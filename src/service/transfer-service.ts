@@ -164,6 +164,7 @@ export default class TransferService extends WithManager {
         payoutRequest: { payoutRequestStatus: true, requestedBy: true },
         fine: { userFineGroup: { user: true } },
         waivedFines: { fines: { userFineGroup: true } },
+        inactiveAdministrativeCost: {  transfer: true  },
       },
       take,
       skip,

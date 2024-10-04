@@ -92,7 +92,7 @@ describe('InactiveAdministrativeCostService', () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
-    const begin = new Date(2023, 1);
+    const begin = new Date(new Date().getFullYear() - 1, 1);
     const end = new Date();
 
     const users = await new UserSeeder().seed();
@@ -217,9 +217,15 @@ describe('InactiveAdministrativeCostService', () => {
 
       const inactiveAdministrativeCosts: InactiveAdministrativeCost[] = await new InactiveAdministrativeCostService().getInactiveAdministrativeCosts();
       const lastEntry = inactiveAdministrativeCosts.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      const transfer = await Transfer.findOne({
+        where: { id: lastEntry.transfer.id },
+        relations: { inactiveAdministrativeCost: true },
+      });
 
       expect(lastEntry.id).to.be.eq(res.id);
       expect(newBalance).to.be.eq(previousBalance - res.amount.getAmount());
+      expect(transfer.fromId).to.be.eq(lastEntry.fromId);
+      expect(transfer.inactiveAdministrativeCost).not.be.undefined;
     });
   });
 
@@ -259,6 +265,27 @@ describe('InactiveAdministrativeCostService', () => {
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
       expect(user.id).to.be.eql(users[0].id);
+    });
+    it('should still return users that had an inactive administrative cost as last transfer', async () => {
+      const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
+      await new TransactionService().createTransaction(ctx.validTransReq);
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'cool',
+        fromId: user.id,
+        toId: undefined,
+        createdAt: new Date(2020, 1).toString(),
+      };
+      const transfer = await new TransferService().createTransfer(req);
+      const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
+      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
+
+      expect(user.id).to.be.eql(users[0].id);
+      expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
     });
     it('should not return users which already had a notification send', async () => {
       const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
