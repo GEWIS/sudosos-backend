@@ -24,7 +24,10 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { EligibleInactiveUsers } from '../entity/user/user';
 import BalanceService from './balance-service';
 import TransferService from './transfer-service';
-import { CreateInactiveAdministrativeCostRequest } from '../controller/request/inactive-administrative-cost-request';
+import {
+  CreateInactiveAdministrativeCostRequest,
+  HandoutInactiveAdministrativeCostsRequest,
+} from '../controller/request/inactive-administrative-cost-request';
 import TransferRequest from '../controller/request/transfer-request';
 import dinero from 'dinero.js';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
@@ -36,7 +39,10 @@ import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inact
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { BaseInactiveAdministrativeCostResponse } from '../controller/response/inactive-administrative-cost-response';
+import {
+  BaseInactiveAdministrativeCostResponse,
+  UserToInactiveAdministrativeCostResponse,
+} from '../controller/response/inactive-administrative-cost-response';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 
@@ -99,12 +105,12 @@ export default class InactiveAdministrativeCostService extends WithManager {
    * @param params
    */
   public async checkInactiveUsers(params: InactiveAdministrativeCostFilterParameters)
-    : Promise<User[]> {
+    : Promise<UserToInactiveAdministrativeCostResponse[]> {
     const { notification } = params;
     const differenceDate = notification ? 2 : 3;
 
     const users = await User.find();
-    const eligibleUsers: User[] = [];
+    const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
 
     // go through all users and get their last transfer and transaction
     for (let i = 0; i < users.length; i += 1) {
@@ -119,7 +125,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
         where: { fromId: user.id },
         relations: { inactiveAdministrativeCost: true },
       }));
-      console.log(userTransfers[1].inactiveAdministrativeCost);
+
       const lastTransfer = userTransfers.length == 0 ? null : userTransfers
         .reduce((prev, curr) => (((prev.createdAt < curr.createdAt) && curr.inactiveAdministrativeCost == null) ? curr : prev));
       const userTransactions = ((await Transaction.find({ relations: ['from'] }))
@@ -134,7 +140,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
         isNotEligible = true;
       }
 
-      if (!isNotEligible) eligibleUsers.push(user);
+      if (!isNotEligible) {
+        const response: UserToInactiveAdministrativeCostResponse = { userId: user.id };
+        eligibleUsers.push(response);
+      }
     }
 
     return eligibleUsers;
@@ -219,14 +228,16 @@ export default class InactiveAdministrativeCostService extends WithManager {
    * Email all users with the given ids. These user will get notified that an administrative cost has been deducted from their account.
    * @param users
    */
-  public async handOutInactiveAdministrativeCost(users: User[])
+  public async handOutInactiveAdministrativeCost(users: HandoutInactiveAdministrativeCostsRequest)
     : Promise<InactiveAdministrativeCost[]> {
-    return Promise.all(users.map(async (u) => {
-      const req: CreateInactiveAdministrativeCostRequest = { forId: u.id };
+    return Promise.all(users.userIds.map(async (u) => {
+      const req: CreateInactiveAdministrativeCostRequest = { forId: u };
 
       const inactiveAdministrativeCost = await this.createInactiveAdministrativeCost(req);
 
-      await Mailer.getInstance().send(u, new UserGotInactiveAdministrativeCost({
+      const user = await User.findOne({ where: { id: u } });
+
+      await Mailer.getInstance().send(user, new UserGotInactiveAdministrativeCost({
         amount: inactiveAdministrativeCost.amount,
       }));
 
@@ -239,13 +250,16 @@ export default class InactiveAdministrativeCostService extends WithManager {
    * account as they have been inactive for three years.
    * @param users
    */
-  public async sendInactiveNotification(users: User[])
+  public async sendInactiveNotification(users: HandoutInactiveAdministrativeCostsRequest)
     : Promise<void> {
 
-    await Promise.all(users.map(async (u) => {
-      u.inactiveNotificationSend = true;
-      await u.save();
-      return Mailer.getInstance().send(u, new InactiveAdministrativeCostNotification({}));
+    await Promise.all(users.userIds.map(async (u) => {
+      const user = await User.findOne({ where: { id: u } });
+
+      user.inactiveNotificationSend = true;
+      await user.save();
+
+      return Mailer.getInstance().send(user, new InactiveAdministrativeCostNotification({}));
     }),
     );
   }
