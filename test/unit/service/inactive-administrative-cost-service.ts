@@ -35,11 +35,11 @@ import InactiveAdministrativeCostService from '../../../src/service/inactive-adm
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import {
-  BaseInactiveAdministrativeCostResponse,
+  BaseInactiveAdministrativeCostResponse, UserToInactiveAdministrativeCostResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import BalanceService from '../../../src/service/balance-service';
 import {
-  CreateInactiveAdministrativeCostRequest,
+  CreateInactiveAdministrativeCostRequest, HandoutInactiveAdministrativeCostsRequest,
 } from '../../../src/controller/request/inactive-administrative-cost-request';
 import TransferService from '../../../src/service/transfer-service';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
@@ -262,9 +262,9 @@ describe('InactiveAdministrativeCostService', () => {
       };
       await new TransferService().createTransfer(req);
 
-      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
+      const users: UserToInactiveAdministrativeCostResponse[] = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
-      expect(user.id).to.be.eql(users[0].id);
+      expect(user.id).to.be.eql(users[0].userId);
     });
     it('should still return users that had an inactive administrative cost as last transfer', async () => {
       const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
@@ -284,7 +284,7 @@ describe('InactiveAdministrativeCostService', () => {
       const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
 
-      expect(user.id).to.be.eql(users[0].id);
+      expect(user.id).to.be.eql(users[0].userId);
       expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
     });
     it('should not return users which already had a notification send', async () => {
@@ -316,7 +316,9 @@ describe('InactiveAdministrativeCostService', () => {
       const users = ctx.users.slice(8);
       const userIds = users.map((u) => u.id);
 
-      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(users);
+      const handoutRequest: HandoutInactiveAdministrativeCostsRequest = { userIds };
+
+      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
       expect(sendMailFake.callCount).to.equal(users.length);
@@ -328,7 +330,9 @@ describe('InactiveAdministrativeCostService', () => {
       const users = ctx.users.slice(8);
       const userIds = users.map((u) => u.id);
 
-      await new InactiveAdministrativeCostService().sendInactiveNotification(users);
+      const handoutRequest: HandoutInactiveAdministrativeCostsRequest = { userIds };
+
+      await new InactiveAdministrativeCostService().sendInactiveNotification(handoutRequest);
       const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
       expect(sendMailFake.callCount).to.equal(users.length);

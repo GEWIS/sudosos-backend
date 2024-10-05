@@ -38,13 +38,9 @@ export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
 /**
  * @typedef {object} UserToInactiveAdministrativeCostResponse
  * @property {integer} id.required - User ID
- * @property {DineroObjectResponse} amount.required - Amount for the administrative cost
- * @property {DineroObjectResponse} newBalance - The new balance of the user.
  */
 export interface UserToInactiveAdministrativeCostResponse {
-  id: number;
-  amount: DineroObjectResponse;
-  newBalance?: DineroObjectResponse;
+  userId: number;
 }
 
 /**
