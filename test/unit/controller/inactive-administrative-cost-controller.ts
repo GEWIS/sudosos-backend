@@ -39,7 +39,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { expect, request } from 'chai';
 import Swagger from '../../../src/start/swagger';
 import {
-  BaseInactiveAdministrativeCostResponse,
+  BaseInactiveAdministrativeCostResponse, UserToInactiveAdministrativeCostResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { INVALID_USER_ID } from '../../../src/controller/request/validators/validation-errors';
