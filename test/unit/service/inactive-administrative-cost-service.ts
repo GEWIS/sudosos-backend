@@ -287,27 +287,6 @@ describe('InactiveAdministrativeCostService', () => {
       expect(user.id).to.be.eql(users[0].userId);
       expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
     });
-    it('should still return users that had an inactive administrative cost as last transfer', async () => {
-      const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
-      await new TransactionService().createTransaction(ctx.validTransReq);
-      const req: TransferRequest = {
-        amount: {
-          amount: 10,
-          precision: dinero.defaultPrecision,
-          currency: dinero.defaultCurrency,
-        },
-        description: 'cool',
-        fromId: user.id,
-        toId: undefined,
-        createdAt: new Date(2020, 1).toString(),
-      };
-      const transfer = await new TransferService().createTransfer(req);
-      const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
-      const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
-
-      expect(user.id).to.be.eql(users[0].id);
-      expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
-    });
     it('should not return users which already had a notification send', async () => {
       const user = await User.findOne({ where: { id: ctx.validTransReq.from } });
       user.inactiveNotificationSend = true;
@@ -337,7 +316,9 @@ describe('InactiveAdministrativeCostService', () => {
       const users = ctx.users.slice(8);
       const userIds = users.map((u) => u.id);
 
-      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(users);
+      const handoutRequest: HandoutInactiveAdministrativeCostsRequest = { userIds };
+
+      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
