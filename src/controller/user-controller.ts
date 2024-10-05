@@ -70,6 +70,7 @@ import ReportService, { BuyerReportService, SalesReportService } from '../servic
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
 import { reportPDFhelper } from '../helpers/express-pdf';
 import { PdfError } from '../errors';
+import { WaiveFinesRequest } from './request/debtor-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -330,6 +331,7 @@ export default class UserController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
           handler: this.waiveUserFines.bind(this),
+          body: { modelName: 'WaiveFinesRequest' },
         },
       },
     };
@@ -1602,6 +1604,7 @@ export default class UserController extends BaseController {
    * @summary Waive all given user's fines
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
+   * @param {WaiveFinesRequest} request.body.required
    * @operationId waiveUserFines
    * @security JWT
    * @return 204 - Success
@@ -1610,11 +1613,10 @@ export default class UserController extends BaseController {
    */
   public async waiveUserFines(req: RequestWithToken, res: Response): Promise<void> {
     const { id: rawId } = req.params;
-    this.logger.trace('Waive fines of user', rawId, 'by', req.token.user);
-
+    const body = req.body as WaiveFinesRequest;
+    this.logger.trace('Waive fines', body, 'of user', rawId, 'by', req.token.user);
 
     try {
-
       const id = parseInt(rawId, 10);
 
       const user = await User.findOne({ where: { id }, relations: ['currentFines'] });
@@ -1627,7 +1629,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await DebtorService.waiveFines(id);
+      await new DebtorService().waiveFines(id, body);
       res.status(204).send();
     } catch (e) {
       res.status(500).send();

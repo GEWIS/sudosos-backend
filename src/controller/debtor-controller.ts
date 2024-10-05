@@ -129,7 +129,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      res.json(await DebtorService.getFineHandoutEvents({ take, skip }));
+      res.json(await new DebtorService().getFineHandoutEvents({ take, skip }));
     } catch (error) {
       this.logger.error('Could not return all fine handout event:', error);
       res.status(500).json('Internal server error.');
@@ -152,7 +152,7 @@ export default class DebtorController extends BaseController {
     this.logger.trace('Get fine handout event', id, 'by', req.token.user);
 
     try {
-      res.json(await DebtorService.getSingleFineHandoutEvent(Number.parseInt(id, 10)));
+      res.json(await new DebtorService().getSingleFineHandoutEvent(Number.parseInt(id, 10)));
     } catch (error) {
       this.logger.error('Could not return fine handout event:', error);
       res.status(500).json('Internal server error.');
@@ -182,7 +182,7 @@ export default class DebtorController extends BaseController {
         return;
       }
 
-      await DebtorService.deleteFine(parsedId);
+      await new DebtorService().deleteFine(parsedId);
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not return fine handout event:', error);
@@ -223,7 +223,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      res.json(await DebtorService.calculateFinesOnDate(params));
+      res.json(await new DebtorService().calculateFinesOnDate(params));
     } catch (error) {
       this.logger.error('Could not calculate fines:', error);
       res.status(500).json('Internal server error.');
@@ -261,7 +261,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      const result = await DebtorService.handOutFines({ referenceDate, userIds: body.userIds }, req.token.user);
+      const result = await new DebtorService().handOutFines({ referenceDate, userIds: body.userIds }, req.token.user);
       res.json(result);
     } catch (error) {
       this.logger.error('Could not handout fines:', error);
@@ -300,7 +300,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      await DebtorService.sendFineWarnings({ referenceDate, userIds: body.userIds });
+      await new DebtorService().sendFineWarnings({ referenceDate, userIds: body.userIds });
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not send future fine notification emails:', error);
@@ -334,7 +334,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      const report = await DebtorService.getFineReport(fromDate, toDate);
+      const report = await new DebtorService().getFineReport(fromDate, toDate);
       res.json(report.toResponse());
     } catch (error) {
       this.logger.error('Could not get fine report:', error);
@@ -371,7 +371,7 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      const report = await DebtorService.getFineReport(fromDate, toDate);
+      const report = await new DebtorService().getFineReport(fromDate, toDate);
 
       const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createTex();
       const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;

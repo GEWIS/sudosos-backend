@@ -24,6 +24,8 @@
  * @module debtors
  */
 
+import { DineroObjectRequest } from './dinero-request';
+
 /**
  * @typedef {object} HandoutFinesRequest
  * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
@@ -32,4 +34,17 @@
 export interface HandoutFinesRequest {
   userIds: number[];
   referenceDate: string;
+}
+
+/**
+ * @typedef {object} WaiveFinesREquest
+ * @property {DineroObjectRequest} amount.required - The amount of fines that have to be
+ * waived. Cannot be negative or more than the total amount of unpaid fines.
+ */
+export interface WaiveFinesRequest {
+  /**
+   * The amount of fines that have to be waived. Cannot be
+   * negative or more than the total amount of unpaid fines.
+   */
+  amount: DineroObjectRequest;
 }
