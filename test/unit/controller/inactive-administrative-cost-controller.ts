@@ -29,7 +29,7 @@ import {
 import InactiveAdministrativeCost from '../../../src/entity/transactions/inactive-administrative-cost';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
-import { RbacSeeder } from '../../seed';
+import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import InactiveAdministrativeCostSeeder from '../../seed/ledger/inactive-administrative-cost-seeder';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -39,9 +39,15 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { expect, request } from 'chai';
 import Swagger from '../../../src/start/swagger';
 import {
-  BaseInactiveAdministrativeCostResponse,
+  BaseInactiveAdministrativeCostResponse, UserToInactiveAdministrativeCostResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
+import { INVALID_USER_ID } from '../../../src/controller/request/validators/validation-errors';
+import Transfer from '../../../src/entity/transactions/transfer';
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import { rootStubs } from '../../root-hooks';
+import Mailer from '../../../src/mailer';
+import nodemailer, { Transporter } from 'nodemailer';
 
 
 describe('InactiveAdministrativeCostController', async () => {
@@ -56,7 +62,12 @@ describe('InactiveAdministrativeCostController', async () => {
     validInactiveAdministrativeCostRequest: CreateInactiveAdministrativeCostRequest,
     token: string,
     inactiveAdministrativeCosts: InactiveAdministrativeCost[],
+    transfers: Transfer[],
+    users: User[],
   };
+
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -84,8 +95,13 @@ describe('InactiveAdministrativeCostController', async () => {
 
     await User.save(adminUser);
     await User.save(localUser);
+    const users = await new UserSeeder().seed();
 
-    const { inactiveAdministrativeCosts } = await new InactiveAdministrativeCostSeeder().seed([localUser, adminUser], begin, end);
+    const transfers = await new TransferSeeder().seed(users, new Date(2019, 1), new Date(2020, 1));
+
+    const { inactiveAdministrativeCosts, inactiveAdministrativeCostsTransfers } = await new InactiveAdministrativeCostSeeder().seed([localUser, adminUser], begin, end);
+
+    transfers.concat(inactiveAdministrativeCostsTransfers);
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -100,6 +116,7 @@ describe('InactiveAdministrativeCostController', async () => {
           get: all,
           update: all,
           delete: all,
+          notify: all,
         },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
@@ -143,11 +160,31 @@ describe('InactiveAdministrativeCostController', async () => {
       token,
       adminToken,
       inactiveAdministrativeCosts,
+      transfers,
+      users,
     };
+  });
+
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   after(async () => {
     await finishTestDB(ctx.connection);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   describe('GET /inactiveAdministrativeCosts', ()=> {
@@ -210,7 +247,8 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
         .post('/inactiveAdministrativeCosts')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send(ctx.validInactiveAdministrativeCostRequest);
 
       expect(res.status).to.equal(403);
     });
@@ -223,6 +261,178 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(await InactiveAdministrativeCost.count()).to.equal(count + 1);
       expect(res.status).to.equal(200);
+    });
+    it('should verify that forId is a valid user', async () => {
+      const req: CreateInactiveAdministrativeCostRequest = { forId: -1 };
+
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(req);
+
+      expect(res.status).to.eq(400);
+      expect(res.body).to.equal(INVALID_USER_ID().value);
+    });
+  });
+  describe('GET /inactiveAdministrativeCost/{id}', () => {
+    it('should return the correct model', async () => {
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
+      const res = await request(ctx.app)
+        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'InactiveAdministrativeCostResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and the requested inactive administrative cost if exists and admin', async () => {
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
+      const res = await request(ctx.app)
+        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect((res.body as BaseInactiveAdministrativeCostResponse).id).to.be.equal(inactiveAdministrativeCost.id);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
+      const res = await request(ctx.app)
+        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.be.equal(403);
+    });
+    it('should return an HTTP 404 if inactive administrative cost does not exist', async () => {
+      const count = await InactiveAdministrativeCost.count();
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.findOne({ where: { id: count + 1 } }));
+      expect(inactiveAdministrativeCost).to.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/inactiveAdministrativeCosts/${count + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.be.equal(404);
+    });
+  });
+  describe('DELETE /inactiveAdministrativeCost/{id}',  () => {
+    it('should return an HTPP 204 and delete the requested invoice if exists and admin', async () => {
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
+
+      const res = await request(ctx.app)
+        .delete(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
+      const res = await request(ctx.app)
+        .delete(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.be.equal(403);
+    });
+    it('should return an HTTP 404 if inactive administrative cost does not exist', async () => {
+      const count = await InactiveAdministrativeCost.count();
+      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.findOne({ where: { id: count + 1 } }));
+      expect(inactiveAdministrativeCost).to.be.null;
+
+      const res = await request(ctx.app)
+        .delete(`/inactiveAdministrativeCosts/${count + 1}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.be.equal(404);
+    });
+  });
+  describe('GET /checkInactiveUsers',  () => {
+    it('should return inactive users', async () => {
+      const res = await request(ctx.app)
+        .get('/inactiveAdministrativeCosts/checkInactiveUsers')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send('true');
+
+      const userCount = await User.count();
+
+      expect(res.status).to.be.equal(200);
+      expect((res.body as UserToInactiveAdministrativeCostResponse[]).length).to.be.equal(userCount);
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/inactiveAdministrativeCosts/checkInactiveUsers')
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.be.equal(403);
+    });
+  });
+  describe('POST /notify', () => {
+    it('should notify users with given ID', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(204);
+
+      expect(sendMailFake.callCount).to.be.at.least(1);
+    });
+    it('should return 403 if user is not an admin', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/notify')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if userIds is not an array', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/notify')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: '42Vo' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if array of userIds is invalid', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/notify')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: ['WieDitLeestTrektBak'] });
+      expect(res.status).to.equal(400);
+    });
+  });
+  describe('POST /handout', () => {
+    it('should handout inactive administrative costs to users with given ID', async () => {
+      const count = await InactiveAdministrativeCost.count();
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(200);
+
+      expect(sendMailFake.callCount).to.be.at.least(1);
+      expect(await InactiveAdministrativeCost.count()).to.be.equal(count + (ctx.users.map((u) => u.id)).length);
+    });
+    it('should return 403 if user is not an admin', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/handout')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: ctx.users.map((u) => u.id) });
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if userIds is not an array', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/handout')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: '42Vo' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if array of userIds is invalid', async () => {
+      const res = await request(ctx.app)
+        .post('/inactiveAdministrativeCosts/handout')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: ['WieDitLeestTrektBak'] });
+      expect(res.status).to.equal(400);
     });
   });
 });
