@@ -29,7 +29,12 @@ import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
+import User, {
+  LocalUserTypes,
+  TermsOfServiceStatus,
+  TOSRequired,
+  UserType,
+} from '../entity/user/user';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
 import { CreateUserRequest, UpdateUserRequest } from '../controller/request/user-request';
 import TransactionService, { TransactionFilterParameters } from './transaction-service';
@@ -47,6 +52,8 @@ import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
 import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
+import DebtorService from './debtor-service';
+import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -289,6 +296,22 @@ export default class UserService {
     user.extensiveDataProcessing = params.extensiveDataProcessing;
     await user.save();
     return true;
+  }
+
+  /**
+   * Check if users should become defaulter
+   * @param userId - ID of the user to check to default or not
+   * @return boolean - Whether the user should become defaulter
+   */
+  public static async checkIfUserShouldBeDefaulter(userId: number): Promise<boolean> {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) return false;
+    if (user.type == UserType.INVOICE) return false;
+
+    const lastFineHandoutEvent = await FineHandoutEvent.count();
+    const fineResponses = (await DebtorService.getSingleFineHandoutEvent(lastFineHandoutEvent)).fines;
+
+    return ((fineResponses.map((f) => f.user.id == user.id)).length != 0);
   }
 
   /**
