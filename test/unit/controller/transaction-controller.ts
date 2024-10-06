@@ -670,6 +670,31 @@ describe('TransactionController', (): void => {
       expect(res.status).to.equal(403);
       expect(res.body).to.equal('Insufficient balance.');
     });
+    it('should return an HTTP 403 if the user is soft-locked', async () => {
+      // create defaulter user
+      const user = await User.save({
+        firstName: 'john',
+        lastName: 'default',
+        active: true,
+        deleted: false,
+        type: UserType.LOCAL_USER,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        canGoIntoDebt: true,
+        defaulter: true,
+      } as User);
+
+      const badReq = {
+        ...ctx.validTransReq,
+        from: user.id,
+      } as TransactionRequest;
+
+      const res = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(badReq);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('User soft-locked.');
+    });
   });
 
   describe('PATCH /transactions', () => {

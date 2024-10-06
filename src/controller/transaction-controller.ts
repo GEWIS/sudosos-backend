@@ -168,6 +168,8 @@ export default class TransactionController extends BaseController {
       const user = await User.findOne({ where: { id: body.from } });
       if (!user.canGoIntoDebt && !await new TransactionService().verifyBalance(body)) {
         res.status(403).json('Insufficient balance.');
+      } else if (user.defaulter) {
+        res.status(403).json('User soft-locked.');
       } else {
         // create the transaction
         res.json(await new TransactionService().createTransaction(body));
