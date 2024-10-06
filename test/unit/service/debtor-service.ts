@@ -24,7 +24,7 @@ import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
-import DebtorService from '../../../src/service/debtor-service';
+import DebtorService, { WaiveFinesParams } from '../../../src/service/debtor-service';
 import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
@@ -42,7 +42,6 @@ import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import { rootStubs } from '../../root-hooks';
-import { WaiveFinesRequest } from '../../../src/controller/request/debtor-request';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -55,7 +54,7 @@ describe('DebtorService', (): void => {
     fines: Fine[],
     userFineGroups: UserFineGroup[],
     actor: User,
-    waiveFinesRequest: WaiveFinesRequest,
+    waiveFinesParams: WaiveFinesParams,
   };
 
   let sandbox: SinonSandbox;
@@ -87,7 +86,7 @@ describe('DebtorService', (): void => {
       fines,
       userFineGroups,
       actor: usersWithFines[0],
-      waiveFinesRequest: {
+      waiveFinesParams: {
         amount: { amount: 100, currency: 'EUR', precision: 2 },
       },
     };
@@ -553,14 +552,14 @@ describe('DebtorService', (): void => {
       const user = await User.findOne({ where: { id } });
       expect(user).to.be.null;
 
-      await expect(new DebtorService().waiveFines(id, ctx.waiveFinesRequest)).to.eventually.rejectedWith(`User with ID ${id} does not exist`);
+      await expect(new DebtorService().waiveFines(id, ctx.waiveFinesParams)).to.eventually.rejectedWith(`User with ID ${id} does not exist`);
     });
     it('should not do anything when user does not have fines', async () => {
       const user = ctx.users.find((u) => u.currentFines == null);
       expect(user).to.not.be.null;
       const nrTransfers = await Transfer.count();
 
-      await new DebtorService().waiveFines(user.id, ctx.waiveFinesRequest);
+      await new DebtorService().waiveFines(user.id, ctx.waiveFinesParams);
       expect(await Transfer.count()).to.equal(nrTransfers);
     });
   });
@@ -844,7 +843,7 @@ describe('DebtorService', (): void => {
     it( 'should return error if transfer has fine and waivedFine', async () => {
       const fineHandoutEvent = await makeFines();
       const debtorService = new DebtorService();
-      await debtorService.waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesRequest);
+      await debtorService.waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesParams);
 
       const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].user.id } }, relations: ['fine', 'waivedFines'] });
       transfer.fine = await Fine.create({
@@ -869,7 +868,7 @@ describe('DebtorService', (): void => {
       const tillDate = new Date();
       tillDate.setTime(tillDate.getTime() + 1000);
 
-      await new DebtorService().waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesRequest);
+      await new DebtorService().waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesParams);
       const report = await new DebtorService().getFineReport(date, tillDate);
 
       expect(report.fromDate.toISOString()).to.equal(date.toISOString());
@@ -879,7 +878,7 @@ describe('DebtorService', (): void => {
 
       const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
-      expect(report.waivedAmount.getAmount()).to.equal(ctx.waiveFinesRequest.amount.amount);
+      expect(report.waivedAmount.getAmount()).to.equal(ctx.waiveFinesParams.amount.amount);
     });
 
   });
