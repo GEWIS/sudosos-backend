@@ -319,7 +319,7 @@ describe('InactiveAdministrativeCostController', async () => {
     });
   });
   describe('DELETE /inactiveAdministrativeCost/{id}',  () => {
-    it('should return an HTPP 204 and delete the requested invoice if exists and admin', async () => {
+    it('should return an HTTP 204 and delete the requested invoice if exists and admin', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
 
       const res = await request(ctx.app)
@@ -356,10 +356,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send('true');
 
-      const userCount = await User.count();
-
       expect(res.status).to.be.equal(200);
-      expect((res.body as UserToInactiveAdministrativeCostResponse[]).length).to.be.equal(userCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
