@@ -113,6 +113,14 @@ export default class User extends BaseEntity {
   })
   public canGoIntoDebt: boolean;
 
+  /**
+   * Whether the user is 'soft-locked' and can only top up.
+   */
+  @Column({
+    default: false,
+  })
+  public defaulter: boolean;
+
   @Column({
     default: false,
   })
