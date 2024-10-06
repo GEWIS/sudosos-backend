@@ -310,7 +310,7 @@ export default class DebtorService extends WithManager {
     const userFineGroup = user.currentFines;
     const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount: 0 }));
 
-    if (params.amount.amount < 0) throw new Error('Amount to waive cannot be negative.');
+    if (params.amount.amount <= 0) throw new Error('Amount to waive cannot be zero or negative.');
     if (params.amount.amount > amount.getAmount()) throw new Error('Amount to waive cannot be greater than the total amount of fines.');
 
     // If the fine is already partially waived, delete the old transfer
@@ -320,7 +320,7 @@ export default class DebtorService extends WithManager {
 
     // Create the transfer for the waived amount
     userFineGroup.waivedTransfer = await new TransferService(this.manager).createTransfer({
-      amount: amount.toObject(),
+      amount: params.amount,
       toId: user.id,
       description: 'Waived fines',
       fromId: undefined,
@@ -331,9 +331,10 @@ export default class DebtorService extends WithManager {
       // Remove the fine from the user when the total amount is waived.
       // This must be done manually, because the user can still have a
       // negative balance when the fine is waived.
-      user.currentFines = null;
+      await this.manager.update(User, { id: user.id }, { currentFines: null });
     }
-    await this.manager.save(User, user);
+
+    return userFineGroup;
   }
 
   /**

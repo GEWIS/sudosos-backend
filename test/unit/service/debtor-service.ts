@@ -347,15 +347,24 @@ describe('DebtorService', (): void => {
     it('should correctly waive all fines', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
-      const dbUserFineGroupOld = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
       const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+
+      // Sanity checks
       expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
       expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
       expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
 
       await new DebtorService().waiveFines(userFineGroup.userId, { amount: { amount, currency: 'EUR', precision: 2 } });
 
-      const dbUserFineGroupNew = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
       expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
       expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amount);
       expect(dbUserFineGroupNew.user.currentFines).to.be.null;
@@ -365,6 +374,179 @@ describe('DebtorService', (): void => {
       dbUserFineGroupNew.waivedTransfer = null;
       await dbUserFineGroupNew.save();
       await Transfer.remove(transfer);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should waive fines partially and remove current fines if positive balance', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+      // Do not waive fifty cents
+      const amountToWaive = amount - 50;
+      const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      // Balance is negative and fine amount is positive. Also add 75 cents just
+      const topupToGoOutOfDebt = -1 * (balance.amount.getAmount() + amountToWaive) + 75;
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+      expect(topupToGoOutOfDebt).to.be.greaterThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt).to.be.lessThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt + amountToWaive).to.be.greaterThan(0);
+
+      const topUpTransfer = await new TransferService().createTransfer({
+        fromId: -1,
+        toId: user.id,
+        amount: { amount: topupToGoOutOfDebt, precision: 2, currency: 'EUR' },
+        description: 'Some money <3',
+      });
+      await new DebtorService().waiveFines(user.id, { amount: { amount: amountToWaive, currency: 'EUR', precision: 2 } });
+
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: { to: true }, user: { currentFines: true } },
+      });
+      expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
+      expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amountToWaive);
+      const newBalance = calculateBalance(
+        user,
+        ctx.transactions,
+        ctx.subTransactions,
+        [...ctx.transfersInclFines, topUpTransfer, dbUserFineGroupNew.waivedTransfer],
+      );
+      expect(newBalance.amount.getAmount()).to.be.greaterThan(0);
+      expect(dbUserFineGroupNew.user.currentFines).to.be.null;
+
+      // Cleanup
+      const transfer = dbUserFineGroupNew.waivedTransfer;
+      dbUserFineGroupNew.waivedTransfer = null;
+      await dbUserFineGroupNew.save();
+      await Transfer.remove([transfer, topUpTransfer]);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should waive fines partially and keep current fines if still negative balance', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+      // Do not waive fifty cents
+      const amountToWaive = amount - 50;
+      const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      // Balance is negative and fine amount is positive. Also subtract 25 cents so the user will not go out of debt
+      const topupToGoOutOfDebt = -1 * (balance.amount.getAmount() + amountToWaive) - 25;
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+      expect(topupToGoOutOfDebt).to.be.greaterThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt).to.be.lessThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt + amountToWaive).to.be.lessThan(0);
+
+      const topUpTransfer = await new TransferService().createTransfer({
+        fromId: -1,
+        toId: user.id,
+        amount: { amount: topupToGoOutOfDebt, precision: 2, currency: 'EUR' },
+        description: 'Some money <3',
+      });
+      await new DebtorService().waiveFines(user.id, { amount: { amount: amountToWaive, currency: 'EUR', precision: 2 } });
+
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: { to: true }, user: { currentFines: true } },
+      });
+      expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
+      expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amountToWaive);
+      const newBalance = calculateBalance(
+        user,
+        ctx.transactions,
+        ctx.subTransactions,
+        [...ctx.transfersInclFines, topUpTransfer, dbUserFineGroupNew.waivedTransfer],
+      );
+      expect(newBalance.amount.getAmount()).to.be.lessThan(0);
+      expect(dbUserFineGroupNew.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupNew.user.currentFines.id).to.equal(dbUserFineGroupNew.id);
+
+      // Cleanup
+      const transfer = dbUserFineGroupNew.waivedTransfer;
+      dbUserFineGroupNew.waivedTransfer = null;
+      await dbUserFineGroupNew.save();
+      await Transfer.remove([transfer, topUpTransfer]);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should throw if amount to waive is more than the total fine amount', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const totalFineAmount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: totalFineAmount + 1, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be greater than the total amount of fines.');
+    });
+    it('should throw if amount to waive is zero', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: 0, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be zero or negative.');
+    });
+    it('should throw if amount to waive is negative', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: -100, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be zero or negative.');
+    });
+    it('should replace old waive transfer is new is created', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+
+      const fineGroup1 = await new DebtorService().waiveFines(user.id, { amount: { amount: 100, currency: 'EUR', precision: 2 } });
+      const fineGroup2 = await new DebtorService().waiveFines(user.id, { amount: { amount: 200, currency: 'EUR', precision: 2 } });
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: { waivedTransfer: true } } });
+
+      expect(fineGroup1.waivedTransfer).to.not.be.undefined;
+      expect(fineGroup2.waivedTransfer).to.not.be.undefined;
+      expect(fineGroup1.waivedTransfer.id).to.not.equal(fineGroup2.waivedTransfer.id);
+      expect(await Transfer.findOne({ where: { id: fineGroup1.waivedTransfer.id } })).to.be.null;
+      expect(await Transfer.findOne({ where: { id: fineGroup2.waivedTransfer.id } })).to.not.be.null;
+      expect(dbUser.currentFines).to.not.be.null;
+      expect(dbUser.currentFines.waivedTransfer).to.not.be.null;
+      expect(dbUser.currentFines.waivedTransfer.id).to.equal(fineGroup2.waivedTransfer.id);
+      expect(dbUser.currentFines.waivedTransfer.amountInclVat.getAmount()).to.equal(200);
+
+      // Cleanup
+      const transfer = fineGroup2.waivedTransfer;
+      await Transfer.remove(transfer);
+      await User.save(user);
     });
     it('should throw error when user does not exist', async () => {
       const id = 999999;
@@ -697,7 +879,7 @@ describe('DebtorService', (): void => {
 
       const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
-      expect(report.waivedAmount.getAmount()).to.equal(fineHandoutEvent.fines[0].amount.amount);
+      expect(report.waivedAmount.getAmount()).to.equal(ctx.waiveFinesRequest.amount.amount);
     });
 
   });
