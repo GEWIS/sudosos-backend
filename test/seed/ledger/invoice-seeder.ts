@@ -25,7 +25,6 @@ import Invoice from '../../../src/entity/invoices/invoice';
 import Transfer from '../../../src/entity/transactions/transfer';
 import dinero from 'dinero.js';
 import InvoiceStatus, { InvoiceState } from '../../../src/entity/invoices/invoice-status';
-import { addDays } from 'date-fns';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
 export default class InvoiceSeeder extends WithManager {
@@ -107,7 +106,7 @@ export default class InvoiceSeeder extends WithManager {
         invoice,
         changedBy: users[i],
         state: InvoiceState.CREATED,
-        dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+        dateChanged: new Date(new Date(2020, 0, 1).getTime() + ((1000 * 60 * 60 * 24) * (2 - (i * 2))) ),
       });
       invoice.invoiceStatus.push(status);
       invoices = invoices.concat(invoice);
@@ -124,7 +123,7 @@ export default class InvoiceSeeder extends WithManager {
         invoice: invoices[i],
         changedBy: current,
         state: [InvoiceState.SENT, InvoiceState.PAID, InvoiceState.DELETED][i % 3],
-        dateChanged: addDays(new Date(2020, 0, 1), 2 - (i * 2)),
+        dateChanged: new Date(new Date(2020, 0, 1).getTime() + ((1000 * 60 * 60 * 24) * (2 - (i * 2))) ),
       });
       invoices[i].invoiceStatus.push(status);
       await this.manager.save(Invoice, invoices[i]);
