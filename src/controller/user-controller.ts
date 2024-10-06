@@ -1606,6 +1606,7 @@ export default class UserController extends BaseController {
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
    * @param {WaiveFinesRequest} request.body
+   * Optional body, see https://github.com/GEWIS/sudosos-backend/pull/344
    * @operationId waiveUserFines
    * @security JWT
    * @return 204 - Success

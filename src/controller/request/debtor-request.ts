@@ -37,6 +37,11 @@ export interface HandoutFinesRequest {
 }
 
 /**
+ * The total request and all its fields are optional for backwards compatibility's sake.
+ * If this request object is extended, it is probably best to make everything required
+ * and remove the backwards compatibility, as the frontend will (and should) already use
+ * this new object. See https://github.com/GEWIS/sudosos-backend/pull/344
+ *
  * @typedef {object} WaiveFinesRequest
  * @property {DineroObjectRequest} amount - The amount of fines that have to be
  * waived. Cannot be negative or more than the total amount of unpaid fines.
