@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the ldap-sync-service.
+ *
+ * @module internal/user-sync
+ */
+
 import { SyncService } from './sync-service';
 import User, { TermsOfServiceStatus, UserType } from '../../entity/user/user';
 import { Client } from 'ldapts';
@@ -31,22 +37,26 @@ import log4js, { Logger } from 'log4js';
 
 export default class LdapSyncService extends SyncService {
 
-  // We only sync organs and members.
+  // We only sync organs, members and integrations.
   targets = [UserType.ORGAN, UserType.MEMBER, UserType.INTEGRATION];
 
+  // Is set in the `pre` function.
   private ldapClient: Client;
+
+  private readonly adService: ADService;
 
   private readonly roleManager: RoleManager;
 
   private logger: Logger = log4js.getLogger('AdSyncService');
 
-  constructor(roleManager: RoleManager, manager?: EntityManager) {
+  constructor(roleManager: RoleManager, adService?: ADService, manager?: EntityManager) {
     // Sanity check, since we already have a ldapClient
     if (!process.env.ENABLE_LDAP) throw new Error('LDAP is not enabled');
 
     super(manager);
     this.logger.level = process.env.LOG_LEVEL;
     this.roleManager = roleManager;
+    this.adService = adService ?? new ADService(this.manager);
   }
 
   async guard(user: User): Promise<boolean> {
@@ -70,7 +80,7 @@ export default class LdapSyncService extends SyncService {
     const ldapAuth = await this.manager.findOne(LDAPAuthenticator, { where: { user: { id: user.id } } });
     if (!ldapAuth) return false;
 
-    const ldapUser = await new ADService(this.manager).getLDAPResponseFromGUID(this.ldapClient, ldapAuth.UUID);
+    const ldapUser = await this.adService.getLDAPResponseFromGUID(this.ldapClient, ldapAuth.UUID);
     if (!ldapUser) return false;
 
     // For members, we fetch user info from the GEWISDB
@@ -112,23 +122,22 @@ export default class LdapSyncService extends SyncService {
   /**
    * Fetches all shared accounts from AD and creates them in SudoSOS.
    * Also updates the membership of the shared accounts.
-   * @param adService
    * @private
    */
-  private async fetchSharedAccounts(adService: ADService): Promise<void> {
+  private async fetchSharedAccounts(): Promise<void> {
     this.logger.debug('Fetching shared accounts from LDAP');
-    const sharedAccounts = await adService.getLDAPGroups<LDAPGroup>(
+    const sharedAccounts = await this.adService.getLDAPGroups<LDAPGroup>(
       this.ldapClient, process.env.LDAP_SHARED_ACCOUNT_FILTER);
 
     // If there are new shared accounts, we create them.
-    const newSharedAccounts = (await adService.filterUnboundGUID(sharedAccounts)) as LDAPGroup[];
+    const newSharedAccounts = (await this.adService.filterUnboundGUID(sharedAccounts)) as LDAPGroup[];
     this.logger.trace(`Found ${newSharedAccounts.length} new shared accounts`);
     for (const sharedAccount of newSharedAccounts) {
-      await adService.toSharedUser(sharedAccount);
+      await this.adService.toSharedUser(sharedAccount);
     }
 
     for (const sharedAccount of sharedAccounts) {
-      await adService.updateSharedAccountMembership(this.ldapClient, sharedAccount);
+      await this.adService.updateSharedAccountMembership(this.ldapClient, sharedAccount);
     }
   }
 
@@ -141,9 +150,9 @@ export default class LdapSyncService extends SyncService {
    * @param adService
    * @private
    */
-  private async fetchUserRoles(adService: ADService): Promise<void> {
+  private async fetchUserRoles(): Promise<void> {
     this.logger.debug('Fetching user roles from LDAP');
-    const roles = await adService.getLDAPGroups<LDAPGroup>(
+    const roles = await this.adService.getLDAPGroups<LDAPGroup>(
       this.ldapClient, process.env.LDAP_ROLE_FILTER);
     if (!roles) return;
 
@@ -158,25 +167,24 @@ export default class LdapSyncService extends SyncService {
     const localRoles = roles.filter(ldapRole => dbRoleNames.has(ldapRole.cn));
     this.logger.trace(`Found ${localRoles.length} local roles`);
     for (const ldapRole of localRoles) {
-      await adService.updateRoleMembership(this.ldapClient, ldapRole, this.roleManager);
+      await this.adService.updateRoleMembership(this.ldapClient, ldapRole, this.roleManager);
     }
   }
 
   /**
    * Fetches all service accounts from LDAP and creates them locally.
    *
-   * @param adService
    * @private
    */
-  private async fetchServiceAccounts(adService: ADService): Promise<void> {
+  private async fetchServiceAccounts(): Promise<void> {
     this.logger.debug('Fetching service accounts from LDAP');
-    const serviceAccounts = (await adService.getLDAPGroupMembers(
+    const serviceAccounts = (await this.adService.getLDAPGroupMembers(
       this.ldapClient, process.env.LDAP_SERVICE_ACCOUNT_FILTER)).searchEntries;
 
-    const newServiceAccounts = await adService.filterUnboundGUID(serviceAccounts);
+    const newServiceAccounts = await this.adService.filterUnboundGUID(serviceAccounts);
     this.logger.trace(`Found ${newServiceAccounts.length} new service accounts`);
     for (const serviceAccount of newServiceAccounts) {
-      await adService.toServiceAccount(serviceAccount as LDAPUser);
+      await this.adService.toServiceAccount(serviceAccount as LDAPUser);
     }
   }
 
@@ -185,27 +193,29 @@ export default class LdapSyncService extends SyncService {
    */
   async fetch(): Promise<void> {
     this.logger.trace('Fetching LDAP data');
-    const adService = new ADService(this.manager);
 
     if (!process.env.LDAP_SHARED_ACCOUNT_FILTER) {
       this.logger.warn('LDAP_SHARED_ACCOUNT_FILTER is not set, skipping shared accounts');
     } else {
-      await this.fetchSharedAccounts(adService);
+      await this.fetchSharedAccounts();
     }
 
     if (!process.env.LDAP_ROLE_FILTER) {
       this.logger.warn('LDAP_ROLE_FILTER is not set, skipping user roles');
     } else {
-      await this.fetchUserRoles(adService);
+      await this.fetchUserRoles();
     }
 
     if (!process.env.LDAP_SERVICE_ACCOUNT_FILTER) {
       this.logger.warn('LDAP_SERVICE_ACCOUNT_FILTER is not set, skipping service accounts');
     } else {
-      await this.fetchServiceAccounts(adService);
+      await this.fetchServiceAccounts();
     }
   }
 
+  // TODO: dependency injection of Client instead?
+  //    i.e. add a Client to the constructor
+  //    this would require us to make a wrapper constructor to be able to bind the client on call
   async pre(): Promise<void> {
     this.ldapClient = await getLDAPConnection();
   }

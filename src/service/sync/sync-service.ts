@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the abstract sync-service.
+ *
+ * @module internal/user-sync
+ */
+
 import User, { UserType } from '../../entity/user/user';
 import WithManager from '../../database/with-manager';
 
@@ -88,7 +94,7 @@ export abstract class SyncService extends WithManager {
    * Down is called when the SyncService decides that the user is no longer connected to this sync service be removed.
    * This can be used to remove the user from the database or clean up entities.
    *
-   * This should be revertable and idempotent!
+   * This should be revertible and idempotent!
    *
    * @param user
    */
