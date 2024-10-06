@@ -104,7 +104,7 @@ async function createCronTasks(): Promise<void> {
   const syncServices: SyncService[] = [];
 
   if (process.env.ENABLE_LDAP === 'true') {
-    const ldapSyncService = new LdapSyncService(application.roleManager, AppDataSource.manager);
+    const ldapSyncService = new LdapSyncService(application.roleManager, null, AppDataSource.manager);
     syncServices.push(ldapSyncService);
   }
 
