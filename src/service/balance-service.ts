@@ -83,12 +83,18 @@ export default class BalanceService extends WithManager {
 
     return {
       id: rawBalance.id,
+      firstName: rawBalance.firstName,
+      lastName: rawBalance.lastName,
+      nickname: rawBalance.nickname,
+      type: rawBalance.type,
       date: date.toISOString(),
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
       lastTransferId: rawBalance.lastTransferId,
       fine: rawBalance.fine ? DineroTransformer.Instance.from(rawBalance.fine).toObject() : null,
       fineSince,
+      fineWaived: rawBalance.fine && rawBalance.fineWaived
+        ? DineroTransformer.Instance.from(rawBalance.fineWaived).toObject() : null,
     };
   }
 
@@ -226,6 +232,10 @@ export default class BalanceService extends WithManager {
     const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
 
     let query = 'SELECT moneys2.id as id, '
+      + 'moneys2.firstName as firstName, '
+      + 'moneys2.lastName as lastName, '
+      + 'moneys2.nickname as nickname, '
+      + 'moneys2.type as type, '
       + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
       + 'moneys2.count as count, '
       + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
@@ -235,6 +245,10 @@ export default class BalanceService extends WithManager {
       + 'f.fineSince as fineSince '
       + 'from ( '
       + 'SELECT user.id as id, '
+      + 'user.firstName as firstName, '
+      + 'user.lastName as lastName, '
+      + 'user.nickname as nickname, '
+      + 'user.type as type, '
       + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
       + 'count(moneys.totalValue) as count, '
       + 'max(moneys.transactionId) as lastTransactionId, '
