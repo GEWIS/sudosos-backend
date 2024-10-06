@@ -50,7 +50,6 @@ import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 import { FineReport } from '../entity/report/fine-report';
 import WithManager from '../database/with-manager';
 import QueryFilter from '../helpers/query-filter';
-import { WaiveFinesRequest } from '../controller/request/debtor-request';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -61,6 +60,10 @@ export interface CalculateFinesParams {
 export interface HandOutFinesParams {
   referenceDate: Date;
   userIds: number[];
+}
+
+export interface WaiveFinesParams {
+  amount: DineroObjectRequest;
 }
 
 /**
@@ -299,7 +302,7 @@ export default class DebtorService extends WithManager {
    * @param userId User to waive fines for
    * @param params
    */
-  public async waiveFines(userId: number, params: WaiveFinesRequest): Promise<UserFineGroup> {
+  public async waiveFines(userId: number, params: WaiveFinesParams): Promise<UserFineGroup> {
     const user: User = await this.manager.findOne(User, {
       where: { id: userId },
       relations: { currentFines: { fines: true, waivedTransfer: true } },

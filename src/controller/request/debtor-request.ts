@@ -37,8 +37,8 @@ export interface HandoutFinesRequest {
 }
 
 /**
- * @typedef {object} WaiveFinesREquest
- * @property {DineroObjectRequest} amount.required - The amount of fines that have to be
+ * @typedef {object} WaiveFinesRequest
+ * @property {DineroObjectRequest} amount - The amount of fines that have to be
  * waived. Cannot be negative or more than the total amount of unpaid fines.
  */
 export interface WaiveFinesRequest {
@@ -46,5 +46,5 @@ export interface WaiveFinesRequest {
    * The amount of fines that have to be waived. Cannot be
    * negative or more than the total amount of unpaid fines.
    */
-  amount: DineroObjectRequest;
+  amount?: DineroObjectRequest;
 }

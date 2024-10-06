@@ -65,12 +65,13 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import UpdateKeyResponse from './response/update-key-response';
 import { randomBytes } from 'crypto';
-import DebtorService from '../service/debtor-service';
+import DebtorService, { WaiveFinesParams } from '../service/debtor-service';
 import ReportService, { BuyerReportService, SalesReportService } from '../service/report-service';
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
 import { reportPDFhelper } from '../helpers/express-pdf';
 import { PdfError } from '../errors';
 import { WaiveFinesRequest } from './request/debtor-request';
+import Dinero from 'dinero.js';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -331,7 +332,7 @@ export default class UserController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
           handler: this.waiveUserFines.bind(this),
-          body: { modelName: 'WaiveFinesRequest' },
+          body: { modelName: 'WaiveFinesRequest', allowBlankTarget: true },
         },
       },
     };
@@ -1604,7 +1605,7 @@ export default class UserController extends BaseController {
    * @summary Waive all given user's fines
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user
-   * @param {WaiveFinesRequest} request.body.required
+   * @param {WaiveFinesRequest} request.body
    * @operationId waiveUserFines
    * @security JWT
    * @return 204 - Success
@@ -1619,7 +1620,7 @@ export default class UserController extends BaseController {
     try {
       const id = parseInt(rawId, 10);
 
-      const user = await User.findOne({ where: { id }, relations: ['currentFines'] });
+      const user = await User.findOne({ where: { id }, relations: { currentFines: { fines: true } } });
       if (user == null) {
         res.status(404).json('Unknown user ID.');
         return;
@@ -1629,7 +1630,19 @@ export default class UserController extends BaseController {
         return;
       }
 
-      await new DebtorService().waiveFines(id, body);
+      const totalAmountOfFines = user.currentFines!.fines.reduce((total, f) => total.add(f.amount), Dinero());
+      // Backwards compatibility with old version, where you could only waive all user's fines
+      const amountToWaive = body?.amount ?? totalAmountOfFines.toObject();
+      if (amountToWaive.amount <= 0) {
+        res.status(400).json('Amount to waive cannot be zero or negative.');
+        return;
+      }
+      if (amountToWaive.amount > totalAmountOfFines.getAmount()) {
+        res.status(400).json('Amount to waive cannot be more than the total amount of fines.');
+        return;
+      }
+
+      await new DebtorService().waiveFines(id, { amount: amountToWaive } as WaiveFinesParams);
       res.status(204).send();
     } catch (e) {
       res.status(500).send();
