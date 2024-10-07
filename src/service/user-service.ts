@@ -54,6 +54,7 @@ import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import DebtorService from './debtor-service';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
+import { UserDefaulterRequest } from '../controller/request/user-defaulter-request';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -300,18 +301,26 @@ export default class UserService {
 
   /**
    * Check if users should become defaulter
-   * @param userId - ID of the user to check to default or not
+   * @param params - User defaulter request
    * @return boolean - Whether the user should become defaulter
    */
-  public static async checkIfUserShouldBeDefaulter(userId: number): Promise<boolean> {
-    const user = await User.findOne({ where: { id: userId } });
+  public static async checkIfUserShouldBeDefaulter(params: UserDefaulterRequest): Promise<boolean> {
+    const user = await User.findOne({ where: { id: params.userId } });
     if (!user) return false;
     if (user.type == UserType.INVOICE) return false;
 
-    const lastFineHandoutEvent = await FineHandoutEvent.count();
-    const fineResponses = (await DebtorService.getSingleFineHandoutEvent(lastFineHandoutEvent)).fines;
+    const userBalance = await new BalanceService().getBalance(params.userId);
+    let bigDebt: boolean;
+    if (params.amount != undefined) {
+      bigDebt = (userBalance.amount.amount - params.amount.amount) <= -20;
+    } else {
+      bigDebt = userBalance.amount.amount <= -20;
+    }
 
-    return ((fineResponses.map((f) => f.user.id == user.id)).length != 0);
+    const currentFine = await User.findOne({ where: { id: params.userId, currentFines: true } });
+
+
+    return (currentFine != undefined && bigDebt);
   }
 
   /**

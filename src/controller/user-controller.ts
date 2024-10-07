@@ -70,6 +70,7 @@ import ReportService, { BuyerReportService, SalesReportService } from '../servic
 import { ReturnFileType, UserReportParametersType } from 'pdf-generator-client';
 import { reportPDFhelper } from '../helpers/express-pdf';
 import { PdfError } from '../errors';
+import { UserDefaulterRequest } from './request/user-defaulter-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -129,6 +130,14 @@ export default class UserController extends BaseController {
           handler: this.acceptToS.bind(this),
           body: { modelName: 'AcceptTosRequest' },
           restrictions: { acceptedTOS: false },
+        },
+      },
+      '/checkDefaulterUser': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['*'],
+          ),
+          handler: this.checkDefaulterUser.bind(this),
         },
       },
       '/:id(\\d+)/authenticator/pin': {
@@ -906,6 +915,39 @@ export default class UserController extends BaseController {
       return;
     } catch (error) {
       this.logger.error('Could not accept ToS for user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/checkDefaulterUser
+   * @summary Check if a user is a defaulter
+   * @operationId checkDefaulterUser
+   * @tags users - Operations of the User controller
+   * @param {UserDefaulterRequest} request.body - Check request
+   * @security JWT
+   * @return {boolean} 200 - Whether user should be defaulter or not
+   * @return {string} 400 - Bad request
+   * @return {string} 500 - Internal server error
+   */
+  public async checkDefaulterUser(req: RequestWithToken, res:Response): Promise<void> {
+    this.logger.trace('Check if user is a defaulter', req.token.user);
+
+    const body = req.body as UserDefaulterRequest;
+
+    try {
+      const user = await UserService.getSingleUser(body.userId);
+      if (user == null) {
+        res.status(400).json('User not found.');
+        return;
+      }
+
+      const check = await UserService.checkIfUserShouldBeDefaulter(body);
+
+      res.status(200).json(check);
+      return;
+    } catch (error) {
+      this.logger.error('Could not check whether user should :', error);
       res.status(500).json('Internal server error.');
     }
   }

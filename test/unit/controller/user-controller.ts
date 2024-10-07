@@ -37,7 +37,6 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import Container from '../../../src/entity/container/container';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ProductRevision from '../../../src/entity/product/product-revision';
-import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import seedDatabase from '../../seed';
 import { verifyUserResponse } from '../validators';
@@ -78,6 +77,8 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
+import BalanceService from '../../../src/service/balance-service';
+import { UserDefaulterRequest } from '../../../src/controller/request/user-defaulter-request';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -100,7 +101,6 @@ describe('UserController', (): void => {
     products: Product[],
     productRevisions: ProductRevision[],
     containers: Container[],
-    containerRevisions: ContainerRevision[],
     pointsOfSale: PointOfSale[],
     pointOfSaleRevisions: PointOfSaleRevision[],
     transactions: Transaction[],
@@ -1529,6 +1529,74 @@ describe('UserController', (): void => {
         .send(body);
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('User already accepted ToS.');
+    });
+  });
+
+  describe('GET /users/checkDefaulterUser', (): void=> {
+    it('should return whether or not an user should become defaulter', async () => {
+      const user = ctx.users.find(async (u) => (await new BalanceService().getBalance(u.id)).amount.amount <= -2000 && u.currentFines != null );
+      expect(user).not.be.null;
+      const body: UserDefaulterRequest = {
+        userId: user.id,
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/checkDefaulterUser')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(body);
+
+      expect(res.status).to.be.equal(200);
+      expect(res.body).to.be.equal(true);
+    });
+    it('should return whether or not an user should become defaulter when deducting a certain amount', async () => {
+      const user = ctx.users.find(async (u) => (await new BalanceService().getBalance(u.id)).amount.amount <= -2000 && u.currentFines != null );
+      expect(user).not.be.null;
+
+      const currentBalance = (await new BalanceService().getBalance(user.id)).amount.amount;
+      const amount = (currentBalance - (currentBalance - 2000));
+      const body: UserDefaulterRequest = {
+        userId: user.id,
+        amount: {
+          amount: amount,
+          precision: 2,
+          currency: 'EUR',
+        },
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/checkDefaulterUser')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(body);
+
+      expect(res.status).to.be.equal(200);
+      expect(res.body).to.be.equal(true);
+    });
+    it('should return an 400 if user not found', async () => {
+      const userCount = await User.count();
+      const body: UserDefaulterRequest = {
+        userId: userCount + 1,
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/checkDefaulterUser')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(body);
+      expect(res.status).to.be.equal(400);
+    });
+    it('should return an 403 if user is not admin', async () => {
+      const user = ctx.users.find(async (u) => (await new BalanceService().getBalance(u.id)).amount.amount <= -2000 && u.currentFines != null );
+      expect(user).not.be.null;
+
+      const body: UserDefaulterRequest = {
+        userId: user.id,
+      };
+
+      const res = await request(ctx.app)
+        .get('/users/checkDefaulterUser')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(body);
+
+      expect(res.status).to.be.equal(403);
     });
   });
 
