@@ -80,6 +80,7 @@ import {
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
+import UserService from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -381,8 +382,9 @@ export default class TransactionService extends WithManager {
    * Creates a transaction response from a transaction
    * @returns {TransactionResponse.model} - the transaction response
    * @param transaction
+   * @param userDefaulter
    */
-  public async asTransactionResponse(transaction: Transaction):
+  public async asTransactionResponse(transaction: Transaction, userDefaulter?: boolean):
   Promise<TransactionResponse | undefined> {
     if (!transaction) {
       return undefined;
@@ -415,6 +417,7 @@ export default class TransactionService extends WithManager {
       )),
       pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
       totalPriceInclVat: { ...cost.toObject() } as DineroObjectResponse,
+      setUserDefaulter: userDefaulter,
     } as TransactionResponse;
   }
 
@@ -658,8 +661,11 @@ export default class TransactionService extends WithManager {
 
     await transaction.save();
 
+    const userDefaulter = await UserService.checkIfUserShouldBeDefaulter({ userId: req.from, amount: req.totalPriceInclVat });
+    if (userDefaulter) await UserService.updateUser(req.from, { defaulter: true });
+
     // save the transaction and invalidate user balance cache
-    const savedTransaction = await this.asTransactionResponse(transaction);
+    const savedTransaction = await this.asTransactionResponse(transaction, userDefaulter);
     await TransactionService.invalidateBalanceCache(savedTransaction);
 
     // save transaction and return response

@@ -48,6 +48,7 @@ import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import BalanceService from '../../../src/service/balance-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -732,6 +733,22 @@ describe('TransactionService', (): void => {
             .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
+    });
+    it('should soft-lock user if too big a debt', async () => {
+      const user = ctx.users.find(async (u) => (await new BalanceService().getBalance(u.id)).amount.amount <= -2000 && u.currentFines != null );
+      expect(user).not.be.null;
+
+      const defaulterValidTransReq: TransactionRequest = {
+        ...ctx.validTransReq,
+        from: user.id,
+        createdBy: user.id,
+      };
+      const savedTransaction = await new TransactionService().createTransaction(defaulterValidTransReq);
+      const updatedUser = await User.findOne({ where: { id: user.id } });
+
+
+      expect(savedTransaction.setUserDefaulter).to.be.true;
+      expect(updatedUser.defaulter).to.be.true;
     });
   });
 

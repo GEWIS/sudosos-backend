@@ -62,6 +62,7 @@ export interface BaseTransactionResponse extends BaseResponse {
  * has been created
  * @property {DineroObjectResponse} totalPriceInclVat.required - The total cost of the
  * transaction
+ * @property {Boolean} setUserDefaulter - Whether use has been made defaulter or not
  */
 export interface TransactionResponse extends BaseResponse {
   from: BaseUserResponse,
@@ -69,6 +70,7 @@ export interface TransactionResponse extends BaseResponse {
   subTransactions: SubTransactionResponse[],
   pointOfSale: BasePointOfSaleResponse,
   totalPriceInclVat: DineroObjectResponse,
+  setUserDefaulter?: boolean,
 }
 
 /**

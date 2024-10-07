@@ -312,9 +312,9 @@ export default class UserService {
     const userBalance = await new BalanceService().getBalance(params.userId);
     let bigDebt: boolean;
     if (params.amount != undefined) {
-      bigDebt = (userBalance.amount.amount - params.amount.amount) <= -20;
+      bigDebt = (userBalance.amount.amount - params.amount.amount) <= -50;
     } else {
-      bigDebt = userBalance.amount.amount <= -20;
+      bigDebt = userBalance.amount.amount <= -50;
     }
 
     const currentFine = await User.findOne({ where: { id: params.userId, currentFines: true } });
