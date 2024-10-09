@@ -48,9 +48,8 @@ import UserGotFined from '../mailer/messages/user-got-fined';
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 import { FineReport } from '../entity/report/fine-report';
-import { AppDataSource } from '../database/database';
-import { Raw } from 'typeorm';
-import { toMySQLString } from '../helpers/timestamps';
+import WithManager from '../database/with-manager';
+import QueryFilter from '../helpers/query-filter';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -61,6 +60,10 @@ export interface CalculateFinesParams {
 export interface HandOutFinesParams {
   referenceDate: Date;
   userIds: number[];
+}
+
+export interface WaiveFinesParams {
+  amount: DineroObjectRequest;
 }
 
 /**
@@ -80,7 +83,7 @@ function calculateFine(balance: DineroObject | DineroObjectResponse | DineroObje
   );
 }
 
-export default class DebtorService {
+export default class DebtorService extends WithManager {
   static asFineResponse(fine: Fine): FineResponse {
     return {
       id: fine.id,
@@ -117,13 +120,13 @@ export default class DebtorService {
   /**
    * Get a list of all fine handout events in chronological order
    */
-  public static async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
+  public async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
     const { take, skip } = pagination;
 
-    const events = await FineHandoutEvent.find({ take, skip, order: {
+    const events = await this.manager.find(FineHandoutEvent, { take, skip, order: {
       createdAt: 'DESC',
     } });
-    const count = await FineHandoutEvent.count();
+    const count = await this.manager.count(FineHandoutEvent);
 
     const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));
 
@@ -138,10 +141,10 @@ export default class DebtorService {
   /**
    * Return the fine handout event with the given id. Includes all its fines with the corresponding user
    */
-  public static async getSingleFineHandoutEvent(id: number): Promise<FineHandoutEventResponse> {
-    const fineHandoutEvent = await FineHandoutEvent.findOne({
+  public async getSingleFineHandoutEvent(id: number): Promise<FineHandoutEventResponse> {
+    const fineHandoutEvent = await this.manager.findOne(FineHandoutEvent, {
       where: { id },
-      relations: ['fines', 'fines.userFineGroup', 'fines.userFineGroup.user'],
+      relations: { fines: { userFineGroup: { user: true } } },
       order: { createdAt: 'DESC' },
     });
 
@@ -156,7 +159,7 @@ export default class DebtorService {
    * @param referenceDates Dates at which a user needs to have a negative balance. The first
    * date will be used to determine the size of the fine
    */
-  public static async calculateFinesOnDate({ userTypes, userIds, referenceDates }: CalculateFinesParams): Promise<UserToFineResponse[]> {
+  public async calculateFinesOnDate({ userTypes, userIds, referenceDates }: CalculateFinesParams): Promise<UserToFineResponse[]> {
     if (referenceDates.length === 0) throw new Error('No reference dates given.');
 
     const balances = await Promise.all(referenceDates.map((date) => new BalanceService().getBalances({
@@ -187,22 +190,22 @@ export default class DebtorService {
    * @param userIds Ids of all users to fine
    * @param createdBy User handing out fines
    */
-  public static async handOutFines({
+  public async handOutFines({
     referenceDate, userIds,
   }: HandOutFinesParams, createdBy: User): Promise<FineHandoutEventResponse> {
-    const previousFineGroup = (await FineHandoutEvent.find({
+    const previousFineGroup = (await this.manager.find(FineHandoutEvent, {
       order: { id: 'desc' },
       relations: ['fines', 'fines.userFineGroup'],
       take: 1,
     }))[0];
 
-    const balances = await new BalanceService().getBalances({
+    const balances = await new BalanceService(this.manager).getBalances({
       date: referenceDate,
       ids: userIds,
     });
 
     // NOTE: executed in single transaction
-    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await AppDataSource.transaction(async (manager) => {
+    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await this.manager.transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
         referenceDate,
@@ -225,10 +228,10 @@ export default class DebtorService {
             user: user,
             fines: [],
           });
-          userFineGroup = await userFineGroup.save();
+          userFineGroup = await manager.save(UserFineGroup, userFineGroup);
           if (amount.getAmount() > 0) {
             user.currentFines = userFineGroup;
-            await manager.save(user);
+            await manager.save(User, user);
           }
         }
 
@@ -265,7 +268,7 @@ export default class DebtorService {
       updatedAt: fineHandoutEvent1.updatedAt.toISOString(),
       referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
       createdBy: parseUserToBaseResponse(fineHandoutEvent1.createdBy, false),
-      fines: fines1.map((f) => this.asFineResponse(f)),
+      fines: fines1.map((f) => DebtorService.asFineResponse(f)),
     };
   }
 
@@ -273,33 +276,36 @@ export default class DebtorService {
    * Delete a fine with its transfer, but keep the FineHandoutEvent (they can be empty)
    * @param id
    */
-  public static async deleteFine(id: number): Promise<void> {
-    const fine = await Fine.findOne({ where: { id }, relations: ['transfer', 'userFineGroup', 'userFineGroup.fines'] });
+  public async deleteFine(id: number): Promise<void> {
+    const fine = await this.manager.findOne(Fine, { where: { id }, relations: ['transfer', 'userFineGroup', 'userFineGroup.fines'] });
     if (fine == null) return;
 
     const { transfer, userFineGroup } = fine;
 
-    await Fine.remove(fine);
-    await Transfer.remove(transfer);
+    await this.manager.remove(Fine, fine);
+    await this.manager.remove(Transfer, transfer);
     if (userFineGroup.fines.length === 1) {
-      await UserFineGroup.remove(userFineGroup);
+      await this.manager.remove(UserFineGroup, userFineGroup);
     }
     if (userFineGroup.fines.length > 1) {
       // If user does not have a debt anymore, remove the UserFineGroup reference
       const newBalance = await new BalanceService().getBalance(userFineGroup.userId);
       if (newBalance.amount.amount < 0) return;
-      await User.update(userFineGroup.userId, { currentFines: null });
+      await this.manager.update(User, userFineGroup.userId, { currentFines: null });
     }
   }
 
   /**
-   * Waive a user's unpaid fines by creating a transfer nullifying them
-   * @param userId
+   * Waive a user's unpaid fines (partially) by creating a transfer which puts some money
+   * back into the user's account. If the user's fines were already (partially) waived, the
+   * existing transfer waiving the fines will be replaced by a new transfer.
+   * @param userId User to waive fines for
+   * @param params
    */
-  public static async waiveFines(userId: number): Promise<UserFineGroup> {
-    const user = await User.findOne({
+  public async waiveFines(userId: number, params: WaiveFinesParams): Promise<UserFineGroup> {
+    const user: User = await this.manager.findOne(User, {
       where: { id: userId },
-      relations: ['currentFines', 'currentFines.fines'],
+      relations: { currentFines: { fines: true, waivedTransfer: true } },
     });
     if (user == null) throw new Error(`User with ID ${userId} does not exist`);
     if (user.currentFines == null) return;
@@ -307,20 +313,31 @@ export default class DebtorService {
     const userFineGroup = user.currentFines;
     const amount = userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount: 0 }));
 
-    // Create the waived transfer
-    userFineGroup.waivedTransfer = await new TransferService().createTransfer({
-      amount: amount.toObject(),
+    if (params.amount.amount <= 0) throw new Error('Amount to waive cannot be zero or negative.');
+    if (params.amount.amount > amount.getAmount()) throw new Error('Amount to waive cannot be greater than the total amount of fines.');
+
+    // If the fine is already partially waived, delete the old transfer
+    if (userFineGroup.waivedTransfer) {
+      await this.manager.remove(Transfer, userFineGroup.waivedTransfer);
+    }
+
+    // Create the transfer for the waived amount
+    userFineGroup.waivedTransfer = await new TransferService(this.manager).createTransfer({
+      amount: params.amount,
       toId: user.id,
       description: 'Waived fines',
       fromId: undefined,
     });
-    await userFineGroup.save();
+    await this.manager.save(UserFineGroup, userFineGroup);
 
-    // Remove the fine from the user. This must be done manually,
-    // because the user can still have a negative balance when the
-    // fine is waived.
-    user.currentFines = null;
-    await user.save();
+    if (params.amount.amount === amount.getAmount()) {
+      // Remove the fine from the user when the total amount is waived.
+      // This must be done manually, because the user can still have a
+      // negative balance when the fine is waived.
+      await this.manager.update(User, { id: user.id }, { currentFines: null });
+    }
+
+    return userFineGroup;
   }
 
   /**
@@ -332,13 +349,13 @@ export default class DebtorService {
    * @param referenceDate
    * @param userIds
    */
-  public static async sendFineWarnings({
+  public async sendFineWarnings({
     referenceDate, userIds,
   }: HandOutFinesParams): Promise<void> {
     const fines = await this.calculateFinesOnDate({ userIds, referenceDates: [referenceDate] });
 
     await Promise.all(fines.map(async (f) => {
-      const user = await User.findOne({ where: { id: f.id } });
+      const user = await this.manager.findOne(User, { where: { id: f.id } });
       const balance = f.balances[0];
       if (balance == null) throw new Error('Missing balance');
       return Mailer.getInstance().send(user, new UserWillGetFined({
@@ -354,7 +371,7 @@ export default class DebtorService {
    * @param fromDate
    * @param toDate
    */
-  public static async getFineReport(fromDate: Date, toDate: Date): Promise<FineReport> {
+  public async getFineReport(fromDate: Date, toDate: Date): Promise<FineReport> {
     let handedOut = dinero({ amount: 0 });
     let waivedAmount = dinero({ amount: 0 });
     const count = {
@@ -363,16 +380,12 @@ export default class DebtorService {
     };
 
     // Get all transfers that have a fine or waived fine
-    const transfers = await Transfer.find({
-      relations: ['fine', 'fine.transfer',  'waivedFines', 'waivedFines.waivedTransfer'],
-      where: [{ fine: true, createdAt: Raw(
-        (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
-        { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(toDate) },
-      ) },
-      { waivedFines: true, createdAt: Raw(
-        (alias) => `${alias} >= :fromDate AND ${alias} < :tillDate`,
-        { fromDate: toMySQLString(fromDate), tillDate: toMySQLString(toDate) },
-      ) }],
+    const transfers = await this.manager.find(Transfer, {
+      relations: { fine: { transfer: true }, waivedFines: { waivedTransfer: true } },
+      where: [
+        { fine: true, createdAt: QueryFilter.createFilterWhereDate(fromDate, toDate) },
+        { waivedFines: true, createdAt: QueryFilter.createFilterWhereDate(fromDate, toDate) },
+      ],
     });
 
     transfers.forEach((transfer) => {
