@@ -23,7 +23,6 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import { addDays } from 'date-fns';
 import ContainerSeeder from './container-seeder';
 
 export default class PointOfSaleSeeder extends WithManager {
@@ -81,8 +80,8 @@ export default class PointOfSaleSeeder extends WithManager {
     const revisions: PointOfSaleRevision[] = [];
     // Only allow products with same owner in container.
     const candidates = containerRevisions.filter((c) => c.container.owner === pointOfSale.owner);
-    const startDate = addDays(new Date(2020, 0, 1), 2 - (dateOffset * 2));
-    const endDate = addDays(new Date(2020, 0, 1), 3 - (dateOffset * 2));
+    const startDate = new Date(new Date(2020, 0, 1).getTime() + ((1000 * 60 * 60 * 24) * (2 - (dateOffset * 2))));
+    const endDate = new Date(new Date(2020, 0, 1).getTime() + ((1000 * 60 * 60 * 24) * (3 - (dateOffset * 2))));
 
     for (let rev = 1; rev <= count; rev += 1) {
       revisions.push(Object.assign(new PointOfSaleRevision(), {
