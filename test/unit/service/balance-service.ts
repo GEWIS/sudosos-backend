@@ -64,7 +64,8 @@ describe('BalanceService', (): void => {
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(seededUsers);
     const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { fines, fineTransfers, users } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
+    const { fines, fineTransfers, users, userFineGroups } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
+    const { waiveFineTransfers } = await new FineSeeder().seedWaivers(userFineGroups);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
@@ -74,7 +75,7 @@ describe('BalanceService', (): void => {
       pointOfSaleRevisions,
       transactions,
       subTransactions,
-      transfers: transfers.concat(fineTransfers),
+      transfers: transfers.concat(fineTransfers).concat(waiveFineTransfers),
       fines,
       spec: await Swagger.importSpecification(),
     };
@@ -88,12 +89,21 @@ describe('BalanceService', (): void => {
     if (user.currentFines == null) {
       expect(balance.fine).to.be.null;
       expect(balance.fineSince).to.be.null;
+      return;
+    }
+
+    expect(balance.fine).to.not.be.null;
+    const fines = await Fine.find({ where: { userFineGroup: { id: user.currentFines.id } } }); // user.currentFines.fines;
+    const fineAmount = fines.reduce((sum, fine) => sum + fine.amount.getAmount(), 0);
+    expect(balance.fine.amount).to.equal(fineAmount);
+    expect(new Date(balance.fineSince).getTime()).to.equal(user.currentFines.createdAt.getTime());
+
+    if (user.currentFines.waivedTransfer == null) {
+      expect(balance.fineWaived).to.be.null;
     } else {
-      expect(balance.fine).to.not.be.null;
-      const fines = await Fine.find({ where: { userFineGroup: { id: user.currentFines.id } } }); // user.currentFines.fines;
-      const fineAmount = fines.reduce((sum, fine) => sum + fine.amount.getAmount(), 0);
-      expect(balance.fine.amount).to.equal(fineAmount);
-      expect(new Date(balance.fineSince).getTime()).to.equal(user.currentFines.createdAt.getTime());
+      expect(balance.fineWaived).to.not.be.null;
+      expect(balance.fineWaived).to.not.be.undefined;
+      expect(balance.fineWaived.amount).to.equal(user.currentFines.waivedTransfer.amountInclVat.getAmount());
     }
   }
 

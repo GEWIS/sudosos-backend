@@ -97,6 +97,45 @@ export default class FineSeeder extends WithManager {
   }
 
   /**
+   * Waive some of the fines: for each 2/5th group, waive half the total fines.
+   * @param userFineGroups
+   */
+  public async seedWaivers(userFineGroups: UserFineGroup[]) {
+    const transfers: Transfer[] = [];
+    const newUserFineGroups: UserFineGroup[] = [];
+
+    for (let i = 0; i < userFineGroups.length; i++) {
+      const userFineGroup = userFineGroups[i];
+      if (i % 5 !== 1) {
+        newUserFineGroups.push(userFineGroup);
+        continue;
+      }
+
+      const { user } = userFineGroup;
+      let amountToWaive = userFineGroup.fines
+        .reduce((total, f) => total.add(f.amount), dinero())
+        .divide(2);
+
+      const transfer = await this.manager.save(Transfer, {
+        to: user,
+        toId: user.id,
+        amountInclVat: amountToWaive,
+        description: 'Seeded waiver',
+      });
+      transfers.push(transfer);
+
+      userFineGroup.waivedTransfer = transfer;
+      await this.manager.save(UserFineGroup, userFineGroup);
+      userFineGroups.push(userFineGroup);
+    }
+
+    return {
+      waiveFineTransfers: transfers,
+      userFineGroups: newUserFineGroups,
+    };
+  }
+
+  /**
    * Add two fineHandoutEvents to the database, one on 2021-01-01 and the other at the current time.
    * @param users
    * @param transactions
