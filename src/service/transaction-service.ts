@@ -354,7 +354,9 @@ export default class TransactionService extends WithManager {
       ...update,
       version: update.version + 1,
       updatedAt: new Date(),
-    }) : Object.assign(new Transaction(), {})) as Transaction;
+    }) : Object.assign(new Transaction(), {
+      createdAt: req.createdAt ? new Date(req.createdAt) : new Date(),
+    })) as Transaction;
 
     // get users
     transaction.from = await this.manager.findOne(User, { where: { id: req.from } });
