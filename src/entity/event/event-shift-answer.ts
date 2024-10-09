@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of event-shift-answer.
+ *
+ * @module events
+ */
+
 import {
   Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';

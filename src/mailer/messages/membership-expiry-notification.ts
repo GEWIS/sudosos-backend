@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the membership-expiry-notification.
+ *
+ * @module internal/mailer
+ */
+
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';

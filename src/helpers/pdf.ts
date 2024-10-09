@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the pdf.
+ *
+ * @module helpers
+ */
+
 import { Identity, Product, ProductPricing, TotalPricing, VAT } from 'pdf-generator-client';
 import User from '../entity/user/user';
 import { Report, ReportProductEntry, ReportVatEntry } from '../entity/report/report';

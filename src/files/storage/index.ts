@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the storage.
+ *
+ * @module internal/files/storage
+ */
+
 export { default as DiskStorage } from './disk-storage';
 export { default as FileStorage } from './file-storage';
 export * from './locations';

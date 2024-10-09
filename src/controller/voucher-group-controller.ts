@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the voucher-group-controller.
+ *
+ * @module vouchers
+ */
+
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';

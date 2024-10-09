@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product.
+ *
+ * @module catalogue/products
+ * @mergeTarget
+ */
+
 import {
   Column, DeleteDateColumn,
   Entity, JoinColumn,

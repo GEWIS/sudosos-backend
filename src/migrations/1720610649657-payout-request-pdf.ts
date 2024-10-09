@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * @module
+ * @hidden
+ */
+
 import { MigrationInterface, QueryRunner, Table, TableColumn, TableForeignKey } from 'typeorm';
 
 export class PayoutRequestPdf1720610649657 implements MigrationInterface {

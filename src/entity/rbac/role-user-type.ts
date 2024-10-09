@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the role-user-type.
+ *
+ * @module rbac
+ */
+
 import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import Role from './role';
 import { UserType } from '../user/user';

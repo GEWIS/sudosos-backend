@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of user-report-pdf-service.
+ *
+ * @module internal/pdf/user-report-pdf-service
+ */
+
 import { BuyerReport, ReportProductEntry, SalesReport } from '../../entity/report/report';
 import {
   FileResponse,

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-request-spec.
+ *
+ * @module internal/spec/invoice-request-spec
+ */
+
 import { FindOptionsRelations, In } from 'typeorm';
 import {
   BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,

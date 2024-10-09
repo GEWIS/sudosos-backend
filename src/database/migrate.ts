@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of migrate.
+ *
+ * @module internal/migrations
+ * @mergeTarget
+ */
+
 import { config } from 'dotenv';
 import { Application } from '../index';
 import log4js from 'log4js';

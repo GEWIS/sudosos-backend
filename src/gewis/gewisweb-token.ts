@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the gewisweb-token.
+ *
+ * @module GEWIS
+ */
+
 export default interface GewiswebToken {
   /**
    * JWT token issuer.

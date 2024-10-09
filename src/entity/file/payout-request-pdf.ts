@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of payout-request-pdf.
+ *
+ * @module payout-requests
+ */
+
 import { Entity } from 'typeorm';
 import Pdf from './pdf-file';
 

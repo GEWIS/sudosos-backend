@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the mail-body-generator.
+ *
+ * @module internal/mailer
+ */
+
 import { Language, MailLanguageMap } from './mail-message';
 import User from '../entity/user/user';
 import fs from 'fs';

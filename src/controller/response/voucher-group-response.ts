@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the voucher-group-response.
+ *
+ * @module vouchers
+ */
+
 import BaseResponse from './base-response';
 import { UserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';

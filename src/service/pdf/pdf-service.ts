@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of pdf-service.
+ *
+ * @module internal/pdf
+ */
+
 import Pdf from '../../entity/file/pdf-file';
 import {
   Client, FileResponse,

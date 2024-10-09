@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the event-service.
+ *
+ * @module events
+ */
+
 import { Between, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   BaseEventAnswerResponse,

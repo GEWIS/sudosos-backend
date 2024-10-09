@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * THis is the module page of the root-controller.
+ *
+ * @module internal/controllers
+ */
+
 import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of hash-based-authentication-method.
+ *
+ * @module authentication
+ */
+
 import { Column } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 

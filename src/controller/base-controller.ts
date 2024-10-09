@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of base-controller.
+ *
+ * @module internal/controllers
+ */
+
 import express, { Router, RequestHandler } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Policy, { MethodPolicy } from './policy';

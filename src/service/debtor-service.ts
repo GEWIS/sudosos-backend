@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the debtor-service.
+ *
+ * @module debtors
+ */
+
 import User, { UserType } from '../entity/user/user';
 import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-response.
+ *
+ * @module stripe
+ */
+
 import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
 import { StripePaymentIntentState } from '../../entity/stripe/stripe-payment-intent-status';

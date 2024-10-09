@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seller-payout-response.
+ *
+ * @module seller-payouts
+ */
+
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';

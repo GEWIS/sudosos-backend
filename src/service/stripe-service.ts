@@ -18,9 +18,15 @@
  *  @license
  */
 
+/**
+ * This is the module page of the stripe-service.
+ *
+ * @module stripe
+ */
+
 import Stripe from 'stripe';
 import { Dinero } from 'dinero.js';
-import { getLogger, Logger } from 'log4js';
+import log4js, { Logger } from 'log4js';
 import User from '../entity/user/user';
 import StripeDeposit from '../entity/stripe/stripe-deposit';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -51,7 +57,7 @@ export default class StripeService extends WithManager {
     this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
       apiVersion: STRIPE_API_VERSION,
     });
-    this.logger = getLogger('StripeController');
+    this.logger = log4js.getLogger('StripeController');
   }
 
   /**

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the payout-request-status-request.
+ *
+ * @module payout-requests
+ */
+
 import { PayoutRequestState } from '../../entity/transactions/payout/payout-request-status';
 
 /**

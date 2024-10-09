@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-subscriber.
+ *
+ * @module internal/subscribers/transaction-subscriber
+ */
+
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
 import User, { NotifyDebtUserTypes } from '../entity/user/user';
@@ -25,7 +31,7 @@ import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { getLogger } from 'log4js';
+import log4js from 'log4js';
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {
@@ -77,6 +83,6 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     Mailer.getInstance().send(user, new UserDebtNotification({
       balance: DineroTransformer.Instance.from(currentBalance),
       url: '',
-    })).catch((e) => getLogger('Transaction').error(e));
+    })).catch((e) => log4js.getLogger('Transaction').error(e));
   }
 }

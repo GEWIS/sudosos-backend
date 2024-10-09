@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-service.
+ *
+ * @module catalogue/products
+ */
+
 import {
   FindManyOptions,
   FindOptionsRelations,

@@ -18,6 +18,13 @@
  *  @license
  */
 
+
+/**
+ * This is the module page of the transfer-subscriber.
+ *
+ * @module internal/subscribers/transfer-subscriber
+ */
+
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
 import User from '../entity/user/user';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the balance-response.
+ *
+ * @module balance
+ */
+
 import { DineroObjectResponse } from './dinero-response';
 import { PaginationResult } from '../../helpers/pagination';
 

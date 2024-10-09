@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seller-payout.
+ *
+ * @module seller-payouts
+ * @mergeTarget
+ */
+
 import BasePayout from './base-payout';
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import SellerPayoutPdf from '../../file/seller-payout-pdf';

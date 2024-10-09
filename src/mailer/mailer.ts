@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of mailer.
+ *
+ * @module internal/mailer
+ */
+
 import { Transporter } from 'nodemailer';
 import log4js, { Logger } from 'log4js';
 import createSMTPTransporter from './transporter';

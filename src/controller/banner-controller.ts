@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of banner-controller.
+ *
+ * @module banners
+ */
+
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import { UploadedFile } from 'express-fileupload';

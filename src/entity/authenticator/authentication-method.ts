@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of authentication-method.
+ *
+ * @module authentication
+ */
+
 import {
   JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';

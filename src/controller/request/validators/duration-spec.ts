@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the duration-spec.
+ *
+ * @module internal/spec/duration-spec
+ */
+
 import {
   Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';

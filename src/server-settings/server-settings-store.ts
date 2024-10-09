@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the server-settings store.
+ *
+ * @module internal/server-settings
+ */
+
 import { Repository } from 'typeorm';
 import ServerSetting, { ISettings } from '../entity/server-setting';
 import SettingsDefaults from './setting-defaults';

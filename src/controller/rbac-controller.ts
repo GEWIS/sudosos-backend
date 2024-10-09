@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of rbac-controller.
+ *
+ * @module rbac
+ */
+
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-response.
+ *
+ * @module transactions
+ */
+
 import { DineroObject } from 'dinero.js';
 import BaseResponse from './base-response';
 import { BasePointOfSaleResponse } from './point-of-sale-response';

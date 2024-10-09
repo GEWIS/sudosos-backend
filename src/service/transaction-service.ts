@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction-service.
+ *
+ * @module transactions
+ */
+
 import { Brackets, In, IsNull, SelectQueryBuilder } from 'typeorm';
 import dinero from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';

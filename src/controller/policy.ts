@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of policy.
+ *
+ * @module internal/controller
+ */
+
 import { RequestHandler } from 'express';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { TokenRestrictions } from '../middleware/restriction-middleware';

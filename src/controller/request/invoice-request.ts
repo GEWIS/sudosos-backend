@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the invoice-request.
+ *
+ * @module invoicing
+ */
+
 import { InvoiceState } from '../../entity/invoices/invoice-status';
 import { DineroObjectRequest } from './dinero-request';
 

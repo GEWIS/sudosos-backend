@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of product-image.
+ *
+ * @module catalogue/products
+ */
+
 import { Entity } from 'typeorm';
 import BaseFile from './base-file';
 

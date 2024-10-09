@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-ean-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationEanRequest
  * @property {string} eanCode.required
  */

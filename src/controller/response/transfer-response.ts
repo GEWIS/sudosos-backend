@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transfer-response.
+ *
+ * @module transfers
+ */
+
 import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
 import { BaseUserResponse } from './user-response';

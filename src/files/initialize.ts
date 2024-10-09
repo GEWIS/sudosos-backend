@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the initialize-disk-storage.
+ *
+ * @module internal/files
+ */
+
 import * as fs from 'fs';
 import path from 'path';
 import * as locations from './storage/locations';

@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of banner.
+ *
+ * @module banners
+ * @mergeTarget
+ */
+
 import {
   Column, Entity, JoinColumn, OneToOne,
 } from 'typeorm';

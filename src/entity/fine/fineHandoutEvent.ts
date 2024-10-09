@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of fine-handout-event.
+ *
+ * @module fines
+ */
+
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import BaseEntity from '../base-entity';
 import Fine from './fine';

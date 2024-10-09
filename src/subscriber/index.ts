@@ -18,5 +18,11 @@
  *  @license
  */
 
+/**
+ * This is the module page of the subscribers.
+ *
+ * @module internal/subscribers
+ */
+
 export { default as TransactionSubscriber } from './transaction-subscriber';
 export { default as TransferSubscriber } from './transfer-subscriber';

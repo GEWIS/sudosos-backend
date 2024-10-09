@@ -19,6 +19,11 @@
  */
 
 /**
+ * This is the module page of the accept-tos-request.
+ * @module users
+ */
+
+/**
  * @typedef {object} AcceptTosRequest
  * @property {boolean} extensiveDataProcessing.required - Whether data about this
  * user can be used (non-anonymously) for more data science!

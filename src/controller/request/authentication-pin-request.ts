@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-pin-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationPinRequest
  * @property {number} userId.required
  * @property {string} pin.required

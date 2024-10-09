@@ -91,7 +91,7 @@ describe('AuthenticationService', (): void => {
       ],
       givenName: 'Sudo',
       sn: 'SOS',
-      objectGUID: '1',
+      objectGUID: Buffer.from('11', 'hex'),
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',
     };
@@ -149,7 +149,7 @@ describe('AuthenticationService', (): void => {
     });
     it('should login without creating a user if already bound', async () => {
       const otherValidADUser = {
-        ...ctx.validADUser, givenName: 'Test', objectGUID: 2, sAMAccountName: 'm0041',
+        ...ctx.validADUser, givenName: 'Test', objectGUID: Buffer.from('22', 'hex'), sAMAccountName: 'm0041',
       };
       let DBUser = await User.findOne(
         { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },

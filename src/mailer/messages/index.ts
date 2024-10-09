@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the mailer messages.
+ *
+ * @module internal/mailer
+ */
+
 export * from './changed-pin';
 export * from './forgot-event-planning';
 export * from './hello-world';
