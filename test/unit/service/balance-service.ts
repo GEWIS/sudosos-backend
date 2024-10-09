@@ -65,15 +65,15 @@ describe('BalanceService', (): void => {
     const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
     const { fines, fineTransfers, users, userFineGroups } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
-    console.log('====================================');
-    console.log('Users before');
-    console.log(users);
-    console.log('====================================');
+    // console.log('====================================');
+    // console.log('Users before');
+    // console.log(users);
+    // console.log('====================================');
     const { waiveFineTransfers } = await new FineSeeder().seedWaivers(userFineGroups);
-    console.log('====================================');
-    console.log('Users after');
-    console.log(users);
-    console.log('====================================');
+    // console.log('====================================');
+    // console.log('Users after');
+    // console.log(users);
+    // console.log('====================================');
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
