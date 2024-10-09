@@ -231,6 +231,7 @@ describe('InactiveAdministrativeCostController', async () => {
       const skip = 3;
       const res = await request(ctx.app)
         .get('/inactiveAdministrativeCosts')
+        .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       const inactiveAdministrativeCosts = res.body.records as BaseInactiveAdministrativeCostResponse[];
@@ -339,11 +340,11 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return an HTTP 404 if inactive administrative cost does not exist', async () => {
       const count = await InactiveAdministrativeCost.count();
-      const inactiveAdministrativeCost = (await InactiveAdministrativeCost.findOne({ where: { id: count + 1 } }));
+      const inactiveAdministrativeCost = await InactiveAdministrativeCost.findOne({ where: { id: count + 2 } });
       expect(inactiveAdministrativeCost).to.be.null;
 
       const res = await request(ctx.app)
-        .delete(`/inactiveAdministrativeCosts/${count + 1}`)
+        .delete(`/inactiveAdministrativeCosts/${count + 2}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(404);
