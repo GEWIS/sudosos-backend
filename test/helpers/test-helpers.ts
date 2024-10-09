@@ -132,3 +132,15 @@ export function restoreLDAPEnv(ldapEnv:{ [key: string]: any; }) {
   process.env.ENABLE_LDAP = ldapEnv.ENABLE_LDAP;
   process.env.LDAP_USER_BASE = ldapEnv.LDAP_USER_BASE;
 }
+
+export function setDefaultLDAPEnv() {
+  process.env.LDAP_SERVER_URL = 'ldaps://gewisdc03.gewis.nl:636';
+  process.env.LDAP_BASE = 'DC=gewiswg,DC=gewis,DC=nl';
+  process.env.LDAP_USER_FILTER = '(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=PRIV - SudoSOS Users,OU=Privileges,OU=Groups,DC=gewiswg,DC=gewis,DC=nl)(mail=*)(sAMAccountName=%u))';
+  process.env.LDAP_BIND_USER = 'CN=Service account SudoSOS,OU=Service Accounts,OU=Special accounts,DC=gewiswg,DC=gewis,DC=nl';
+  process.env.LDAP_BIND_PW = 'BIND PW';
+  process.env.LDAP_SHARED_ACCOUNT_FILTER = 'OU=SudoSOS Shared Accounts,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
+  process.env.LDAP_ROLE_FILTER = 'OU=SudoSOS Roles,OU=Groups,DC=GEWISWG,DC=GEWIS,DC=NL';
+  process.env.ENABLE_LDAP = 'true';
+  process.env.LDAP_USER_BASE = 'CN=PRIV - SudoSOS Users,OU=SudoSOS Roles,OU=Groups,DC=gewiswg,DC=gewis,DC=nl';
+}
