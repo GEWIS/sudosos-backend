@@ -48,6 +48,7 @@ import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import WithManager from '../database/with-manager';
+import UserToLocalUser from '../mailer/messages/user-to-local-user';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -294,20 +295,18 @@ export default class UserService extends WithManager {
 
   /**
    * Change user to local User
-   * @param userIds - ID of the user to change to local user
+   * @param userId - ID of the user to change to local user
    */
-  public async changeToLocalUsers(userIds: number[]): Promise<UserResponse[]> {
-    const users = await User.find({ where: { id: In(userIds) } });
-    if (!users) return undefined;
+  public async changeToLocalUsers(userId: number): Promise<UserResponse> {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) return undefined;
 
-    return users.map(async (u) => {
-      const resetTokenInfo = await new AuthenticationService().createResetToken(user);
-      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
-        throw e;
-      });
-
-      return this.updateUser(u.id, { canGoIntoDebt: false, type: UserType.LOCAL_USER });
+    const resetTokenInfo = await new AuthenticationService().createResetToken(user);
+    Mailer.getInstance().send(user, new UserToLocalUser({ email: user.email, resetTokenInfo })).then().catch((e) => {
+      throw e;
     });
+
+    return this.updateUser(userId, { canGoIntoDebt: false, type: UserType.LOCAL_USER });
   }
 
 
