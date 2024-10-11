@@ -394,7 +394,7 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const users = await UserService.getUsers(filters, { take, skip });
+      const users = await new UserService().getUsers(filters, { take, skip });
       res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
@@ -712,7 +712,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const members = await UserService.getUsers({ organId }, { take, skip });
+      const members = await new UserService().getUsers({ organId }, { take, skip });
       res.status(200).json(members);
     } catch (error) {
       this.logger.error('Could not get organ members:', error);
@@ -736,7 +736,7 @@ export default class UserController extends BaseController {
 
     try {
       // Get the user object if it exists
-      const user = await UserService.getSingleUser(asNumber(parameters.id));
+      const user = await new UserService().getSingleUser(asNumber(parameters.id));
       // If it does not exist, return a 404 error
       if (user == null) {
         res.status(404).json('Unknown user ID.');
@@ -773,7 +773,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const user = await UserService.createUser(body);
+      const user = await new UserService().createUser(body);
       res.status(201).json(user);
     } catch (error) {
       this.logger.error('Could not create user:', error);
@@ -830,7 +830,7 @@ export default class UserController extends BaseController {
       } as User;
       await User.update(parameters.id, user);
       res.status(200).json(
-        await UserService.getSingleUser(asNumber(parameters.id)),
+        await new UserService().getSingleUser(asNumber(parameters.id)),
       );
     } catch (error) {
       this.logger.error('Could not update user:', error);
@@ -893,13 +893,13 @@ export default class UserController extends BaseController {
     const body = req.body as AcceptTosRequest;
 
     try {
-      const user = await UserService.getSingleUser(id);
+      const user = await new UserService().getSingleUser(id);
       if (user == null) {
         res.status(404).json('User not found.');
         return;
       }
 
-      const success = await UserService.acceptToS(id, body);
+      const success = await new UserService().acceptToS(id, body);
       if (!success) {
         res.status(400).json('User already accepted ToS.');
         return;
@@ -1511,7 +1511,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const mutations = await UserService.getUserFinancialMutations(user, filters, { take, skip });
+      const mutations = await new UserService().getUserFinancialMutations(user, filters, { take, skip });
       res.status(200).json(mutations);
     } catch (error) {
       this.logger.error('Could not get financial mutations of user:', error);

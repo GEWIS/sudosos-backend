@@ -131,7 +131,7 @@ export default class GewisDBService {
 
         const currentBalance = await new BalanceService().getBalance(gewisUser.user.id);
         const isZero = currentBalance.amount.amount === 0;
-        const user = await UserService.closeUser(gewisUser.user.id, isZero);
+        const user = await new UserService().closeUser(gewisUser.user.id, isZero);
         Mailer.getInstance().send(gewisUser.user, new MembershipExpiryNotification({
           balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
         }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
@@ -147,7 +147,7 @@ export default class GewisDBService {
       logger.log(`Updated user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
       if (!commit) return null;
 
-      return UserService.updateUser(gewisUser.user.id, update);
+      return new UserService().updateUser(gewisUser.user.id, update);
     }
   }
 

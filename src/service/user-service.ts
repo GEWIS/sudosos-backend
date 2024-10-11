@@ -47,6 +47,7 @@ import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
 import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
+import WithManager from '../database/with-manager';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -95,13 +96,13 @@ export function parseGetFinancialMutationsFilters(req: RequestWithToken): Financ
   };
 }
 
-export default class UserService {
+export default class UserService extends WithManager {
   /**
    * Function for getting al Users
    * @param filters - Query filters to apply
    * @param pagination - Pagination to adhere to
    */
-  public static async getUsers(
+  public async getUsers(
     filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
   ): Promise<PaginatedUserResponse> {
     const { take, skip } = pagination;
@@ -196,7 +197,7 @@ export default class UserService {
    * @returns User if exists
    * @returns undefined if user does not exits
    */
-  public static async getSingleUser(id: number) {
+  public async getSingleUser(id: number) {
     const user = await this.getUsers({ id, deleted: false });
     if (!user.records[0]) {
       return undefined;
@@ -209,7 +210,7 @@ export default class UserService {
    * @param createUserRequest - The user to create
    * @returns The created user
    */
-  public static async createUser(createUserRequest: CreateUserRequest) {
+  public async createUser(createUserRequest: CreateUserRequest) {
     // Check if user needs to accept TOS.
     const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
     const user = await User.save({
@@ -241,7 +242,7 @@ export default class UserService {
    * @throws Error if the user has a non-zero balance and is being deleted.
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
-  public static async closeUser(userId: number, deleted = false): Promise<UserResponse> {
+  public async closeUser(userId: number, deleted = false): Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId, deleted: false } });
     if (!user) return undefined;
 
@@ -265,7 +266,7 @@ export default class UserService {
    * @param userId - ID of the user to update.
    * @param updateUserRequest - The update object.
    */
-  public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
+  public async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
   Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId } });
     if (!user) return undefined;
@@ -280,7 +281,7 @@ export default class UserService {
    * @param params
    * @returns boolean - Whether the request has successfully been processed
    */
-  public static async acceptToS(userId: number, params: AcceptTosRequest): Promise<boolean> {
+  public async acceptToS(userId: number, params: AcceptTosRequest): Promise<boolean> {
     const user = await User.findOne({ where: { id: userId } });
     if (!user) return false;
 
@@ -292,12 +293,33 @@ export default class UserService {
   }
 
   /**
+   * Change user to local User
+   * @param userId - ID of the user to change to local user
+   */
+  public async changeToLocalUsers(userIds: number[]): Promise<UserResponse[]> {
+    const users = await User.find({ where: { id: In(userIds) } });
+    if (!users) return undefined;
+    
+    const userResponses: UserResponse[] = users.map(async (u) => {
+      const resetTokenInfo = await new AuthenticationService().createResetToken(user);
+      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
+        throw e;
+      });
+
+      return this.updateUser(u.id, { canGoIntoDebt: false, type: UserType.LOCAL_USER });
+    });
+
+    return; 
+  }
+
+
+  /**
    * Combined query to return a users transfers and transactions from the database
    * @param user - The user of which to get.
    * @param filters - Filter parameters to adhere to
    * @param paginationParameters - Pagination Parameters to adhere to.
    */
-  public static async getUserFinancialMutations(
+  public async getUserFinancialMutations(
     user: User,
     filters: FinancialMutationsFilterParams = {},
     paginationParameters: PaginationParameters = {},
@@ -343,7 +365,7 @@ export default class UserService {
    * @param left - User to check
    * @param right - User to check
    */
-  public static async areInSameOrgan(left: number, right: number) {
+  public async areInSameOrgan(left: number, right: number) {
     const leftAuth = await MemberAuthenticator.find({ where: { user: { id: left } }, relations: ['authenticateAs'] });
     const rightAuth = await MemberAuthenticator.find({ where: { user: { id: right } }, relations: ['authenticateAs'] });
 
