@@ -294,13 +294,13 @@ export default class UserService extends WithManager {
 
   /**
    * Change user to local User
-   * @param userId - ID of the user to change to local user
+   * @param userIds - ID of the user to change to local user
    */
   public async changeToLocalUsers(userIds: number[]): Promise<UserResponse[]> {
     const users = await User.find({ where: { id: In(userIds) } });
     if (!users) return undefined;
-    
-    const userResponses: UserResponse[] = users.map(async (u) => {
+
+    return users.map(async (u) => {
       const resetTokenInfo = await new AuthenticationService().createResetToken(user);
       Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
         throw e;
@@ -308,8 +308,6 @@ export default class UserService extends WithManager {
 
       return this.updateUser(u.id, { canGoIntoDebt: false, type: UserType.LOCAL_USER });
     });
-
-    return; 
   }
 
 
