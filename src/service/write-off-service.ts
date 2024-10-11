@@ -164,7 +164,7 @@ export default class WriteOffService extends WithManager {
   //   wait for BalanceService to be refactored
   public async createWriteOffAndCloseUser(user: User): Promise<WriteOffResponse> {
     const writeOff = await this.createWriteOff(user);
-    await UserService.closeUser(user.id, true);
+    await new UserService().closeUser(user.id, true);
     return writeOff;
   }
 
