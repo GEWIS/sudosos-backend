@@ -317,7 +317,7 @@ export default class TransactionController extends BaseController {
   static async postRelation(req: RequestWithToken): Promise<string> {
     const request = req.body as TransactionRequest;
     if (request.createdBy !== req.token.user.id) {
-      if (await new UserService().areInSameOrgan(request.createdBy, req.token.user.id)) {
+      if (await UserService.areInSameOrgan(request.createdBy, req.token.user.id)) {
         return 'organ';
       }
       return 'all';

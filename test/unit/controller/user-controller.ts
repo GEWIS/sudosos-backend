@@ -78,6 +78,7 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
+import exp from 'node:constants';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -2475,6 +2476,44 @@ describe('UserController', (): void => {
           .query(parameters);
         expect(res.status).to.equal(404);
       });
+    });
+  });
+  describe('POST /users/{id}/toLocalUser', ()=> {
+    it('should return 200 and a correct user response', async () => {
+      const id = 1;
+      const user = await User.findOne({ where: { id: id } });
+      expect(user).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .post(`/users/${id}/toLocalUser`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.be.equal(200);
+      expect((res.body as UserResponse).type).to.be.equal(UserType.LOCAL_USER);
+      expect((res.body as UserResponse).canGoIntoDebt).to.be.false;
+    });
+    it('should return 403 if not admin', async () => {
+      const id = 1;
+      const user = await User.findOne({ where: { id: id } });
+      expect(user).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .post(`/users/${id}/toLocalUser`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.be.equal(403);
+    });
+    it('should return 404 if user does not exist', async () => {
+      const count = await User.count();
+      const id = count + 1;
+      const user = await User.findOne({ where: { id } });
+      expect(user).to.be.null;
+
+      const res = await request(ctx.app)
+        .post(`/users/${id}/toLocalUser`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.be.equal(404);
     });
   });
 });
