@@ -169,7 +169,7 @@ export default class GewisAuthenticationController extends BaseController {
       } else {
         //
         const update = webResponseToUpdate(gewisweb);
-        await new UserService().updateUser(gewisUser.user.id, update);
+        await UserService.updateUser(gewisUser.user.id, update);
       }
 
       const response = await new AuthenticationService().getSaltedToken(

@@ -335,6 +335,14 @@ export default class UserController extends BaseController {
           body: { modelName: 'WaiveFinesRequest', allowBlankTarget: true },
         },
       },
+      '/:id(\\d+)/tolocaluser':{
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+          ),
+          handler: this.changeToLocalUser.bind(this),
+        },
+      },
     };
   }
 
@@ -394,7 +402,7 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const users = await new UserService().getUsers(filters, { take, skip });
+      const users = await UserService.getUsers(filters, { take, skip });
       res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
@@ -712,7 +720,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const members = await new UserService().getUsers({ organId }, { take, skip });
+      const members = await UserService.getUsers({ organId }, { take, skip });
       res.status(200).json(members);
     } catch (error) {
       this.logger.error('Could not get organ members:', error);
@@ -736,7 +744,7 @@ export default class UserController extends BaseController {
 
     try {
       // Get the user object if it exists
-      const user = await new UserService().getSingleUser(asNumber(parameters.id));
+      const user = await UserService.getSingleUser(asNumber(parameters.id));
       // If it does not exist, return a 404 error
       if (user == null) {
         res.status(404).json('Unknown user ID.');
@@ -773,7 +781,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const user = await new UserService().createUser(body);
+      const user = await UserService.createUser(body);
       res.status(201).json(user);
     } catch (error) {
       this.logger.error('Could not create user:', error);
@@ -830,7 +838,7 @@ export default class UserController extends BaseController {
       } as User;
       await User.update(parameters.id, user);
       res.status(200).json(
-        await new UserService().getSingleUser(asNumber(parameters.id)),
+        await UserService.getSingleUser(asNumber(parameters.id)),
       );
     } catch (error) {
       this.logger.error('Could not update user:', error);
@@ -893,13 +901,13 @@ export default class UserController extends BaseController {
     const body = req.body as AcceptTosRequest;
 
     try {
-      const user = await new UserService().getSingleUser(id);
+      const user = await UserService.getSingleUser(id);
       if (user == null) {
         res.status(404).json('User not found.');
         return;
       }
 
-      const success = await new UserService().acceptToS(id, body);
+      const success = await UserService.acceptToS(id, body);
       if (!success) {
         res.status(400).json('User already accepted ToS.');
         return;
@@ -1511,7 +1519,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const mutations = await new UserService().getUserFinancialMutations(user, filters, { take, skip });
+      const mutations = await UserService.getUserFinancialMutations(user, filters, { take, skip });
       res.status(200).json(mutations);
     } catch (error) {
       this.logger.error('Could not get financial mutations of user:', error);
@@ -1649,5 +1657,37 @@ export default class UserController extends BaseController {
       res.status(500).send();
       this.logger.error(e);
     }
+  }
+
+  /**
+   * POST /users/{id}/tolocaluser
+   * @summary Change user to a local user
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @operationId toLocalUser
+   * @security JWT
+   * @return {UserResponse} 200 - Return changed user
+   * @return {string} 404 - User not found error.
+   */
+  public async changeToLocalUser(req: RequestWithToken, res:Response): Promise<void> {
+    const { id: rawId } = req.params;
+    this.logger.trace('Change user to local user', rawId, 'by', req.token.user);
+
+    try {
+      const id = parseInt(rawId, 10);
+
+      const user = await User.findOne({ where: { id:id } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const newUserResponse = await new UserService().changeToLocalUsers(id);
+      res.status(200).json(newUserResponse);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
+
   }
 }

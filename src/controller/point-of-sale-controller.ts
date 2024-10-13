@@ -404,8 +404,8 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const { owner } = pos;
-      const ownerMembers = await new UserService().getUsers({ organId: pos.owner.id });
-      const cashiers = await new UserService().getUsers({ assignedRoleIds: pos.cashierRoles.map((r) => r.id) });
+      const ownerMembers = await UserService.getUsers({ organId: pos.owner.id });
+      const cashiers = await UserService.getUsers({ assignedRoleIds: pos.cashierRoles.map((r) => r.id) });
 
       const response = {
         owner,
