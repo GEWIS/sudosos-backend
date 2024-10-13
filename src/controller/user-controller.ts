@@ -343,6 +343,14 @@ export default class UserController extends BaseController {
           handler: this.changeToLocalUser.bind(this),
         },
       },
+      '/:id(\\d+)/tolocaluser':{
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+          ),
+          handler: this.changeToLocalUser.bind(this),
+        },
+      },
     };
   }
 
