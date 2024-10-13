@@ -332,6 +332,14 @@ export default class UserController extends BaseController {
           handler: this.waiveUserFines.bind(this),
         },
       },
+      '/:id(\\d+)/tolocaluser':{
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+          ),
+          handler: this.changeToLocalUser.bind(this),
+        },
+      },
     };
   }
 
@@ -1633,5 +1641,37 @@ export default class UserController extends BaseController {
       res.status(500).send();
       this.logger.error(e);
     }
+  }
+
+  /**
+   * POST /users/{id}/tolocaluser
+   * @summary Change user to a local user
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @operationId toLocalUser
+   * @security JWT
+   * @return {UserResponse} 200 - Return changed user
+   * @return {string} 404 - User not found error.
+   */
+  public async changeToLocalUser(req: RequestWithToken, res:Response): Promise<void> {
+    const { id: rawId } = req.params;
+    this.logger.trace('Change user to local user', rawId, 'by', req.token.user);
+
+    try {
+      const id = parseInt(rawId, 10);
+
+      const user = await User.findOne({ where: { id:id } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      const newUserResponse = await new UserService().changeToLocalUsers(id);
+      res.status(200).json(newUserResponse);
+    } catch (e) {
+      res.status(500).send();
+      this.logger.error(e);
+    }
+
   }
 }
