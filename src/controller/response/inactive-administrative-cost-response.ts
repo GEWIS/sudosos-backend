@@ -17,6 +17,7 @@
  *
  *  @license
  */
+
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { TransferResponse } from './transfer-response';

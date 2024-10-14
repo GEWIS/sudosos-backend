@@ -70,7 +70,7 @@ export const NotifyDebtUserTypes: UserType[] = [
 ];
 
 /**
- * All users that could make inactive administrative costs.
+ * All users that have made inactive administrative costs.
  */
 export const EligibleInactiveUsers: UserType[] = [
   UserType.LOCAL_ADMIN, UserType.LOCAL_USER, UserType.MEMBER,
