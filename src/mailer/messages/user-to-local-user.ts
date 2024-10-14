@@ -68,7 +68,7 @@ Before you can actually use SudoSOS again, you have to set a password by going t
 See you on the borrel!`,
 });
 
-const mailContents: MailLanguageMap<WelcomeWithResetOptions> = {
+const mailContents: MailLanguageMap<UserToLocalUserOptions> = {
   [Language.DUTCH]: userToLocalUserDutch,
   [Language.ENGLISH]: userToLocalUserEnglish,
 };
