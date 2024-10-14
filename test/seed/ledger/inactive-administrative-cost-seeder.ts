@@ -17,6 +17,7 @@
  *
  *  @license
  */
+
 import WithManager from '../../../src/database/with-manager';
 import User from '../../../src/entity/user/user';
 import InactiveAdministrativeCost from '../../../src/entity/transactions/inactive-administrative-cost';

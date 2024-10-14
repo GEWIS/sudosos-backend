@@ -33,14 +33,14 @@ interface InactiveAdministrativeCostNotificationOptions {
 
 const inactiveAdministrativeCostNotificationDutch = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
   getHTML: () => `
-  <p> Je hebt al 2 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.<br>
-  Er zal dan 10 euro van je account worden afgehaald ter betaling vor administratie kosten. </p>
+  <p> Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.<br>
+  Er zal dan 10 euro van je account worden afgehaald ter betaling voor administratie kosten. </p>
   `,
   getSubject: () => 'Notificatie administratie kosten SudoSOS',
   getTitle: 'Administratienotificatie',
   getText: () => `
-  Je hebt al 2 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.
-  Er zal dan 10 euro van je account worden afgehaald ter betaling vor administratie kosten. 
+  Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.
+  Er zal dan 10 euro van je account worden afgehaald ter betaling voor administratie kosten. 
   `,
 });
 
