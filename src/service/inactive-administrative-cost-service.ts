@@ -17,6 +17,7 @@
  *
  *  @license
  */
+
 import WithManager from '../database/with-manager';
 import { FindManyOptions, FindOptionsRelations } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
@@ -113,8 +114,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
 
     // go through all users and get their last transfer and transaction
-    for (let i = 0; i < users.length; i += 1) {
-      const user = users[i];
+    for (const user of users) {
       if (!EligibleInactiveUsers.includes(user.type)) continue;
       if (notification && user.inactiveNotificationSend) continue;
 
@@ -133,10 +133,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
       const lastTransaction = userTransactions.length == 0  ? null : userTransactions
         .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
 
-      if (lastTransfer != null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
+      if (lastTransfer !== null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
         isNotEligible = true;
       }
-      if (lastTransaction != null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
+      if (lastTransaction !== null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
         isNotEligible = true;
       }
 
@@ -171,10 +171,15 @@ export default class InactiveAdministrativeCostService extends WithManager {
     };
 
     // Save new transfer and delete the administrative cost
-    await new TransferService(this.manager).postTransfer(undoTransfer);
-    await this.manager.delete(InactiveAdministrativeCost, inactiveAdministrativeCostId);
+    await new TransferService(this.manager).postTransfer(undoTransfer).then(async (response) => {
+      const transfer = await this.manager.findOne(Transfer, { where: { id: response.id } });
+      if (!transfer) throw new Error('Transfer not found during deletion of inactive administrative cost, aborting');
+      inactiveAdministrativeCost.creditTransfer = transfer;
+    });
+    await this.manager.save(InactiveAdministrativeCost, inactiveAdministrativeCost);
 
-    return inactiveAdministrativeCost;
+    const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: inactiveAdministrativeCost.id });
+    return this.manager.findOne(InactiveAdministrativeCost, options);
   }
 
   /**
@@ -189,7 +194,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const user = await this.manager.findOne(User, { where: { id: forId } });
     const userBalance = await new BalanceService(this.manager).getBalance(forId);
 
-    const monetaryAmount = (userBalance.amount.amount < 5) ? userBalance.amount.amount - 5 : 5;
+    const monetaryAmount = (userBalance.amount.amount < 10) ? userBalance.amount.amount - 10 : 10;
 
     const amount: DineroObjectRequest = {
       amount: monetaryAmount,
@@ -205,7 +210,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       toId: 0,
     };
 
-    const transfer = await new TransferService(this.manager).createTransfer(transferRequest);
+    const transfer = await new TransferService().createTransfer(transferRequest);
 
     // Create a new inactive administrative cost
     const newInactiveAdministrativeCost: InactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
@@ -217,8 +222,8 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
     transfer.inactiveAdministrativeCost = newInactiveAdministrativeCost;
 
-    await this.manager.getRepository(Transfer).save(transfer);
-    await this.manager.save(InactiveAdministrativeCost, newInactiveAdministrativeCost);
+    await this.manager.save(Transfer, transfer);
+    await this.manager.save(newInactiveAdministrativeCost);
 
     const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: newInactiveAdministrativeCost.id });
     return this.manager.findOne(InactiveAdministrativeCost, options);

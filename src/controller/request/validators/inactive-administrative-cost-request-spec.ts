@@ -19,9 +19,9 @@
  */
 
 /**
- * This is the module page of the invoice-request-spec.
+ * This is the module page of the inactive-administrative-cost-spec.
  *
- * @module internal/spec/invoice-request-spec
+ * @module internal/spec/inactive-administrative-cost-spec
  */
 
 import { CreateInactiveAdministrativeCostRequest } from '../inactive-administrative-cost-request';

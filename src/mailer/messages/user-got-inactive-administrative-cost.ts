@@ -39,14 +39,14 @@ const formatBalance = (b: Dinero) => {
 const userGotInactiveAdministrativeCostDutch = new MailContentBuilder<UserGotInactiveAdministrativeCostOptions>({
   getHTML: (context) => `
   <p> Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.<br>
-  Er word ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
+  Er wordt ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
   
   `,
   getSubject: () => 'Administratie kosten SudoSOS',
   getTitle: 'Administratiekosten',
   getText: (context) => `
   Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.
-  Er word ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
+  Er wordt ${formatBalance(context.amount)} van je account worden afgehaald ter betaling vor administratie kosten.
   `,
 });
 
