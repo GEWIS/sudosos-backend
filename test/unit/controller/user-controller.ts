@@ -78,7 +78,6 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
-import exp from 'node:constants';
 
 chai.use(deepEqualInAnyOrder);
 

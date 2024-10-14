@@ -332,10 +332,10 @@ export default class UserController extends BaseController {
           handler: this.waiveUserFines.bind(this),
         },
       },
-      '/:id(\\d+)/tolocaluser':{
+      '/:id(\\d+)/toLocalUser':{
         POST: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['pin'],
+            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['*'],
           ),
           handler: this.changeToLocalUser.bind(this),
         },
@@ -1644,7 +1644,7 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * POST /users/{id}/tolocaluser
+   * POST /users/{id}/tolocalUser
    * @summary Change user to a local user
    * @tags users - Operations of user controller
    * @param {integer} id.path.required - The id of the user

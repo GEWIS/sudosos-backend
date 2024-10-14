@@ -47,6 +47,7 @@ import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
 import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
+import UserToLocalUser from '../mailer/messages/user-to-local-user';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -289,6 +290,22 @@ export default class UserService {
     user.extensiveDataProcessing = params.extensiveDataProcessing;
     await user.save();
     return true;
+  }
+
+  /**
+   * Change user to local User
+   * @param userId - ID of the user to change to local user
+   */
+  public async changeToLocalUsers(userId: number): Promise<UserResponse> {
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) return undefined;
+
+    const resetTokenInfo = await new AuthenticationService().createResetToken(user);
+    Mailer.getInstance().send(user, new UserToLocalUser({ email: user.email, resetTokenInfo })).then().catch((e) => {
+      throw e;
+    });
+
+    return UserService.updateUser(userId, { canGoIntoDebt: false, type: UserType.LOCAL_USER });
   }
 
   /**
