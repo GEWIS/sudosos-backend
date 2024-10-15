@@ -78,6 +78,7 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
+import Dinero from 'dinero.js';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -2069,19 +2070,133 @@ describe('UserController', (): void => {
     });
   });
   describe('POST /users/{id}/fines/waive', () => {
-    it("should correctly waive a user's fines", async () => {
+    it("should correctly waive all user's fines", async () => {
       const user = ctx.users.find((u) => u.currentFines != null);
-      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.not.be.null;
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = user.currentFines!.fines.reduce((total, f) => total.add(f.amount), Dinero());
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({ amount: amount.toObject() })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.be.null;
+      const dbFineGroup = await UserFineGroup.findOne({ where: { id: user.currentFines!.id }, relations: { waivedTransfer: true } });
+      expect(dbFineGroup.waivedTransfer).to.not.be.null;
+      expect(dbFineGroup.waivedTransfer.amountInclVat.getAmount()).to.equal(amount.getAmount());
+
+      // Cleanup
+      await Transfer.remove(dbFineGroup.waivedTransfer);
+      await User.save(user);
+    });
+    it("should correctly waive a part of a user's fines", async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = Dinero({ amount: 50 });
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({ amount: amount.toObject() })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.not.be.null;
+      const dbFineGroup = await UserFineGroup.findOne({ where: { id: user.currentFines!.id }, relations: { waivedTransfer: true } });
+      expect(dbFineGroup.waivedTransfer).to.not.be.null;
+      expect(dbFineGroup.waivedTransfer.amountInclVat.getAmount()).to.equal(amount.getAmount());
+
+      // Cleanup
+      await Transfer.remove(dbFineGroup.waivedTransfer);
+      await User.save(user);
+    });
+    it("should correctly waive all user's fines if no body is given", async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = user.currentFines!.fines.reduce((total, f) => total.add(f.amount), Dinero());
+
       const res = await request(ctx.app)
         .post(`/users/${user.id}/fines/waive`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.be.null;
+
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.be.null;
+      const dbFineGroup = await UserFineGroup.findOne({ where: { id: user.currentFines!.id }, relations: { waivedTransfer: true } });
+      expect(dbFineGroup.waivedTransfer).to.not.be.null;
+      expect(dbFineGroup.waivedTransfer.amountInclVat.getAmount()).to.equal(amount.getAmount());
+
+      // Cleanup
+      await Transfer.remove(dbFineGroup.waivedTransfer);
+      await User.save(user);
+    });
+    it("should correctly waive all user's fines if an empty body is given", async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = user.currentFines!.fines.reduce((total, f) => total.add(f.amount), Dinero());
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({})
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: true } });
+      expect(dbUser.currentFines).to.be.null;
+      const dbFineGroup = await UserFineGroup.findOne({ where: { id: user.currentFines!.id }, relations: { waivedTransfer: true } });
+      expect(dbFineGroup.waivedTransfer).to.not.be.null;
+      expect(dbFineGroup.waivedTransfer.amountInclVat.getAmount()).to.equal(amount.getAmount());
+
+      // Cleanup
+      await Transfer.remove(dbFineGroup.waivedTransfer);
+      await User.save(user);
+    });
+    it('should return 400 if amount to waive is zero', async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = Dinero({ amount: 0 });
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({ amount: amount.toObject() })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Amount to waive cannot be zero or negative.');
+    });
+    it('should return 400 if amount to waive is negative', async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      const amount = Dinero({ amount: -100 });
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({ amount: amount.toObject() })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Amount to waive cannot be zero or negative.');
+    });
+    it('should return 400 if amount to waive is more than the user\'s fines', async () => {
+      const user = ctx.users.find((u) => u.currentFines != null);
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.not.be.null;
+      let amount = user.currentFines!.fines.reduce((total, f) => total.add(f.amount), Dinero());
+      amount = amount.add(Dinero({ amount: 100 }));
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/fines/waive`)
+        .send({ amount: amount.toObject() })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Amount to waive cannot be more than the total amount of fines.');
     });
     it('should return 400 if user has no fines', async () => {
       const user = ctx.users.find((u) => u.currentFines == null);
-      expect((await User.findOne({ where: { id: user.id }, relations: ['currentFines'] })).currentFines).to.be.null;
+      expect((await User.findOne({ where: { id: user.id }, relations: { currentFines: true } })).currentFines).to.be.null;
       const res = await request(ctx.app)
         .post(`/users/${user.id}/fines/waive`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);

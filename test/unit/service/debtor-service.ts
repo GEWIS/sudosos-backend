@@ -24,7 +24,7 @@ import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
-import DebtorService from '../../../src/service/debtor-service';
+import DebtorService, { WaiveFinesParams } from '../../../src/service/debtor-service';
 import { expect } from 'chai';
 import { addTransfer } from '../../helpers/transaction-helpers';
 import BalanceService from '../../../src/service/balance-service';
@@ -54,6 +54,7 @@ describe('DebtorService', (): void => {
     fines: Fine[],
     userFineGroups: UserFineGroup[],
     actor: User,
+    waiveFinesParams: WaiveFinesParams,
   };
 
   let sandbox: SinonSandbox;
@@ -85,6 +86,9 @@ describe('DebtorService', (): void => {
       fines,
       userFineGroups,
       actor: usersWithFines[0],
+      waiveFinesParams: {
+        amount: { amount: 100, currency: 'EUR', precision: 2 },
+      },
     };
   });
 
@@ -113,7 +117,7 @@ describe('DebtorService', (): void => {
   describe('calculateFinesOnDate', () => {
     it('should return everyone who should get fined', async () => {
       const now = new Date();
-      const calculatedFines = await DebtorService.calculateFinesOnDate({
+      const calculatedFines = await new DebtorService().calculateFinesOnDate({
         referenceDates: [now],
       });
       const usersToFine = ctx.users
@@ -133,7 +137,7 @@ describe('DebtorService', (): void => {
 
     it('should only return users from given userTypes', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.INVOICE];
-      const calculatedFines = await DebtorService.calculateFinesOnDate({
+      const calculatedFines = await new DebtorService().calculateFinesOnDate({
         userTypes,
         referenceDates: [new Date()],
       });
@@ -153,7 +157,7 @@ describe('DebtorService', (): void => {
 
     it('should only return users that have more than 5 euros debt now and on reference date', async () => {
       const referenceDates = [new Date('2021-02-12'), new Date()];
-      const calculatedFines = await DebtorService.calculateFinesOnDate({
+      const calculatedFines = await new DebtorService().calculateFinesOnDate({
         referenceDates,
       });
       const usersToFine = ctx.users
@@ -193,7 +197,7 @@ describe('DebtorService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-500);
 
-      const fines = await DebtorService.calculateFinesOnDate({
+      const fines = await new DebtorService().calculateFinesOnDate({
         referenceDates: [new Date()],
       });
       const fineForUser = fines.find((f) => f.id === newUser.id);
@@ -211,7 +215,7 @@ describe('DebtorService', (): void => {
       const usersWithDebt = users.filter((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() <= -500);
       const userIds = usersWithDebt.map((u) => u.id);
 
-      await DebtorService.sendFineWarnings({ referenceDate: new Date(), userIds });
+      await new DebtorService().sendFineWarnings({ referenceDate: new Date(), userIds });
 
       expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
     });
@@ -224,7 +228,7 @@ describe('DebtorService', (): void => {
       const userIds = usersWithDebt.map((u) => u.id);
       expect(userIds.length).to.be.at.least(0);
 
-      await DebtorService.sendFineWarnings({ referenceDate, userIds });
+      await new DebtorService().sendFineWarnings({ referenceDate, userIds });
 
       expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
     });
@@ -239,7 +243,7 @@ describe('DebtorService', (): void => {
       expect(dbUserFineGroup.fines.length).to.equal(1);
 
       const fine = dbUserFineGroup.fines[0];
-      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+      expect(await new DebtorService().deleteFine(fine.id)).to.not.throw;
 
       const dbFine = await Fine.findOne({ where: { id: fine.id } });
       expect(dbFine).to.be.null;
@@ -261,7 +265,7 @@ describe('DebtorService', (): void => {
       expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
 
       const fine = dbUserFineGroup.fines[0];
-      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+      expect(await new DebtorService().deleteFine(fine.id)).to.not.throw;
 
       const dbFine = await Fine.findOne({ where: { id: fine.id } });
       expect(dbFine).to.be.null;
@@ -309,7 +313,7 @@ describe('DebtorService', (): void => {
       expect(dbBalance.fine).to.not.be.undefined;
       expect(dbBalance.fineSince).to.not.be.undefined;
 
-      expect(await DebtorService.deleteFine(fine.id)).to.not.throw;
+      expect(await new DebtorService().deleteFine(fine.id)).to.not.throw;
 
       const dbFine = await Fine.findOne({ where: { id: fine.id } });
       expect(dbFine).to.be.null;
@@ -334,23 +338,32 @@ describe('DebtorService', (): void => {
       const id = 9999999;
       const fine = await Fine.findOne({ where: { id } });
       expect(fine).to.be.null;
-      expect(await DebtorService.deleteFine(id)).to.not.throw;
+      expect(await new DebtorService().deleteFine(id)).to.not.throw;
     });
   });
 
   describe('waiveFines', () => {
-    it('should correctly waive fines', async () => {
+    it('should correctly waive all fines', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
-      const dbUserFineGroupOld = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
       const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+
+      // Sanity checks
       expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
       expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
       expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
 
-      await DebtorService.waiveFines(userFineGroup.userId);
+      await new DebtorService().waiveFines(userFineGroup.userId, { amount: { amount, currency: 'EUR', precision: 2 } });
 
-      const dbUserFineGroupNew = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'waivedTransfer', 'user', 'user.currentFines'] });
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
       expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
       expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amount);
       expect(dbUserFineGroupNew.user.currentFines).to.be.null;
@@ -360,20 +373,193 @@ describe('DebtorService', (): void => {
       dbUserFineGroupNew.waivedTransfer = null;
       await dbUserFineGroupNew.save();
       await Transfer.remove(transfer);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should waive fines partially and remove current fines if positive balance', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+      // Do not waive fifty cents
+      const amountToWaive = amount - 50;
+      const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      // Balance is negative and fine amount is positive. Also add 75 cents just
+      const topupToGoOutOfDebt = -1 * (balance.amount.getAmount() + amountToWaive) + 75;
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+      expect(topupToGoOutOfDebt).to.be.greaterThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt).to.be.lessThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt + amountToWaive).to.be.greaterThan(0);
+
+      const topUpTransfer = await new TransferService().createTransfer({
+        fromId: -1,
+        toId: user.id,
+        amount: { amount: topupToGoOutOfDebt, precision: 2, currency: 'EUR' },
+        description: 'Some money <3',
+      });
+      await new DebtorService().waiveFines(user.id, { amount: { amount: amountToWaive, currency: 'EUR', precision: 2 } });
+
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: { to: true }, user: { currentFines: true } },
+      });
+      expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
+      expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amountToWaive);
+      const newBalance = calculateBalance(
+        user,
+        ctx.transactions,
+        ctx.subTransactions,
+        [...ctx.transfersInclFines, topUpTransfer, dbUserFineGroupNew.waivedTransfer],
+      );
+      expect(newBalance.amount.getAmount()).to.be.greaterThan(0);
+      expect(dbUserFineGroupNew.user.currentFines).to.be.null;
+
+      // Cleanup
+      const transfer = dbUserFineGroupNew.waivedTransfer;
+      dbUserFineGroupNew.waivedTransfer = null;
+      await dbUserFineGroupNew.save();
+      await Transfer.remove([transfer, topUpTransfer]);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should waive fines partially and keep current fines if still negative balance', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const amount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+      // Do not waive fifty cents
+      const amountToWaive = amount - 50;
+      const balance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines);
+      // Balance is negative and fine amount is positive. Also subtract 25 cents so the user will not go out of debt
+      const topupToGoOutOfDebt = -1 * (balance.amount.getAmount() + amountToWaive) - 25;
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+      expect(topupToGoOutOfDebt).to.be.greaterThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt).to.be.lessThan(0);
+      expect(balance.amount.getAmount() + topupToGoOutOfDebt + amountToWaive).to.be.lessThan(0);
+
+      const topUpTransfer = await new TransferService().createTransfer({
+        fromId: -1,
+        toId: user.id,
+        amount: { amount: topupToGoOutOfDebt, precision: 2, currency: 'EUR' },
+        description: 'Some money <3',
+      });
+      await new DebtorService().waiveFines(user.id, { amount: { amount: amountToWaive, currency: 'EUR', precision: 2 } });
+
+      const dbUserFineGroupNew = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: { to: true }, user: { currentFines: true } },
+      });
+      expect(dbUserFineGroupNew.waivedTransfer).to.not.be.null;
+      expect(dbUserFineGroupNew.waivedTransfer.amountInclVat.getAmount()).to.equal(amountToWaive);
+      const newBalance = calculateBalance(
+        user,
+        ctx.transactions,
+        ctx.subTransactions,
+        [...ctx.transfersInclFines, topUpTransfer, dbUserFineGroupNew.waivedTransfer],
+      );
+      expect(newBalance.amount.getAmount()).to.be.lessThan(0);
+      expect(dbUserFineGroupNew.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupNew.user.currentFines.id).to.equal(dbUserFineGroupNew.id);
+
+      // Cleanup
+      const transfer = dbUserFineGroupNew.waivedTransfer;
+      dbUserFineGroupNew.waivedTransfer = null;
+      await dbUserFineGroupNew.save();
+      await Transfer.remove([transfer, topUpTransfer]);
+      await User.save(dbUserFineGroupOld.user);
+    });
+    it('should throw if amount to waive is more than the total fine amount', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+      const totalFineAmount = dbUserFineGroupOld.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0);
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: totalFineAmount + 1, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be greater than the total amount of fines.');
+    });
+    it('should throw if amount to waive is zero', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: 0, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be zero or negative.');
+    });
+    it('should throw if amount to waive is negative', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+
+      await expect(new DebtorService().waiveFines(user.id, { amount: { amount: -100, currency: 'EUR', precision: 2 } }))
+        .to.eventually.be.rejectedWith('Amount to waive cannot be zero or negative.');
+    });
+    it('should replace old waive transfer is new is created', async () => {
+      const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
+      const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
+      const { user } = userFineGroup;
+      const dbUserFineGroupOld = await UserFineGroup.findOne({
+        where: { id: userFineGroup.id },
+        relations: { fines: true, waivedTransfer: true, user: { currentFines: true } },
+      });
+
+      // Sanity checks
+      expect(dbUserFineGroupOld.waivedTransfer).to.be.null;
+      expect(dbUserFineGroupOld.user.currentFines).to.not.be.null;
+      expect(dbUserFineGroupOld.user.currentFines.id).to.equal(dbUserFineGroupOld.id);
+      expect(dbUserFineGroupOld.fines.length).to.be.greaterThan(0);
+
+      const fineGroup1 = await new DebtorService().waiveFines(user.id, { amount: { amount: 100, currency: 'EUR', precision: 2 } });
+      const fineGroup2 = await new DebtorService().waiveFines(user.id, { amount: { amount: 200, currency: 'EUR', precision: 2 } });
+      const dbUser = await User.findOne({ where: { id: user.id }, relations: { currentFines: { waivedTransfer: true } } });
+
+      expect(fineGroup1.waivedTransfer).to.not.be.undefined;
+      expect(fineGroup2.waivedTransfer).to.not.be.undefined;
+      expect(fineGroup1.waivedTransfer.id).to.not.equal(fineGroup2.waivedTransfer.id);
+      expect(await Transfer.findOne({ where: { id: fineGroup1.waivedTransfer.id } })).to.be.null;
+      expect(await Transfer.findOne({ where: { id: fineGroup2.waivedTransfer.id } })).to.not.be.null;
+      expect(dbUser.currentFines).to.not.be.null;
+      expect(dbUser.currentFines.waivedTransfer).to.not.be.null;
+      expect(dbUser.currentFines.waivedTransfer.id).to.equal(fineGroup2.waivedTransfer.id);
+      expect(dbUser.currentFines.waivedTransfer.amountInclVat.getAmount()).to.equal(200);
+
+      // Cleanup
+      const transfer = fineGroup2.waivedTransfer;
+      await Transfer.remove(transfer);
+      await User.save(user);
     });
     it('should throw error when user does not exist', async () => {
       const id = 999999;
       const user = await User.findOne({ where: { id } });
       expect(user).to.be.null;
 
-      await expect(DebtorService.waiveFines(id)).to.eventually.rejectedWith(`User with ID ${id} does not exist`);
+      await expect(new DebtorService().waiveFines(id, ctx.waiveFinesParams)).to.eventually.rejectedWith(`User with ID ${id} does not exist`);
     });
     it('should not do anything when user does not have fines', async () => {
       const user = ctx.users.find((u) => u.currentFines == null);
       expect(user).to.not.be.null;
       const nrTransfers = await Transfer.count();
 
-      await DebtorService.waiveFines(user.id);
+      await new DebtorService().waiveFines(user.id, ctx.waiveFinesParams);
       expect(await Transfer.count()).to.equal(nrTransfers);
     });
   });
@@ -470,10 +656,11 @@ describe('DebtorService', (): void => {
 
     it('should correctly create fines with reference date', async () => {
       const referenceDate = new Date('2021-01-30');
-      const usersToFine = await DebtorService.calculateFinesOnDate({
+      const debtorService = new DebtorService();
+      const usersToFine = await debtorService.calculateFinesOnDate({
         referenceDates: [referenceDate],
       });
-      const fineHandoutEvent = await DebtorService.handOutFines({
+      const fineHandoutEvent = await debtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
         referenceDate,
       }, ctx.actor);
@@ -499,7 +686,8 @@ describe('DebtorService', (): void => {
     });
     it('should correctly put two fines in same userFineGroup', async () => {
       const referenceDate = new Date('2021-01-30');
-      const usersToFine = await DebtorService.calculateFinesOnDate({
+      const debtorService = new DebtorService();
+      const usersToFine = await debtorService.calculateFinesOnDate({
         referenceDates: [referenceDate],
       });
       const usersWithoutFines = ctx.users.filter((u) => !ctx.userFineGroups.some((g) => g.userId === u.id));
@@ -512,11 +700,11 @@ describe('DebtorService', (): void => {
       });
       expect(userFineGroups).to.be.length(0);
 
-      const fineHandoutEvent1 = await DebtorService.handOutFines({
+      const fineHandoutEvent1 = await debtorService.handOutFines({
         userIds: [user.id],
         referenceDate,
       }, ctx.actor);
-      const fineHandoutEvent2 = await DebtorService.handOutFines({
+      const fineHandoutEvent2 = await debtorService.handOutFines({
         userIds: [user.id],
         referenceDate: new Date(),
       }, ctx.actor);
@@ -542,7 +730,7 @@ describe('DebtorService', (): void => {
       await deleteFineHandoutEvent(fineHandoutEvent2.id);
     });
     it('should create no fines if empty list of userIds is given', async function () {
-      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [], referenceDate: new Date() }, ctx.actor);
+      const fineHandoutEvent = await new DebtorService().handOutFines({ userIds: [], referenceDate: new Date() }, ctx.actor);
 
       expect(fineHandoutEvent.fines.length).to.equal(0);
       expect(await Fine.count()).to.equal(0);
@@ -555,7 +743,7 @@ describe('DebtorService', (): void => {
       let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
       expect(dbUser.currentFines).to.be.null;
 
-      const fineHandoutEvent = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.actor);
+      const fineHandoutEvent = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.actor);
       expect(fineHandoutEvent.fines.length).to.equal(1);
       const fine = fineHandoutEvent.fines[0];
       expect(fine.user.id).to.equal(user.id);
@@ -573,7 +761,7 @@ describe('DebtorService', (): void => {
       const user = ctx.users[0];
       expect(user).to.not.be.undefined;
 
-      const fineHandoutEvent = await DebtorService.handOutFines({
+      const fineHandoutEvent = await new DebtorService().handOutFines({
         userIds: [user.id],
         referenceDate: new Date(),
       }, ctx.actor);
@@ -597,12 +785,13 @@ describe('DebtorService', (): void => {
 
     async function makeFines(): Promise<FineHandoutEventResponse> {
       const referenceDate = new Date('2021-01-30');
+      const debtorService = new DebtorService();
 
-      const usersToFine = await DebtorService.calculateFinesOnDate({
+      const usersToFine = await debtorService.calculateFinesOnDate({
         referenceDates: [referenceDate],
       });
 
-      return DebtorService.handOutFines({
+      return debtorService.handOutFines({
         userIds: usersToFine.map((u) => u.id),
         referenceDate,
       }, ctx.actor);
@@ -614,7 +803,7 @@ describe('DebtorService', (): void => {
       fromDate.setTime(fromDate.getTime() - 1000);
       const endDate = new Date();
       endDate.setTime(endDate.getTime() + 1000);
-      const report = await DebtorService.getFineReport(fromDate, endDate);
+      const report = await new DebtorService().getFineReport(fromDate, endDate);
 
       expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
       expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
@@ -629,7 +818,7 @@ describe('DebtorService', (): void => {
       await makeFines();
       const fromDate = new Date('2020-01-01');
       const endDate = new Date('2021-01-01');
-      const report = await DebtorService.getFineReport(fromDate, endDate);
+      const report = await new DebtorService().getFineReport(fromDate, endDate);
 
       expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
       expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
@@ -642,7 +831,7 @@ describe('DebtorService', (): void => {
       await makeFines();
       const fromDate = new Date('3020-01-01');
       const endDate = new Date('3021-01-01');
-      const report = await DebtorService.getFineReport(fromDate, endDate);
+      const report = await new DebtorService().getFineReport(fromDate, endDate);
 
       expect(report.fromDate.toISOString()).to.equal(fromDate.toISOString());
       expect(report.toDate.toISOString()).to.equal(endDate.toISOString());
@@ -653,7 +842,8 @@ describe('DebtorService', (): void => {
 
     it( 'should return error if transfer has fine and waivedFine', async () => {
       const fineHandoutEvent = await makeFines();
-      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
+      const debtorService = new DebtorService();
+      await debtorService.waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesParams);
 
       const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].user.id } }, relations: ['fine', 'waivedFines'] });
       transfer.fine = await Fine.create({
@@ -668,7 +858,7 @@ describe('DebtorService', (): void => {
       const tillDate = new Date();
       tillDate.setTime(tillDate.getTime() + 1000);
       // Expect to error
-      await expect(DebtorService.getFineReport(date, tillDate)).to.eventually.rejectedWith('Transfer has both fine and waived fine');
+      await expect(debtorService.getFineReport(date, tillDate)).to.eventually.rejectedWith('Transfer has both fine and waived fine');
     });
 
     it('should deal with waived fines', async () => {
@@ -678,8 +868,8 @@ describe('DebtorService', (): void => {
       const tillDate = new Date();
       tillDate.setTime(tillDate.getTime() + 1000);
 
-      await DebtorService.waiveFines(fineHandoutEvent.fines[0].user.id);
-      const report = await DebtorService.getFineReport(date, tillDate);
+      await new DebtorService().waiveFines(fineHandoutEvent.fines[0].user.id, ctx.waiveFinesParams);
+      const report = await new DebtorService().getFineReport(date, tillDate);
 
       expect(report.fromDate.toISOString()).to.equal(date.toISOString());
       expect(report.toDate.toISOString()).to.equal(tillDate.toISOString());
@@ -688,7 +878,7 @@ describe('DebtorService', (): void => {
 
       const handedOut = fineHandoutEvent.fines.reduce((sum, u) => sum + u.amount.amount, 0);
       expect(report.handedOut.getAmount()).to.equal(handedOut);
-      expect(report.waivedAmount.getAmount()).to.equal(fineHandoutEvent.fines[0].amount.amount);
+      expect(report.waivedAmount.getAmount()).to.equal(ctx.waiveFinesParams.amount.amount);
     });
 
   });

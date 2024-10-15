@@ -24,6 +24,8 @@
  * @module debtors
  */
 
+import { DineroObjectRequest } from './dinero-request';
+
 /**
  * @typedef {object} HandoutFinesRequest
  * @property {Array<integer>} userIds.required - Users to fine. If a user is not eligible for a fine, a fine of 0,00 will be handed out.
@@ -32,4 +34,22 @@
 export interface HandoutFinesRequest {
   userIds: number[];
   referenceDate: string;
+}
+
+/**
+ * The total request and all its fields are optional for backwards compatibility's sake.
+ * If this request object is extended, it is probably best to make everything required
+ * and remove the backwards compatibility, as the frontend will (and should) already use
+ * this new object. See https://github.com/GEWIS/sudosos-backend/pull/344
+ *
+ * @typedef {object} WaiveFinesRequest
+ * @property {DineroObjectRequest} amount - The amount of fines that have to be
+ * waived. Cannot be negative or more than the total amount of unpaid fines.
+ */
+export interface WaiveFinesRequest {
+  /**
+   * The amount of fines that have to be waived. Cannot be
+   * negative or more than the total amount of unpaid fines.
+   */
+  amount?: DineroObjectRequest;
 }
