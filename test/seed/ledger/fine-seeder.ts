@@ -173,14 +173,23 @@ export default class FineSeeder extends WithManager {
     });
 
     if (addCurrentFines) {
-      newUsers = await Promise.all(users.map(async (user) => {
+      newUsers = [];
+      for (let user of users) {
         const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
         if (userFineGroup) {
           user.currentFines = userFineGroup;
-          await this.manager.save(user);
+          await this.manager.save(User, user);
         }
-        return user;
-      }));
+        newUsers.push(user);
+      }
+      // newUsers = await Promise.all(users.map(async (user) => {
+      //   const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
+      //   if (userFineGroup) {
+      //     user.currentFines = userFineGroup;
+      //     await this.manager.save(User, user);
+      //   }
+      //   return user;
+      // }));
     }
 
     return {
