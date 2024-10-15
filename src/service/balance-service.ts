@@ -83,12 +83,18 @@ export default class BalanceService extends WithManager {
 
     return {
       id: rawBalance.id,
+      firstName: rawBalance.firstName,
+      lastName: rawBalance.lastName,
+      nickname: rawBalance.nickname,
+      type: rawBalance.type,
       date: date.toISOString(),
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
       lastTransferId: rawBalance.lastTransferId,
       fine: rawBalance.fine ? DineroTransformer.Instance.from(rawBalance.fine).toObject() : null,
       fineSince,
+      fineWaived: rawBalance.fine && rawBalance.fineWaived
+        ? DineroTransformer.Instance.from(rawBalance.fineWaived).toObject() : null,
     };
   }
 
@@ -226,15 +232,24 @@ export default class BalanceService extends WithManager {
     const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
 
     let query = 'SELECT moneys2.id as id, '
+      + 'moneys2.firstName as firstName, '
+      + 'moneys2.lastName as lastName, '
+      + 'moneys2.nickname as nickname, '
+      + 'moneys2.type as type, '
       + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
       + 'moneys2.count as count, '
       + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
       + `${greatest}(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, `
       + 'b5.amount as cachedAmount, '
       + 'f.fine as fine, '
-      + 'f.fineSince as fineSince '
+      + 'f.fineSince as fineSince, '
+      + 'f.fineWaived as fineWaived '
       + 'from ( '
       + 'SELECT user.id as id, '
+      + 'user.firstName as firstName, '
+      + 'user.lastName as lastName, '
+      + 'user.nickname as nickname, '
+      + 'user.type as type, '
       + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
       + 'count(moneys.totalValue) as count, '
       + 'max(moneys.transactionId) as lastTransactionId, '
@@ -288,10 +303,11 @@ export default class BalanceService extends WithManager {
     query += ') AS b5 ON b5.userId=moneys2.id '
       + 'inner join user as u on u.id = moneys2.id '
       + 'left join ( '
-        + 'select sum(fine.amount) as fine, max(user_fine_group.createdAt) as fineSince, user.id as id '
+        + 'select sum(fine.amount) as fine, max(user_fine_group.createdAt) as fineSince, max(transfer.amountInclVat) as fineWaived, user.id as id '
         + 'from fine '
         + 'inner join user_fine_group on fine.userFineGroupId = user_fine_group.id '
         + 'inner join user on user_fine_group.userId = user.id '
+        + 'left join transfer on user_fine_group.waivedTransferId = transfer.id '
         + 'where user.currentFinesId = user_fine_group.id '
         + 'group by user.id '
       + ') as f on f.id = moneys2.id '
