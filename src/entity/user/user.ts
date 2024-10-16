@@ -46,6 +46,7 @@ export enum UserType {
   LOCAL_ADMIN = 'LOCAL_ADMIN',
   INVOICE = 'INVOICE',
   POINT_OF_SALE = 'POINT_OF_SALE',
+  INTEGRATION = 'INTEGRATION',
 }
 
 /**

@@ -27,15 +27,14 @@ export class Builder {
 
   public async default() {
     const count = await User.count();
-    this.user = Object.assign(new User(), {
+    this.user = await User.save( {
       firstName: `User #${count + 1}`,
       lastName: `Doe #${count + 1}`,
       type: UserType.MEMBER,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
       canGoIntoDebt: true,
-    } as User);
-    await User.save(this.user);
+    });
     return this;
   }
 
@@ -58,23 +57,23 @@ export class Builder {
   }
 
   public async clone(amount: number): Promise<User[]> {
-    const users: any[] = [];
+    const users: User[] = [];
 
     const count = await User.count();
     const user = this.user ?? (await this.default()).user;
+    const promises: Promise<void>[] = [];
 
     for (let i = 1; i <= amount; i += 1) {
-      const clone = {
+      promises.push(User.save(Object.assign(new User(), {
         ...user,
         firstName: `User #${count + i}`,
         lastName: `Doe #${count + i}`,
         email: `${count + i}@sudosos.nl`,
         type: user.type ?? UserType.MEMBER,
         id: count + i,
-      } as User;
-      users.push(clone);
+      })).then((u) => { users.push(u); }));
     }
-    await User.save(users);
+    await Promise.all(promises);
     return users;
   }
 }
@@ -110,6 +109,17 @@ export const INVOICE_USER = async () => {
     active: true,
     acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
   } as User);
+};
+
+export const INTEGRATION_USER = async () => {
+  const count = await User.count();
+  return Object.assign(new User(), {
+    firstName: `Integration #${count + 1}`,
+    lastName: `Doe #${count + 1}`,
+    type: UserType.INTEGRATION,
+    active: true,
+    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+  });
 };
 
 async function setInactive(users: User[]) {
