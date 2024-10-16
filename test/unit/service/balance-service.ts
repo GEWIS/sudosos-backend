@@ -64,8 +64,7 @@ describe('BalanceService', (): void => {
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(seededUsers);
     const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { fines, fineTransfers, users, userFineGroups } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
-    const { waiveFineTransfers } = await new FineSeeder().seedWaivers(userFineGroups);
+    const { fines, fineTransfers, users } = await new FineSeeder().seed(seededUsers, transactions, transfers, true, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
@@ -75,7 +74,7 @@ describe('BalanceService', (): void => {
       pointOfSaleRevisions,
       transactions,
       subTransactions,
-      transfers: transfers.concat(fineTransfers).concat(waiveFineTransfers),
+      transfers: transfers.concat(fineTransfers),
       fines,
       spec: await Swagger.importSpecification(),
     };
@@ -92,6 +91,9 @@ describe('BalanceService', (): void => {
       expect(balance.nrFines).to.equal(0);
       return;
     }
+
+    // Sanity check, user should have negative balance (otherwise they cannot have an unpaid fine)
+    expect(balance.amount.amount).to.be.lessThan(0);
 
     expect(balance.fine).to.not.be.null;
     const { fines } = user.currentFines;
