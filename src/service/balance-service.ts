@@ -107,7 +107,7 @@ export default class BalanceService extends WithManager {
       fineSince,
       fineWaived: rawBalance.fine && rawBalance.fineWaived
         ? DineroTransformer.Instance.from(rawBalance.fineWaived).toObject() : null,
-      nrFines: rawBalance.nrFines ?? 0,
+      nrFines: Number(rawBalance.nrFines) ?? 0,
     };
   }
 
