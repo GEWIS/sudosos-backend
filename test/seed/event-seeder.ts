@@ -26,6 +26,9 @@ import Event, { EventType } from '../../src/entity/event/event';
 import EventShiftAnswer, { Availability } from '../../src/entity/event/event-shift-answer';
 import AssignedRole from '../../src/entity/rbac/assigned-role';
 
+/**
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
 export default class EventSeeder extends WithManager {
   /**
    * Seeds a default dataset of borrelSchemaShifts and stores them in the database

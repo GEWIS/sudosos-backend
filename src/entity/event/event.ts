@@ -21,6 +21,7 @@
 /**
  * This is the module page of event.
  *
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  * @module events
  * @mergeTarget
  */
@@ -45,6 +46,7 @@ export enum EventType {
  * @property {User.model} createdBy - Creator of the event.
  * @property {string} startDate - The starting date from which the banner should be shown.
  * @property {string} endDate - The end date from which the banner should no longer be shown.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 @Entity()
