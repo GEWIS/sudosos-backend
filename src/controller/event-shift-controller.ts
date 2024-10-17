@@ -22,6 +22,7 @@
  * This is the module page of event-shift-controller.
  *
  * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 import BaseController, { BaseControllerOptions } from './base-controller';
@@ -35,6 +36,9 @@ import EventShift from '../entity/event/event-shift';
 import { parseRequestPagination } from '../helpers/pagination';
 import { asDate, asEventType } from '../helpers/validators';
 
+/**
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
 export default class EventShiftController extends BaseController {
   private logger: Logger = log4js.getLogger('EventShiftLogger');
 
@@ -95,6 +99,7 @@ export default class EventShiftController extends BaseController {
    * @return {PaginatedEventShiftResponse} 200 - All existing event shifts
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async getAllShifts(req: RequestWithToken, res: Response) {
     this.logger.trace('Get all shifts by user', req.token.user);
@@ -129,6 +134,7 @@ export default class EventShiftController extends BaseController {
    * @return {EventShiftResponse} 200 - Created event shift
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async createShift(req: RequestWithToken, res: Response) {
     const body = req.body as EventShiftRequest;
@@ -169,6 +175,7 @@ export default class EventShiftController extends BaseController {
    * @return {EventShiftResponse} 200 - Created event shift
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async updateShift(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;
@@ -221,6 +228,7 @@ export default class EventShiftController extends BaseController {
    * @return 204 - Success
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async deleteShift(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;
@@ -255,6 +263,7 @@ export default class EventShiftController extends BaseController {
    * @return {Array<PaginatedEventShiftResponse>} 200 - All existing event shifts
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async getShiftSelectedCount(req: RequestWithToken, res: Response) {
     const { id: rawId } = req.params;

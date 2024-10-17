@@ -67,6 +67,9 @@ const mailContents: MailLanguageMap<ForgotEventPlanningOptions> = {
   [Language.ENGLISH]: forgotEventPlanningEnglish,
 };
 
+/**
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
 export default class ForgotEventPlanning extends MailMessage<ForgotEventPlanningOptions> {
   public constructor(options: ForgotEventPlanningOptions) {
     super(options, mailContents);
