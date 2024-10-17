@@ -38,9 +38,14 @@ export default class FineSeeder extends WithManager {
    * @param userFineGroups
    * @param firstReferenceDate
    */
-  public async seedSingleFines(users: User[], transactions: Transaction[], transfers: Transfer[], userFineGroups: UserFineGroup[] = [], firstReferenceDate: Date = new Date()) {
-    const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
-      .map((t) => t.subTransactions));
+  public async seedSingleFines(
+    users: User[],
+    transactions: Transaction[],
+    subTransactions: SubTransaction[],
+    transfers: Transfer[],
+    userFineGroups: UserFineGroup[] = [],
+    firstReferenceDate: Date = new Date(),
+  ) {
     // Get all users that are in debt and should get fined
     const debtors = users.filter((u) =>
       calculateBalance(u, transactions, subTransactions, transfers, firstReferenceDate).amount.getAmount() < 500);
@@ -140,28 +145,34 @@ export default class FineSeeder extends WithManager {
    * @param users
    * @param transactions
    * @param transfers
-   * @param addCurrentFines
+   * @param addCurrentFines Whether the created fines should be linked to the user, meaning these
+   * fines are marked as "unpaid"
+   * @param waiveFines Whether some of the fines should be waived
    */
-  public async seed(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false) {
+  public async seed(users: User[], transactions: Transaction[], transfers: Transfer[], addCurrentFines = false, waiveFines = false) {
+    const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
+      .map((t) => t.subTransactions));
+
     // Make a copy of users, so we can update currentFines
     let newUsers = users;
+
 
     const {
       fines: fines1,
       fineTransfers: fineTransfers1,
       userFineGroups: userFineGroups1,
       fineHandoutEvent: fineHandoutEvent1,
-    } = await this.seedSingleFines(users, transactions, transfers, [], new Date('2021-01-01'));
+    } = await this.seedSingleFines(users, transactions, subTransactions, transfers, [], new Date('2021-01-01'));
 
     const {
       fines: fines2,
       fineTransfers: fineTransfers2,
       userFineGroups: userFineGroups2,
       fineHandoutEvent: fineHandoutEvent2,
-    } = await this.seedSingleFines(users, transactions, [...transfers, ...fineTransfers1], userFineGroups1);
+    } = await this.seedSingleFines(users, transactions, subTransactions, [...transfers, ...fineTransfers1], userFineGroups1);
 
     // Remove duplicates
-    const userFineGroups = [...userFineGroups1, ...userFineGroups2]
+    let userFineGroups = [...userFineGroups1, ...userFineGroups2]
       .filter((g, i, groups) => groups.findIndex((g2) => g2.id === g.id) === i);
     const fines = [...fines1, ...fines2];
 
@@ -172,20 +183,32 @@ export default class FineSeeder extends WithManager {
       userFineGroups[i].fines.push(f);
     });
 
+    // Optionally waive some of the fines
+    let waiveTransfers: Transfer[] = [];
+    if (waiveFines) {
+      const result = await this.seedWaivers(userFineGroups);
+      waiveTransfers = result.waiveFineTransfers;
+      userFineGroups = result.userFineGroups;
+    }
+
+    const fineTransfers = [...fineTransfers1, ...fineTransfers2, ...waiveTransfers];
+
     if (addCurrentFines) {
-      newUsers = await Promise.all(users.map(async (user) => {
+      newUsers = [];
+      for (let user of users) {
         const userFineGroup = userFineGroups.find((g) => user.id === g.userId);
-        if (userFineGroup) {
+        const currentBalance = calculateBalance(user, transactions, subTransactions, [...transfers, ...fineTransfers]);
+        if (userFineGroup && currentBalance.amount.getAmount() < 0) {
           user.currentFines = userFineGroup;
-          await this.manager.save(user);
+          await this.manager.save(User, user);
         }
-        return user;
-      }));
+        newUsers.push(user);
+      }
     }
 
     return {
       fines,
-      fineTransfers: [...fineTransfers1, ...fineTransfers2],
+      fineTransfers,
       userFineGroups,
       fineHandoutEvents: [fineHandoutEvent1, fineHandoutEvent2],
       users: newUsers,

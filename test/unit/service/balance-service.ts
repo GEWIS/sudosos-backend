@@ -64,8 +64,7 @@ describe('BalanceService', (): void => {
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(seededUsers);
     const { transactions } = await new TransactionSeeder().seed(seededUsers, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
     const transfers = await new TransferSeeder().seed(seededUsers, new Date('2020-02-12'), new Date('2021-11-30'));
-    const { fines, fineTransfers, users, userFineGroups } = await new FineSeeder().seed(seededUsers, transactions, transfers, true);
-    const { waiveFineTransfers } = await new FineSeeder().seedWaivers(userFineGroups);
+    const { fines, fineTransfers, users } = await new FineSeeder().seed(seededUsers, transactions, transfers, true, true);
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
@@ -75,7 +74,7 @@ describe('BalanceService', (): void => {
       pointOfSaleRevisions,
       transactions,
       subTransactions,
-      transfers: transfers.concat(fineTransfers).concat(waiveFineTransfers),
+      transfers: transfers.concat(fineTransfers),
       fines,
       spec: await Swagger.importSpecification(),
     };
@@ -85,17 +84,22 @@ describe('BalanceService', (): void => {
     await finishTestDB(ctx.connection);
   });
 
-  async function checkFine(balance: BalanceResponse, user: User) {
+  function checkFine(balance: BalanceResponse, user: User) {
     if (user.currentFines == null) {
       expect(balance.fine).to.be.null;
       expect(balance.fineSince).to.be.null;
+      expect(balance.nrFines).to.equal(0);
       return;
     }
 
+    // Sanity check, user should have negative balance (otherwise they cannot have an unpaid fine)
+    expect(balance.amount.amount).to.be.lessThan(0);
+
     expect(balance.fine).to.not.be.null;
-    const fines = await Fine.find({ where: { userFineGroup: { id: user.currentFines.id } } }); // user.currentFines.fines;
+    const { fines } = user.currentFines;
     const fineAmount = fines.reduce((sum, fine) => sum + fine.amount.getAmount(), 0);
     expect(balance.fine.amount).to.equal(fineAmount);
+    expect(balance.nrFines).to.equal(fines.length);
     expect(new Date(balance.fineSince).getTime()).to.equal(user.currentFines.createdAt.getTime());
 
     if (user.currentFines.waivedTransfer == null) {
@@ -110,41 +114,44 @@ describe('BalanceService', (): void => {
   describe('getBalances', () => {
     it('should return balances from all users', async () => {
       const balanceResponses = await new BalanceService().getBalances({});
+      const now = new Date();
       expect(balanceResponses.records.length).to.equal(ctx.users.length);
 
-      await Promise.all(balanceResponses.records.map(async (balance) => {
+      balanceResponses.records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
-        expect(new Date().getTime() - new Date(balance.date).getTime()).to.be.at.most(1000);
-        await checkFine(balance, user);
-      }));
+        expect(now.getTime() - new Date(balance.date).getTime()).to.be.at.most(1000);
+        checkFine(balance, user);
+      });
+
+      expect(balanceResponses.records.some((b) => b.fine), 'At least one user has a fine').to.be.true;
     });
     it('should return balances on certain date', async () => {
       const date = new Date('2021-01-01');
       const balances = await new BalanceService().getBalances({ date });
 
-      await Promise.all(balances.records.map(async (balance) => {
+      balances.records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
         expect(balance.date).to.equal(date.toISOString());
-        await checkFine(balance, user);
-      }));
+        checkFine(balance, user);
+      });
     });
     it('should return balance from subset of users', async () => {
       const users = [ctx.users[10], ctx.users[11], ctx.users[12]];
       const balanceResponses = await new BalanceService().getBalances({ ids: users.map((u) => u.id) });
       expect(balanceResponses.records.length).to.equal(users.length);
 
-      await Promise.all(balanceResponses.records.map(async (balance) => {
+      balanceResponses.records.map((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
-        await checkFine(balance, user);
-      }));
+        checkFine(balance, user);
+      });
     });
     it('should only return balances more than or equal a certain amount', async () => {
       const amount = 1039;
@@ -545,7 +552,10 @@ describe('BalanceService', (): void => {
       expect(balance.amount.amount).to.equal(0);
       expect(balance.fine).to.be.null;
       expect(balance.fineSince).to.be.null;
+      expect(balance.nrFines).to.equal(0);
+      expect(balance.fineWaived).to.be.null;
       expect(balance.lastTransactionId).to.equal(-1);
+      expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(-1);
     });
     it('should return correct balance for new user with single outgoing transaction', async () => {
@@ -555,6 +565,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount);
       expect(balance.lastTransactionId).to.equal(transaction.id);
+      expect(balance.lastTransactionDate).to.equal(transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
     });
     it('should return correct balance for new user with single incoming transaction', async () => {
@@ -564,6 +575,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount);
       expect(balance.lastTransactionId).to.equal(transaction.id);
+      expect(balance.lastTransactionDate).to.equal(transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
     });
     it('should correctly return balance for new user with single outgoing transfer', async () => {
@@ -573,6 +585,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount);
       expect(balance.lastTransactionId).to.equal(-1);
+      expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(transfer.id);
     });
     it('should correctly return balance for new user with single incoming transfer', async () => {
@@ -582,6 +595,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount);
       expect(balance.lastTransactionId).to.equal(-1);
+      expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(transfer.id);
     });
     it('should return correct balance for new user with two outgoing transactions and balance cache', async () => {
@@ -600,6 +614,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount - transaction2.amount.amount);
       expect(balance.lastTransactionId).to.equal(transaction2.transaction.id);
+      expect(balance.lastTransactionDate).to.equal(transaction2.transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
     });
     it('should return correct balance for new user with two incoming transactions and balance cache', async () => {
@@ -619,6 +634,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount + transaction2.amount.amount);
       expect(balance.lastTransactionId).to.equal(transaction2.transaction.id);
+      expect(balance.lastTransactionDate).to.equal(transaction2.transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
     });
     it('should correctly return balance for new user with two outgoing transfers with balance cache', async () => {
@@ -637,6 +653,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount - transfer2.amount.amount);
       expect(balance.lastTransactionId).to.equal(-1);
+      expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(transfer2.transfer.id);
     });
     it('should correctly return balance for new user with single incoming transfer', async () => {
@@ -655,6 +672,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(amount.amount + transfer2.amount.amount);
       expect(balance.lastTransactionId).to.equal(-1);
+      expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(transfer2.transfer.id);
     });
     it('should correctly return balance for new user with incoming and outgoing transactions and transfers', async () => {
@@ -768,6 +786,7 @@ describe('BalanceService', (): void => {
       const balance = await new BalanceService().getBalance(newUser.id);
       expect(balance.amount.amount).to.equal(-amount.amount);
       expect(balance.lastTransactionId).to.equal(transaction.id);
+      expect(balance.lastTransactionDate).to.equal(transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
     });
   });

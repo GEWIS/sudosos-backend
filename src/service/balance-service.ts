@@ -73,13 +73,24 @@ export function asBalanceOrderColumn(input: any): BalanceOrderColumn | undefined
 }
 
 export default class BalanceService extends WithManager {
-  protected static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
-    let fineSince = null;
-    // SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone
-    if (rawBalance.fineSince) {
-      const fineSinceUtc = process.env.TYPEORM_CONNECTION === 'sqlite' ? rawBalance.fineSince + 'Z' : rawBalance.fineSince;
-      fineSince = new Date(fineSinceUtc).toISOString();
+  /**
+   * Parse the given SQL date to a ISO date. This custom conversion is necessary, because
+   * SQLite returns timestamps in UTC, while MariaDB/MySQL returns timestamps in the local timezone.
+   * @param rawDate
+   * @private
+   */
+  private static sqlTimeToISOTime(rawDate: any): string | null {
+    let date = null;
+    if (rawDate) {
+      const dateSinceUtc = process.env.TYPEORM_CONNECTION === 'sqlite' ? rawDate + 'Z' : rawDate;
+      date = new Date(dateSinceUtc).toISOString();
     }
+    return date;
+  }
+
+  private static asBalanceResponse(rawBalance: any, date: Date): BalanceResponse {
+    let fineSince = this.sqlTimeToISOTime(rawBalance.fineSince);
+    let lastTransactionDate = this.sqlTimeToISOTime(rawBalance.lastTransactionDate);
 
     return {
       id: rawBalance.id,
@@ -90,15 +101,17 @@ export default class BalanceService extends WithManager {
       date: date.toISOString(),
       amount: DineroTransformer.Instance.from(rawBalance.amount).toObject(),
       lastTransactionId: rawBalance.lastTransactionId,
+      lastTransactionDate,
       lastTransferId: rawBalance.lastTransferId,
       fine: rawBalance.fine ? DineroTransformer.Instance.from(rawBalance.fine).toObject() : null,
       fineSince,
       fineWaived: rawBalance.fine && rawBalance.fineWaived
         ? DineroTransformer.Instance.from(rawBalance.fineWaived).toObject() : null,
+      nrFines: Number(rawBalance.nrFines) ?? 0,
     };
   }
 
-  protected static addWhereClauseForIds(
+  private static addWhereClauseForIds(
     query: string, parameters: any[], column: string, ids?: number[],
   ) {
     if (ids !== undefined) {
@@ -109,7 +122,7 @@ export default class BalanceService extends WithManager {
     return query;
   }
 
-  protected static addWhereClauseForDate(
+  private static addWhereClauseForDate(
     query: string, parameters: any[], column: string, date?: string,
   ) {
     if (date !== undefined) {
@@ -231,90 +244,105 @@ export default class BalanceService extends WithManager {
 
     const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
 
-    let query = 'SELECT moneys2.id as id, '
-      + 'moneys2.firstName as firstName, '
-      + 'moneys2.lastName as lastName, '
-      + 'moneys2.nickname as nickname, '
-      + 'moneys2.type as type, '
-      + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
-      + 'moneys2.count as count, '
-      + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
-      + `${greatest}(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, `
-      + 'b5.amount as cachedAmount, '
+    let query = 'SELECT userBalance.id as id, '
+      + 'userBalance.firstName as firstName, '
+      + 'userBalance.lastName as lastName, '
+      + 'userBalance.nickname as nickname, '
+      + 'userBalance.type as type, '
+      + 'userBalance.amount as amount, '
+      + 'userBalance.count as count, '
+      + 'userBalance.lastTransactionId as lastTransactionId, '
+      + 'userBalance.lastTransferId as lastTransferId, '
+      + 'userBalance.cachedAmount as cachedAmount, '
+      + 'lt.createdAt as lastTransactionDate, '
       + 'f.fine as fine, '
       + 'f.fineSince as fineSince, '
-      + 'f.fineWaived as fineWaived '
+      + 'f.fineWaived as fineWaived, '
+      + 'f.nrFines as nrFines '
       + 'from ( '
-      + 'SELECT user.id as id, '
-      + 'user.firstName as firstName, '
-      + 'user.lastName as lastName, '
-      + 'user.nickname as nickname, '
-      + 'user.type as type, '
-      + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
-      + 'count(moneys.totalValue) as count, '
-      + 'max(moneys.transactionId) as lastTransactionId, '
-      + 'max(moneys.transferId) as lastTransferId '
-      + 'from user '
-      + 'left join ( '
-      + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue`, t.id as `transactionId`, null as `transferId` '
-      + 'from `transaction` as `t` '
-      + `left join ${balanceSubquery()} as b on t.fromId=b.userId `
-      + 'inner join sub_transaction st on t.id=st.transactionId '
-      + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
-      + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
-      + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
+        + 'SELECT moneys2.id as id, '
+        + 'moneys2.firstName as firstName, '
+        + 'moneys2.lastName as lastName, '
+        + 'moneys2.nickname as nickname, '
+        + 'moneys2.type as type, '
+        + 'moneys2.totalValue + COALESCE(b5.amount, 0) as amount, '
+        + 'moneys2.count as count, '
+        + `${greatest}(coalesce(b5.lasttransactionid, -1), coalesce(moneys2.lastTransactionId, -1)) as lastTransactionId, `
+        + `${greatest}(coalesce(b5.lasttransferid, -1), coalesce(moneys2.lastTransferId, -1)) as lastTransferId, `
+        + 'b5.amount as cachedAmount '
+        + 'from ( '
+        + 'SELECT user.id as id, '
+        + 'user.firstName as firstName, '
+        + 'user.lastName as lastName, '
+        + 'user.nickname as nickname, '
+        + 'user.type as type, '
+        + 'COALESCE(sum(moneys.totalValue), 0) as totalValue, '
+        + 'count(moneys.totalValue) as count, '
+        + 'max(moneys.transactionId) as lastTransactionId, '
+        + 'max(moneys.transferId) as lastTransferId '
+        + 'from user '
+        + 'left join ( '
+        + 'select t.fromId as `id`, str.amount * pr.priceInclVat * -1 as `totalValue`, t.id as `transactionId`, null as `transferId` '
+        + 'from `transaction` as `t` '
+        + `left join ${balanceSubquery()} as b on t.fromId=b.userId `
+        + 'inner join sub_transaction st on t.id=st.transactionId '
+        + 'inner join sub_transaction_row str on st.id=str.subTransactionId '
+        + 'inner join product_revision pr on str.productRevision=pr.revision and str.productProductId=pr.productId '
+        + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = BalanceService.addWhereClauseForIds(query, parameters, 't.fromId', ids);
     query = BalanceService.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
-      + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue`, t.id as `transactionId`, null as `transferId` from sub_transaction st2 '
-      + `left join ${balanceSubquery()} b on st2.toId=b.userId `
-      + 'inner join `transaction` t on t.id=st2.transactionId '
-      + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
-      + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
-      + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
+        + 'select st2.toId as `id`, str2.amount * pr2.priceInclVat as `totalValue`, t.id as `transactionId`, null as `transferId` from sub_transaction st2 '
+        + `left join ${balanceSubquery()} b on st2.toId=b.userId `
+        + 'inner join `transaction` t on t.id=st2.transactionId '
+        + 'inner join sub_transaction_row str2 on st2.id=str2.subTransactionId '
+        + 'inner join product_revision pr2 on str2.productRevision=pr2.revision and str2.productProductId=pr2.productId '
+        + 'where t.createdAt > COALESCE(b.lastTransactionDate, 0) ';
     query = BalanceService.addWhereClauseForIds(query, parameters, 'st2.toId', ids);
     query = BalanceService.addWhereClauseForDate(query, parameters, 't.createdAt', d);
     query += 'UNION ALL '
-      + 'select t2.fromId as `id`, t2.amountInclVat*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
-      + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
-      + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
+        + 'select t2.fromId as `id`, t2.amountInclVat*-1 as `totalValue`, null as `transactionId`, t2.id as `transferId` from transfer t2 '
+        + `left join ${balanceSubquery()} b on t2.fromId=b.userId `
+        + 'where t2.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = BalanceService.addWhereClauseForIds(query, parameters, 't2.fromId', ids);
     query = BalanceService.addWhereClauseForDate(query, parameters, 't2.createdAt', d);
     query += 'UNION ALL '
-      + 'select t3.toId as `id`, t3.amountInclVat as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
-      + `left join ${balanceSubquery()} b on t3.toId=b.userId `
-      + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
+        + 'select t3.toId as `id`, t3.amountInclVat as `totalValue`, null as `transactionId`, t3.id as `transferId` from transfer t3 '
+        + `left join ${balanceSubquery()} b on t3.toId=b.userId `
+        + 'where t3.createdAt > COALESCE(b.lastTransferDate, 0) ';
     query = BalanceService.addWhereClauseForIds(query, parameters, 't3.toId', ids);
     query = BalanceService.addWhereClauseForDate(query, parameters, 't3.createdAt', d);
     query += ') as moneys on moneys.id=user.id '
-      + 'where 1 ';
+        + 'where 1 ';
     query = BalanceService.addWhereClauseForIds(query, parameters, 'user.id', ids);
     query += 'group by user.id '
-      + ') as moneys2 '
-      + 'left join ( '
-      + 'select b.userId, b.amount, b.lastTransactionId, b.lastTransferId '
-      + 'from balance b '
-      + 'left join `transaction` t1 on b.lastTransactionId=t1.id '
-      + 'left join `transfer` t2 on b.lastTransferId=t2.id ';
+        + ') as moneys2 '
+        + 'left join ( '
+        + 'select b.userId, b.amount, b.lastTransactionId, b.lastTransferId '
+        + 'from balance b '
+        + 'left join `transaction` t1 on b.lastTransactionId = t1.id '
+        + 'left join `transfer` t2 on b.lastTransferId = t2.id ';
     if (date !== undefined) {
       query += 'where t1.createdAt <= ? AND t2.createdAt <= ? ';
       parameters.push(...[d, d]);
     }
     query += ') AS b5 ON b5.userId=moneys2.id '
-      + 'inner join user as u on u.id = moneys2.id '
+      + ') as userBalance '
+      + 'inner join `user` as u on u.id = userBalance.id '
+      + 'left join `transaction` as lt on lt.id = userBalance.lastTransactionId '
       + 'left join ( '
-        + 'select sum(fine.amount) as fine, max(user_fine_group.createdAt) as fineSince, max(transfer.amountInclVat) as fineWaived, user.id as id '
+        + 'select sum(fine.amount) as fine, max(user_fine_group.createdAt) as fineSince, max(transfer.amountInclVat) as fineWaived, count(fine.id) as nrFines, user.id as id '
         + 'from fine '
-        + 'inner join user_fine_group on fine.userFineGroupId = user_fine_group.id '
-        + 'inner join user on user_fine_group.userId = user.id '
-        + 'left join transfer on user_fine_group.waivedTransferId = transfer.id '
+        + 'inner join `user_fine_group` on fine.userFineGroupId = user_fine_group.id '
+        + 'inner join `user` on user_fine_group.userId = user.id '
+        + 'left join `transfer` on user_fine_group.waivedTransferId = transfer.id '
         + 'where user.currentFinesId = user_fine_group.id '
         + 'group by user.id '
-      + ') as f on f.id = moneys2.id '
+      + ') as f on f.id = userBalance.id '
       + `where u.type not in ("${UserType.POINT_OF_SALE}") `;
 
-    if (minBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) >= ${minBalance.getAmount()} `;
-    if (maxBalance !== undefined) query += `and moneys2.totalvalue + Coalesce(b5.amount, 0) <= ${maxBalance.getAmount()} `;
+    if (minBalance !== undefined) query += `and userBalance.amount >= ${minBalance.getAmount()} `;
+    if (maxBalance !== undefined) query += `and userBalance.amount <= ${maxBalance.getAmount()} `;
     if (hasFine === false) query += 'and f.fine is null ';
     if (hasFine === true) query += 'and f.fine is not null ';
     if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;

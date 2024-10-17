@@ -41,10 +41,13 @@ import { UserType } from '../../entity/user/user';
  * subtracted from the "fine" property to calculate the actual amount of fines the user has. Only
  * represents the current point in time, aka "now" (if any). Should be ignored if date is not now.
  * @property {string} fineSince - Timestamp of the first fine
+ * @property {integer} nrFines.required - The number of fines this user has received. 0 if no unpaid fines.
  * @property {number} lastTransactionId - The ID of the last transaction that was
- * present when the balance was cached
+ * present when the balance was cached. -1 if the user has not made any transactions
+ * @property {string} lastTransactionDate - The timestamp of this user's last transaction. NULL if this
+ * user has not made any transactions
  * @property {number} lastTransferId - The ID of the last transfer that was
- * present when the balance was cached
+ * present when the balance was cached. -1 if the user has not made any transfers
  */
 export default interface BalanceResponse extends BaseUserResponse {
   type: UserType;
@@ -53,7 +56,9 @@ export default interface BalanceResponse extends BaseUserResponse {
   fine?: DineroObjectResponse | null;
   fineWaived?: DineroObjectRequest | null;
   fineSince?: string | null;
+  nrFines: number;
   lastTransactionId: number;
+  lastTransactionDate?: string | null;
   lastTransferId: number;
 }
 
