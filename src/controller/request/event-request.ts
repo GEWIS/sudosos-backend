@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the event-request.
+ *
+ * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
+
 import { Availability } from '../../entity/event/event-shift-answer';
 
 /**
@@ -28,6 +35,7 @@ import { Availability } from '../../entity/event/event-shift-answer';
  * @property {string} type - The type of the event.
  * @property {Array<integer>} shiftIds.required - IDs of shifts that are in this event
  * per participant per borrel.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 /**
@@ -38,6 +46,7 @@ import { Availability } from '../../entity/event/event-shift-answer';
  * @property {string} type - The type of the event.
  * @property {Array<integer>} shiftIds - IDs of shifts that are in this event
  * per participant per borrel.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventRequest {
   name: string,
@@ -51,12 +60,14 @@ export interface EventRequest {
  * @typedef {object} CreateShiftRequest
  * @property {string} name.required - Name of the event
  * @property {Array<string>} roles.required - Roles that (can) have this shift
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 /**
  * @typedef {object} UpdateShiftRequest
  * @property {string} name - Name of the event
  * @property {Array<string>} roles - Roles that (can) have this shift
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventShiftRequest {
   name: string,
@@ -66,6 +77,7 @@ export interface EventShiftRequest {
 /**
  * @typedef {object} EventAnswerAssignmentRequest
  * @property {boolean} selected.required - Whether this user is selected for the given shift at the given event
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventAnswerAssignmentRequest {
   selected: boolean,
@@ -74,6 +86,7 @@ export interface EventAnswerAssignmentRequest {
 /**
  * @typedef {object} EventAnswerAvailabilityRequest
  * @property {string} availability.required - New availability of the given user for the given event (YES, NO, LATER, NA)
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventAnswerAvailabilityRequest {
   availability: Availability,

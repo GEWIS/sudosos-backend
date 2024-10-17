@@ -89,7 +89,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
       ],
       givenName: 'Sudo',
       sn: 'SOS',
-      objectGUID: '1',
+      objectGUID: Buffer.from('11', 'hex'),
       employeeNumber: '4141',
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',
@@ -172,7 +172,9 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     it('should bind to GEWIS User if already exists', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const ADuser = {
-          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
+          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`,
+          objectGUID: Buffer.from(((user.id).toString().length % 2 ? '0' : '') + (user.id).toString(), 'hex'),
+          employeeNumber: `${user.id}`,
         };
         const userCount = await User.count();
 
@@ -207,7 +209,9 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
     it('should login and create a user + GEWIS user using LDAP ', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         const ADuser = {
-          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`, objectGUID: user.id, employeeNumber: `${user.id}`,
+          ...ctx.validADUser, givenName: `Sudo #${user.firstName}`, sn: `SOS #${user.lastName}`,
+          objectGUID: Buffer.from(((user.id).toString().length % 2 ? '0' : '') + (user.id).toString(), 'hex'),
+          employeeNumber: `${user.id}`,
         };
         let DBUser = await User.findOne(
           { where: { firstName: ctx.validADUser.givenName, lastName: ctx.validADUser.sn } },

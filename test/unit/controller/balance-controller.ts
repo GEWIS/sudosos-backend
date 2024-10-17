@@ -295,8 +295,11 @@ describe('BalanceController', (): void => {
       expect(res.status).to.equal(200);
 
       const body = res.body as PaginatedBalanceResponse;
+      // Users with at most 10000 fine and a negative balance
       const users = ctx.userFineGroups
-        .filter((u) => u.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) <= maxFine);
+        .filter((u) => u.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) <= maxFine)
+        .filter((u) => calculateBalance(u.user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() < 0);
+      expect(users.length).to.be.at.least(1);
 
       expect(body.records.length).to.equal(users.length);
       expect(body.records.map((b) => b.id)).to.deep.equalInAnyOrder(users.map((u) => u.user.id));

@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of event-shift-answer.
+ *
+ * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
+
 import {
   Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
@@ -42,6 +49,7 @@ export enum Availability {
  * during the related borrel.
  * @property {EventShift.model} shift - Shift that answers are related to.
  * @property {Event.model} event - Event that answers are related to
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 @Entity()

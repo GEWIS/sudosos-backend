@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the hash.
+ *
+ * @module helpers
+ */
+
 import crypto from 'crypto';
 
 /**

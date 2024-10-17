@@ -18,12 +18,18 @@
  *  @license
  */
 
+/**
+ * is the module page of the restriction-middleware.
+ *
+ * @module internal/middleware
+ */
+
 import { RequestHandler, Response } from 'express';
 import { RequestWithToken } from './token-middleware';
 import { TermsOfServiceStatus } from '../entity/user/user';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
-import { getLogger } from 'log4js';
+import log4js from 'log4js';
 
 export interface TokenRestrictions {
   /**
@@ -68,7 +74,7 @@ export default class RestrictionMiddleware {
         return;
       }
     } catch (e) {
-      getLogger('RestrictionMiddleware').error(e);
+      log4js.getLogger('RestrictionMiddleware').error(e);
       res.status(500).end('Internal server error.');
       return;
     }

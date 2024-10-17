@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of nfc-authenticator.
+ *
+ * @module authentication
+ */
+
 import {
   Column, Entity,
 } from 'typeorm';

@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the user-fine-group.
+ *
+ * @module fines
+ * @mergeTarget
+ */
+
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import User from '../user/user';
 import Fine from './fine';

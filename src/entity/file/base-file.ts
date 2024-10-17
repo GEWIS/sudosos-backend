@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of base-file.
+ *
+ * @module internal/files
+ */
+
 import { Column, Entity, ManyToOne } from 'typeorm';
 import BaseEntity from '../base-entity';
 import User from '../user/user';

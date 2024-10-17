@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the point-of-sale-request-spec.
+ *
+ * @module internal/spec/point-of-sale-request-spec
+ */
+
 import {
   createArrayRule,
   Specification, toFail,

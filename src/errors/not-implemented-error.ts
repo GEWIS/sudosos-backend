@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the not-implemented-error.
+ *
+ * @module internal/errors
+ */
+
 export class NotImplementedError extends Error {
   constructor(message?: string) {
     super(message);

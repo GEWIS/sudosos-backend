@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-local-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationLocalRequest
  * @property {string} accountMail.required - The users mail to authenticate
  * @property {string} password.required - The password

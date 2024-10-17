@@ -237,7 +237,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       ],
       givenName: 'Sudo',
       sn: 'SOS',
-      objectGUID: '1',
+      objectGUID: Buffer.from('11', 'hex'),
       employeeNumber: '4141',
       sAMAccountName: 'm4141',
       mail: 'm4141@gewis.nl',

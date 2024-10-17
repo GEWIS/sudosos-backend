@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the point-of-sale-request.
+ *
+ * @module catalogue/point-of-sale
+ */
+
 export interface BasePointOfSaleParams {
   containers: number[],
   name: string,

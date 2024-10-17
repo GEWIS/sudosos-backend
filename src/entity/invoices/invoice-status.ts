@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the page of invoice-status.
+ *
+ * @module invoicing
+ */
+
+
 import {
   Column, Entity, JoinColumn, ManyToOne,
 } from 'typeorm';

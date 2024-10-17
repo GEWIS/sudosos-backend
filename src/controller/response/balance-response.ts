@@ -18,29 +18,47 @@
  *  @license
  */
 
+/**
+ * This is the module page of the balance-response.
+ *
+ * @module balance
+ */
+
 import { DineroObjectResponse } from './dinero-response';
 import { PaginationResult } from '../../helpers/pagination';
+import { BaseUserResponse } from './user-response';
+import { DineroObjectRequest } from '../request/dinero-request';
+import { UserType } from '../../entity/user/user';
 
 /**
- * @typedef {object} BalanceResponse
- * @property {number} id.required - ID of the user this balance belongs to
+ * @typedef {allOf|BaseUserResponse} BalanceResponse
+ * @property {string} type.required - The user's type
  * @property {string} date.required - Date at which this user had this balance
  * @property {DineroObjectResponse} amount.required - The amount of balance this user has
  * @property {DineroObjectResponse} fine - The amount of fines this user has at the current point in time,
  * aka "now" (if any). Should be ignored if date is not now.
+ * @property {DineroObjectResponse} fineWaived - The amount of fines that have been waived. Should be
+ * subtracted from the "fine" property to calculate the actual amount of fines the user has. Only
+ * represents the current point in time, aka "now" (if any). Should be ignored if date is not now.
  * @property {string} fineSince - Timestamp of the first fine
+ * @property {integer} nrFines.required - The number of fines this user has received. 0 if no unpaid fines.
  * @property {number} lastTransactionId - The ID of the last transaction that was
- * present when the balance was cached
+ * present when the balance was cached. -1 if the user has not made any transactions
+ * @property {string} lastTransactionDate - The timestamp of this user's last transaction. NULL if this
+ * user has not made any transactions
  * @property {number} lastTransferId - The ID of the last transfer that was
- * present when the balance was cached
+ * present when the balance was cached. -1 if the user has not made any transfers
  */
-export default interface BalanceResponse {
-  id: number;
+export default interface BalanceResponse extends BaseUserResponse {
+  type: UserType;
   date: string;
   amount: DineroObjectResponse;
   fine?: DineroObjectResponse | null;
+  fineWaived?: DineroObjectRequest | null;
   fineSince?: string | null;
+  nrFines: number;
   lastTransactionId: number;
+  lastTransactionDate?: string | null;
   lastTransferId: number;
 }
 

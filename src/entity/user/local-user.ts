@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the local-user.
+ *
+ * @module users
+ */
+
 import {
   BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
 } from 'typeorm';

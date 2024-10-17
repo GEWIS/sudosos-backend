@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the write-off-service.
+ *
+ * @module write-offs
+ */
+
 import WriteOff from '../entity/transactions/write-off';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';

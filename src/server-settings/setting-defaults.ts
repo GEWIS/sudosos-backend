@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the server-settings defaults.
+ *
+ * @module internal/server-settings
+ */
+
 import { ISettings } from '../entity/server-setting';
 
 const SettingsDefaults: ISettings = {

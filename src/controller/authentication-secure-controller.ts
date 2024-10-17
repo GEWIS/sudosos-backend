@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of authentication-secure-controller.
+ *
+ * @module authentication
+ */
+
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';

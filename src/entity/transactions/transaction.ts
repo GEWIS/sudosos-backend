@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction.
+ *
+ * @module transactions
+ * @mergeTarget
+ */
+
 import {
   Entity, ManyToOne, OneToMany,
 } from 'typeorm';

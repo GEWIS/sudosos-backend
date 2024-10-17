@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the hello-world.
+ *
+ * @module internal/mailer
+ */
+
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
 

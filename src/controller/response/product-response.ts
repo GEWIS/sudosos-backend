@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-response.
+ *
+ * @module catalogue/products
+ */
+
 import BaseResponse from './base-response';
 import { BaseUserResponse } from './user-response';
 import { ProductCategoryResponse } from './product-category-response';

@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-nfc-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationNfcRequest
  * @property {string} nfcCode.required
  */

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the general-validators.
+ *
+ * @module internal/spec
+ */
+
 import { toFail, toPass, ValidationError } from '../../../helpers/specification-validation';
 import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
 import {

@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the reset-local-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} ResetLocalRequest
  * @property {string} accountMail.required - The mail of the user
  */

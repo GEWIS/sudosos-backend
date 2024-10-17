@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the event-service.
+ *
+ * @module events
+ */
+
 import { Between, FindManyOptions, In, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   BaseEventAnswerResponse,
@@ -97,6 +103,7 @@ export function parseEventFilterParameters(
  * @param req
  * @param partial - Whether all attributes are required or not
  * @param id
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  * @throws Error - validation failed
  */
 export async function parseUpdateEventRequestParameters(
@@ -143,6 +150,7 @@ export async function parseUpdateEventRequestParameters(
 
 /**
  * Wrapper for all Borrel-schema related logic.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export default class EventService {
   private static asBaseEventResponse(entity: Event): BaseEventResponse {

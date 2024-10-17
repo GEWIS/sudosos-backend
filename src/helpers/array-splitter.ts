@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the array-splitter.
+ *
+ * @module helpers
+ */
+
 import { ContainerParams } from '../controller/request/container-request';
 import { ProductRequest } from '../controller/request/product-request';
 

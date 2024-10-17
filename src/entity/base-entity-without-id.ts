@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of base-entity-without-id.
+ *
+ * @module internal/entities
+ */
+
 import {
   BaseEntity as OrmBaseEntity, CreateDateColumn, Index, UpdateDateColumn, VersionColumn,
 } from 'typeorm';

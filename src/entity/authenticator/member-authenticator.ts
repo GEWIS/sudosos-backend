@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of member-authenticator.
+ *
+ * @module authentication
+ */
+
 import {
   Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';

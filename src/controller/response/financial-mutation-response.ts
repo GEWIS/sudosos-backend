@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * @hidden
+ * @module
+ */
+
 import { PaginationResult } from '../../helpers/pagination';
 import { TransferResponse } from './transfer-response';
 import { BaseTransactionResponse } from './transaction-response';

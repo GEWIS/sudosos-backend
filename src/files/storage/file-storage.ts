@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the file-storage.
+ *
+ * @module internal/files/storage
+ */
+
 import BaseFile from '../../entity/file/base-file';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

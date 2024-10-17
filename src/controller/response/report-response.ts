@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the report-response.
+ *
+ * @module reports
+ */
+
 import { DineroObjectResponse } from './dinero-response';
 import { VatGroupResponse } from './vat-group-response';
 import { BaseProductResponse } from './product-response';

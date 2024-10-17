@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the seller-payout-service.
+ *
+ * @module seller-payouts
+ */
+
 import {
   FindManyOptions,
   FindOptionsRelations,

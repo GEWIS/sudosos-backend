@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the voucher-group-request.
+ *
+ * @module vouchers
+ */
+
 import DineroFactory from 'dinero.js';
 import { DineroObjectRequest } from './dinero-request';
 

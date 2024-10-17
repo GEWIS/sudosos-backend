@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the token-middleware.
+ *
+ * @module internal/middleware
+ */
+
 import { v4 as uuid4 } from 'uuid';
 import { RequestHandler, Response } from 'express';
 import TokenHandler from '../authentication/token-handler';

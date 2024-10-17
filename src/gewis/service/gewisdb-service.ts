@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of gewis-db-service.
+ *
+ * @module GEWIS/gewisdb
+ */
+
 import GewisUser from '../entity/gewis-user';
 import { BasicApi, Configuration, Health, MembersApi } from 'gewisdb-ts-client';
 import log4js, { getLogger, Logger } from 'log4js';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the pdf-able.
+ *
+ * @module internal/files/pdf
+ */
+
 import Pdf from './pdf-file';
 import BaseEntity from '../base-entity';
 import User from '../user/user';

@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the ad.
+ *
+ * @module helpers
+ */
+
 import { EntityManager } from 'typeorm';
 import { Client } from 'ldapts';
 import log4js, { Logger } from 'log4js';
@@ -38,7 +44,7 @@ export function getLDAPSettings() {
 }
 
 export interface LDAPResponse {
-  objectGUID: string,
+  objectGUID: Buffer,
   whenChanged: string,
 }
 
@@ -54,7 +60,7 @@ export interface LDAPUser {
   memberOfFlattened: string[],
   givenName: string,
   sn: string,
-  objectGUID: string,
+  objectGUID: Buffer,
   mail: string,
   mNumber: number | undefined;
 }
@@ -67,13 +73,11 @@ export interface LDAPUser {
  * @param user - The User to bind to.
  */
 export async function bindUser(manager: EntityManager,
-  ADUser: { objectGUID: string }, user: User): Promise<LDAPAuthenticator> {
-  const auth = Object.assign(new LDAPAuthenticator(), {
-    user,
+  ADUser: { objectGUID: Buffer }, user: User): Promise<LDAPAuthenticator> {
+  return manager.save(LDAPAuthenticator, {
+    user: user,
     UUID: ADUser.objectGUID,
-  }) as LDAPAuthenticator;
-  await manager.save(auth);
-  return auth;
+  });
 }
 
 /**
@@ -100,11 +104,22 @@ export async function getLDAPConnection(): Promise<Client> {
   return client;
 }
 
+export interface LDAPResult {
+  dn: string,
+  whenChanged: string,
+  memberOfFlattened: string[],
+  givenName: string,
+  sn: string,
+  objectGUID: Buffer,
+  mail: string,
+  employeeNumber: number | undefined;
+}
+
 /**
  * Wrapper for typing the untyped ldap result.
  * @param ldapResult - Search result to type
  */
-export function userFromLDAP(ldapResult: any): LDAPUser {
+export function userFromLDAP(ldapResult: LDAPResult): LDAPUser {
   const {
     dn, memberOfFlattened, givenName, sn,
     objectGUID, mail, employeeNumber, whenChanged,

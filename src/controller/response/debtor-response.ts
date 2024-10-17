@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the debtor-response.
+ *
+ * @module debtors
+ */
+
 import { DineroObjectResponse } from './dinero-response';
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';

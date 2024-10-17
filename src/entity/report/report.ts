@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the report.
+ *
+ * @module reports
+ * @mergeTarget
+ */
+
 import Dinero from 'dinero.js';
 import ProductRevision from '../product/product-revision';
 import VatGroup from '../vat-group';

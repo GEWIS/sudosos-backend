@@ -18,4 +18,10 @@
  *  @license
  */
 
+/**
+ * This is the module page of the helpers/database.
+ *
+ * @module helpers
+ */
+
 export const PERSISTENT_TEST_DATABASES = new Set(['mysql', 'mariadb']);

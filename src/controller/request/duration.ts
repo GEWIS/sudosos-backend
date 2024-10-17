@@ -19,6 +19,11 @@
  */
 
 /**
+ * @hidden
+ * @module
+ */
+
+/**
  * For all requests that contain an object with a start and end date.
  */
 export default interface Duration {

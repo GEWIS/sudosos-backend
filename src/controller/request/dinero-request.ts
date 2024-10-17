@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the dinero-request.
+ *
+ * @module helpers/dinero
+ */
+
+/**
  * @typedef {object} DineroObject
  * @property {integer} amount.required - amount
  * @property {string} currency.required - currency

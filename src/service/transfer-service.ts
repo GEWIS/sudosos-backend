@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of transfer-service.
+ *
+ * @module transfers
+ */
+
 import dinero from 'dinero.js';
 import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';

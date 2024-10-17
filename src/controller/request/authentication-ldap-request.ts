@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the authentication-ldap-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} AuthenticationLDAPRequest
  * @property {string} accountName.required - The AD account name to authenticate
  * @property {string} password.required - The password

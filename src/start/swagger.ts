@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the swagger-service.
+ *
+ * @module internal/swagger
+ */
+
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import express from 'express';

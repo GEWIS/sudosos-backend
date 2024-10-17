@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the update-nfc-request.
+ *
+ * @module authentication
+ */
+
+/**
  * @typedef {object} UpdateNfcRequest
  * @property {string} nfcCode.required - The NFC code to set
  */

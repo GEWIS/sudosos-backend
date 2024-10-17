@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the payout-request-request.
+ *
+ * @module payout-requests
+ */
+
 import { DineroObjectRequest } from './dinero-request';
 
 /**

@@ -18,6 +18,20 @@
  *  @license
  */
 
+/**
+ * This is the module page of invoicing.
+ *
+ * ```ts
+ * const invoice = await this.manager.findOne(Invoice, {
+ *    where: { id: invoiceId }, relations: ['transfer', 'transfer.from',
+ *   'invoiceStatus', 'invoiceStatus.changedBy']
+ * });
+ * ```
+ *
+ * @module invoicing
+ * @mergeTarget
+ */
+
 import {
   Column,
   Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, ManyToMany, JoinTable,

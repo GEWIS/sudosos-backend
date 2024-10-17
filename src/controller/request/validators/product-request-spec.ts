@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the product-request-spec.
+ *
+ * @module internal/spec/product-request-spec
+ */
+
 import CreateProductParams, { BaseProductParams } from '../product-request';
 import {
   Specification,

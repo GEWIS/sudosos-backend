@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the banner-service.
+ *
+ * @module banners
+ */
+
 import { FindManyOptions } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
 import { BannerResponse, PaginatedBannerResponse } from '../controller/response/banner-response';

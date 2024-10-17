@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the page of payout-request-pdf-service.
+ *
+ * @module internal/pdf/payout-request-pdf-service
+ */
+
 import { FileResponse, PayoutRouteParams } from 'pdf-generator-client';
 import PayoutRequest from '../../entity/transactions/payout/payout-request';
 import {

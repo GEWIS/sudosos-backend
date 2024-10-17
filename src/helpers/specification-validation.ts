@@ -19,6 +19,12 @@
  */
 
 /**
+ * This is the module page of the specification-validation.
+ *
+ * @module helpers
+ */
+
+/**
  * To allow for nested errors we need the notation of traversing through errors.
  * The abstraction is that we have a 'Joinable' such that items can be combined.
  */

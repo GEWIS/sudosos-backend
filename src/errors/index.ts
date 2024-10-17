@@ -18,5 +18,11 @@
  *  @license
  */
 
+/**
+ * This is the module page of the errors.
+ *
+ * @module internal/errors
+ */
+
 export { NotImplementedError } from './not-implemented-error';
 export { PdfError } from './pdf-error';

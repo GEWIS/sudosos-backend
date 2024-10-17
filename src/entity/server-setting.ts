@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the server-setting.
+ *
+ * @module internal/server-settings
+ */
+
 import { Column, Entity } from 'typeorm';
 import BaseEntity from './base-entity';
 

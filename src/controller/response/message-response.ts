@@ -19,6 +19,11 @@
  */
 
 /**
+ * @module
+ * @hidden
+ */
+
+/**
  * @typedef {object} MessageResponse
  * @property {string} message.required - The message response text.
  */

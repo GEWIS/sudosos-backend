@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the point-of-sale-revision.
+ *
+ * @module catalogue/point-of-sale
+ */
+
 import {
   Entity,
   ManyToOne,

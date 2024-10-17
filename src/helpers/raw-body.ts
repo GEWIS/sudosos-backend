@@ -18,6 +18,12 @@
  *  @license
  */
 
+/**
+ * This is the module page of the raw-body.
+ *
+ * @module helpers
+ */
+
 import { IncomingMessage, ServerResponse } from 'http';
 import { Request } from 'express';
 

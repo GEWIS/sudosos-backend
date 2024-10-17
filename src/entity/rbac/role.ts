@@ -18,6 +18,13 @@
  *  @license
  */
 
+/**
+ * This is the module page of the role.
+ *
+ * @module rbac
+ * @mergeTarget
+ */
+
 import BaseEntity from '../base-entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 import Permission from './permission';
