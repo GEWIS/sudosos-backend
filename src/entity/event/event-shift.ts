@@ -22,6 +22,7 @@
  * This is the module page of event-shift.
  *
  * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 import {
@@ -34,6 +35,7 @@ import Role from '../rbac/role';
  * @typedef {BaseEntity} EventShift
  * @property {string} name - Name of the shift.
  * @property {boolean} default - Indicator whether the shift is a regular shift.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 @Entity()

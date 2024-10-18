@@ -78,7 +78,7 @@ describe('TransferSubscriber', (): void => {
       expect(debt.getAmount()).to.be.lessThan(0);
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
+      const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],
@@ -108,7 +108,7 @@ describe('TransferSubscriber', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
+      const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],
@@ -140,7 +140,7 @@ describe('TransferSubscriber', (): void => {
       const debt = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(debt.getAmount());
 
-      const { fines } = await DebtorService.handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
+      const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
         relations: ['userFineGroup'],

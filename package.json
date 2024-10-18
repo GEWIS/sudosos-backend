@@ -26,7 +26,7 @@
     "predocs:dev": "typedoc",
     "typedoc": "typedoc",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "NODE_OPTIONS=--max-old-space-size=8192 vitepress build docs --mode production",
+    "docs:build": "NODE_OPTIONS=--max-old-space-size=12288 vitepress build docs --mode production",
     "docs:preview": "vitepress preview docs"
   },
   "author": "",

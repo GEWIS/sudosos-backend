@@ -22,6 +22,7 @@
  * This is the module page of event-controller.
  *
  * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 import log4js, { Logger } from 'log4js';
@@ -40,6 +41,9 @@ import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
 import { asShiftAvailability } from '../helpers/validators';
 
+/**
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
+ */
 export default class EventController extends BaseController {
   private logger: Logger = log4js.getLogger('EventLogger');
 
@@ -129,6 +133,7 @@ export default class EventController extends BaseController {
    * @return {PaginatedBaseEventResponse} 200 - All existing events
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async getAllEvents(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get all events by user', req.token.user);
@@ -172,6 +177,7 @@ export default class EventController extends BaseController {
    * @return {EventResponse} 200 - All existing events
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async getSingleEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -201,6 +207,7 @@ export default class EventController extends BaseController {
    * @return {EventResponse} 200 - Created event
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async createEvent(req: RequestWithToken, res: Response) {
     const body = req.body as EventRequest;
@@ -237,6 +244,7 @@ export default class EventController extends BaseController {
    * @return {EventResponse} 200 - Created event
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async updateEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -284,6 +292,7 @@ export default class EventController extends BaseController {
    * @return 204 - Success
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async deleteEvent(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -316,6 +325,7 @@ export default class EventController extends BaseController {
    * @return {EventResponse} 200 - All existing events
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async syncEventShiftAnswers(req: RequestWithToken, res: Response) {
     const { id } = req.params;
@@ -350,6 +360,7 @@ export default class EventController extends BaseController {
    * @return {BaseEventAnswerResponse} 200 - Created event
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async assignEventShift(req: RequestWithToken, res: Response) {
     const { eventId: rawEventId, shiftId: rawShiftId, userId: rawUserId } = req.params;
@@ -402,6 +413,7 @@ export default class EventController extends BaseController {
    * @return {BaseEventAnswerResponse} 200 - Created event
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
+   * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
    */
   public async updateShiftAvailability(req: RequestWithToken, res: Response) {
     const { userId: rawUserId, shiftId: rawShiftId, eventId: rawEventId } = req.params;

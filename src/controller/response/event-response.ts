@@ -22,6 +22,7 @@
  * This is the module page of the event-response.
  *
  * @module events
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 
 import { PaginationResult } from '../../helpers/pagination';
@@ -36,6 +37,7 @@ import { EventType } from '../../entity/event/event';
  * @property {string} startDate.required - The starting date of the event.
  * @property {string} endDate.required - The end date of the event.
  * @property {string} type.required - The tpye of event.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface BaseEventResponse extends BaseResponse {
   createdBy: BaseUserResponse,
@@ -48,6 +50,7 @@ export interface BaseEventResponse extends BaseResponse {
 /**
  * @typedef {allOf|BaseResponse} BaseEventShiftResponse
  * @property {string} name.required - Name of the shift.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface BaseEventShiftResponse extends BaseResponse {
   name: string,
@@ -56,6 +59,7 @@ export interface BaseEventShiftResponse extends BaseResponse {
 /**
  * @typedef {allOf|BaseEventShiftResponse} EventShiftResponse
  * @property {Array<string>} roles.required - Which roles can fill in this shift.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventShiftResponse extends BaseEventShiftResponse {
   roles: string[],
@@ -64,6 +68,7 @@ export interface EventShiftResponse extends BaseEventShiftResponse {
 /**
  * @typedef {allOf|EventShiftResponse} EventInShiftResponse
  * @property {Array<BaseEventAnswerResponse>} answers - Answers for this shift.
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventInShiftResponse extends EventShiftResponse {
   answers: BaseEventAnswerResponse[];
@@ -73,6 +78,7 @@ export interface EventInShiftResponse extends EventShiftResponse {
  * @typedef {object} PaginatedEventShiftResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<EventShiftResponse>} records.required - Returned event shifts
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface PaginatedEventShiftResponse {
   _pagination: PaginationResult,
@@ -82,6 +88,7 @@ export interface PaginatedEventShiftResponse {
 /**
  * @typedef {allOf|BaseEventResponse} EventResponse
  * @property {Array<EventInShiftResponse>} shifts.required - Shifts for this event
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventResponse extends BaseEventResponse {
   shifts: EventInShiftResponse[],
@@ -92,6 +99,7 @@ export interface EventResponse extends BaseEventResponse {
  * @property {BaseUserResponse} user.required - Participant that filled in their availability
  * @property {string} availability - Filled in availability per slot.
  * @property {boolean} selected.required - Whether this user is selected for the shift in the event
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface BaseEventAnswerResponse {
   user: BaseUserResponse,
@@ -103,6 +111,7 @@ export interface BaseEventAnswerResponse {
  * @typedef {object} PaginatedBaseEventResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<BaseEventResponse>} records.required - Returned borrel Schemas
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface PaginatedBaseEventResponse {
   _pagination: PaginationResult,
@@ -112,6 +121,7 @@ export interface PaginatedBaseEventResponse {
 /**
  * @typedef {allOf|BaseUserResponse} EventPlanningSelectedCount
  * @property {integer} count.required - Number of times this user was selected for this shift
+ * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export interface EventPlanningSelectedCount extends BaseUserResponse {
   count: number;
