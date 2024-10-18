@@ -43,7 +43,7 @@
     "gewisdb-ts-client": "github:GEWIS/gewisdb-ts-client#26575e8",
     "jsonwebtoken": "^9.0.2",
     "ldap-escape": "^2.0.6",
-    "ldapts": "^7.1.1",
+    "ldapts": "^7.2.1",
     "log4js": "^6.9.1",
     "mime-types": "^2.1.35",
     "mysql2": "^3.11.0",
