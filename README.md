@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- Centered Logo Image -->
-<img src="https://github.com/GEWIS/sudosos-frontend/blob/develop/apps/dashboard/src/assets/img/bier.png?raw=true" alt="Logo" style="width:200px;height:auto;">
+<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="Logo" style="width:200px;height:auto;">
 
 <!-- Centered Name Beneath Logo -->
 <h1>SudoSOS Backend</h1>
@@ -11,6 +11,7 @@
 [![Issues](https://img.shields.io/github/issues/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/issues)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/commits/develop)
 [![Code Size](https://img.shields.io/github/languages/code-size/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend)
+[![License](https://img.shields.io/github/license/GEWIS/sudosos-backend.svg)](./LICENSE)
 
 </div>
 
@@ -58,3 +59,11 @@ To make sure ESLint fixes your code on save do the following:
 - Go to Preferences - Language and Frameworks - Javascript - Code Quality Tools - Eslint
 - check `Run ESLint --fix on save`
 - Apply changes and press ok
+
+## Contributors
+
+This project exists thanks to all the people who contribute code.
+
+[//]: # (TODO create a CONTRIBUTING.md)
+[//]: # (If you'd like to help, see [our guide to contributing code]&#40;CONTRIBUTING.md&#41;.)
+<a href="https://github.com/GEWIS/sudosos-backend/graphs/contributors"><img src="https://contributors.aika.dev/GEWIS/sudosos-backend/contributors.svg?max=44" alt="Code contributors" /></a>
