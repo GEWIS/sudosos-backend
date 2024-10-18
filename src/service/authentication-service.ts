@@ -26,21 +26,19 @@
 
 import bcrypt from 'bcrypt';
 // @ts-ignore
-import { filter } from 'ldap-escape';
-import log4js, { Logger } from 'log4js';
-import { FindOptionsWhere, In } from 'typeorm';
-import { randomBytes } from 'crypto';
-import User, { LocalUserTypes, UserType } from '../entity/user/user';
+import {filter} from 'ldap-escape';
+import log4js, {Logger} from 'log4js';
+import {FindOptionsWhere, In} from 'typeorm';
+import {randomBytes} from 'crypto';
+import User, {LocalUserTypes, UserType} from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import MemberAuthenticator from '../entity/authenticator/member-authenticator';
-import {
-  bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,
-} from '../helpers/ad';
-import { parseUserToResponse } from '../helpers/revision-to-response';
+import {bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,} from '../helpers/ad';
+import {parseUserToResponse} from '../helpers/revision-to-response';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
@@ -49,6 +47,7 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import RBACService from './rbac-service';
 import Role from '../entity/rbac/role';
 import WithManager from '../database/with-manager';
+import UserService from "./user-service";
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -308,7 +307,13 @@ export default class AuthenticationService extends WithManager {
     const authenticator = await this.manager.findOne(LDAPAuthenticator, { where: { UUID: ADUser.objectGUID }, relations: ['user'] });
 
     // If there is no user associated with the GUID we create the user and bind it.
-    if (authenticator) return authenticator.user;
+    if (authenticator) {
+      if (authenticator.user.type == UserType.LOCAL_USER) {
+        await UserService.updateUser(authenticator.user.id, {canGoIntoDebt: true, type: UserType.MEMBER});
+      }
+
+      return authenticator.user;
+    }
     return onNewUser(ADUser);
   }
 

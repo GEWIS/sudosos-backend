@@ -351,14 +351,6 @@ export default class UserController extends BaseController {
           handler: this.changeToLocalUser.bind(this),
         },
       },
-      '/:id(\\d+)/toLocalUser':{
-        POST: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'update', UserController.getRelation(req), 'Authenticator', ['*'],
-          ),
-          handler: this.changeToLocalUser.bind(this),
-        },
-      },
     };
   }
 
@@ -1698,7 +1690,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const newUserResponse = await new UserService().changeToLocalUsers(id);
+      const newUserResponse = await UserService.changeToLocalUsers(id);
       res.status(200).json(newUserResponse);
     } catch (e) {
       res.status(500).send();

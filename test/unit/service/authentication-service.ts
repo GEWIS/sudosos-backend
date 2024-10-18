@@ -38,6 +38,7 @@ import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/has
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import { truncateAllTables } from '../../setup';
+import UserService from "../../../src/service/user-service";
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -186,6 +187,45 @@ describe('AuthenticationService', (): void => {
       userIsAsExpected(user, otherValidADUser);
 
       expect(count).to.be.equal(await User.count());
+    });
+    it('should login and set user to member again if member can be found in AD', async () => {
+      const otherValidADUser = {
+        ...ctx.validADUser, givenName: 'Test', objectGUID: Buffer.from('22', 'hex'), sAMAccountName: 'm0041',
+      };
+
+      const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
+      const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({
+        searchReferences: [],
+        searchEntries: [otherValidADUser],
+      });
+      stubs.push(clientBindStub);
+      stubs.push(clientSearchStub);
+
+      let user: User;
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m0041', 'This Is Correct', service.createUserAndBind.bind(service));
+      });
+
+      userIsAsExpected(user, otherValidADUser);
+
+      await UserService.changeToLocalUsers(user.id);
+      expect((await User.findOne({where: {id: user.id}})).type).to.be.equal(UserType.LOCAL_USER);
+
+      let DBUser = await User.findOne(
+          { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
+      );
+      expect(DBUser).to.not.be.undefined;
+
+      const count = await User.count();
+
+      await ctx.connection.transaction(async (manager) => {
+        const service = new AuthenticationService(manager);
+        user = await service.LDAPAuthentication('m0041', 'This Is Correct', service.createUserAndBind.bind(service));
+      });
+
+      expect(count).to.be.equal(await User.count());
+      expect((await User.findOne({where: {id: user.id}})).type).to.be.equal(UserType.MEMBER);
     });
     it('should return undefined if wrong password', async () => {
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);

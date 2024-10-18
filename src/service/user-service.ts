@@ -296,7 +296,7 @@ export default class UserService {
    * Change user to local User
    * @param userId - ID of the user to change to local user
    */
-  public async changeToLocalUsers(userId: number): Promise<UserResponse> {
+  public static async changeToLocalUsers(userId: number): Promise<UserResponse> {
     const user = await User.findOne({ where: { id: userId } });
     if (!user) return undefined;
 
