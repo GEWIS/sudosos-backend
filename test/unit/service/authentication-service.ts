@@ -38,7 +38,7 @@ import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/has
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import { truncateAllTables } from '../../setup';
-import UserService from "../../../src/service/user-service";
+import UserService from '../../../src/service/user-service';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -210,10 +210,10 @@ describe('AuthenticationService', (): void => {
       userIsAsExpected(user, otherValidADUser);
 
       await UserService.changeToLocalUsers(user.id);
-      expect((await User.findOne({where: {id: user.id}})).type).to.be.equal(UserType.LOCAL_USER);
+      expect((await User.findOne({ where: { id: user.id } })).type).to.be.equal(UserType.LOCAL_USER);
 
       let DBUser = await User.findOne(
-          { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
+        { where: { firstName: otherValidADUser.givenName, lastName: otherValidADUser.sn } },
       );
       expect(DBUser).to.not.be.undefined;
 
@@ -225,7 +225,7 @@ describe('AuthenticationService', (): void => {
       });
 
       expect(count).to.be.equal(await User.count());
-      expect((await User.findOne({where: {id: user.id}})).type).to.be.equal(UserType.MEMBER);
+      expect((await User.findOne({ where: { id: user.id } })).type).to.be.equal(UserType.MEMBER);
     });
     it('should return undefined if wrong password', async () => {
       const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
