@@ -27,18 +27,14 @@ import { MigrationInterface, TableColumn, QueryRunner } from 'typeorm';
 
 export class UserAdministrativeCost1729266426571 implements MigrationInterface {
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.addColumn('user', new TableColumn({
-            name: 'inactiveNotificationSend',
-            type: 'boolean',
-            default: 0,
-            isNullable: false,
-            isUnique: false,
-        }));
-    }
-
-    public async down(queryRunner: QueryRunner): Promise<void> {
-
-    }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumn('user', new TableColumn({
+      name: 'inactiveNotificationSend',
+      type: 'boolean',
+      default: 0,
+      isNullable: false,
+      isUnique: false,
+    }));
+  }
 
 }

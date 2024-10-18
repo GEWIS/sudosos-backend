@@ -19,10 +19,10 @@
  */
 
 import WithManager from '../database/with-manager';
-import {FindManyOptions, FindOptionsRelations, In} from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
-import QueryFilter, {FilterMapping} from '../helpers/query-filter';
-import User, {EligibleInactiveUsers, UserType} from '../entity/user/user';
+import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import User, { EligibleInactiveUsers } from '../entity/user/user';
 import BalanceService from './balance-service';
 import TransferService from './transfer-service';
 import {
@@ -31,20 +31,20 @@ import {
 } from '../controller/request/inactive-administrative-cost-request';
 import TransferRequest from '../controller/request/transfer-request';
 import dinero from 'dinero.js';
-import {DineroObjectRequest} from '../controller/request/dinero-request';
+import { DineroObjectRequest } from '../controller/request/dinero-request';
 import Transfer from '../entity/transactions/transfer';
 import Transaction from '../entity/transactions/transaction';
 import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
 import Mailer from '../mailer';
 import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inactive-administrative-cost';
-import {RequestWithToken} from '../middleware/token-middleware';
-import {asBoolean, asNumber} from '../helpers/validators';
-import {PaginationParameters} from '../helpers/pagination';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { asBoolean, asNumber } from '../helpers/validators';
+import { PaginationParameters } from '../helpers/pagination';
 import {
   BaseInactiveAdministrativeCostResponse,
   UserToInactiveAdministrativeCostResponse,
 } from '../controller/response/inactive-administrative-cost-response';
-import {parseUserToBaseResponse} from '../helpers/revision-to-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 
 export interface InactiveAdministrativeCostFilterParameters {
@@ -111,7 +111,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const differenceDate = notification ? 2 : 3;
 
     const users = await User.find({
-      where: { type: In(EligibleInactiveUsers)}
+      where: { type: In(EligibleInactiveUsers) },
     });
     const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
 
