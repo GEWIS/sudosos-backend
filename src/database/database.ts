@@ -105,6 +105,9 @@ import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-c
 import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller-payout-pdf';
 import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
+import {
+  UserAdministrativeCost1729266426571
+} from "../migrations/1729266426571-user-administrative-cost";
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -141,6 +144,7 @@ const options: DataSourceOptions = {
     CustomInvoiceEntries1725388477226,
     SellerPayoutPdf1726066600389,
     LDAPObjectGUID1726689003147,
+    UserAdministrativeCost1729266426571,
   ],
   extra: {
     authPlugins: {
