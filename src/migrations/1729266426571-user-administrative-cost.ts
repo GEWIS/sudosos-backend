@@ -37,4 +37,8 @@ export class UserAdministrativeCost1729266426571 implements MigrationInterface {
     }));
   }
 
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropColumn('user', 'inactiveNotificationSend');
+  }
+
 }
