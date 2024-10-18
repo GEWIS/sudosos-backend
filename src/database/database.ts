@@ -105,8 +105,8 @@ import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller
 import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import {
-  UserAdministrativeCost1729266426571
-} from "../migrations/1729266426571-user-administrative-cost";
+  UserAdministrativeCost1729266426571,
+} from '../migrations/1729266426571-user-administrative-cost';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
