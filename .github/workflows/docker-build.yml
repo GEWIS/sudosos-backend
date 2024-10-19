@@ -17,6 +17,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Sanitize GitHub actor for Docker tag
+        id: sanitize
+        run: |
+          if [[ "${{ github.actor }}" == *"[bot]"* ]]; then
+            echo "actor=${{ github.actor }}" | sed 's/\[bot\]//g' | tr '[:upper:]' '[:lower:]' | tr -d '[]' > actor.txt
+          else
+            echo "actor=${{ github.actor }}" | tr '[:upper:]' '[:lower:]' | tr -d '[]' > actor.txt
+          fi
+        shell: bash
+
       - name: Get Docker meta across forks
         id: meta
         uses: docker/metadata-action@v4
