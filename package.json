@@ -52,7 +52,7 @@
     "pdf-generator-client": "github:GEWIS/pdf-generator#04e040b",
     "reflect-metadata": "^0.2.2",
     "sqlite3": "^5.1.7",
-    "stripe": "^16.1.0",
+    "stripe": "^16.12.0",
     "swagger-model-validator": "^3.0.21",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.20",
