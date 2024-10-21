@@ -89,6 +89,7 @@ jobs:
             typeorm-database: local.sqlite
             typeorm-synchronize: 'true'
     env:
+      NAME: sudosos-test
       NODE_ENV: development
       API_HOST: localhost:3000
       API_BASEPATH: /v1
@@ -167,6 +168,7 @@ jobs:
   post-migration-test:
     runs-on: ubuntu-latest
     env:
+      NAME: sudosos-test
       NODE_ENV: development
       API_HOST: localhost:3000
       API_BASEPATH: /v1
