@@ -62,6 +62,7 @@ export interface LDAPUser {
   sn: string,
   objectGUID: Buffer,
   mail: string,
+  displayName: string,
   mNumber: number | undefined;
 }
 
@@ -112,6 +113,7 @@ export interface LDAPResult {
   sn: string,
   objectGUID: Buffer,
   mail: string,
+  displayName: string,
   employeeNumber: number | undefined;
 }
 
@@ -121,7 +123,7 @@ export interface LDAPResult {
  */
 export function userFromLDAP(ldapResult: LDAPResult): LDAPUser {
   const {
-    dn, memberOfFlattened, givenName, sn,
+    dn, memberOfFlattened, givenName, sn, displayName,
     objectGUID, mail, employeeNumber, whenChanged,
   } = ldapResult;
   return {
@@ -132,6 +134,7 @@ export function userFromLDAP(ldapResult: LDAPResult): LDAPUser {
     sn,
     objectGUID,
     mail,
+    displayName,
     mNumber: employeeNumber,
   };
 }
