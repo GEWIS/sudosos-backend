@@ -263,7 +263,7 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.to).to.be.undefined;
     });
     it('should reset user inactive notification send to false', async () => {
-      const user = await User.findOne({where: {id: ctx.users[0].id}});
+      const user = await User.findOne({ where: { id: ctx.users[0].id } });
       user.inactiveNotificationSend = true;
       await user.save();
 
@@ -280,7 +280,7 @@ describe('TransferService', async (): Promise<void> => {
       };
       await new TransferService().postTransfer(req);
 
-      const updatedUser = await User.findOne({where: {id: user.id}})
+      const updatedUser = await User.findOne({ where: { id: user.id } });
 
       expect(updatedUser.inactiveNotificationSend).to.be.eq(false);
     });
