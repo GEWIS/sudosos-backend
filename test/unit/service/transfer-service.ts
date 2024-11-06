@@ -262,6 +262,28 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.from.id).to.equal(req.fromId);
       expect(lastEntry.to).to.be.undefined;
     });
+    it('should reset user inactive notification send to false', async () => {
+      const user = await User.findOne({where: {id: ctx.users[0].id}});
+      user.inactiveNotificationSend = true;
+      await user.save();
+
+      const req: TransferRequest = {
+        amount: {
+          amount: 10,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'cool',
+        fromId: ctx.users[0].id,
+        toId: undefined,
+        vatId: ctx.vatGroups[0].id,
+      };
+      await new TransferService().postTransfer(req);
+
+      const updatedUser = await User.findOne({where: {id: user.id}})
+
+      expect(updatedUser.inactiveNotificationSend).to.be.eq(false);
+    });
   });
   describe('createTransfer function', () => {
     it('should be able to create a new transfer', async () => {
