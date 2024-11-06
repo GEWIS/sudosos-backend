@@ -222,7 +222,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       toId: 0,
     };
 
-    const transfer = await new TransferService().createTransfer(transferRequest);
+    const transfer = await new TransferService(this.manager).createTransfer(transferRequest);
 
     // Create a new inactive administrative cost
     const newInactiveAdministrativeCost: InactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
