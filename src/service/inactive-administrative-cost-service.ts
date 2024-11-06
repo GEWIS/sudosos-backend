@@ -127,6 +127,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
         relations: { inactiveAdministrativeCost: true },
       }));
 
+      // Checks whether a user has transactions or transfers and reduces over them all to find the youngest.
       const lastTransfer = userTransfers.length == 0 ? null : userTransfers
         .reduce((prev, curr) => (((prev.createdAt < curr.createdAt) && curr.inactiveAdministrativeCost == null) ? curr : prev));
       const userTransactions = ((await Transaction.find({ relations: ['from'] }))
@@ -211,7 +212,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       toId: 0,
     };
 
-    const transfer = await new TransferService().createTransfer(transferRequest);
+    const transfer = await new TransferService(this.manager).createTransfer(transferRequest);
 
     // Create a new inactive administrative cost
     const newInactiveAdministrativeCost: InactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
