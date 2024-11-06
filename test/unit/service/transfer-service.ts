@@ -43,6 +43,7 @@ import {
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
+import UserService from "../../../src/service/user-service";
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -263,9 +264,7 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.to).to.be.undefined;
     });
     it('should reset user inactive notification send to false', async () => {
-      const user = await User.findOne({ where: { id: ctx.users[0].id } });
-      user.inactiveNotificationSend = true;
-      await user.save();
+      const user = await User.findOne({ where: { inactiveNotificationSend: true } });
 
       const req: TransferRequest = {
         amount: {
@@ -274,7 +273,7 @@ describe('TransferService', async (): Promise<void> => {
           currency: dinero.defaultCurrency,
         },
         description: 'cool',
-        fromId: ctx.users[0].id,
+        fromId: user.id,
         toId: undefined,
         vatId: ctx.vatGroups[0].id,
       };

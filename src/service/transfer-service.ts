@@ -188,7 +188,7 @@ export default class TransferService extends WithManager {
 
   public async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
     const transfer = await this.createTransfer(request);
-    if (!transfer.from == undefined && transfer.from.inactiveNotificationSend == true) {
+    if (transfer.from != undefined && transfer.from.inactiveNotificationSend == true) {
       await UserService.updateUser(transfer.fromId, { inactiveNotificationSend: false });
     }
     return TransferService.asTransferResponse(transfer);
