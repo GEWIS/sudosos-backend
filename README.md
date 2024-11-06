@@ -6,6 +6,7 @@
 <!-- Centered Name Beneath Logo -->
 <h1>SudoSOS Backend</h1>
 
+[![Uptime](https://uptime.gewis.nl/api/badge/2/uptime)](https://sudosos.gewis.nl/api/v1/ping)
 [![Build](https://img.shields.io/github/actions/workflow/status/GEWIS/sudosos-backend/release.yml?branch=main&label=Build)](https://github.com/GEWIS/sudosos-backend/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/tag/GEWIS/sudosos-backend?label=Latest)](https://github.com/GEWIS/sudosos-backend/releases)
 [![Issues](https://img.shields.io/github/issues/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/issues)
