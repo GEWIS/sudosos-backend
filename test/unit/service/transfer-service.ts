@@ -43,7 +43,6 @@ import {
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
-import UserService from "../../../src/service/user-service";
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
