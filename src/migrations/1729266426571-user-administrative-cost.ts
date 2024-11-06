@@ -23,9 +23,10 @@
  * @hidden
  */
 
-import { MigrationInterface, TableColumn, QueryRunner } from 'typeorm';
+import {MigrationInterface, TableColumn, QueryRunner, Table, TableForeignKey} from 'typeorm';
 
 export class UserAdministrativeCost1729266426571 implements MigrationInterface {
+  private INACTIVE_ADMINISTRATIVE_COST_TABLE = 'inactive_administrative_cost';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.addColumn('user', new TableColumn({
@@ -35,10 +36,108 @@ export class UserAdministrativeCost1729266426571 implements MigrationInterface {
       isNullable: false,
       isUnique: false,
     }));
+
+    await queryRunner.addColumn('transfer', new TableColumn({
+      name: 'inactiveAdministrativeCostId',
+      type: 'integer',
+      isNullable: true,
+    }));
+
+    await queryRunner.createForeignKey(
+        'transfer',
+        new TableForeignKey({
+          columnNames: ['inactiveAdministrativeCostId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'InactiveAdministrativeCost',
+          onDelete: 'RESTRICT',
+        })
+    );
+
+    await queryRunner.createTable(new Table({
+      name: this.INACTIVE_ADMINISTRATIVE_COST_TABLE,
+      columns: [{
+        name: 'createdAt',
+        type: 'datetime(6)',
+        default: 'current_timestamp',
+        isNullable: false,
+      }, {
+        name: 'updatedAt',
+        type: 'datetime(6)',
+        default: 'current_timestamp',
+        onUpdate: 'current_timestamp',
+        isNullable: false,
+      }, {
+        name: 'id',
+        type: 'integer',
+        isPrimary: true,
+        isGenerated: true,
+        generationStrategy: 'increment',
+      }, {
+        name: 'fromId',
+        type: 'integer',
+        isNullable: false,
+      }, {
+          name: 'amount',
+          type: 'integer',
+          isNullable: false,
+        }, {
+          name: 'transferId',
+          type: 'int',
+          isNullable: false,
+        },{
+          name: 'creditTransferId',
+          type: 'int',
+          isNullable: true,
+        },
+      ],
+    }),
+        true
+    );
+
+    //Add the columns for users and transfers
+    await queryRunner.createForeignKey(
+        'InactiveAdministrativeCost',
+        new TableForeignKey({
+          columnNames: ['fromId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'User',
+          onDelete: 'RESTRICT',
+        })
+    );
+
+    await queryRunner.createForeignKey(
+        'InactiveAdministrativeCost',
+        new TableForeignKey({
+          columnNames: ['transferId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'Transfer',
+          onDelete: 'RESTRICT',
+        })
+    );
+
+    await queryRunner.createForeignKey(
+        'InactiveAdministrativeCost',
+        new TableForeignKey({
+          columnNames: ['creditTransferId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'Transfer',
+          onDelete: 'RESTRICT',
+        })
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropColumn('user', 'inactiveNotificationSend');
+    await queryRunner.dropForeignKey('transfer', 'FK_Transfer_inactiveAdministrativeCostId');
+    await queryRunner.dropColumn('transfer', 'inactiveAdministrativeCostId');
+
+    // Drop the foreign keys in reverse order
+    await queryRunner.dropForeignKey('InactiveAdministrativeCost', 'FK_InactiveAdministrativeCost_creditTransfer');
+    await queryRunner.dropForeignKey('InactiveAdministrativeCost', 'FK_InactiveAdministrativeCost_transfer');
+    await queryRunner.dropForeignKey('InactiveAdministrativeCost', 'FK_InactiveAdministrativeCost_from');
+
+    // Drop the InactiveAdministrativeCost table
+    await queryRunner.dropTable('InactiveAdministrativeCost');
   }
 
 }

@@ -733,6 +733,17 @@ describe('TransactionService', (): void => {
         }
       }
     });
+    it('should reset a users inactive notification send to false', async () => {
+      const user = await User.findOne({where: {id: ctx.validTransReq.from}});
+      user.inactiveNotificationSend = true;
+      await user.save;
+
+      // check response without prices
+      const savedTransaction = await new TransactionService().createTransaction(ctx.validTransReq);
+
+      const updatedUser = await User.findOne({where: {id: ctx.validTransReq.from}});
+      expect(updatedUser.inactiveNotificationSend).to.be.eq(false);
+    });
   });
 
   describe('Delete a transaction', () => {
