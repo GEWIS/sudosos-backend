@@ -72,6 +72,7 @@ export default class UserSeeder extends WithManager {
         type,
         active,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        inactiveNotificationSend: nr % 3 === 0,
       }) as User);
     }
     return users;

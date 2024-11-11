@@ -23,7 +23,7 @@
  * @hidden
  */
 
-import {MigrationInterface, TableColumn, QueryRunner, Table, TableForeignKey} from 'typeorm';
+import { MigrationInterface, TableColumn, QueryRunner, Table, TableForeignKey } from 'typeorm';
 
 export class UserAdministrativeCost1729266426571 implements MigrationInterface {
   private INACTIVE_ADMINISTRATIVE_COST_TABLE = 'inactive_administrative_cost';
@@ -44,13 +44,13 @@ export class UserAdministrativeCost1729266426571 implements MigrationInterface {
     }));
 
     await queryRunner.createForeignKey(
-        'transfer',
-        new TableForeignKey({
-          columnNames: ['inactiveAdministrativeCostId'],
-          referencedColumnNames: ['id'],
-          referencedTableName: 'InactiveAdministrativeCost',
-          onDelete: 'RESTRICT',
-        })
+      'transfer',
+      new TableForeignKey({
+        columnNames: ['inactiveAdministrativeCostId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'InactiveAdministrativeCost',
+        onDelete: 'RESTRICT',
+      }),
     );
 
     await queryRunner.createTable(new Table({
@@ -77,52 +77,52 @@ export class UserAdministrativeCost1729266426571 implements MigrationInterface {
         type: 'integer',
         isNullable: false,
       }, {
-          name: 'amount',
-          type: 'integer',
-          isNullable: false,
-        }, {
-          name: 'transferId',
-          type: 'int',
-          isNullable: false,
-        },{
-          name: 'creditTransferId',
-          type: 'int',
-          isNullable: true,
-        },
+        name: 'amount',
+        type: 'integer',
+        isNullable: false,
+      }, {
+        name: 'transferId',
+        type: 'int',
+        isNullable: false,
+      }, {
+        name: 'creditTransferId',
+        type: 'int',
+        isNullable: true,
+      },
       ],
     }),
-        true
+    true,
     );
 
     //Add the columns for users and transfers
     await queryRunner.createForeignKey(
-        'InactiveAdministrativeCost',
-        new TableForeignKey({
-          columnNames: ['fromId'],
-          referencedColumnNames: ['id'],
-          referencedTableName: 'User',
-          onDelete: 'RESTRICT',
-        })
+      'InactiveAdministrativeCost',
+      new TableForeignKey({
+        columnNames: ['fromId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'User',
+        onDelete: 'RESTRICT',
+      }),
     );
 
     await queryRunner.createForeignKey(
-        'InactiveAdministrativeCost',
-        new TableForeignKey({
-          columnNames: ['transferId'],
-          referencedColumnNames: ['id'],
-          referencedTableName: 'Transfer',
-          onDelete: 'RESTRICT',
-        })
+      'InactiveAdministrativeCost',
+      new TableForeignKey({
+        columnNames: ['transferId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'Transfer',
+        onDelete: 'RESTRICT',
+      }),
     );
 
     await queryRunner.createForeignKey(
-        'InactiveAdministrativeCost',
-        new TableForeignKey({
-          columnNames: ['creditTransferId'],
-          referencedColumnNames: ['id'],
-          referencedTableName: 'Transfer',
-          onDelete: 'RESTRICT',
-        })
+      'InactiveAdministrativeCost',
+      new TableForeignKey({
+        columnNames: ['creditTransferId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'Transfer',
+        onDelete: 'RESTRICT',
+      }),
     );
   }
 

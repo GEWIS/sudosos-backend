@@ -43,7 +43,7 @@ import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
 import WithManager from '../database/with-manager';
-import UserService from "./user-service";
+import UserService from './user-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -188,8 +188,8 @@ export default class TransferService extends WithManager {
 
   public async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
     const transfer = await this.createTransfer(request);
-    if (!transfer.from == undefined) {
-      transfer.from.inactiveNotificationSend ? await UserService.updateUser(transfer.fromId, {inactiveNotificationSend: false}) : undefined;
+    if (transfer.from != undefined && transfer.from.inactiveNotificationSend == true) {
+      await UserService.updateUser(transfer.fromId, { inactiveNotificationSend: false });
     }
     return TransferService.asTransferResponse(transfer);
   }
