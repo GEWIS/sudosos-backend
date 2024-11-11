@@ -80,7 +80,7 @@ import {
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
-import UserService from "./user-service";
+import UserService from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -658,8 +658,9 @@ export default class TransactionService extends WithManager {
     const transaction = await this.asTransaction(req);
 
     await transaction.save();
-
-    transaction.from.inactiveNotificationSend ? await UserService.updateUser(transaction.from.id, {inactiveNotificationSend: false}) : undefined;
+    if (transaction.from.inactiveNotificationSend == true) {
+      await UserService.updateUser(transaction.from.id, { inactiveNotificationSend: false });
+    }
 
     // save the transaction and invalidate user balance cache
     const savedTransaction = await this.asTransactionResponse(transaction);

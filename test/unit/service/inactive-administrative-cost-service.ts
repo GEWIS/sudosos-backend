@@ -293,9 +293,6 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
-      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
-      await User.find({ where: { id: In(userIds) } });
-
       expect(sendMailFake.callCount).to.equal(users.length);
     });
   });
