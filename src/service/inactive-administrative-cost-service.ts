@@ -45,6 +45,8 @@ import {
   UserToInactiveAdministrativeCostResponse,
 } from '../controller/response/inactive-administrative-cost-response';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ISettings } from '../entity/server-setting';
 
 
 export interface InactiveAdministrativeCostFilterParameters {
@@ -80,6 +82,29 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const ageDate = new Date(dateDiff);
 
     return Math.abs(ageDate.getUTCFullYear() - 1970);
+  }
+
+  private static getAdministrativeCostValue(): number {
+    return ServerSettingsStore.getInstance().getSetting('administrativeCostValue') as ISettings['administrativeCostValue'];
+  }
+
+  private async lastTransferQuery(userId: number): Promise<Transfer> {
+    return Transfer.getRepository()
+      .createQueryBuilder('transfer')
+      .select('MAX(transfer.createdAt) as createdAt')
+      .where('transfer.inactiveAdministrativeCost = NULL')
+      .andWhere(`transfer.fromId = ${userId}`)
+      .leftJoin(InactiveAdministrativeCost, 'inactiveAdministrativeCost', 'inactiveAdministrativeCost.transferId = inactiveAdministrativeCost.id')
+      .where('inactiveAdministrativeCost.id is NULL')
+      .getOne();
+  }
+
+  private async lastTransactionQuery(userId: number): Promise<Transaction> {
+    return Transaction.getRepository()
+      .createQueryBuilder('transaction')
+      .select('MAX(createdAt) as createdAt')
+      .where(`transaction.from.id = ${userId}`)
+      .getOne();
   }
 
   public static toArrayResponse(inactiveAdministrativeCosts: InactiveAdministrativeCost[]): BaseInactiveAdministrativeCostResponse[] {
@@ -121,19 +146,8 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
       let isNotEligible = false;
 
-      // Find transfers and transaction of users and if not null reduce to the last one
-      const userTransfers = (await Transfer.find({
-        where: { fromId: user.id },
-        relations: { inactiveAdministrativeCost: true },
-      }));
-
-      // Checks whether a user has transactions or transfers and reduces over them all to find the youngest.
-      const lastTransfer = userTransfers.length == 0 ? null : userTransfers
-        .reduce((prev, curr) => (((prev.createdAt < curr.createdAt) && curr.inactiveAdministrativeCost == null) ? curr : prev));
-      const userTransactions = ((await Transaction.find({ relations: ['from'] }))
-        .filter((t) => t.from.id === user.id));
-      const lastTransaction = userTransactions.length == 0  ? null : userTransactions
-        .reduce((prev, curr) => (prev.createdAt < curr.createdAt ? curr : prev));
+      const lastTransfer = await this.lastTransferQuery(user.id);
+      const lastTransaction = await this.lastTransactionQuery(user.id);
 
       if (lastTransfer !== null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
         isNotEligible = true;
@@ -174,7 +188,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
     // Save new transfer and delete the administrative cost
     await new TransferService(this.manager).postTransfer(undoTransfer).then(async (response) => {
-      const transfer = await this.manager.findOne(Transfer, { where: { id: response.id } });
+      const transfer = await Transfer.findOne({ where: { id: response.id } });
       if (!transfer) throw new Error('Transfer not found during deletion of inactive administrative cost, aborting');
       inactiveAdministrativeCost.creditTransfer = transfer;
     });
@@ -196,7 +210,9 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const user = await this.manager.findOne(User, { where: { id: forId } });
     const userBalance = await new BalanceService(this.manager).getBalance(forId);
 
-    const monetaryAmount = (userBalance.amount.amount < 10) ? userBalance.amount.amount - 10 : 10;
+    const administrativeCostValue = InactiveAdministrativeCostService.getAdministrativeCostValue();
+
+    const monetaryAmount = (userBalance.amount.amount < administrativeCostValue) ? userBalance.amount.amount - administrativeCostValue : administrativeCostValue;
 
     const amount: DineroObjectRequest = {
       amount: monetaryAmount,

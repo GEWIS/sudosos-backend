@@ -48,6 +48,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 
 describe('InactiveAdministrativeCostController', async () => {
@@ -144,6 +145,8 @@ describe('InactiveAdministrativeCostController', async () => {
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/inactiveAdministrativeCosts', controller.getRouter());
+
+    await ServerSettingsStore.getInstance().initialize();
 
     const validInactiveAdministrativeCostRequest: CreateInactiveAdministrativeCostRequest = {
       forId: localUser.id,

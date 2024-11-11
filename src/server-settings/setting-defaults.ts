@@ -28,6 +28,7 @@ import { ISettings } from '../entity/server-setting';
 
 const SettingsDefaults: ISettings = {
   highVatGroupId: -1,
+  administrativeCostValue: 10,
   jwtExpiryDefault: 3600,
   jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
   maintenanceMode: false,
