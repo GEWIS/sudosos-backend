@@ -60,6 +60,7 @@ import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -124,6 +125,8 @@ describe('InactiveAdministrativeCostService', () => {
 
     const pos = pointOfSaleRevisions.filter((p) => p.pointOfSale.deletedAt == null);
     const { subTransactions, transactions } = await new TransactionSeeder().seed(users, pos, begin, end);
+
+    await ServerSettingsStore.getInstance().initialize();
 
     // start app
     const app = express();
@@ -289,9 +292,6 @@ describe('InactiveAdministrativeCostService', () => {
       const userIds = users.map((u) => u.id);
 
       const handoutRequest: HandoutInactiveAdministrativeCostsRequest = { userIds };
-
-      await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
-      await User.find({ where: { id: In(userIds) } });
 
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });

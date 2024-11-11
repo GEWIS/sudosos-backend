@@ -140,8 +140,4 @@ export class UserAdministrativeCost1729266426571 implements MigrationInterface {
     await queryRunner.dropTable('InactiveAdministrativeCost');
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn('user', 'inactiveNotificationSend');
-  }
-
 }

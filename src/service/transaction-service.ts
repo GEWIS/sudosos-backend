@@ -662,8 +662,6 @@ export default class TransactionService extends WithManager {
       await UserService.updateUser(transaction.from.id, { inactiveNotificationSend: false });
     }
 
-    transaction.from.inactiveNotificationSend ? await UserService.updateUser(transaction.from.id, {inactiveNotificationSend: false}) : undefined;
-
     // save the transaction and invalidate user balance cache
     const savedTransaction = await this.asTransactionResponse(transaction);
     await TransactionService.invalidateBalanceCache(savedTransaction);
