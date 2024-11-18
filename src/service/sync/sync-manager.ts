@@ -18,60 +18,58 @@
  *  @license
  */
 
-import User from '../../entity/user/user';
 import WithManager from '../../database/with-manager';
 import { SyncResult, SyncService } from './sync-service';
-import { In } from 'typeorm';
 import log4js, { Logger } from 'log4js';
 
-export default class UserSyncService extends WithManager {
+export default abstract class SyncManager<T, S extends SyncService<T>> extends WithManager {
 
-  private readonly services: SyncService[];
+  protected readonly services: S[];
 
-  private logger: Logger = log4js.getLogger('UserSync');
+  protected logger: Logger = log4js.getLogger('SyncManager');
 
-  constructor(services: SyncService[]) {
+  constructor(services: S[]) {
     super();
     this.logger.level = process.env.LOG_LEVEL;
     this.services = services;
   }
 
-  async syncUsers() {
-    const userTypes = this.services.flatMap((s) => s.targets);
-    this.logger.trace('Syncing users of types', userTypes);
-    await this.pre();
+  abstract getTargets(): Promise<T[]>;
 
-    const users = await this.manager.find(User, { where: { type: In(userTypes) } });
-    for (const user of users) {
+  async run() {
+    this.logger.trace('Start sync job');
+    const entities = await this.getTargets();
+
+    await this.pre();
+    for (const entity of entities) {
       try {
-        const result = await this.sync(user);
+        const result = await this.sync(entity);
 
         if (result.skipped) {
-          this.logger.trace('Syncing skipped for user', user.id, user.firstName, user.type);
+          this.logger.trace('Syncing skipped for', entity);
           continue;
         }
 
         if (result.result === false) {
-          this.logger.warn('Sync result: false for user', user.id);
-          await this.down(user);
+          this.logger.warn('Sync result: false for', entity);
+          await this.down(entity);
         } else {
-          this.logger.trace('Sync result: true for user', user.id);
+          this.logger.trace('Sync result: true for', entity);
         }
 
       } catch (error) {
-        this.logger.error('Syncing error for user', user.id, error);
+        this.logger.error('Syncing error for', entities, error);
       }
     }
-
     await this.post();
   }
 
-  async sync(user: User): Promise<SyncResult> {
+  async sync(entity: T): Promise<SyncResult> {
     const syncResult: SyncResult = { skipped: true, result: false };
 
     // Aggregate results from all services
     for (const service of this.services) {
-      const result = await service.up(user);
+      const result = await service.up(entity);
 
       if (!result.skipped) syncResult.skipped = false;
       if (result.result) syncResult.result = true;
@@ -80,12 +78,12 @@ export default class UserSyncService extends WithManager {
     return syncResult;
   }
 
-  async down(user: User): Promise<void> {
+  async down(entity: T): Promise<void> {
     for (const service of this.services) {
       try {
-        await service.down(user);
+        await service.down(entity);
       } catch (error) {
-        this.logger.error('Could not down user', user.id);
+        this.logger.error('Could not down', entity);
       }
     }
   }

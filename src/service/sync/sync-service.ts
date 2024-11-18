@@ -21,10 +21,9 @@
 /**
  * This is the module page of the abstract sync-service.
  *
- * @module internal/user-sync
+ * @module internal/sync-service
  */
 
-import User, { UserType } from '../../entity/user/user';
 import WithManager from '../../database/with-manager';
 
 export interface SyncResult {
@@ -35,53 +34,44 @@ export interface SyncResult {
 /**
  * SyncService interface.
  *
- * SyncService is the abstract class which is used to sync user data.
+ * SyncService is the abstract class which is used to sync entity data.
  * This can be used to integrate external data sources into the SudoSOS back-end.
  */
-export abstract class SyncService extends WithManager {
+export abstract class SyncService<T> extends WithManager {
 
   /**
-   * Targets is the list of user types that this sync service is responsible for.
-   *
-   * Used to improve performance by only syncing the relevant user types.
-   */
-  targets: UserType[];
-
-  /**
-   * Guard determines whether the user should be synced using this sync service.
+   * Guard determines whether the entity should be synced using this sync service.
    *
    * Not passing the guard will result in the user being skipped.
    * A skipped sync does not count as a failure.
    *
-   * @param user The user to check.
-   * @returns {Promise<boolean>} True if the user should be synced, false otherwise.
+   * @param entity The entity to check.
+   * @returns {Promise<boolean>} True if the entity should be synced, false otherwise.
    */
-  protected guard(user: User): Promise<boolean> {
-    return Promise.resolve(this.targets.includes(user.type));
-  }
+  abstract guard(entity: T): Promise<boolean>;
 
   /**
    * Up is a wrapper around `sync` that handles the guard.
    *
-   * @param user
+   * @param entity
    *
    * @returns {Promise<SyncResult>} The result of the sync.
    */
-  async up(user: User): Promise<SyncResult> {
-    const guardResult = await this.guard(user);
+  async up(entity: T): Promise<SyncResult> {
+    const guardResult = await this.guard(entity);
     if (!guardResult) return { skipped: true, result: false };
 
-    const result = await this.sync(user);
+    const result = await this.sync(entity);
     return { skipped: false, result };
   }
 
   /**
    * Synchronizes the user data with the external data source.
    *
-   * @param user The user to synchronize.
+   * @param entity The user to synchronize.
    * @returns {Promise<boolean>} True if the user was synchronized, false otherwise.
    */
-  protected abstract sync(user: User): Promise<boolean>;
+  protected abstract sync(entity: T): Promise<boolean>;
 
   /**
    * Fetches the user data from the external data source.
@@ -91,14 +81,14 @@ export abstract class SyncService extends WithManager {
   abstract fetch(): Promise<void>;
 
   /**
-   * Down is called when the SyncService decides that the user is no longer connected to this sync service be removed.
-   * This can be used to remove the user from the database or clean up entities.
+   * Down is called when the SyncService decides that the entity is no longer connected to this sync service be removed.
+   * This can be used to remove the entity from the database or clean up entities.
    *
    * This should be revertible and idempotent!
    *
-   * @param user
+   * @param entity
    */
-  abstract down(user: User): Promise<void>;
+  abstract down(entity: T): Promise<void>;
 
   /**
    * Called before a sync batch is started.

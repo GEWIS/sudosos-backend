@@ -27,7 +27,7 @@ import {
   setDefaultLDAPEnv,
   storeLDAPEnv,
 } from '../../../helpers/test-helpers';
-import LdapSyncService from '../../../../src/service/sync/ldap-sync-service';
+import LdapSyncService from '../../../../src/service/sync/user/ldap-sync-service';
 import { expect } from 'chai';
 import LDAPAuthenticator from '../../../../src/entity/authenticator/ldap-authenticator';
 import sinon from 'sinon';
@@ -98,7 +98,7 @@ describe('LdapSyncService', () => {
     });
   });
 
-  describe('sync function', () => {
+  describe('ldap functions', () => {
     let ldapSyncService: LdapSyncService;
 
     before(async () => {
@@ -112,8 +112,24 @@ describe('LdapSyncService', () => {
     beforeEach(() => {
       stubs.push(sinon.stub(Client.prototype, 'bind').resolves(null));
     });
+    
+    function stubGroupSearch(stub: sinon.SinonStub, baseDN: string, returns: any) {
+      stub.withArgs(baseDN, {
+        filter: '(CN=*)',
+        explicitBufferAttributes: ['objectGUID'],
+      }).resolves(returns);
+      stubs.push(stub);
+    }
 
-    function stubSearch(stub: sinon.SinonStub, value: Buffer, returns: any) {
+    function stubMemberSearch(stub: sinon.SinonStub, dn: string, returns: any) {
+      stub.withArgs(process.env.LDAP_BASE, {
+        filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${dn}))`,
+        explicitBufferAttributes: ['objectGUID'],
+      }).resolves(returns);
+      stubs.push(stub);
+    }
+
+    function stubGUIDSearch(stub: sinon.SinonStub, value: Buffer, returns: any) {
       stub.withArgs(process.env.LDAP_BASE, {
         filter: new EqualityFilter({
           attribute: 'objectGUID',
@@ -143,103 +159,162 @@ describe('LdapSyncService', () => {
       expect(user.active).to.be.true;
     }
 
-    it('should return false if user no AD entry matching the LDAPAuthenticator UUID', async () => {
-      await inUserContext(
-        await (await UserFactory()).clone(1),
-        async (member: User) => {
-          const UUID = Buffer.from('4321', 'hex');
-          expect(await ldapSyncService.guard(member)).to.be.false;
-          const stub = sinon.stub(Client.prototype, 'search');
-          stubSearch(stub, UUID, { searchReferences: [], searchEntries: [] });
-          await ldapSyncService.pre();
+    describe('sync function', () => {
+      it('should return false if user no AD entry matching the LDAPAuthenticator UUID', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (member: User) => {
+            const UUID = Buffer.from('4321', 'hex');
+            expect(await ldapSyncService.guard(member)).to.be.false;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [] });
+            await ldapSyncService.pre();
 
-          await addLDAPAuthenticator(UUID, member);
-          expect(await ldapSyncService.sync(member)).to.be.false;
-        },
-      );
+            await addLDAPAuthenticator(UUID, member);
+            expect(await ldapSyncService.sync(member)).to.be.false;
+          },
+        );
+      });
+      it('should return true if user has AD entry matching the LDAPAuthenticator UUID', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (member: User) => {
+            const UUID = Buffer.from('4444', 'hex');
+            await addLDAPAuthenticator(UUID, member);
+
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [{ member }] });
+            await ldapSyncService.pre();
+
+            expect(await ldapSyncService.sync(member)).to.be.true;
+          },
+        );
+      });
+      it('should return true and update user if user is of type ORGAN with known LDAPAuthenticator', async () => {
+        await inUserContext(
+          await (await UserFactory(await ORGAN_USER())).clone(1),
+          async (organ: User) => {
+            const UUID = Buffer.from('8989', 'hex');
+            await addLDAPAuthenticator(UUID, organ);
+
+            // Intentionally "mess up" the user
+            await AppDataSource.manager.update(User, organ.id, {
+              firstName: 'Wrong',
+              lastName: 'Wrong',
+              canGoIntoDebt: true,
+              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              active: false,
+            });
+
+            const displayName = `${organ.firstName} Updated`;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, {
+              searchReferences: [], searchEntries: [{
+                displayName,
+              }],
+            });
+
+            await ldapSyncService.pre();
+            expect(await ldapSyncService.sync(organ)).to.be.true;
+            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            userIsAsExpected(dbUser, { displayName } as LDAPUser);
+          },
+        );
+      });
+      it('should return true and update user if user is of type INTEGRATION with known LDAPAuthenticator', async () => {
+        await inUserContext(
+          await (await UserFactory(await INTEGRATION_USER())).clone(1),
+          async (organ: User) => {
+            const UUID = Buffer.from('4141', 'hex');
+            await addLDAPAuthenticator(UUID, organ);
+
+            // Intentionally "mess up" the user
+            await AppDataSource.manager.update(User, organ.id, {
+              firstName: 'Wrong',
+              lastName: 'Wrong',
+              canGoIntoDebt: true,
+              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              active: false,
+            });
+
+            const displayName = `${organ.firstName} Updated`;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, {
+              searchReferences: [], searchEntries: [{
+                displayName,
+              }],
+            });
+
+            await ldapSyncService.pre();
+            expect(await ldapSyncService.sync(organ)).to.be.true;
+            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            userIsAsExpected(dbUser, { displayName } as LDAPUser);
+          },
+        );
+      });
+      it('should return false if user has no LDAPAuthenticator', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (member: User) => {
+            expect(await ldapSyncService.sync(member)).to.be.false;
+          },
+        );
+      });
     });
-    it('should return true if user has AD entry matching the LDAPAuthenticator UUID', async () => {
-      await inUserContext(
-        await (await UserFactory()).clone(1),
-        async (member: User) => {
-          const UUID = Buffer.from('4444', 'hex');
-          await addLDAPAuthenticator(UUID, member);
 
-          const stub = sinon.stub(Client.prototype, 'search');
-          stubSearch(stub, UUID, { searchReferences: [], searchEntries: [{ member }] });
-          await ldapSyncService.pre();
+    describe('down function', () => {
+      it('should remove the LDAPAuthenticator for the given user', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (member: User) => {
+            const UUID = Buffer.from('4321'.repeat(member.id), 'hex');
+            expect(await ldapSyncService.guard(member)).to.be.false;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [] });
+            await ldapSyncService.pre();
 
-          expect(await ldapSyncService.sync(member)).to.be.true;
-        },
-      );
+            await addLDAPAuthenticator(UUID, member);
+            expect(await ldapSyncService.sync(member)).to.be.false;
+
+            await ldapSyncService.down(member);
+            const auth = await LDAPAuthenticator.findOne({ where: { UUID } });
+            expect(auth).to.be.null;
+          },
+        );
+      });
+      it('should set INTEGRATION and ORGAN users to deleted and inactive', async () => {
+        await inUserContext(
+          await (await UserFactory(await ORGAN_USER())).clone(1),
+          async (organ: User) => {
+            const UUID = Buffer.from('4141'.repeat(organ.id), 'hex');
+            expect(await ldapSyncService.guard(organ)).to.be.true;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [] });
+            await ldapSyncService.pre();
+
+            await addLDAPAuthenticator(UUID, organ);
+            expect(await ldapSyncService.sync(organ)).to.be.false;
+
+            await ldapSyncService.down(organ);
+            const auth = await LDAPAuthenticator.findOne({ where: { UUID } });
+            expect(auth).to.be.null;
+
+            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            expect(dbUser.deleted).to.be.true;
+            expect(dbUser.active).to.be.false;
+          },
+        );
+      });
     });
-    it('should return true and update user if user is of type ORGAN with known LDAPAuthenticator', async () => {
-      await inUserContext(
-        await (await UserFactory(await ORGAN_USER())).clone(1),
-        async (organ: User) => {
-          const UUID = Buffer.from('8989', 'hex');
-          await addLDAPAuthenticator(UUID, organ);
 
-          // Intentionally "mess up" the user
-          await AppDataSource.manager.update(User, organ.id, {
-            firstName: 'Wrong',
-            lastName: 'Wrong',
-            canGoIntoDebt: true,
-            acceptedToS: TermsOfServiceStatus.ACCEPTED,
-            active: false,
-          });
-
-          const displayName = `${organ.firstName} Updated`;
-          const stub = sinon.stub(Client.prototype, 'search');
-          stubSearch(stub, UUID, { searchReferences: [], searchEntries: [{
-            displayName,
-          }] });
-
-          await ldapSyncService.pre();
-          expect(await ldapSyncService.sync(organ)).to.be.true;
-          const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
-          userIsAsExpected(dbUser, { displayName } as LDAPUser);
-        },
-      );
-    });
-    it('should return true and update user if user is of type INTEGRATION with known LDAPAuthenticator', async () => {
-      await inUserContext(
-        await (await UserFactory(await INTEGRATION_USER())).clone(1),
-        async (organ: User) => {
-          const UUID = Buffer.from('4141', 'hex');
-          await addLDAPAuthenticator(UUID, organ);
-
-          // Intentionally "mess up" the user
-          await AppDataSource.manager.update(User, organ.id, {
-            firstName: 'Wrong',
-            lastName: 'Wrong',
-            canGoIntoDebt: true,
-            acceptedToS: TermsOfServiceStatus.ACCEPTED,
-            active: false,
-          });
-
-          const displayName = `${organ.firstName} Updated`;
-          const stub = sinon.stub(Client.prototype, 'search');
-          stubSearch(stub, UUID, { searchReferences: [], searchEntries: [{
-            displayName,
-          }] });
-
-          await ldapSyncService.pre();
-          expect(await ldapSyncService.sync(organ)).to.be.true;
-          const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
-          userIsAsExpected(dbUser, { displayName } as LDAPUser);
-        },
-      );
-    });
-    it('should return false if user has no LDAPAuthenticator', async () => {
-      await inUserContext(
-        await (await UserFactory()).clone(1),
-        async (member: User) => {
-          expect(await ldapSyncService.sync(member)).to.be.false;
-        },
-      );
+    describe('fetch functions', () => {
+      describe('fetchSharedAccounts function', () => {
+        it('should create an account for new shared accounts', async () => {
+        });
+      });
     });
   });
+
 
   // TODO: move these test cases to ad-sync-service test cases
   // describe('syncSharedAccounts functions', () => {
@@ -514,7 +589,7 @@ describe('LdapSyncService', () => {
   //     expect(await AssignedRole.findOne({ where: { role: { name: 'SudoSOS - Test' }, user: { id: users[1].id } } })).to.exist;
   //   });
   // });
-  // describe('syncUsers function', () => {
+  // describe('run function', () => {
   //   it('should create new users if needed', async () => {
   //     process.env.ENABLE_LDAP = 'true';
   //
@@ -531,7 +606,7 @@ describe('LdapSyncService', () => {
   //     stubs.push(clientBindStub);
   //     stubs.push(clientSearchStub);
   //
-  //     await new ADService().syncUsers();
+  //     await new ADService().run();
   //     const auth = (await LDAPAuthenticator.findOne(
   //       { where: { UUID: newUser.objectGUID }, relations: ['user'] },
   //     ));

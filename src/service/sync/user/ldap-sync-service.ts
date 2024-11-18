@@ -21,21 +21,21 @@
 /**
  * This is the module page of the ldap-sync-service.
  *
- * @module internal/user-sync
+ * @module internal/ldap-sync-service
  */
 
-import { SyncService } from './sync-service';
-import User, { TermsOfServiceStatus, UserType } from '../../entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
 import { Client } from 'ldapts';
-import ADService from '../ad-service';
-import LDAPAuthenticator from '../../entity/authenticator/ldap-authenticator';
-import RoleManager from '../../rbac/role-manager';
+import ADService from '../../ad-service';
+import LDAPAuthenticator from '../../../entity/authenticator/ldap-authenticator';
+import RoleManager from '../../../rbac/role-manager';
 import { EntityManager } from 'typeorm';
-import { getLDAPConnection, LDAPGroup, LDAPUser } from '../../helpers/ad';
-import RBACService from '../rbac-service';
+import { getLDAPConnection, LDAPGroup, LDAPUser } from '../../../helpers/ad';
+import RBACService from '../../rbac-service';
 import log4js, { Logger } from 'log4js';
+import { UserSyncService } from './user-sync-service';
 
-export default class LdapSyncService extends SyncService {
+export default class LdapSyncService extends UserSyncService {
 
   // We only sync organs, members and integrations.
   targets = [UserType.ORGAN, UserType.MEMBER, UserType.INTEGRATION];

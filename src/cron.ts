@@ -34,8 +34,9 @@ import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
-import { SyncService } from './service/sync/sync-service';
-import LdapSyncService from './service/sync/ldap-sync-service';
+import LdapSyncService from './service/sync/user/ldap-sync-service';
+import { UserSyncService } from './service/sync/user/user-sync-service';
+import UserSyncManager from './service/sync/user/user-sync-manager';
 
 class CronApplication {
   logger: Logger;
@@ -101,7 +102,7 @@ async function createCronTasks(): Promise<void> {
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();
 
-  const syncServices: SyncService[] = [];
+  const syncServices: UserSyncService[] = [];
 
   if (process.env.ENABLE_LDAP === 'true') {
     const ldapSyncService = new LdapSyncService(application.roleManager, null, AppDataSource.manager);
@@ -119,9 +120,17 @@ async function createCronTasks(): Promise<void> {
   //   application.tasks.push(syncGewis);
   // }
 
-  // TODO sensible cron schedule
-  // const runSyncer = cron.schedule('*/10 * * * *', async () => {
-  // }
+  if (syncServices.length !== 0) {
+    const syncManager = new UserSyncManager(syncServices);
+
+    // TODO sensible cron schedule
+    const userSyncer = cron.schedule('*/10 * * * *', async () => {
+      logger.debug('Syncing users.');
+      await syncManager.run();
+      await syncManager.fetch();
+    });
+    application.tasks.push(userSyncer);
+  }
 
   application.logger.info('Tasks registered');
 }
