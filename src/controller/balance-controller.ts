@@ -113,7 +113,7 @@ export default class BalanceController extends BaseController {
    * @param {boolean} allowDeleted.query - Whether to include deleted users
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
-   * @return {Array<BalanceResponse>} 200 - The requested user's balance
+   * @return {PaginatedBalanceResponse} 200 - The requested user's balance
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
