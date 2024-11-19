@@ -97,7 +97,7 @@ export default class BalanceController extends BaseController {
 
   /**
    * GET /balances/all
-   * @summary Get balance of the current user
+   * @summary Get balance of all users
    * @operationId getAllBalance
    * @tags balance - Operations of balance controller
    * @security JWT
