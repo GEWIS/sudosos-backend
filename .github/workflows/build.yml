@@ -159,7 +159,7 @@ jobs:
           sources_base_path: "/__w/sudosos-backend/sudosos-backend" #github.action_path does not work in Docker (https://github.com/actions/runner/issues/716)
       - name: "Upload code coverage report"
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: reports/coverage/
