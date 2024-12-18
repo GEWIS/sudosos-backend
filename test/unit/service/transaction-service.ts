@@ -686,6 +686,15 @@ describe('TransactionService', (): void => {
 
       expect(records.length).to.equal(0);
     });
+
+    it('should not return transactions createdBy given user', async () => {
+      const transaction = ctx.transactions[0];
+
+      const records = (await new TransactionService().getTransactions({ excludeById: transaction.createdBy.id })).records;
+      records.forEach((r) => {
+        expect(r.createdBy).to.not.eq(transaction.createdBy.id);
+      });
+    });
   });
 
   describe('Get all transactions involving a user', () => {
