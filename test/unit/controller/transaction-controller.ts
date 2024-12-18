@@ -36,7 +36,7 @@ import { BaseTransactionResponse } from '../../../src/controller/response/transa
 import { verifyBaseTransactionEntity } from '../validators';
 import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { defaultPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
+import { defaultPagination, maxPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
 import { truncateAllTables } from '../../setup';
@@ -528,6 +528,35 @@ describe('TransactionController', (): void => {
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ skip: 'Wie dit leest trekt een bak' });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return all transactions except for the ones createdby a user themself', async () => {
+      const excludeById = 7;
+      const take = maxPagination();
+
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ take, excludeById });
+      expect(res.status).to.equal(200);
+
+      const actualTransactions = ctx.transactions
+        .filter((transactions) => transactions.createdBy.id != excludeById);
+
+      const transactions = res.body.records as BaseTransactionResponse[];
+      const spec = await Swagger.importSpecification();
+      expect(transactions.length).to.equal(actualTransactions.length);
+      transactions.forEach((transaction: BaseTransactionResponse) => {
+        verifyBaseTransactionEntity(spec, transaction);
+      });
+    });
+
+    it('should return 400 when excludeById is not a number', async () => {
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ skip: '42 is erg Vo' });
       expect(res.status).to.equal(400);
     });
   });
