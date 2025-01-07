@@ -77,7 +77,6 @@ import ServerSettingsStore from './server-settings/server-settings-store';
 import SellerPayoutController from './controller/seller-payout-controller';
 import { ISettings } from './entity/server-setting';
 import ServerSettingsController from './controller/server-settings-controller';
-import TransactionSummaryController from './controller/transaction-summary-controller';
 
 export class Application {
   app: express.Express;
@@ -247,7 +246,6 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
   application.app.use('/v1/pointsofsale', new PointOfSaleController(options).getRouter());
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
-  application.app.use('/v1/transactions/summary', new TransactionSummaryController(options).getRouter());
   application.app.use('/v1/vouchergroups', new VoucherGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/fines', new DebtorController(options).getRouter());

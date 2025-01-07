@@ -103,7 +103,6 @@ export default class TransactionController extends BaseController {
    * @param {integer} createdById.query - User that created selected transaction
    * @param {integer} toId.query - To-user for selected transactions
    * transactions. Requires ContainerId
-   * @param {integer} excludeById.query - Your own ID to not include in transactions
    * @param {integer} pointOfSaleId.query - Point of sale ID for selected transactions
    * @param {integer} productId.query - Product ID for selected transactions
    * @param {integer} productRevision.query - Product Revision for selected

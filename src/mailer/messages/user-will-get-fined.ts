@@ -63,29 +63,29 @@ const getDateEN = (d: Date) => {
 const userGotFinedDutch = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
 <p>${getDateNL(context.referenceDate)} je een saldo van ${formatBalance(context.balance)}.<br>
-Volgende week worden er boetes uitgedeeld aan de SudoSOS-gebruikers die deze week een negatief saldo hebben. Jij krijgt een boete van ${context.fine.toFormat()} als je saldo dan nog steeds negatief is!<br>
+Vandaag heeft de BAC boetes uitgedeeld. De volgende keer dat er boetes worden uitgedeeld (waarschijnlijk volgende week), krijg jij een boute van ${context.fine.toFormat()}!<br>
 
-<p>Ga naar de SudoSOS-website om je saldo op te hogen en deze boete te voorkomen.</p>`,
-  getSubject: () => 'De volgende keer krijg je een boete voor je negatieve SudoSOS-saldo',
+<p>Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.</p>`,
+  getSubject: () => 'De volgende keer krijg je een boete voor je negatieve SudoSOS saldo',
   getTitle: 'Schuldnotificatie',
   getText: (context) => `
 ${getDateNL(context.referenceDate)} je een saldo van ${context.balance.toFormat()}.
-Volgende week worden er boetes uitgedeeld aan de SudoSOS-gebruikers die deze week een negatief saldo hebben. Jij krijgt een boete van ${context.fine.toFormat()} als je saldo dan nog steeds negatief is!
+Vandaag heeft de BAC boetes uitgedeeld. De volgende keer dat er boetes worden uitgedeeld (waarschijnlijk volgende week), krijg jij een boute van ${context.fine.toFormat()}!
 
-Ga naar de SudoSOS-website om je saldo op te hogen en deze boete te voorkomen.`,
+Ga snel naar de SudoSOS website om je saldo op te hogen en deze boete te voorkomen.`,
 });
 
 const userGotFinedEnglish = new MailContentBuilder<UserWillGetFinedOptions>({
   getHTML: (context) => `
 <p>${getDateEN(context.referenceDate)} a balance of ${formatBalance(context.balance)}.<br>
-Next week, fines will be handed out to the SudoSOS users who have a negative balance today. If you don't have a positive balance next week, you will get a fine of ${context.fine.toFormat()}!<br>
+Today, the BAC has handed out fines. Next time fines will be handed out (probably next week), you will get a fine of ${context.fine.toFormat()}!<br>
 
 <p>Go to the SudoSOS website to deposit money into your account to prevent this fine.</p>`,
   getSubject: () => 'Next time you will get fined for your negative SudoSOS balance',
   getTitle: 'Debt notification',
   getText: (context) => `
 ${getDateEN(context.referenceDate)} a balance of ${context.balance.toFormat()}.
-Next week, fines will be handed out to the SudoSOS users who have a negative balance today. If you don't have a positive balance next week, you will get a fine of ${context.fine.toFormat()}!
+Today, the BAC has handed out fines. Next time fines will be handed out (probably next week), you will get a fine of ${context.fine.toFormat()}!
 
 Go to the SudoSOS website to deposit money into your account to prevent this fine.`,
 });
