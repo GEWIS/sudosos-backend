@@ -58,6 +58,10 @@ interface SummaryFilters {
   containerId?: number;
 }
 
+/**
+ * Minimal implementation of the summary service.
+ * https://github.com/GEWIS/sudosos-backend/pull/415
+ */
 export default class TransactionSummaryService extends WithManager {
   public static toContainerSummaryResponse(containerSummary: ContainerSummary): ContainerSummaryResponse {
     return {

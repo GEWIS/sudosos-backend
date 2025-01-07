@@ -65,6 +65,7 @@ export default class TransactionSummaryController extends BaseController {
       if (summaries.length === 0) {
         // This also causes a 404 if the container exists, but no transactions have been made.
         // However, this is a won't fix for now (because time)
+        // https://github.com/GEWIS/sudosos-backend/pull/415
         res.status(404).json('Container not found.');
         return;
       }
