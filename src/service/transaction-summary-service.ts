@@ -102,7 +102,7 @@ export default class TransactionSummaryService extends WithManager {
       return {
         user,
         totalInclVat: DineroTransformer.Instance.from(r.totalValueInclVat),
-        amountOfProducts: r.totalAmount,
+        amountOfProducts: Number(r.totalAmount),
         containerId: r.subTransaction_containerContainerId,
       };
     });
