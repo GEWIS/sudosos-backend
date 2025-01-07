@@ -26,12 +26,16 @@
 
 import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
 import Transaction from '../entity/transactions/transaction';
-import User, { NotifyDebtUserTypes } from '../entity/user/user';
+import User, {MailReceiptsOption, NotifyDebtUserTypes} from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import Mailer from '../mailer';
 import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import log4js from 'log4js';
+import TransactionService from "../service/transaction-service";
+import {TransactionResponse} from "../controller/response/transaction-response";
+import {Dinero} from "dinero.js";
+import TransactionNotification from "../mailer/messages/transaction-notification";
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {
@@ -53,6 +57,12 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
     const balance = await new BalanceService().getBalance(user.id);
+    const transactionResponse = await new TransactionService().getSingleTransaction(entity.id);
+
+    if ((user.mailReceipts == MailReceiptsOption.ALLTRANSACTIONS) ||
+        (entity.createdBy.id != user.id && user.mailReceipts == MailReceiptsOption.CHARGEDBYOTHERS)) {
+      await new TransactionSubscriber().sendReceipt(user, transactionResponse, balance.amount.amount);
+    }
 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
@@ -83,6 +93,13 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     Mailer.getInstance().send(user, new UserDebtNotification({
       balance: DineroTransformer.Instance.from(currentBalance),
       url: '',
+    })).catch((e) => log4js.getLogger('Transaction').error(e));
+  }
+
+  async sendReceipt(user: User, transactionResponse: TransactionResponse, balance: number) {
+    Mailer.getInstance().send(user, new TransactionNotification({
+      transactionResponse: transactionResponse,
+      balance: DineroTransformer.Instance.from(balance),
     })).catch((e) => log4js.getLogger('Transaction').error(e));
   }
 }

@@ -48,6 +48,12 @@ export enum UserType {
   POINT_OF_SALE = 'POINT_OF_SALE',
 }
 
+export enum MailReceiptsOption {
+  NEVER = 'NEVER',
+  CHARGEDBYOTHERS = 'CHARGEDBYOTHERS',
+  ALLTRANSACTIONS = 'ALLTRANSACTIONS',
+}
+
 /**
  * All user types that should be allowed to have a local password.
  */
@@ -143,6 +149,17 @@ export default class User extends BaseEntity {
     default: false,
   })
   public extensiveDataProcessing: boolean;
+
+  @Column({
+    nullable: false,
+    default: MailReceiptsOption.NEVER
+  })
+  public mailReceipts: MailReceiptsOption;
+
+  @Column({
+    default: false,
+  })
+  public balanceNotification: boolean;
 
   @OneToOne(() => UserFineGroup, {
     nullable: true,

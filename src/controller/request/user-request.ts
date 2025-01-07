@@ -24,7 +24,8 @@
  * @module users
  */
 
-import { UserType } from '../../entity/user/user';
+import {MailReceiptsOption, UserType} from '../../entity/user/user';
+import Mail from "nodemailer/lib/mailer";
 
 export default interface BaseUserRequest {
   firstName: string;
@@ -60,11 +61,15 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} deleted
  * @property {boolean} active
  * @property {boolean} extensiveDataProcessing
+ * @property {string} mailReceipts
+ * @property {boolean} balanceNotification
  */
 export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
   deleted?: boolean;
   extensiveDataProcessing?: boolean
+  mailReceipts?: MailReceiptsOption
+  balanceNotification?: boolean
 }
 
 

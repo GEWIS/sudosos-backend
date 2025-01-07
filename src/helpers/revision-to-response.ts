@@ -30,7 +30,7 @@ import { BaseContainerResponse } from '../controller/response/container-response
 import ContainerRevision from '../entity/container/container-revision';
 import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, {MailReceiptsOption, TermsOfServiceStatus, UserType} from '../entity/user/user';
 import { BaseUserResponse, InvoiceUserResponse, UserResponse } from '../controller/response/user-response';
 import VatGroup from '../entity/vat-group';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
@@ -121,6 +121,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
     canGoIntoDebt: user.canGoIntoDebt,
+    mailReceipts: user.mailReceipts,
   };
 }
 
@@ -140,6 +141,7 @@ export interface RawUser {
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: number,
   canGoIntoDebt: number,
+  mailReceipts: MailReceiptsOption,
 }
 
 /**
@@ -163,6 +165,7 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,
+    mailReceipts: user.mailReceipts,
   };
 }
 
