@@ -17,6 +17,16 @@
  *
  *  @license
  */
+
+/**
+ * This is the module page of the transaction summaries.
+ * Not that this module has been created in very strict time constraints,
+ * so its implementation is very minimal.
+ * https://github.com/GEWIS/sudosos-backend/pull/415
+ *
+ * @module transaction-summaries
+ */
+
 import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 

@@ -17,6 +17,16 @@
  *
  *  @license
  */
+
+/**
+ * This is the module page of the transaction summaries.
+ * Not that this module has been created in very strict time constraints,
+ * so its implementation is very minimal.
+ * https://github.com/GEWIS/sudosos-backend/pull/415
+ *
+ * @module transaction-summaries
+ */
+
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
@@ -49,7 +59,7 @@ export default class TransactionSummaryController extends BaseController {
    * @operationId getSingleContainerSummary
    * @tags transactionSummaries - Operations of the transaction summary controller
    * @security JWT
-   * @deprecated - Hotfix for Feestcafé "De BAC" - 70s Disco Edition. Do not for anything else
+   * @deprecated - Hotfix for Feestcafé "De BAC" - 70s Disco Edition. Do not use for anything else. https://github.com/GEWIS/sudosos-backend/pull/415
    * @param {integer} id.path.required - The ID of the container
    * @return {Array<ContainerSummaryResponse>} 200 - The requested summary
    * @return {string} 404 - Not found error

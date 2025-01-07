@@ -18,6 +18,15 @@
  *  @license
  */
 
+/**
+ * This is the module page of the transaction summaries.
+ * Not that this module has been created in very strict time constraints,
+ * so its implementation is very minimal.
+ * https://github.com/GEWIS/sudosos-backend/pull/415
+ *
+ * @module transaction-summaries
+ */
+
 import { Dinero } from 'dinero.js';
 import User from '../entity/user/user';
 import WithManager from '../database/with-manager';
