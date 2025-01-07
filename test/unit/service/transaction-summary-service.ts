@@ -117,7 +117,6 @@ describe('TransactionSummaryService', () => {
         });
       }
     });
-
     it('should filter on container ID', async () => {
       const container = ctx.containers[0];
       const summaries = await new TransactionSummaryService().getContainerSummary({ containerId: container.id });
@@ -142,6 +141,12 @@ describe('TransactionSummaryService', () => {
 
       // Sum of all summaries should add up to the complete sum of all transactions using this container
       expect(actualTotalValue.getAmount()).to.equal(expectedTotalValue.getAmount());
+    });
+    it('should return empty array if container does not exist', async () => {
+      const containerId = ctx.containers.length + 1;
+      const summaries = await new TransactionSummaryService().getContainerSummary({ containerId });
+
+      expect(summaries.length).to.equal(0);
     });
   });
 });

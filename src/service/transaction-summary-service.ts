@@ -27,6 +27,7 @@ import SubTransaction from '../entity/transactions/sub-transaction';
 import ProductRevision from '../entity/product/product-revision';
 import { SelectQueryBuilder } from 'typeorm';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { ContainerSummaryResponse } from '../controller/response/transaction-summary-response';
 
 interface BaseSummary {
   user: User;
@@ -58,6 +59,20 @@ interface SummaryFilters {
 }
 
 export default class TransactionSummaryService extends WithManager {
+  public static toContainerSummaryResponse(containerSummary: ContainerSummary): ContainerSummaryResponse {
+    return {
+      user: {
+        id: containerSummary.user.id,
+        firstName: containerSummary.user.firstName,
+        nickname: containerSummary.user.nickname,
+        lastName: containerSummary.user.lastName,
+      },
+      totalInclVat: containerSummary.totalInclVat.toObject(),
+      amountOfProducts: containerSummary.amountOfProducts,
+      containerId: containerSummary.containerId,
+    };
+  }
+
   private getBaseQueryBuilder(): SelectQueryBuilder<User> {
     return this.manager.createQueryBuilder(User, 'user')
       .innerJoinAndSelect(Transaction, 'transaction', 'transaction.fromId = user.id')
