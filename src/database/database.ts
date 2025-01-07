@@ -35,7 +35,6 @@ import ProductCategory from '../entity/product/product-category';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
-import FlaggedTransaction from '../entity/transactions/flagged-transaction';
 import VoucherGroup from '../entity/user/voucher-group';
 import LocalUser from '../entity/user/local-user';
 import GewisUser from '../gewis/entity/gewis-user';
@@ -172,7 +171,6 @@ const options: DataSourceOptions = {
     Transaction,
     SubTransaction,
     SubTransactionRow,
-    FlaggedTransaction,
     VoucherGroup,
     User,
     LocalUser,
