@@ -5,8 +5,8 @@
   "main": "out/index.js",
   "scripts": {
     "build": "tsc",
-    "watch": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/index.ts",
-    "cron": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/cron.ts",
+    "watch": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/index.ts\"",
+    "cron": "nodemon --watch \"src/**\" --ext \"ts,json\" --exec \"ts-node src/cron.ts\"",
     "serve": "node out/src/index.js",
     "schema": "ts-node src/database/schema.ts",
     "seed": "ts-node src/database/seed.ts",
