@@ -31,15 +31,32 @@ import { BaseUserResponse } from './user-response';
 import { DineroObjectResponse } from './dinero-response';
 
 /**
- * @typedef {object} ContainerSummaryResponse
- * @property {allOf|BaseUserResponse} user.required
+ * @typedef {object} BaseContainerSummaryResponse
  * @property {allOf|DineroObjectResponse} totalInclVat.required
  * @property {integer} amountOfProducts.required
- * @property {integer} containerId.required
  */
-export interface ContainerSummaryResponse {
-  user: BaseUserResponse;
+interface BaseContainerSummaryResponse {
   totalInclVat: DineroObjectResponse;
   amountOfProducts: number;
+}
+
+/**
+ * @typedef {allOf|BaseContainerSummaryResponse} ContainerSummaryRecord
+ * @property {allOf|BaseUserResponse} user.required
+ * @property {integer} containerId.required
+ */
+export interface ContainerSummaryRecord extends BaseContainerSummaryResponse {
+  user: BaseUserResponse;
   containerId: number;
+}
+
+/**
+ * @typedef {allOf|BaseContainerSummaryResponse} ContainerSummaryResponse
+ * @property {Array<ContainerSummaryRecord>} summaries.required All summaries matching the request, excluding
+ * all people who have extensiveDataProcessing disabled.
+ */
+export interface ContainerSummaryResponse {
+  summaries: ContainerSummaryRecord[];
+  totalInclVat: DineroObjectResponse;
+  amountOfProducts: number;
 }

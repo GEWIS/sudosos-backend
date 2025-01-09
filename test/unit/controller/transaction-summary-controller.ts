@@ -24,7 +24,9 @@ import Container from '../../../src/entity/container/container';
 import Transaction from '../../../src/entity/transactions/transaction';
 import { expect, request } from 'chai';
 import User, { UserType } from '../../../src/entity/user/user';
-import { ContainerSummaryResponse } from '../../../src/controller/response/transaction-summary-response';
+import {
+  ContainerSummaryResponse,
+} from '../../../src/controller/response/transaction-summary-response';
 import { json } from 'body-parser';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TransactionController from '../../../src/controller/transaction-controller';
@@ -104,13 +106,13 @@ describe('TransactionSummaryController', () => {
       expect(validation.valid).to.be.true;
 
       const seenUsers = new Set<number>();
-      const body = res.body as ContainerSummaryResponse[];
-      body.forEach((summary) => {
+      const body = res.body as ContainerSummaryResponse;
+      body.summaries.forEach((summary) => {
         expect(summary.containerId).to.equal(container.id);
         seenUsers.add(summary.user.id);
       });
 
-      expect(seenUsers.size).to.equal(body.length);
+      expect(seenUsers.size).to.equal(body.summaries.length);
     });
 
     it('should return 404 if container does not exist', async () => {

@@ -33,6 +33,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import TransactionSummaryService from '../service/transaction-summary-service';
+import { ContainerSummaryResponse } from './response/transaction-summary-response';
 
 export default class TransactionSummaryController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionSummaryController');
@@ -71,7 +72,7 @@ export default class TransactionSummaryController extends BaseController {
 
     try {
       const id = Number(rawId);
-      const summaries = await new TransactionSummaryService().getContainerSummary({ containerId: id });
+      const { summaries, totals } = await new TransactionSummaryService().getContainerSummary({ containerId: id });
       if (summaries.length === 0) {
         // This also causes a 404 if the container exists, but no transactions have been made.
         // However, this is a won't fix for now (because time)
@@ -80,7 +81,14 @@ export default class TransactionSummaryController extends BaseController {
         return;
       }
 
-      res.status(200).json(summaries.map((s) => TransactionSummaryService.toContainerSummaryResponse(s)));
+      const records = summaries.map((s) => TransactionSummaryService.toContainerSummaryRecord(s));
+      const response: ContainerSummaryResponse = {
+        summaries: records,
+        totalInclVat: totals.totalInclVat.toObject(),
+        amountOfProducts: totals.amountOfProducts,
+      };
+
+      res.status(200).json(response);
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);

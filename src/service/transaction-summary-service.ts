@@ -36,7 +36,7 @@ import SubTransaction from '../entity/transactions/sub-transaction';
 import ProductRevision from '../entity/product/product-revision';
 import { SelectQueryBuilder } from 'typeorm';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
-import { ContainerSummaryResponse } from '../controller/response/transaction-summary-response';
+import { ContainerSummaryRecord } from '../controller/response/transaction-summary-response';
 
 interface BaseSummary {
   user: User;
@@ -74,7 +74,7 @@ interface SummaryTotals extends Pick<BaseSummary, 'totalInclVat' | 'amountOfProd
  * https://github.com/GEWIS/sudosos-backend/pull/415
  */
 export default class TransactionSummaryService extends WithManager {
-  public static toContainerSummaryResponse(containerSummary: ContainerSummary): ContainerSummaryResponse {
+  public static toContainerSummaryRecord(containerSummary: ContainerSummary): ContainerSummaryRecord {
     return {
       user: {
         id: containerSummary.user.id,
