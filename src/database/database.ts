@@ -27,6 +27,7 @@
 import {
   createConnection, DataSource,
 } from 'typeorm';
+import fs from 'fs';
 import User from '../entity/user/user';
 import Product from '../entity/product/product';
 import SubTransaction from '../entity/transactions/sub-transaction';
@@ -118,6 +119,11 @@ const options: DataSourceOptions = {
   type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
   username: process.env.TYPEORM_USERNAME,
   password: process.env.TYPEORM_PASSWORD,
+  ...(process.env.TYPEORM_SSL_ENABLED === 'true' ? {
+    ssl: {
+      ca: fs.readFileSync(process.env.TYPEORM_SSL_CACERTS),
+    },
+  } : {}),
   synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
   logging: process.env.TYPEORM_LOGGING === 'true',
   migrations: [
