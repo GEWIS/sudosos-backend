@@ -27,6 +27,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import { ContainerSummaryResponse } from '../../../src/controller/response/transaction-summary-response';
 import { json } from 'body-parser';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
+import TransactionController from '../../../src/controller/transaction-controller';
 
 describe('TransactionSummaryController', () => {
   let ctx: DefaultContext & {
@@ -68,9 +69,11 @@ describe('TransactionSummaryController', () => {
     const userToken = await d.tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce user');
 
     const controller = new TransactionSummaryController({ specification: d.specification, roleManager: d.roleManager });
+    const transactionController = new TransactionController({ specification: d.specification, roleManager: d.roleManager });
     d.app.use(json());
     d.app.use(new TokenMiddleware({ tokenHandler: d.tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     d.app.use('/transactions/summary', controller.getRouter());
+    d.app.use('/transactions', transactionController.getRouter());
 
     ctx = {
       ...d,
