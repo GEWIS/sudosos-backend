@@ -69,10 +69,11 @@ describe('TransactionSummaryService', () => {
     };
 
     it('should return the summary of all user\'s purchases for each container', async () => {
-      const summaries = await new TransactionSummaryService().getContainerSummary();
+      const { summaries, totals } = await new TransactionSummaryService().getContainerSummary();
       const seenUserIds = new Set<number>();
 
       let actualTotalValue = Dinero();
+      let actualNrProducts = 0;
 
       summaries.forEach((summary) => {
         seenUserIds.add(summary.user.id);
@@ -86,11 +87,14 @@ describe('TransactionSummaryService', () => {
         expect(summary.totalInclVat.getAmount()).to.equal(totalInclVat.getAmount());
 
         actualTotalValue = actualTotalValue.add(summary.totalInclVat);
+        actualNrProducts += summary.amountOfProducts;
       });
 
+      let expectedNrProducts = 0;
       const expectedTotalValue = ctx.transactions.reduce((totalTransaction, t) => {
         const subTransactionValue = t.subTransactions.reduce((totalSubTransaction, st) => {
           const subTransactionRowValue = st.subTransactionRows.reduce((totalSubTransactionRow, str) => {
+            expectedNrProducts += str.amount;
             return totalSubTransactionRow.add(str.product.priceInclVat.multiply(str.amount));
           }, Dinero());
           return totalSubTransaction.add(subTransactionRowValue);
@@ -100,6 +104,9 @@ describe('TransactionSummaryService', () => {
 
       // Sum of all summaries should add up to the complete sum of all transactions
       expect(actualTotalValue.getAmount()).to.equal(expectedTotalValue.getAmount());
+      expect(actualNrProducts).to.equal(expectedNrProducts);
+      expect(totals.totalInclVat.getAmount()).to.equal(expectedTotalValue.getAmount());
+      expect(totals.amountOfProducts).to.equal(expectedNrProducts);
 
       const missingUsers = ctx.users.filter((u) => !seenUserIds.has(u.id));
       // If an user is missing, it should be because the user has no (or incorrect) transactions
@@ -119,19 +126,23 @@ describe('TransactionSummaryService', () => {
     });
     it('should filter on container ID', async () => {
       const container = ctx.containers[0];
-      const summaries = await new TransactionSummaryService().getContainerSummary({ containerId: container.id });
+      const { summaries, totals } = await new TransactionSummaryService().getContainerSummary({ containerId: container.id });
 
       let actualTotalValue = Dinero();
+      let actualNrProducts = 0;
 
       summaries.forEach((summary) => {
         expect(summary.containerId).to.equal(container.id);
+        actualNrProducts += summary.amountOfProducts;
         actualTotalValue = actualTotalValue.add(summary.totalInclVat);
       });
 
+      let expectedNrProducts = 0;
       const expectedTotalValue = ctx.transactions.reduce((totalTransaction, t) => {
         const subTransactionValue = t.subTransactions.reduce((totalSubTransaction, st) => {
           if (st.container.containerId !== container.id) return totalSubTransaction;
           const subTransactionRowValue = st.subTransactionRows.reduce((totalSubTransactionRow, str) => {
+            expectedNrProducts += str.amount;
             return totalSubTransactionRow.add(str.product.priceInclVat.multiply(str.amount));
           }, Dinero());
           return totalSubTransaction.add(subTransactionRowValue);
@@ -141,12 +152,17 @@ describe('TransactionSummaryService', () => {
 
       // Sum of all summaries should add up to the complete sum of all transactions using this container
       expect(actualTotalValue.getAmount()).to.equal(expectedTotalValue.getAmount());
+      expect(actualNrProducts).to.equal(expectedNrProducts);
+      expect(totals.totalInclVat.getAmount()).to.equal(expectedTotalValue.getAmount());
+      expect(totals.amountOfProducts).to.equal(expectedNrProducts);
     });
-    it('should return empty array if container does not exist', async () => {
+    it('should return nothing if container does not exist', async () => {
       const containerId = ctx.containers.length + 1;
-      const summaries = await new TransactionSummaryService().getContainerSummary({ containerId });
+      const { summaries, totals } = await new TransactionSummaryService().getContainerSummary({ containerId });
 
       expect(summaries.length).to.equal(0);
+      expect(totals.totalInclVat.getAmount()).to.equal(0);
+      expect(totals.amountOfProducts).to.equal(0);
     });
   });
 });

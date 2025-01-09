@@ -27,7 +27,7 @@
  * @module transaction-summaries
  */
 
-import { Dinero } from 'dinero.js';
+import Dinero from 'dinero.js';
 import User from '../entity/user/user';
 import WithManager from '../database/with-manager';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
@@ -40,7 +40,7 @@ import { ContainerSummaryResponse } from '../controller/response/transaction-sum
 
 interface BaseSummary {
   user: User;
-  totalInclVat: Dinero;
+  totalInclVat: Dinero.Dinero;
   amountOfProducts: number;
 }
 
@@ -67,6 +67,8 @@ interface SummaryFilters {
   containerId?: number;
 }
 
+interface SummaryTotals extends Pick<BaseSummary, 'totalInclVat' | 'amountOfProducts'> {}
+
 /**
  * Minimal implementation of the summary service.
  * https://github.com/GEWIS/sudosos-backend/pull/415
@@ -86,31 +88,53 @@ export default class TransactionSummaryService extends WithManager {
     };
   }
 
-  private getBaseQueryBuilder(): SelectQueryBuilder<User> {
-    return this.manager.createQueryBuilder(User, 'user')
-      .innerJoinAndSelect(Transaction, 'transaction', 'transaction.fromId = user.id')
-      .innerJoinAndSelect(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
-      // .innerJoinAndSelect(ContainerRevision, 'containerRevision', 'containerRevision.containerId = subTransaction.containerContainerId AND containerRevision.revision = subTransaction.containerRevision')
-      .innerJoinAndSelect(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
-      .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
-      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat) as totalValueInclVat')
-      .addSelect('sum(subTransactionRow.amount) as totalAmount');
-  }
-
   private addFilters<T>(query: SelectQueryBuilder<T>, filters?: SummaryFilters): SelectQueryBuilder<T> {
     if (!filters) return query;
     if (filters.containerId) query.where('subTransaction.containerContainerId = :containerId', { containerId: filters.containerId });
     return query;
   }
 
-  public async getContainerSummary(filters?: SummaryFilters): Promise<ContainerSummary[]> {
-    const query = this.getBaseQueryBuilder()
-      .groupBy('user.id, subTransaction.containerContainerId');
+  private getBaseQueryBuilder(filters?: SummaryFilters): SelectQueryBuilder<User> {
+    let query = this.manager.createQueryBuilder(User, 'user')
+      .innerJoinAndSelect(Transaction, 'transaction', 'transaction.fromId = user.id')
+      .innerJoinAndSelect(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
+      .innerJoinAndSelect(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+      .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat) as totalValueInclVat')
+      .addSelect('sum(subTransactionRow.amount) as totalAmount');
 
-    const data = await this.addFilters(query, filters)
+    query = this.addFilters(query, filters);
+    return query;
+  }
+
+  private async getTotals(filters?: SummaryFilters): Promise<SummaryTotals> {
+    const query = this.manager.createQueryBuilder()
+      .select()
+      .from(User, 'user')
+      .innerJoin(Transaction, 'transaction', 'transaction.fromId = user.id')
+      .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.transactionId = transaction.id')
+      .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
+      .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
+      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat) as totalInclVat')
+      .addSelect('sum(subTransactionRow.amount) as amountOfProducts');
+
+    const totals = await this.addFilters(query, filters).getRawOne();
+
+    if (totals) return {
+      totalInclVat: DineroTransformer.Instance.from(totals.totalInclVat),
+      amountOfProducts: Number(totals.amountOfProducts),
+    };
+    return { totalInclVat: Dinero(), amountOfProducts: 0 };
+  }
+
+  public async getContainerSummary(filters?: SummaryFilters): Promise<{ summaries: ContainerSummary[], totals: SummaryTotals }> {
+    const data = await this.getBaseQueryBuilder(filters)
+      .groupBy('user.id, subTransaction.containerContainerId')
       .getRawAndEntities();
 
-    return data.raw.map((r): ContainerSummary => {
+    const totals = await this.getTotals(filters);
+
+    const summaries: ContainerSummary[] = data.raw.map((r): ContainerSummary => {
       const user = data.entities.find((u) => u.id === r.user_id);
       return {
         user,
@@ -119,6 +143,11 @@ export default class TransactionSummaryService extends WithManager {
         containerId: r.subTransaction_containerContainerId,
       };
     });
+
+    return {
+      summaries,
+      totals,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
