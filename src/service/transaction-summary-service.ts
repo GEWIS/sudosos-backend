@@ -101,7 +101,8 @@ export default class TransactionSummaryService extends WithManager {
       .innerJoinAndSelect(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.subTransactionId = subTransaction.id')
       .innerJoin(ProductRevision, 'productRevision', 'productRevision.productId = subTransactionRow.productProductId AND productRevision.revision = subTransactionRow.productRevision')
       .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat) as totalValueInclVat')
-      .addSelect('sum(subTransactionRow.amount) as totalAmount');
+      .addSelect('sum(subTransactionRow.amount) as totalAmount')
+      .where('user.extensiveDataProcessing = TRUE');
 
     query = this.addFilters(query, filters);
     return query;

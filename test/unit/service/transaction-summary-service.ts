@@ -164,5 +164,51 @@ describe('TransactionSummaryService', () => {
       expect(totals.totalInclVat.getAmount()).to.equal(0);
       expect(totals.amountOfProducts).to.equal(0);
     });
+    it('should not include users with extensiveDataProcessing off', async () => {
+      const repo = ctx.connection.getRepository(User);
+      const { summaries: summariesBefore, totals: totalsBefore } = await new TransactionSummaryService().getContainerSummary();
+
+      const u = ctx.users[5];
+      u.extensiveDataProcessing = false;
+      await repo.save(u);
+
+      // Sanity check
+      let userSummaries = summariesBefore.filter((s) => s.user.id === u.id);
+      expect(userSummaries.length).to.be.greaterThan(0);
+      const dbUser = await repo.findOne({ where: { id: u.id } });
+      expect(dbUser).to.not.be.undefined;
+      expect(dbUser.extensiveDataProcessing).to.be.false;
+
+      let userTotalValue = Dinero();
+      let userNrProducts = 0;
+
+      userSummaries.forEach((summary) => {
+        userNrProducts += summary.amountOfProducts;
+        userTotalValue = userTotalValue.add(summary.totalInclVat);
+      });
+
+      const { summaries: summariesAfter, totals: totalsAfter } = await new TransactionSummaryService().getContainerSummary();
+      userSummaries = summariesAfter.filter((s) => s.user.id === u.id);
+      expect(userSummaries.length).to.equal(0);
+
+      let actualTotalValue = Dinero();
+      let actualNrProducts = 0;
+
+      summariesAfter.forEach((summary) => {
+        actualNrProducts += summary.amountOfProducts;
+        actualTotalValue = actualTotalValue.add(summary.totalInclVat);
+      });
+
+      expect(totalsBefore.totalInclVat.getAmount()).to.equal(totalsAfter.totalInclVat.getAmount());
+      expect(totalsBefore.amountOfProducts).to.equal(totalsAfter.amountOfProducts);
+
+      // User should be missing from all summaries, but totals should still add up
+      expect(userNrProducts + actualNrProducts).to.equal(totalsAfter.amountOfProducts);
+      expect(userTotalValue.getAmount() + actualTotalValue.getAmount()).to.equal(totalsAfter.totalInclVat.getAmount());
+
+      // Cleanup
+      u.extensiveDataProcessing = true;
+      await ctx.connection.getRepository(User).save(u);
+    });
   });
 });

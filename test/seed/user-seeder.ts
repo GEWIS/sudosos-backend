@@ -72,6 +72,7 @@ export default class UserSeeder extends WithManager {
         type,
         active,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        extensiveDataProcessing: true,
       }) as User);
     }
     return users;
