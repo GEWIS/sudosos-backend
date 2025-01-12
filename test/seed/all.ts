@@ -54,6 +54,7 @@ import {
 } from './index';
 import seedGEWISUsers from '../../src/gewis/database/seed';
 import BannerSeeder from './banner-seeder';
+import DefaultRoles from '../../src/rbac/default-roles';
 
 export interface DatabaseContent {
   users: User[],
@@ -113,6 +114,8 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seed(users);
   const writeOffs = await new WriteOffSeeder().seed();
   const { banners } = await new BannerSeeder().seed(users);
+
+  await DefaultRoles.synchronize();
 
   return {
     users,
