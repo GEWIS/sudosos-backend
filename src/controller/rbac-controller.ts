@@ -338,9 +338,9 @@ export default class RbacController extends BaseController {
    * @operationId deletePermission
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role
-   * @param {integer} entity.path.required - The entity of the permission
-   * @param {integer} action.path.required - The action of the permission
-   * @param {integer} relation.path.required - The relation of the permission
+   * @param {string} entity.path.required - The entity of the permission
+   * @param {string} action.path.required - The action of the permission
+   * @param {string} relation.path.required - The relation of the permission
    * @return {string} 204 - Success
    * @return {string} 404 - Role not found error
    * @return {string} 404 - Permission not found error
