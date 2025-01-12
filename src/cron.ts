@@ -95,8 +95,16 @@ async function createCronTasks(): Promise<void> {
       .then(() => logger.debug('Sent event planning reminder emails.'))
       .catch((error) => logger.error('Could not send event planning reminder emails.', error));
   });
+  const sendBalanceNotifications = cron.schedule('0 23 * * SUN', () => {
+    logger.debug('Send weekly balance notification emails.');
+    new BalanceService().sendBalanceNotification().then(() => {
+      logger.debug('Send balance notifications.');
+    }).catch((error) => {
+      logger.error('Could not send balance notifications.', error);
+    });
+  });
 
-  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
+  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders, sendBalanceNotifications];
 
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();

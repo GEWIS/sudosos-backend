@@ -42,6 +42,11 @@ import BalanceResponse from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import UserService from "../../../src/service/user-service";
+import sinon, {SinonSandbox, SinonSpy} from "sinon";
+import Mailer from "../../../src/mailer";
+import nodemailer, {Transporter} from "nodemailer";
+import {rootStubs} from "../../root-hooks";
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -54,6 +59,9 @@ describe('BalanceService', (): void => {
     fines: Fine[],
     spec: SwaggerSpecification,
   };
+
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
 
   before(async function test(): Promise<void> {
     this.timeout(50000);
@@ -78,6 +86,20 @@ describe('BalanceService', (): void => {
       fines,
       spec: await Swagger.importSpecification(),
     };
+  });
+
+  beforeEach(() => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+
+    // Reset the mailer, because it was created with an old, expired stub
+    Mailer.reset();
+
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
   });
 
   after(async () => {
@@ -788,6 +810,26 @@ describe('BalanceService', (): void => {
       expect(balance.lastTransactionId).to.equal(transaction.id);
       expect(balance.lastTransactionDate).to.equal(transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
+    });
+  });
+  describe('sendBalanceNotification', () => {
+    it('should send an email if user has balance notification enabled', async () => {
+      const user = ctx.users[0];
+      await UserService.updateUser(user.id, { balanceNotification: true });
+
+      await new BalanceService().sendBalanceNotification();
+
+      expect(sendMailFake).to.be.calledOnce;
+    });
+    it('should not send an email if user has balance notification disabled', async () => {
+      const user = (await User.find({ where: { balanceNotification: true} })).map((u) => u.id);
+      await Promise.all(user.map(async (u) => {
+        await UserService.updateUser(u, { balanceNotification: false });
+      }));
+
+      await new BalanceService().sendBalanceNotification();
+
+      expect(sendMailFake).to.not.be.called;
     });
   });
 });

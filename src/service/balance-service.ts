@@ -28,11 +28,13 @@ import Balance from '../entity/transactions/balance';
 import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { toMySQLString } from '../helpers/timestamps';
-import { Dinero } from 'dinero.js';
+import dinero, { Dinero } from 'dinero.js';
 import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
-import { UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import WithManager from '../database/with-manager';
+import BalanceNotification from "../mailer/messages/balance-notification";
+import Mailer from "../mailer";
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -370,6 +372,22 @@ export default class BalanceService extends WithManager {
       _pagination: { take, skip, count },
       records: balances.map((b: object) => BalanceService.asBalanceResponse(b, date ?? new Date())),
     };
+  }
+
+  /**
+   * Send a balance notification email to all the users that have them enabled.
+   */
+  public async sendBalanceNotification(): Promise<void> {
+    const users: User[] = await this.manager.find(User, {where: { balanceNotification: true } });
+
+    await Promise.all(users.map(async (u) => {
+      const balance = await new BalanceService().getBalance(u.id);
+
+      return Mailer.getInstance().send(u, new BalanceNotification({
+        balance: dinero(balance.amount as any),
+      }));
+    }));
+
   }
 
   /**
