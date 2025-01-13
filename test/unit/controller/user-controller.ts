@@ -79,6 +79,7 @@ import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
 import Dinero from 'dinero.js';
+import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -424,6 +425,55 @@ describe('UserController', (): void => {
     });
   });
 
+  describe('GET /users/nfc/:id', () => {
+    it('should return correct model', async () => {
+      const user = ctx.users[0];
+      const nfc = await NfcAuthenticator.save({
+        userId: user.id,
+        nfcCode: 'vo-de-ledenABC41',
+      });
+      const res = await request(ctx.app)
+        .get(`/users/nfc/${nfc.nfcCode}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel('UserResponse', res.body, false, true).valid).to.be.true;
+    });
+    it('should return an HTTP 404 if the nfc code does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/users/nfc/12345')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Unknown nfc code');
+    });
+    it('should return an HTTP 403 if not admin', async () => {
+      const user = ctx.users[0];
+      const nfc = await NfcAuthenticator.save({
+        userId: user.id,
+        nfcCode: 'vo-de-ledenABC41',
+      });
+      const res = await request(ctx.app)
+        .get(`/users/nfc/${nfc.nfcCode}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return the correct user if nfc code is correct', async () => {
+      const user = ctx.users[0];
+      const nfc = await NfcAuthenticator.save({
+        userId: user.id,
+        nfcCode: 'vo-de-ledenABC41',
+      });
+      const res = await request(ctx.app)
+        .get(`/users/nfc/${nfc.nfcCode}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'UserResponse',
+        res.body,
+      ).valid).to.be.true;
+      expect(res.body.id).to.equal(user.id);
+    });
+  });
+  
   describe('GET /users/usertype/:userType', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
