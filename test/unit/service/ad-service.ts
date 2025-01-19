@@ -34,7 +34,7 @@ import userIsAsExpected from './authentication-service';
 import { finishTestDB, restoreLDAPEnv, setDefaultLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import { UserSeeder } from '../../seed';
-import { Client, Entry, SearchResult } from 'ldapts';
+import { Client } from 'ldapts';
 import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationService from '../../../src/service/authentication-service';
 
