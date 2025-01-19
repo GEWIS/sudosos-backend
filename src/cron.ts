@@ -25,7 +25,7 @@
  */
 
 import log4js, { Logger } from 'log4js';
-import Database, { AppDataSource } from './database/database';
+import Database from './database/database';
 import dinero, { Currency } from 'dinero.js';
 import { DataSource } from 'typeorm';
 import cron from 'node-cron';
@@ -106,11 +106,11 @@ async function createCronTasks(): Promise<void> {
   const syncServices: UserSyncService[] = [];
 
   if (process.env.ENABLE_LDAP === 'true') {
-    const ldapSyncService = new LdapSyncService(application.roleManager, null, AppDataSource.manager);
+    const ldapSyncService = new LdapSyncService(application.roleManager);
     syncServices.push(ldapSyncService);
   }
 
-  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
+  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL) {
     const gewisDBSyncService = new GewisDBSyncService();
     syncServices.push(gewisDBSyncService);
   }
@@ -118,13 +118,17 @@ async function createCronTasks(): Promise<void> {
   if (syncServices.length !== 0) {
     const syncManager = new UserSyncManager(syncServices);
 
-    // TODO sensible cron schedule
-    const userSyncer = cron.schedule('*/10 * * * *', async () => {
+    const userSyncer = cron.schedule('41 1 * * *', async () => {
       logger.debug('Syncing users.');
       await syncManager.run();
-      await syncManager.fetch();
     });
     application.tasks.push(userSyncer);
+
+    const userFetcher = cron.schedule('*/15 * * * *', async () => {
+      logger.debug('Fetching users.');
+      await syncManager.fetch();
+    });
+    application.tasks.push(userFetcher);
   }
 
   application.logger.info('Tasks registered');
