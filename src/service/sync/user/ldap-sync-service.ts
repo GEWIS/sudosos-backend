@@ -147,7 +147,6 @@ export default class LdapSyncService extends UserSyncService {
    *
    * If an AD user has a role but no account yet, the account is created.
    *
-   * @param adService
    * @private
    */
   private async fetchUserRoles(): Promise<void> {

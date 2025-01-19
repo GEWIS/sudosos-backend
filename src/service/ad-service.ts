@@ -37,18 +37,19 @@ import Bindings from '../helpers/bindings';
 export default class ADService extends WithManager {
 
   /**
-   * Creates and binds an Shared (Organ) group to an actual User
+   * Creates and binds a Shared (Organ) group to an actual User
    * @param sharedUser - The group that needs an account.
    */
-  async toSharedUser(sharedUser: LDAPGroup) {
-    const acc = await this.manager.save(User, {
+  async toSharedUser(sharedUser: LDAPGroup): Promise<User> {
+    const account = await this.manager.save(User, {
       firstName: sharedUser.displayName,
       lastName: '',
       type: UserType.ORGAN,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     });
-    await bindUser(this.manager, sharedUser, acc);
+    await bindUser(this.manager, sharedUser, account);
+    return account;
   }
 
   /**
