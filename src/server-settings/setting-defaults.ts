@@ -31,6 +31,7 @@ const SettingsDefaults: ISettings = {
   jwtExpiryDefault: 3600,
   jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
   maintenanceMode: false,
+  allowGewisSyncDelete: false,
 };
 
 export default SettingsDefaults;

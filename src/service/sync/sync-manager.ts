@@ -40,7 +40,12 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
     this.logger.trace('Start sync job');
     const entities = await this.getTargets();
 
-    await this.pre();
+    try {
+      await this.pre();
+    } catch (error) {
+      this.logger.error('Aborting sync due to error', error);
+      return;
+    }
     for (const entity of entities) {
       try {
         const result = await this.sync(entity);
@@ -58,7 +63,7 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
         }
 
       } catch (error) {
-        this.logger.error('Syncing error for', entities, error);
+        this.logger.error('Syncing error for', entity, error);
       }
     }
     await this.post();
@@ -89,11 +94,15 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
   }
 
   async fetch(): Promise<void> {
-    await this.pre();
     for (const service of this.services) {
-      await service.fetch();
+      try {
+        await service.pre();
+        await service.fetch();
+      } catch (error) {
+        this.logger.error('Syncing fetch error for', service, error);
+      }
+      await service.post();
     }
-    await this.post();
   }
 
   async pre(): Promise<void> {

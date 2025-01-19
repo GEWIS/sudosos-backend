@@ -1,0 +1,291 @@
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2024  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
+ */
+
+import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import generateBalance, { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
+import Mailer from '../../../src/mailer';
+import nodemailer, { Transporter } from 'nodemailer';
+import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
+import GewisDBSyncService from '../../../src/gewis/service/gewisdb-sync-service';
+import { expect } from 'chai';
+import { rootStubs } from '../../root-hooks';
+import GewisUser from '../../../src/gewis/entity/gewis-user';
+import User from '../../../src/entity/user/user';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+
+async function createGewisUser(user: User, gewisId: number): Promise<GewisUser> {
+  expect(await GewisUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
+  expect(await GewisUser.findOne({ where: { gewisId } })).to.be.null;
+  const gewisUser = Object.assign(new GewisUser(), {
+    user,
+    gewisId,
+  });
+  await gewisUser.save();
+  return gewisUser;
+}
+
+function toWebResponse(gewisUser: GewisUser): MemberAllAttributes {
+  // Expiration is one year in the future.
+  const d = new Date(gewisUser.user.updatedAt);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  const expiration = new Date(year + 1, month, day);
+
+  return {
+    deleted: gewisUser.user.deleted,
+    email:  gewisUser.user.email,
+    expiration: expiration.toISOString(),
+    given_name: gewisUser.user.firstName,
+    family_name: gewisUser.user.lastName,
+    is_18_plus: gewisUser.user.ofAge,
+    lidnr: gewisUser.gewisId,
+  };
+}
+
+async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number) {
+  const dbUser = await GewisUser.findOne({ where: { userId }, relations: ['user'] });
+  expect(dbUser).to.not.be.undefined;
+  expect(dbUser.user.deleted).to.eq(update.deleted);
+  expect(dbUser.user.email).to.eq(update.email);
+  expect(dbUser.user.firstName).to.eq(update.given_name);
+  expect(dbUser.user.lastName).to.eq(update.family_name);
+  expect(dbUser.user.ofAge).to.eq(update.is_18_plus);
+  expect(dbUser.gewisId).to.eq(update.lidnr);
+}
+
+describe('GewisDBSyncService', () => {
+  let ctx: DefaultContext;
+  let membersApiStub: sinon.SinonStubbedInstance<MembersApi>;
+  let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
+  let sandbox: SinonSandbox;
+  let sendMailFake: SinonSpy;
+  let serverSettingsStore: ServerSettingsStore;
+
+  before(async () => {
+    ctx = {
+      ...(await defaultBefore()),
+    } as any;
+    ServerSettingsStore.deleteInstance();
+    serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
+  });
+
+  beforeEach(async () => {
+    // Restore the default stub
+    rootStubs?.mail.restore();
+    await serverSettingsStore.setSetting('allowGewisSyncDelete', false);
+    Mailer.reset();
+    sandbox = sinon.createSandbox();
+    sendMailFake = sandbox.spy();
+    sandbox.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailFake,
+    } as any as Transporter);
+  });
+
+  after(async () => {
+    await finishTestDB(ctx.connection);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+    sinon.restore();
+  });
+  
+  describe('sync', () => {
+    let syncService: GewisDBSyncService;
+
+    beforeEach(() => {
+      syncService = new GewisDBSyncService();
+      membersApiStub = sinon.createStubInstance(MembersApi);
+      basicApiStub = sinon.createStubInstance(BasicApi);
+      // @ts-ignore
+      syncService.api = membersApiStub as any;
+      // @ts-ignore
+      syncService.pinger = basicApiStub as any;
+
+      basicApiStub.healthGet.resolves({ data: { healthy: true, sync_paused: false } } as any);
+    });
+
+    describe('guard', () => {
+      it('should return true if user is a GEWIS user', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            const result = await syncService.guard(gewisUser.user);
+            expect(result).to.be.true;
+          },
+        );
+      });
+
+      it('should return false if user is not a GEWIS user', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const result = await syncService.guard(user);
+            expect(result).to.be.false;
+          },
+        );
+      });
+    });
+
+
+    it('should abort synchronization if GEWISDB API is unhealthy', async () => {
+      basicApiStub.healthGet.resolves({ data: { healthy: false, sync_paused: false } } as any);
+      await expect(syncService.pre()).to.be.rejectedWith('GEWISDB is not ready for syncing');
+      sinon.assert.calledOnce(basicApiStub.healthGet);
+    });
+
+    it('should allow syncing if GEWISDB API is healthy', async () => {
+      basicApiStub.healthGet.resolves({ data: { healthy: true, sync_paused: false } } as any);
+      const result = await syncService.pre();
+      expect(result).to.be.undefined;
+      sinon.assert.calledOnce(basicApiStub.healthGet);
+    });
+
+    it('should thrown an error if GEWIS User is not found', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          await expect(syncService.sync(user)).to.be.rejectedWith('GEWIS User not found.');
+        },
+      );
+    });
+
+    it('should update user details if sync is needed', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          const gewisUser = await createGewisUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          updatedResponse.given_name = 'UpdatedName';
+          updatedResponse.family_name = 'UpdatedFamily';
+          updatedResponse.email = 'updated@example.com';
+          updatedResponse.is_18_plus = true;
+
+          membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
+
+          const result = await syncService.sync(gewisUser.user);
+          expect(result).to.be.true;
+          await checkUpdateAgainstDB(updatedResponse, gewisUser.user.id);
+        },
+      );
+    });
+
+    it('should return false if user has no GEWISDB entry', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          const gewisUser = await createGewisUser(user, user.id);
+          membersApiStub.membersLidnrGet.resolves({ data: { data: null } } as any);
+
+          const result = await syncService.sync(gewisUser.user);
+          expect(result).to.be.false;
+        },
+      );
+    });
+    
+    it('should return false if user is expired', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          const gewisUser = await createGewisUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          updatedResponse.expiration = new Date(Date.now() - 100000).toISOString();
+          membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
+
+          const result = await syncService.sync(gewisUser.user);
+          expect(result).to.be.false;
+        },
+      );
+    });
+      
+    it('should return true if no update is needed', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          const gewisUser = await createGewisUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
+          const result = await syncService.sync(gewisUser.user);
+          expect(result).to.be.true;
+        });
+    }); 
+
+    describe('down', () => {
+      it('should correctly delete the user', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await syncService.down(gewisUser.user);
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.be.false;
+            expect(dbUser.deleted).to.be.true;
+            expect(dbUser.canGoIntoDebt).to.be.false;
+          },
+        );
+      });
+      it('should not delete the user if allowGewisSyncDelete is false', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', false);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await syncService.down(gewisUser.user);
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.be.true;
+            expect(dbUser.deleted).to.be.false;
+            expect(dbUser.canGoIntoDebt).to.be.true;
+            expect(sendMailFake).to.be.callCount(0);
+          },
+        );
+      });
+      it('should not delete the user if balance is non-zero', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await generateBalance(100, gewisUser.user.id);
+            await syncService.down(gewisUser.user);
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.be.true;
+            expect(dbUser.deleted).to.be.false;
+            expect(dbUser.canGoIntoDebt).to.be.true;
+            expect(sendMailFake).to.be.callCount(0);
+          },
+        );
+      });
+      it('should send an email to the user', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await syncService.down(gewisUser.user);
+            expect(sendMailFake).to.be.callCount(1);
+          });
+      });
+    });
+  });
+});

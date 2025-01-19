@@ -37,6 +37,7 @@ import DefaultRoles from './rbac/default-roles';
 import LdapSyncService from './service/sync/user/ldap-sync-service';
 import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
+import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 
 class CronApplication {
   logger: Logger;
@@ -109,16 +110,10 @@ async function createCronTasks(): Promise<void> {
     syncServices.push(ldapSyncService);
   }
 
-  // TODO move to GewisDBSyncService
-  // if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
-  //   await GewisDBService.syncAll();
-  //   const syncGewis = cron.schedule('41 4 * * *', async () => {
-  //     logger.debug('Syncing users with GEWISDB.');
-  //     await GewisDBService.syncAll();
-  //     logger.debug('Synced users with GEWISDB.');
-  //   });
-  //   application.tasks.push(syncGewis);
-  // }
+  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL && process.env.ENABLE_GEWISDB_SYNC) {
+    const gewisDBSyncService = new GewisDBSyncService();
+    syncServices.push(gewisDBSyncService);
+  }
 
   if (syncServices.length !== 0) {
     const syncManager = new UserSyncManager(syncServices);
