@@ -885,7 +885,7 @@ export default class UserController extends BaseController {
   }
 
   /**
-   * GET /users/nfc/{id}
+   * GET /users/nfc/{nfcCode}
    * @summary Get a user using the nfc code
    * @operationId findUserNfc
    * @tags users - Operations of the user controller
