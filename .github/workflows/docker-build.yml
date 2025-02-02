@@ -5,8 +5,8 @@ on:
     branches: [ main, develop ]
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   dockerize:
@@ -20,10 +20,10 @@ jobs:
       - name: Determine Docker tag
         id: tag
         run: |
-          if [ "dependabot[bot]" = "dependabot[bot]" ]; then
+          if [[ "${{ github.actor }}" == "dependabot[bot]" ]]; then
             echo "docker_actor=dependabot" >> $GITHUB_ENV
           else
-            echo "docker_actor=dependabot[bot]" >> $GITHUB_ENV
+            echo "docker_actor=${{ github.actor }}" >> $GITHUB_ENV
           fi
 
       - name: Get Docker meta across forks
