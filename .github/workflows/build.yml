@@ -51,7 +51,7 @@ jobs:
       - name: "Compress out folder"
         run: tar -zcvf out.tar.gz out/
       - name: "Upload /out of build"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           path: out.tar.gz
