@@ -41,16 +41,14 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image (GitHub)
+      - name: Push to GitHub Container Registry
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/gewis/${{ vars.DOCKER_TAG }}:${{ steps.meta.outputs.version }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Login to SudoSOS Container Registry
         if: github.event_name != 'pull_request'
