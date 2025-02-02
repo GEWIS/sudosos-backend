@@ -890,7 +890,7 @@ export default class UserController extends BaseController {
    * @operationId findUserNfc
    * @tags users - Operations of the user controller
    * @security JWT
-   * @param {integer} nfcCode.path.required - The nfc code of the user
+   * @param {string} nfcCode.path.required - The nfc code of the user
    * @return {UserResponse} 200 - The requested user
    * @return {string} 404 - The user with the given nfc code does not exist
    */
