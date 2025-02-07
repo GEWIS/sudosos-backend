@@ -32,6 +32,7 @@ export interface ISettings {
   jwtExpiryDefault: number;
   jwtExpiryPointOfSale: number;
   maintenanceMode: boolean;
+  allowGewisSyncDelete: boolean;
 }
 
 /**

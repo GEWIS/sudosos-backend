@@ -32,16 +32,15 @@ import { parseRawUserToResponse, parseUserToResponse, RawUser } from './revision
 import { UserResponse } from '../controller/response/user-response';
 import { AppDataSource } from '../database/database';
 
+
 /**
  * Class used for setting default functions or bindings.
  *    For example, this allows the behaviour of user creation to be changed easily.
  *    In this case it is used to inject GEWIS related code without editing the files themselves.
  */
 export default class Bindings {
-  /**
-   * Function called when an unbound User is found and created.
-   */
-  public static ldapUserCreation: () => (ADUser: LDAPUser) => Promise<User> = () => {
+
+  public static onNewUserCreate: () => (ADUser: LDAPUser) => Promise<User> = () => {
     const service = new AuthenticationService();
     return service.createUserAndBind.bind(service);
   };
