@@ -38,6 +38,7 @@ import LdapSyncService from './service/sync/user/ldap-sync-service';
 import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
+import getAppLogger from './helpers/logging';
 
 class CronApplication {
   logger: Logger;
@@ -62,7 +63,7 @@ async function createCronTasks(): Promise<void> {
   application.logger.level = process.env.LOG_LEVEL;
   application.logger.info('Starting cron tasks...');
 
-  const logger = log4js.getLogger('Console (cron)');
+  const logger = getAppLogger('Console (cron)');
   logger.level = process.env.LOG_LEVEL;
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 

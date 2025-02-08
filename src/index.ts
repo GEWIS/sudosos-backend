@@ -78,6 +78,7 @@ import SellerPayoutController from './controller/seller-payout-controller';
 import { ISettings } from './entity/server-setting';
 import ServerSettingsController from './controller/server-settings-controller';
 import TransactionSummaryController from './controller/transaction-summary-controller';
+import getAppLogger from './helpers/logging';
 
 export class Application {
   app: express.Express;
@@ -162,16 +163,7 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
 
 export default async function createApp(): Promise<Application> {
   const application = new Application();
-  log4js.configure({
-    pm2: true,
-    appenders: {
-      out: { type: 'stdout' },
-    },
-    disableClustering: true,
-    categories: { default: { appenders: ['out'], level: 'all' } },
-  });
-  application.logger = log4js.getLogger('Application');
-  application.logger.level = process.env.LOG_LEVEL;
+  application.logger = getAppLogger();
   application.logger.info('Starting application instance...');
 
   // Validate environment variables
