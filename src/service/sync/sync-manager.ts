@@ -88,7 +88,7 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
       try {
         await service.down(entity);
       } catch (error) {
-        this.logger.error('Could not down', entity);
+        this.logger.error('Could not down', entity, error);
       }
     }
   }
