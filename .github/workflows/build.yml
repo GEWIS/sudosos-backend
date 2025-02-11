@@ -22,10 +22,10 @@ jobs:
     container:
       image: node:18
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -38,10 +38,10 @@ jobs:
     container:
       image: node:18
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -117,12 +117,12 @@ jobs:
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
       SKIP_SQLITE_DEFAULTS: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -206,12 +206,12 @@ jobs:
           MARIADB_USER: sudosos-ci
           MARIADB_PASSWORD: sudosos-ci
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
