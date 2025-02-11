@@ -22,9 +22,9 @@ jobs:
         run: |
           ACTOR="${{ github.actor }}"
           if [[ "$ACTOR" == "dependabot[bot]" ]]; then
-            echo "docker_actor=dependabot" >> $GITHUB_ENV
+            echo "docker_actor=dependabot" >> "$GITHUB_ENV"
           else
-            echo "docker_actor=$ACTOR" >> $GITHUB_ENV
+            echo "docker_actor=$ACTOR" >> "$GITHUB_ENV"
           fi
 
       - name: Get Docker meta across forks

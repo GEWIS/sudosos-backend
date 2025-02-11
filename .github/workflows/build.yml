@@ -131,7 +131,7 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
-      - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE" # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 
       - name: "Cannot commit code coverage cross-fork"
