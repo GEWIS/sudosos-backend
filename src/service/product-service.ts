@@ -349,7 +349,12 @@ export default class ProductService {
 
     const { containers } = productRevision;
     containers.forEach((c => c.products = c.products.filter((p) => p.productId !== productId)));
-    await this.executePropagation(containers);
+    // Make sure to filter out deleted and non-current containers
+    const current = containers
+      .filter((c) => c.container.deletedAt == null && c.revision === c.container.currentRevision)
+      .filter((c, index, self) => (
+        index === self.findIndex((c2) => c.container.id === c2.container.id)));
+    await this.executePropagation(current);
 
     await Product.softRemove(productRevision.product);
   }
