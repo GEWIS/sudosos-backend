@@ -25,7 +25,7 @@
  */
 
 import {
-  createConnection, DataSource,
+  DataSource,
 } from 'typeorm';
 import fs from 'fs';
 import User from '../entity/user/user';
@@ -219,10 +219,10 @@ export let AppDataSource = new DataSource(options);
 
 const Database = {
   initialize: async () => {
-    if (AppDataSource && AppDataSource.isInitialized) return AppDataSource;
-    AppDataSource = await createConnection(options);
-    return AppDataSource;
+    if (AppDataSource.isInitialized) return AppDataSource;
+    return AppDataSource.initialize();
   },
 };
+
 export default Database;
 

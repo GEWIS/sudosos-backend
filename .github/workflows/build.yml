@@ -20,7 +20,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     steps:
       - uses: actions/checkout@v4
       - name: Cache and restore node_modules
@@ -36,7 +36,7 @@ jobs:
     needs: [ lint ]
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     steps:
       - uses: actions/checkout@v4
       - name: Cache and restore node_modules
@@ -62,7 +62,7 @@ jobs:
     needs: [ lint ]
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     services:
       mariadb:
         image: mariadb:lts
@@ -196,7 +196,7 @@ jobs:
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
       SKIP_SQLITE_DEFAULTS: true
     container:
-      image: node:18
+      image: node:20
     services:
       mariadb:
         image: mariadb:lts
