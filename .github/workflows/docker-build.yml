@@ -21,7 +21,7 @@ jobs:
         id: tag
         run: |
           ACTOR="${{ github.actor }}"
-          if [[ "$ACTOR" == "dependabot[bot]" ]]; then
+          if [[ "$ACTOR" == "dependabot\[bot\]" ]]; then
             echo "docker_actor=dependabot" >> "$GITHUB_ENV"
           else
             echo "docker_actor=$ACTOR" >> "$GITHUB_ENV"
