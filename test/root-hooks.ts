@@ -21,6 +21,7 @@
 import * as mocha from 'mocha';
 import sinon from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
+import { AppDataSource } from '../src/database/database';
 
 /**
  * Object containing all global stubs that are set before each test case.
@@ -45,5 +46,12 @@ export const mochaHooks: mocha.RootHookObject = {
   },
   afterEach: () => {
     rootStubs?.mail.restore();
+  },
+};
+
+
+export const closeDBHook = {
+  after: async () => {
+    await AppDataSource.destroy();
   },
 };
