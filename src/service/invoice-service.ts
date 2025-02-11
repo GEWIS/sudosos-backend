@@ -386,11 +386,10 @@ export default class InvoiceService extends WithManager {
   }
 
   /**
-   * Gets transactions for an invoice
-   * returns false if the transactions contain invoiced transactions
+   * Gets all uninvoiced transactions for a given user
    * @param params
    */
-  public async getTransactionsForInvoice(params: InvoiceTransactionsRequest): Promise<TransactionResponse[] | false> {
+  public async getEligibleTransactions(params: InvoiceTransactionsRequest): Promise<TransactionResponse[] | false> {
     const { forId, fromDate, tillDate } = params;
     const transactionService = new TransactionService(this.manager);
 
@@ -412,16 +411,10 @@ export default class InvoiceService extends WithManager {
       pointOfSale: true,
     };
 
-    const transactions = await this.manager.find(Transaction, { where: { id: In(tIds) },
-      relations });
-    transactions.forEach((t) => {
-      t.subTransactions.forEach((tSub) => {
-        tSub.subTransactionRows.forEach((tSubRow) => {
-          if (tSubRow.invoice) return false;
-        });
-      });
-    });
-
+    const transactions = await this.manager.find(Transaction, { where: { id: In(tIds),
+      subTransactions: { subTransactionRows: { invoice: false } } },
+    relations });
+    
     const response: Promise<TransactionResponse>[] = [];
     transactions.forEach((t) => response.push(transactionService.asTransactionResponse(t)));
 
