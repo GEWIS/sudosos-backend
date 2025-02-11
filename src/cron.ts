@@ -39,6 +39,7 @@ import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import getAppLogger from './helpers/logging';
+import ServerSettingsStore from './server-settings/server-settings-store';
 
 class CronApplication {
   logger: Logger;
@@ -70,6 +71,10 @@ async function createCronTasks(): Promise<void> {
   // Set up monetary value configuration.
   dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
   dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+
+  // Initialize database-stored settings
+  const store = ServerSettingsStore.getInstance();
+  if (!store.initialized) await store.initialize();
 
   // Setup RBAC.
   application.roleManager = await new RoleManager().initialize();
