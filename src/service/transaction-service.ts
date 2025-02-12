@@ -138,7 +138,12 @@ export default class TransactionService extends WithManager {
   public async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
-      const options =  await ProductService.getOptions({ productRevision: row.product.revision, productId: row.product.id });
+      const options =  await ProductService.getOptions({
+        productRevision: row.product.revision,
+        productId: row.product.id,
+        allowDeleted: true,
+      });
+
       const rowCost = await this.manager.findOne(ProductRevision, options)
         .then((product) => product.priceInclVat.multiply(row.amount));
 
@@ -203,8 +208,12 @@ export default class TransactionService extends WithManager {
     }
 
     // check if product exists
-    const options = await ProductService.getOptions({ productRevision: req.product.revision, productId: req.product.id });
+    const options = await ProductService.getOptions({
+      productRevision: req.product.revision,
+      productId: req.product.id,
+    });
     options.withDeleted = false;
+    
     const product = await this.manager.findOne(ProductRevision, options);
     if (!product) {
       return false;
@@ -501,7 +510,12 @@ export default class TransactionService extends WithManager {
       return undefined;
     }
 
-    const options = await ProductService.getOptions({ productRevision: req.product.revision, productId: req.product.id });
+    const options = await ProductService.getOptions({ 
+      productRevision: req.product.revision,
+      productId: req.product.id,
+      allowDeleted: true,
+    });
+    
     const product = await this.manager.findOne(ProductRevision, options);
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
