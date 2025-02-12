@@ -115,6 +115,11 @@ export interface ProductFilterParameters {
   priceList?: boolean;
 
   returnContainers?: boolean;
+  
+  /**
+   * Whether to allow deleted products
+   */
+  allowDeleted?: boolean;
 }
 
 // TODO Add filtering to get products query
@@ -406,11 +411,14 @@ export default class ProductService {
     // Do not filter on revision if we are getting a specific POS
     revisionFilter.revision = Raw(alias => `${alias} = (${this.revisionSubQuery(params.productRevision)})`);
 
+    let productDeleted: any = { deletedAt: IsNull() };
+    if (params.allowDeleted === true) productDeleted = {};
+    
     let where: FindOptionsWhere<ProductRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
       ...revisionFilter,
       product: {
-        deletedAt: IsNull(),
+        ...productDeleted,
         owner,
       },
     };
