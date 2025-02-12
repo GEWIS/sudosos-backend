@@ -235,7 +235,14 @@ export default class ContainerService {
     // Propagate deletion to points of sale: explicitly remove this (just deleted) container
     const { pointsOfSale } = containerRevision;
     pointsOfSale.forEach((p) => p.containers = p.containers.filter((c) => c.containerId !== containerId));
-    await this.executePropagation(pointsOfSale);
+
+    // Make sure to filter out deleted and non-current pos
+    const current = pointsOfSale
+      .filter((p) => p.pointOfSale.deletedAt == null && p.revision === p.pointOfSale.currentRevision)
+      .filter((p, index, self) => (
+        index === self.findIndex((p2) => p.pointOfSale.id === p2.pointOfSale.id)
+      ));
+    await this.executePropagation(current);
 
     await Container.softRemove(containerRevision.container);
   }
