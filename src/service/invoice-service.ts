@@ -413,7 +413,8 @@ export default class InvoiceService extends WithManager {
 
     const transactions = await this.manager.find(Transaction, { where: { id: In(tIds),
       subTransactions: { subTransactionRows: { invoice: false } } },
-    relations });
+    relations,
+    withDeleted: true });
     
     const response: Promise<TransactionResponse>[] = [];
     transactions.forEach((t) => response.push(transactionService.asTransactionResponse(t)));
