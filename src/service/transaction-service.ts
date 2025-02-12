@@ -667,12 +667,8 @@ export default class TransactionService extends WithManager {
 
     await transaction.save();
 
-    // save the transaction and invalidate user balance cache
-    const savedTransaction = await this.asTransactionResponse(transaction);
-    await TransactionService.invalidateBalanceCache(savedTransaction);
-
     // save transaction and return response
-    return savedTransaction;
+    return this.asTransactionResponse(transaction);
   }
 
   /**
