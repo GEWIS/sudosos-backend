@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of the banner-service.
- *
- * @module banners
+ * @module Banners
  */
 
 import { FindManyOptions } from 'typeorm';
@@ -32,11 +30,17 @@ import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
 import { PaginationParameters } from '../helpers/pagination';
 
+/**
+ * Filter parameters for the `banner` entity.
+ */
 export interface BannerFilterParameters {
   bannerId?: number,
   active?: boolean,
 }
 
+/**
+ * Service class for the `banner` entity,
+ */
 export default class BannerService {
   /**
    * Verifies whether the banner request translates to a valid banner object

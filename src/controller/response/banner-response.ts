@@ -19,15 +19,14 @@
  */
 
 /**
- * This is the module page of the banner-response.
- *
- * @module banners
+ * @module Banners
  */
 
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
+ * API Response for the `banner` entity.
  * @typedef {allOf|BaseResponse} BannerResponse
  * @property {string} name.required - Name/label of the banner
  * @property {string} image - Location of the image
@@ -46,6 +45,7 @@ export interface BannerResponse extends BaseResponse {
 }
 
 /**
+ * Paginated API Response for the `banner` entity.
  * @typedef {object} PaginatedBannerResponse
  * @property {PaginationResult} _pagination - Pagination metadata
  * @property {Array<BannerResponse>} records - Returned banners

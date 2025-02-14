@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of banner-controller.
- *
- * @module banners
+ * @module Banners
  */
 
 import { Response } from 'express';
@@ -37,6 +35,9 @@ import FileService from '../service/file-service';
 import { BANNER_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
 
+/**
+ * Controller for managing all routes related to the `banner` entity.
+ */
 export default class BannerController extends BaseController {
   private logger: Logger = log4js.getLogger('BannerController');
 
