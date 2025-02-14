@@ -519,7 +519,7 @@ export default class InvoiceController extends BaseController {
     }
 
     try {
-      const transactions = await new InvoiceService().getTransactionsForInvoice({
+      const transactions = await new InvoiceService().getEligibleTransactions({
         forId,
         fromDate,
         tillDate,

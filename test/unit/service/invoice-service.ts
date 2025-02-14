@@ -249,7 +249,7 @@ describe('InvoiceService', () => {
           );
           const total = transactionsAfterDate.total;
 
-          const transactions = await new InvoiceService().getTransactionsForInvoice({
+          const transactions = await new InvoiceService().getEligibleTransactions({
             forId: debtor.id,
             fromDate,
           });

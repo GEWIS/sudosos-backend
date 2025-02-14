@@ -80,6 +80,7 @@ import {
 } from '../helpers/transaction-mapper';
 import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
+import ProductService from './product-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -137,12 +138,14 @@ export default class TransactionService extends WithManager {
   public async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
     // get costs of individual rows
     const rowCosts = await Promise.all(rows.map(async (row) => {
-      const rowCost = await this.manager.findOne(ProductRevision, {
-        where: {
-          revision: row.product.revision,
-          product: { id: row.product.id },
-        },
-      }).then((product) => product.priceInclVat.multiply(row.amount));
+      const options =  await ProductService.getOptions({
+        productRevision: row.product.revision,
+        productId: row.product.id,
+        allowDeleted: true,
+      });
+
+      const rowCost = await this.manager.findOne(ProductRevision, options)
+        .then((product) => product.priceInclVat.multiply(row.amount));
 
       return rowCost;
     }));
@@ -205,13 +208,13 @@ export default class TransactionService extends WithManager {
     }
 
     // check if product exists
-    const product = await this.manager.findOne(ProductRevision, {
-      where: {
-        revision: req.product.revision,
-        product: { id: req.product.id, deletedAt: IsNull() },
-      },
-      relations: ['product'],
+    const options = await ProductService.getOptions({
+      productRevision: req.product.revision,
+      productId: req.product.id,
     });
+    options.withDeleted = false;
+    
+    const product = await this.manager.findOne(ProductRevision, options);
     if (!product) {
       return false;
     }
@@ -443,6 +446,8 @@ export default class TransactionService extends WithManager {
         revision: req.container.revision,
         container: { id: req.container.id },
       },
+      withDeleted: true,
+      relations: ['container'],
     });
 
     // sub transaction rows
@@ -504,13 +509,14 @@ export default class TransactionService extends WithManager {
     if (!req) {
       return undefined;
     }
-    const product = await this.manager.findOne(ProductRevision, {
-      where: {
-        revision: req.product.revision,
-        product: { id: req.product.id },
-      },
-      relations: ['vat'],
+
+    const options = await ProductService.getOptions({ 
+      productRevision: req.product.revision,
+      productId: req.product.id,
+      allowDeleted: true,
     });
+    
+    const product = await this.manager.findOne(ProductRevision, options);
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
 
@@ -661,12 +667,8 @@ export default class TransactionService extends WithManager {
 
     await transaction.save();
 
-    // save the transaction and invalidate user balance cache
-    const savedTransaction = await this.asTransactionResponse(transaction);
-    await TransactionService.invalidateBalanceCache(savedTransaction);
-
     // save transaction and return response
-    return savedTransaction;
+    return this.asTransactionResponse(transaction);
   }
 
   /**

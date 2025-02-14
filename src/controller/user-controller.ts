@@ -133,6 +133,14 @@ export default class UserController extends BaseController {
           restrictions: { acceptedTOS: false },
         },
       },
+      '/nfc/:nfcCode': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['*'],
+          ),
+          handler: this.findUserNfc.bind(this),
+        },
+      },
       '/:id(\\d+)/authenticator/pin': {
         PUT: {
           body: { modelName: 'UpdatePinRequest' },
@@ -872,6 +880,36 @@ export default class UserController extends BaseController {
       res.status(204).json('User deleted');
     } catch (error) {
       this.logger.error('Could not create product:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/nfc/{nfcCode}
+   * @summary Get a user using the nfc code
+   * @operationId findUserNfc
+   * @tags users - Operations of the user controller
+   * @security JWT
+   * @param {string} nfcCode.path.required - The nfc code of the user
+   * @return {UserResponse} 200 - The requested user
+   * @return {string} 404 - The user with the given nfc code does not exist
+   */
+  public async findUserNfc(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Find user nfc', parameters, 'by user', req.token.user);
+
+    try {
+      const nfcCode = String(parameters.nfcCode);
+      const nfc = await NfcAuthenticator.findOne({ where: { nfcCode } });
+
+      if (nfc === null) {
+        res.status(404).json('Unknown nfc code');
+        return;
+      }
+
+      res.status(200).json(parseUserToResponse(nfc.user));
+    } catch (error) {
+      this.logger.error('Could not find user using nfc:', error);
       res.status(500).json('Internal server error.');
     }
   }

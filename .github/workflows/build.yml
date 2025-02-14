@@ -20,12 +20,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -36,12 +36,12 @@ jobs:
     needs: [ lint ]
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -51,7 +51,7 @@ jobs:
       - name: "Compress out folder"
         run: tar -zcvf out.tar.gz out/
       - name: "Upload /out of build"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           path: out.tar.gz
@@ -62,7 +62,7 @@ jobs:
     needs: [ lint ]
     runs-on: ubuntu-latest
     container:
-      image: node:18
+      image: node:20
     services:
       mariadb:
         image: mariadb:lts
@@ -117,12 +117,12 @@ jobs:
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
       SKIP_SQLITE_DEFAULTS: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
@@ -131,7 +131,7 @@ jobs:
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
       - run: npm run swagger:validate
       - run: npm run coverage-ci # Separate command to limit the number of workers to prevent timeouts
-      - run: git config --global --add safe.directory $GITHUB_WORKSPACE # To avoid dubious ownership
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE" # To avoid dubious ownership
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
 
       - name: "Cannot commit code coverage cross-fork"
@@ -196,7 +196,7 @@ jobs:
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
       SKIP_SQLITE_DEFAULTS: true
     container:
-      image: node:18
+      image: node:20
     services:
       mariadb:
         image: mariadb:lts
@@ -206,12 +206,12 @@ jobs:
           MARIADB_USER: sudosos-ci
           MARIADB_PASSWORD: sudosos-ci
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Cache and restore node_modules
         id: cache-node
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}

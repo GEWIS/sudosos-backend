@@ -18,20 +18,19 @@
  *  @license
  */
 
-/**
- * This is the module page of the server-settings defaults.
- *
- * @module internal/server-settings
- */
+import User from '../../../entity/user/user';
+import { In } from 'typeorm';
+import log4js, { Logger } from 'log4js';
+import SyncManager from '../sync-manager';
+import { UserSyncService } from './user-sync-service';
 
-import { ISettings } from '../entity/server-setting';
+export default class UserSyncManager extends SyncManager<User, UserSyncService> {
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
+  protected logger: Logger = log4js.getLogger('UserSyncManager');
 
-export default SettingsDefaults;
+  async getTargets(): Promise<User[]> {
+    const userTypes = this.services.flatMap((s) => s.targets);
+    this.logger.trace('Syncing users of types', userTypes);
+    return this.manager.find(User, { where: { type: In(userTypes), deleted: false } });
+  }
+}

@@ -18,20 +18,18 @@
  *  @license
  */
 
-/**
- * This is the module page of the server-settings defaults.
- *
- * @module internal/server-settings
- */
+import log4js from 'log4js';
 
-import { ISettings } from '../entity/server-setting';
-
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
-
-export default SettingsDefaults;
+export default function getAppLogger(category: string = 'Application'): log4js.Logger {
+  log4js.configure({
+    pm2: true,
+    appenders: {
+      out: { type: 'stdout' },
+    },
+    disableClustering: true,
+    categories: { default: { appenders: ['out'], level: 'all' } },
+  });
+  const logger = log4js.getLogger(category);
+  logger.level = process.env.LOG_LEVEL;
+  return logger;
+}

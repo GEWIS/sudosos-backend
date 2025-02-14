@@ -135,12 +135,14 @@ export default class Gewis extends WithManager {
     return gewisUser;
   }
 
+  public static ldapUserCreation: () => (ADUser: LDAPUser) => Promise<User> = () => {
+    const service = new Gewis();
+    return service.findOrCreateGEWISUserAndBind.bind(service);
+  };
+
   // eslint-disable-next-line class-methods-use-this
   static overwriteBindings() {
-    Bindings.ldapUserCreation = () => {
-      const service = new Gewis();
-      return service.findOrCreateGEWISUserAndBind.bind(service);
-    };
+    Bindings.onNewUserCreate = Gewis.ldapUserCreation;
     Bindings.Users = {
       parseToResponse: Gewis.parseRawUserToGewisResponse,
       getBuilder: Gewis.getUserBuilder,

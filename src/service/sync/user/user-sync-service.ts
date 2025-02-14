@@ -19,19 +19,24 @@
  */
 
 /**
- * This is the module page of the server-settings defaults.
+ * This is the module page of the abstract sync-service.
  *
- * @module internal/server-settings
+ * @module internal/user-user-service
  */
 
-import { ISettings } from '../entity/server-setting';
+import User, { UserType } from '../../../entity/user/user';
+import { SyncService } from '../sync-service';
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
+/**
+ * UserSyncService interface.
+ *
+ * Specific sync service for users.
+ */
+export abstract class UserSyncService extends SyncService<User> {
 
-export default SettingsDefaults;
+  targets: UserType[];
+
+  guard(user: User): Promise<boolean> {
+    return Promise.resolve(this.targets.includes(user.type));
+  }
+}
