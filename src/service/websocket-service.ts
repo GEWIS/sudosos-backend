@@ -22,6 +22,7 @@
 import http from 'http';
 import express from 'express';
 import WebSocket from 'ws';
+import log4js, { Logger } from 'log4js';
 
 /**
  * This is the module page of the websocket-service.
@@ -35,11 +36,18 @@ export default class WebSocketService {
   private static webSocketServer = new WebSocket.Server({ server: this.httpServer });
     
   public static initiateWebSocket(): void {
-    this.httpServer.listen(process.env.WEBSOCKET_PORT || 443);
+    const logger: Logger = log4js.getLogger('LDAP');
+    logger.level = process.env.LOG_LEVEL;
+
+    const port = process.env.WEBSOCKET_PORT || 443;
+    this.httpServer.listen(port);
+    logger.info('Opened WebSocket server on port ' + port);
 
     this.webSocketServer.on('maintenance-mode', (status) => {
       this.webSocketServer.clients.forEach((client) => {
-        client.send('maintenance-mode ' + status);
+        const message = 'maintenance-mode ' + status;
+        client.send(message);
+        logger.info('Sent \"' + message + '\" over WebSocket');
       });
     });
   }
