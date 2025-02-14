@@ -30,6 +30,7 @@ import log4js, { Logger } from 'log4js';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ServerSettingsStore from '../server-settings/server-settings-store';
+import WebSocketService from '../service/websocket-service';
 
 /**
  * @typedef {object} UpdateMaintenanceModeRequest
@@ -45,6 +46,7 @@ export default class ServerSettingsController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    WebSocketService.initiateWebSocket();
   }
 
   public getPolicy(): Policy {
@@ -78,6 +80,9 @@ export default class ServerSettingsController extends BaseController {
 
       const store = ServerSettingsStore.getInstance();
       await store.setSetting('maintenanceMode', body.enabled);
+
+      // Send websocket message to POS
+      WebSocketService.sendMaintenanceMode(body.enabled);
 
       res.status(204).send();
     } catch (error) {
