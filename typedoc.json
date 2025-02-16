@@ -5,7 +5,12 @@
   "out": "docs/content/typedoc",
   "includeVersion": true,
   "excludeExternals": true,
-  "plugin": ["typedoc-plugin-merge-modules", "typedoc-vitepress-theme", "typedoc-plugin-markdown"],
+  "plugin": [
+    "typedoc-plugin-merge-modules",
+    "typedoc-vitepress-theme",
+    "typedoc-plugin-markdown",
+    "./docs/plugins/typedoc-plugin-markdown-promote-docs.mjs",
+  ],
   "mergeModulesRenameDefaults": true,
   "mergeModulesMergeMode": "module",
   "githubPages": false,
