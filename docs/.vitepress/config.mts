@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitepress'
 import typedocSidebar from '../content/typedoc/typedoc-sidebar.json'
+import {withMermaid} from "vitepress-plugin-mermaid";
 
 const apiItems = typedocSidebar.filter((item: any) => !['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
 const internalsItems = typedocSidebar.filter((item: any) => ['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
 
-export default defineConfig({
+export default withMermaid({
   title: "SudoSOS Backend",
   srcDir: "./content",
   base: "/docs/",
