@@ -19,8 +19,30 @@
  */
 
 /**
- * This is the module page of the JsonWebToken.
+ * Authentication within SudoSOS is based around [JWT tokens](https://jwt.io/). However, there are many ways to retrieve
+ * a  JWT token, and the token itself is not stored in SudoSOS. Instead, the token is stored in the user's browser,
+ * and is sent with every request to SudoSOS.
  *
+ * The received JWT token is then validated by SudoSOS. If the token is valid, the api request is authorized and is processed.
+ *
+ * To retrieve a JWT token, a user can use one of the following methods:
+ * - {@link GewiswebAuthenticationRequest | GEWIS Web Authentication}.
+ * - {@link PinAuthenticator | PIN Authentication}.
+ * - {@link LDAPAuthenticator | LDAP Authentication}.
+ * - {@link NfcAuthenticator | NFC Authentication}.
+ * - {@link KeyAuthenticator | API Key Authentication}.
+ * - {@link EanAuthenticator | EAN (barcode) authentication}.
+ *
+ * Most of these methods are a hash-based authentication method, where a secret is hashed and stored in the database,
+ * and later compared against the input of the user.
+ *
+ * @module authentication
+ * @mergeTarget
+ */
+
+/**
+ * Test test!
+ * @document ..\..\docs\content\test.md
  * @module authentication
  */
 
