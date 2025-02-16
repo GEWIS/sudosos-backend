@@ -13,5 +13,8 @@
   "entryFileName": "index.md",
   "indexFormat": "table",
   "useCodeBlocks": true,
-  "disableSources": true
+  "disableSources": true,
+  "parametersFormat": "table",
+  "classPropertiesFormat": "table",
+  "propertyMembersFormat": "table"
 }
