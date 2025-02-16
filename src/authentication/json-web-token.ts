@@ -33,7 +33,7 @@
  * - {@link KeyAuthenticator | API Key Authentication}.
  * - {@link EanAuthenticator | EAN (barcode) authentication}.
  *
- * Most of these methods are a hash-based authentication method, where a secret is hashed and stored in the database,
+ * Most of these methods are a {@link HashBasedAuthenticationMethod | hash-based authentication method}, where a secret is hashed and stored in the database,
  * and later compared against the input of the user.
  *
  * @module authentication

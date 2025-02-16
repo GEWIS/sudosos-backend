@@ -41,8 +41,36 @@ const bufferTransformer = {
 };
 
 /**
+ *
+ *
+ * ```mermaid
+ * graph TD
+ *     A[Start] --> B{Receive LDAP Login Request}
+ *     B --> C[Parse Request Body]
+ *     C --> D[Establish LDAP Connection]
+ *     D --> E{Search LDAP for User}
+ *     E -->|Found| F[Attempt User Bind]
+ *     E -->|Not Found| G[Return 403 Error]
+ *
+ *     F --> H{Bind Successful?}
+ *     H -->|Yes| I{Check Local User Account}
+ *     H -->|No| J[Return 403 Error]
+ *
+ *     I -->|Exists| K[Generate JWT Token]
+ *     I -->|Not Exists| L[Create Local User & Bind]
+ *     L --> M[Generate JWT Token]
+ *
+ *     K --> N[Return JWT Token]
+ *     M --> N[Return JWT Token]
+ *
+ *     style G fill:#f66
+ *     style J fill:#f66
+ * ```
+ *
  * @typedef {AuthenticationMethod} LDAPAuthenticator
  * @property {string} accountName.required - The associated AD account name
+ * @promote
+ * @index 1
  */
 @Entity()
 export default class LDAPAuthenticator extends AuthenticationMethod {
