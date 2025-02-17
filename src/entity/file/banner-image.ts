@@ -19,15 +19,15 @@
  */
 
 /**
- * This is the module page of banner-image.
- *
- * @module banners
+ * @module Banners
  */
 
 import { Entity } from 'typeorm';
 import BaseFile from './base-file';
 
 /**
+ * TypeORM entity for banner images.
+ * Note that the image itself is stored in the file system, but the table is used to store the location of the image.
  * @typedef {BaseFile} BannerImage
  */
 @Entity()

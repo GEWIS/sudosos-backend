@@ -19,9 +19,16 @@
  */
 
 /**
- * This is the module page of banner.
+ * `banners` are used to manage promotional material within SudoSOS, commonly displayed on the point of sale.
+ * They can be configured with a duration, activation status, and start/end dates to control their visibility.
  *
- * @module banners
+ * ### Usage
+ * - Banners can be created, updated, or deleted by admins.
+ * - Active banners can be retrieved without authentication.
+ *
+ * For API interactions, refer to the [Swagger Documentation](https://sudosos.gewis.nl/api/api-docs/#/banners).
+ *
+ * @module Banners
  * @mergeTarget
  */
 
@@ -32,6 +39,7 @@ import BaseEntity from './base-entity';
 import BannerImage from './file/banner-image';
 
 /**
+ * TypeORM entity for the `banners` table.
  * @typedef {BaseEntity} Banner
  * @property {string} name - Name/label of the banner.
  * @property {integer} duration - How long the banner should be shown (in seconds).
