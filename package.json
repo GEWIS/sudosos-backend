@@ -25,7 +25,7 @@
     "predocs:dev": "typedoc",
     "typedoc": "typedoc",
     "docs:dev": "vitepress dev docs",
-    "docs:build": "NODE_OPTIONS=--max-old-space-size=12288 vitepress build docs --mode production",
+    "docs:build": "vitepress build docs --mode production",
     "docs:preview": "vitepress preview docs"
   },
   "author": "",
@@ -57,7 +57,7 @@
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
     "validator": "^13.12.0",
-    "vitepress-theme-openapi": "^0.0.3-alpha.30"
+    "vitepress-theme-openapi": "^0.0.3-alpha.34"
   },
   "devDependencies": {
     "@apidevtools/swagger-cli": "^4.0.4",
@@ -112,6 +112,7 @@
     "typedoc-plugin-merge-modules": "^6.1.0",
     "typedoc-vitepress-theme": "^1.1.2",
     "typescript": "^5.6.3",
-    "vitepress": "^1.6.3"
+    "vitepress": "^1.6.3",
+    "vitepress-plugin-mermaid": "^2.0.17"
   }
 }
