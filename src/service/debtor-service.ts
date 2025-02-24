@@ -101,6 +101,7 @@ export default class DebtorService extends WithManager {
       updatedAt: e.updatedAt.toISOString(),
       referenceDate: e.referenceDate.toISOString(),
       createdBy: parseUserToBaseResponse(e.createdBy, false),
+      count: e.fines ? e.fines.length : 0,
     };
   }
 
@@ -269,6 +270,7 @@ export default class DebtorService extends WithManager {
       referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
       createdBy: parseUserToBaseResponse(fineHandoutEvent1.createdBy, false),
       fines: fines1.map((f) => DebtorService.asFineResponse(f)),
+      count: fines1.length,
     };
   }
 
