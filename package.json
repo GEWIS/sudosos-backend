@@ -78,7 +78,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/sinon": "^17.0.3",
     "@types/sinon-chai": "^3.2.12",
-    "@types/swagger-ui-express": "^4.1.7",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^10.0.0",
     "@types/validator": "^13.12.2",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
