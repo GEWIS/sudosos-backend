@@ -6,6 +6,7 @@ RUN npm install
 COPY ./ ./
 RUN npm run build \
  && npm run swagger
+RUN npm ci --production
 
 # The target image that will be run
 FROM node:18-alpine as target
@@ -13,8 +14,7 @@ FROM node:18-alpine as target
 RUN apk add openssl
 
 WORKDIR /app
-COPY ./package.json ./package-lock.json ./
-RUN npm ci
+COPY --from=build --chown=node /app/node_modules /app/node_modules
 RUN npm install pm2 pm2-graceful-intercom -g
 RUN npm install -g typeorm
 ARG TYPEORM_USERNAME
