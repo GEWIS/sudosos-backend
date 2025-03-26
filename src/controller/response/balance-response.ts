@@ -64,9 +64,9 @@ export default interface BalanceResponse extends BaseUserResponse {
 
 /**
  * @typedef {object} UserTypeTotalBalanceResponse
- * @property {string} userType - The user type
- * @property {DineroObjectResponse} totalPositive - The total amount of positive balance for this user type
- * @property {DineroObjectResponse} totalNegative - The total amount of negative balance for this uer type
+ * @property {string} userType.required - The user type
+ * @property {DineroObjectResponse} totalPositive.required - The total amount of positive balance for this user type
+ * @property {DineroObjectResponse} totalNegative.required - The total amount of negative balance for this uer type
  */
 export interface UserTypeTotalBalanceResponse {
   userType: UserType,
