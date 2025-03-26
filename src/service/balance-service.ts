@@ -25,7 +25,11 @@
  */
 
 import Balance from '../entity/transactions/balance';
-import BalanceResponse, { PaginatedBalanceResponse } from '../controller/response/balance-response';
+import BalanceResponse, {
+  PaginatedBalanceResponse,
+  TotalBalanceResponse,
+  UserTypeTotalBalanceResponse,
+} from '../controller/response/balance-response';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { toMySQLString } from '../helpers/timestamps';
 import { Dinero } from 'dinero.js';
@@ -33,6 +37,7 @@ import { OrderingDirection } from '../helpers/ordering';
 import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import { UserType } from '../entity/user/user';
 import WithManager from '../database/with-manager';
+import { DineroObjectResponse } from '../controller/response/dinero-response';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -57,6 +62,8 @@ export interface GetBalanceParameters extends UpdateBalanceParameters {
   orderDirection?: OrderingDirection;
   allowDeleted?: boolean;
 }
+
+
 
 /**
  * Converts the input to an VatDeclarationPeriod
@@ -379,5 +386,58 @@ export default class BalanceService extends WithManager {
    */
   public async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
     return (await this.getBalances({ ids: [id], allowDeleted: true, date })).records[0];
+  }
+
+  /**
+   * Get the total balance of SudoSOS and
+   * @param date Date to check the balances for
+   */
+  public async calculateTotalBalances(date: Date): Promise<TotalBalanceResponse> {
+    const posBalanceRes = (await this.getBalances(
+      { date, minBalance: DineroTransformer.Instance.from(0) })).records;
+    const negBalanceRes = (await this.getBalances(
+      { date, maxBalance: DineroTransformer.Instance.from(0) })).records;
+
+    const totalPos =  BalanceService.calculateTotal(posBalanceRes);
+    const totalNeg = BalanceService.calculateTotal(negBalanceRes);
+
+    const typeTotals: UserTypeTotalBalanceResponse[] = [];
+    const typedPosBalance: BalanceResponse[][] = [];
+    const typedNegBalance: BalanceResponse[][] = [];
+    const promises: Promise<any>[] = [];
+
+    const userTypes = Object.values(UserType);
+
+    for (const [index, type] of userTypes.entries()) {
+      promises.push(this.getBalances(
+        { userTypes: [type], date, minBalance: DineroTransformer.Instance.from(0) })
+        .then((r) => typedPosBalance[index] = r.records));
+      promises.push(this.getBalances({ userTypes: [type], date, maxBalance: DineroTransformer.Instance.from(0) })
+        .then((r) => typedNegBalance[index] = r.records));
+    }
+
+    await Promise.all(promises);
+
+    userTypes.forEach((type, index) => {
+      const totalTypedPos = BalanceService.calculateTotal(typedPosBalance[index]);
+      const totalTypedNeg = BalanceService.calculateTotal(typedNegBalance[index]);
+
+      typeTotals.push({
+        userType: type,
+        totalPositive: totalTypedPos,
+        totalNegative: totalTypedNeg,
+      });
+    });
+
+    return {
+      date: date.toISOString(),
+      totalPositive: totalPos,
+      totalNegative: totalNeg,
+      userTypeBalances: typeTotals,
+    };
+  }
+
+  private static calculateTotal(balanceResponse: BalanceResponse[]): DineroObjectResponse {
+    return DineroTransformer.Instance.from(balanceResponse.reduce((sum, value) => sum + value.amount.amount, 0)).toObject();
   }
 }

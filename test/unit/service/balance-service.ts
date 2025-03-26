@@ -38,7 +38,7 @@ import { defaultPagination } from '../../../src/helpers/pagination';
 import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 import { calculateBalance } from '../../helpers/balance';
 import Fine from '../../../src/entity/fine/fine';
-import BalanceResponse from '../../../src/controller/response/balance-response';
+import BalanceResponse, { UserTypeTotalBalanceResponse } from '../../../src/controller/response/balance-response';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
@@ -788,6 +788,69 @@ describe('BalanceService', (): void => {
       expect(balance.lastTransactionId).to.equal(transaction.id);
       expect(balance.lastTransactionDate).to.equal(transaction.createdAt.toISOString());
       expect(balance.lastTransferId).to.equal(-1);
+    });
+  });
+
+  describe('calculateTotalBalances', () => {
+    it('should return the correct total balances', async () => {
+      const date = new Date('2021-01-01');
+      await new BalanceService().clearBalanceCache();
+
+      const allBalances = await new BalanceService().getBalances({
+        date,
+      });
+
+      const { positiveBalances, negativeBalances } = allBalances.records
+        .reduce((acc, balance) => {
+          const amount = balance.amount.amount;
+          if (amount > 0) {
+            acc.positiveBalances += amount;
+          } else {
+            acc.negativeBalances += amount;
+          }
+          return acc;
+        }, { positiveBalances: 0, negativeBalances: 0 });
+
+      const totalBalanceResponse = await new BalanceService().calculateTotalBalances(date);
+      expect(totalBalanceResponse.totalPositive.amount).to.eq(positiveBalances);
+      expect(totalBalanceResponse.totalNegative.amount).to.eq(negativeBalances);
+    });
+    it('should return the correct total balances for all usertypes', async () => {
+      const date = new Date('2021-01-01');
+      await new BalanceService().clearBalanceCache();
+
+      const allBalances = await new BalanceService().getBalances({
+        date,
+      });
+
+      const userTypeBalances: UserTypeTotalBalanceResponse[] = [];
+
+      for (const type of Object.values(UserType)) {
+        const { positiveBalances, negativeBalances } = allBalances.records
+          .filter((r) => r.type == type)
+          .reduce((acc, balance) => {
+            const amount = balance.amount.amount;
+            if (amount > 0) {
+              acc.positiveBalances += amount;
+            } else {
+              acc.negativeBalances += amount;
+            }
+            return acc;
+          }, { positiveBalances: 0, negativeBalances: 0 });
+        userTypeBalances.push({
+          userType: type,
+          totalPositive: DineroTransformer.Instance.from(positiveBalances).toObject(),
+          totalNegative: DineroTransformer.Instance.from(negativeBalances).toObject(),
+        });
+      }
+
+      const totalBalanceResponse = await new BalanceService().calculateTotalBalances(date);
+      totalBalanceResponse.userTypeBalances.forEach((u) => {
+        const index = userTypeBalances.findIndex((b) => b.userType === u.userType);
+        expect(u.userType).to.be.eq(userTypeBalances[index].userType);
+        expect(u.totalPositive.amount).to.be.eq(userTypeBalances[index].totalPositive.amount);
+        expect(u.totalNegative.amount).to.be.eq(userTypeBalances[index].totalNegative.amount);
+      });
     });
   });
 });

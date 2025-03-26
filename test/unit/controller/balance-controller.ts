@@ -32,7 +32,10 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import BalanceController from '../../../src/controller/balance-controller';
 import Transfer from '../../../src/entity/transactions/transfer';
-import BalanceResponse, { PaginatedBalanceResponse } from '../../../src/controller/response/balance-response';
+import BalanceResponse, {
+  PaginatedBalanceResponse,
+  TotalBalanceResponse,
+} from '../../../src/controller/response/balance-response';
 import { calculateBalance } from '../../helpers/balance';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import { OrderingDirection } from '../../../src/helpers/ordering';
@@ -406,5 +409,40 @@ describe('BalanceController', (): void => {
 
   after(async () => {
     await finishTestDB(ctx.connection);
+  });
+
+  describe('GET /balances/summary', () => {
+    it('should correctly return the amounts', async () => {
+      const date = new Date('2021-11-30');
+      const res = await request(ctx.app)
+        .get('/balances/summary')
+        .query({ date: date })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const { positiveBalances, negativeBalances } = ctx.users.map((user) => calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date))
+        .reduce((acc, balance) => {
+          const amount = balance.amount.getAmount();
+          if (amount > 0) {
+            acc.positiveBalances += amount;
+          } else {
+            acc.negativeBalances += amount;
+          }
+          return acc;
+        },
+        { positiveBalances: 0, negativeBalances: 0 },
+        );
+
+      const balanceResponse = res.body as TotalBalanceResponse;
+      expect(balanceResponse.totalPositive.amount).to.eq(positiveBalances);
+      expect(balanceResponse.totalNegative.amount).to.eq(negativeBalances);
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .get('/balances/summary')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
   });
 });
