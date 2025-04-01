@@ -571,6 +571,7 @@ export default class InvoiceService extends WithManager {
       where: {
         ...QueryFilter.createFilterWhereClause(filterMapping, params),
         ...stateFilter,
+        createdAt: QueryFilter.createFilterWhereDate(params.fromDate, params.tillDate),
       },
       order: { createdAt: 'DESC' },
     };
