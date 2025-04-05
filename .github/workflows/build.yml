@@ -164,6 +164,12 @@ jobs:
           name: coverage
           path: reports/coverage/
           retention-days: 7
+      - name: "Upload coverage to Coveralls"
+        if: matrix.typeorm-connection == 'mariadb'
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./reports/coverage/lcov.info
 
   post-migration-test:
     runs-on: ubuntu-latest
