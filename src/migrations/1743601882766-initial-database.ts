@@ -40,8 +40,17 @@ export class InitialSQLMigration1743601882766 implements MigrationInterface {
     // no-op
   }
 
+  /**
+   * CHANGES:
+   * expect column Invoice.attention to be nullable
+   * expect column Invoice.description to be nullable
+   * PayoutRequestPdf fk users should be on delete no action
+   * PayoutReuqest fk pdfId should be on update no action
+   */
+
+
   static readonly sql = `
-  SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -50,6 +59,16 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: \`sudosos_prod\`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`assigned_role\`
+--
 
 CREATE TABLE \`assigned_role\` (
   \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
@@ -124,6 +143,24 @@ CREATE TABLE \`base_file\` (
   \`downloadName\` varchar(255) NOT NULL,
   \`location\` varchar(255) NOT NULL,
   \`createdById\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`borrelkaart_group\`
+--
+
+CREATE TABLE \`borrelkaart_group\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`id\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`activeStartDate\` datetime NOT NULL DEFAULT current_timestamp(),
+  \`activeEndDate\` datetime NOT NULL,
+  \`amount\` int(11) NOT NULL,
+  \`balance\` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
 
 -- --------------------------------------------------------
@@ -292,6 +329,23 @@ CREATE TABLE \`fine_handout_event\` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table \`flagged_transaction\`
+--
+
+CREATE TABLE \`flagged_transaction\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`id\` int(11) NOT NULL,
+  \`status\` int(11) DEFAULT NULL,
+  \`flaggedById\` int(11) NOT NULL,
+  \`transactionId\` int(11) NOT NULL,
+  \`reason\` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table \`gewis_user\`
 --
 
@@ -313,7 +367,7 @@ CREATE TABLE \`invoice\` (
   \`id\` int(11) NOT NULL,
   \`toId\` int(11) NOT NULL,
   \`addressee\` varchar(255) NOT NULL,
-  \`description\` varchar(255) NULL,
+  \`description\` varchar(255) DEFAULT NULL,
   \`transferId\` int(11) NOT NULL,
   \`reference\` varchar(255) NOT NULL,
   \`street\` varchar(255) NOT NULL,
@@ -321,7 +375,7 @@ CREATE TABLE \`invoice\` (
   \`city\` varchar(255) NOT NULL,
   \`country\` varchar(255) NOT NULL,
   \`pdfId\` int(11) DEFAULT NULL,
-  \`attention\` varchar(255) NULL DEFAULT '',
+  \`attention\` varchar(255) DEFAULT '',
   \`date\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
   \`creditTransferId\` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
@@ -689,7 +743,7 @@ CREATE TABLE \`product_revision\` (
   \`version\` int(11) NOT NULL,
   \`name\` varchar(64) NOT NULL,
   \`priceInclVat\` int(11) NOT NULL,
-  \`alcoholPercentage\` decimal(10,2) NOT NULL,
+  \`alcoholPercentage\` decimal(10,0) NOT NULL,
   \`productId\` int(11) NOT NULL,
   \`revision\` int(11) NOT NULL DEFAULT 1,
   \`vatId\` int(11) NOT NULL,
@@ -911,6 +965,75 @@ CREATE TABLE \`transfer\` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table \`updated_container\`
+--
+
+CREATE TABLE \`updated_container\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`containerId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_container_products_product\`
+--
+
+CREATE TABLE \`updated_container_products_product\` (
+  \`updatedContainerContainerId\` int(11) NOT NULL,
+  \`productId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_point_of_sale\`
+--
+
+CREATE TABLE \`updated_point_of_sale\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`useAuthentication\` tinyint(4) NOT NULL DEFAULT 0,
+  \`pointOfSaleId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_point_of_sale_containers_container\`
+--
+
+CREATE TABLE \`updated_point_of_sale_containers_container\` (
+  \`updatedPointOfSalePointOfSaleId\` int(11) NOT NULL,
+  \`containerId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_product\`
+--
+
+CREATE TABLE \`updated_product\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`priceInclVat\` int(11) NOT NULL,
+  \`alcoholPercentage\` decimal(10,0) NOT NULL,
+  \`productId\` int(11) NOT NULL,
+  \`vatId\` int(11) NOT NULL,
+  \`categoryId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table \`user\`
 --
 
@@ -931,6 +1054,17 @@ CREATE TABLE \`user\` (
   \`nickname\` varchar(64) DEFAULT NULL,
   \`currentFinesId\` int(11) DEFAULT NULL,
   \`canGoIntoDebt\` tinyint(4) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`user_borrelkaart_group\`
+--
+
+CREATE TABLE \`user_borrelkaart_group\` (
+  \`userId\` int(11) NOT NULL,
+  \`borrelkaartGroupId\` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
 
 -- --------------------------------------------------------
@@ -1007,7 +1141,25 @@ CREATE TABLE \`write_off\` (
   \`id\` int(11) NOT NULL,
   \`transferId\` int(11) DEFAULT NULL,
   \`amount\` int(11) NOT NULL,
-  \`toId\` int(11) NOT NULL
+  \`toId\` int(11) NOT NULL,
+  \`pdfId\` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`write_off_pdf\`
+--
+
+CREATE TABLE \`write_off_pdf\` (
+  \`id\` int(11) NOT NULL,
+  \`hash\` varchar(255) NOT NULL,
+  \`downloadName\` varchar(255) NOT NULL,
+  \`location\` varchar(255) NOT NULL,
+  \`createdById\` int(11) NOT NULL,
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
 
 --
@@ -1053,6 +1205,14 @@ ALTER TABLE \`base_file\`
   ADD PRIMARY KEY (\`id\`),
   ADD KEY \`FK_e3163d85b9568a2e2356dbf3780\` (\`createdById\`),
   ADD KEY \`IDX_91f19c398debec3f46e7ef5f4b\` (\`createdAt\`);
+
+--
+-- Indexes for table \`borrelkaart_group\`
+--
+ALTER TABLE \`borrelkaart_group\`
+  ADD PRIMARY KEY (\`id\`),
+  ADD UNIQUE KEY \`IDX_12fd292e0ad58511d4e543a56f\` (\`name\`),
+  ADD KEY \`IDX_bbb604f5cc9f122e25fd2b950f\` (\`createdAt\`);
 
 --
 -- Indexes for table \`container\`
@@ -1111,11 +1271,8 @@ ALTER TABLE \`event_shifts_event_shift\`
 -- Indexes for table \`event_shift_answer\`
 --
 ALTER TABLE \`event_shift_answer\`
-  ADD PRIMARY KEY (\`userId\`, \`shiftId\`, \`eventId\`),
-  ADD KEY \`IDX_cde8d23385a9e5db4b82ec3b36\` (\`createdAt\`),
-  ADD CONSTRAINT \`FK_a6887f089a4dd5fe71c41526695\` FOREIGN KEY (\`eventId\`) 
-    REFERENCES \`event\` (\`id\`) 
-    ON DELETE CASCADE;
+  ADD PRIMARY KEY (\`userId\`,\`shiftId\`,\`eventId\`),
+  ADD KEY \`IDX_cde8d23385a9e5db4b82ec3b36\` (\`createdAt\`);
 
 --
 -- Indexes for table \`event_shift_roles_role\`
@@ -1138,6 +1295,15 @@ ALTER TABLE \`fine\`
 ALTER TABLE \`fine_handout_event\`
   ADD PRIMARY KEY (\`id\`),
   ADD KEY \`IDX_3a87bd6247b8ef17621a3fdc1b\` (\`createdAt\`);
+
+--
+-- Indexes for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  ADD PRIMARY KEY (\`id\`),
+  ADD KEY \`FK_738bd6356590332e067456e1b4e\` (\`flaggedById\`),
+  ADD KEY \`FK_38807b7b1725fe57bd8b014772d\` (\`transactionId\`),
+  ADD KEY \`IDX_11928b9a88be0b95839cc72fff\` (\`createdAt\`);
 
 --
 -- Indexes for table \`gewis_user\`
@@ -1466,12 +1632,62 @@ ALTER TABLE \`transfer\`
   ADD KEY \`FK_982efd15d8f524a263dc0dacd1c\` (\`vatId\`);
 
 --
+-- Indexes for table \`updated_container\`
+--
+ALTER TABLE \`updated_container\`
+  ADD PRIMARY KEY (\`containerId\`),
+  ADD UNIQUE KEY \`REL_aed61f0ebbe447d8133a68b5dc\` (\`containerId\`),
+  ADD KEY \`IDX_973e5010e226f69bb1402281a7\` (\`createdAt\`);
+
+--
+-- Indexes for table \`updated_container_products_product\`
+--
+ALTER TABLE \`updated_container_products_product\`
+  ADD PRIMARY KEY (\`updatedContainerContainerId\`,\`productId\`),
+  ADD KEY \`IDX_6c25f3b3c37db9812e3ae2db23\` (\`updatedContainerContainerId\`),
+  ADD KEY \`IDX_00bacabbad03567d6b290aa15d\` (\`productId\`);
+
+--
+-- Indexes for table \`updated_point_of_sale\`
+--
+ALTER TABLE \`updated_point_of_sale\`
+  ADD PRIMARY KEY (\`pointOfSaleId\`),
+  ADD UNIQUE KEY \`REL_05265354a3b84f882fe68349f4\` (\`pointOfSaleId\`),
+  ADD KEY \`IDX_23023f77294bff8abe57ab6ab6\` (\`createdAt\`);
+
+--
+-- Indexes for table \`updated_point_of_sale_containers_container\`
+--
+ALTER TABLE \`updated_point_of_sale_containers_container\`
+  ADD PRIMARY KEY (\`updatedPointOfSalePointOfSaleId\`,\`containerId\`),
+  ADD KEY \`IDX_7d0d7f029a07d3133137bc0eec\` (\`updatedPointOfSalePointOfSaleId\`),
+  ADD KEY \`IDX_18e428547adff0f47d2e91b5dc\` (\`containerId\`);
+
+--
+-- Indexes for table \`updated_product\`
+--
+ALTER TABLE \`updated_product\`
+  ADD PRIMARY KEY (\`productId\`),
+  ADD UNIQUE KEY \`REL_43e680991b2168755292d2280e\` (\`productId\`),
+  ADD KEY \`FK_41d61434f1a90cb169674f2bfd2\` (\`vatId\`),
+  ADD KEY \`FK_ea95a6e5f0b010f862aaa119435\` (\`categoryId\`),
+  ADD KEY \`IDX_d0e7a0935cce6da8f78b8011d2\` (\`createdAt\`);
+
+--
 -- Indexes for table \`user\`
 --
 ALTER TABLE \`user\`
   ADD PRIMARY KEY (\`id\`),
   ADD UNIQUE KEY \`IDX_b42ca95830a90a240d46c70572\` (\`currentFinesId\`),
   ADD KEY \`IDX_e11e649824a45d8ed01d597fd9\` (\`createdAt\`);
+
+--
+-- Indexes for table \`user_borrelkaart_group\`
+--
+ALTER TABLE \`user_borrelkaart_group\`
+  ADD PRIMARY KEY (\`userId\`),
+  ADD UNIQUE KEY \`REL_cd1a0ec76506b63b72afd07377\` (\`userId\`),
+  ADD KEY \`FK_6501a68f43cba85a7e7f530cab9\` (\`borrelkaartGroupId\`);
 
 --
 -- Indexes for table \`user_fine_group\`
@@ -1509,7 +1725,15 @@ ALTER TABLE \`voucher_group\`
 ALTER TABLE \`write_off\`
   ADD PRIMARY KEY (\`id\`),
   ADD KEY \`FK_write_off_transferId\` (\`transferId\`),
-  ADD KEY \`FK_write_off_toId\` (\`toId\`);
+  ADD KEY \`FK_write_off_toId\` (\`toId\`),
+  ADD KEY \`FK_e9033ba76807efc3e10682bab1a\` (\`pdfId\`);
+
+--
+-- Indexes for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  ADD PRIMARY KEY (\`id\`),
+  ADD KEY \`FK_e6c374b0d0b9d90697820ba88c9\` (\`createdById\`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -1531,6 +1755,12 @@ ALTER TABLE \`banner_image\`
 -- AUTO_INCREMENT for table \`base_file\`
 --
 ALTER TABLE \`base_file\`
+  MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table \`borrelkaart_group\`
+--
+ALTER TABLE \`borrelkaart_group\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -1564,6 +1794,12 @@ ALTER TABLE \`fine_handout_event\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table \`invoice\`
 --
 ALTER TABLE \`invoice\`
@@ -1580,7 +1816,6 @@ ALTER TABLE \`invoice_pdf\`
 --
 ALTER TABLE \`invoice_status\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
-
 
 --
 -- AUTO_INCREMENT for table \`payout_request\`
@@ -1721,6 +1956,12 @@ ALTER TABLE \`write_off\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -1787,6 +2028,13 @@ ALTER TABLE \`ean_authenticator\`
 ALTER TABLE \`event_shift_roles_role\`
   ADD CONSTRAINT \`FK_ac36ca9f11e4cebf7a7fc4fd1e1\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE,
   ADD CONSTRAINT \`FK_b7bc5f8d015ac4ab0fa9353cea0\` FOREIGN KEY (\`eventShiftId\`) REFERENCES \`event_shift\` (\`id\`) ON DELETE CASCADE;
+
+--
+-- Constraints for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  ADD CONSTRAINT \`FK_38807b7b1725fe57bd8b014772d\` FOREIGN KEY (\`transactionId\`) REFERENCES \`transaction\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_738bd6356590332e067456e1b4e\` FOREIGN KEY (\`flaggedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`gewis_user\`
@@ -1866,7 +2114,7 @@ ALTER TABLE \`payout_request\`
   ADD CONSTRAINT \`FK_5ff1718fd7ef4b1314c279124fb\` FOREIGN KEY (\`requestedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_956cef8545f8bc1944809f69c24\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_b48700107cc13b06f601a7332ec\` FOREIGN KEY (\`approvedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_c54ab0d505973c4a37a9d1ddeb0\` FOREIGN KEY (\`pdfId\`) REFERENCES \`payout_request_pdf\` (\`id\`);
+  ADD CONSTRAINT \`FK_c54ab0d505973c4a37a9d1ddeb0\` FOREIGN KEY (\`pdfId\`) REFERENCES \`payout_request_pdf\` (\`id\`) ON DELETE RESTRICT ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`payout_request_pdf\`
@@ -2033,10 +2281,58 @@ ALTER TABLE \`transfer\`
   ADD CONSTRAINT \`FK_9bc2f01e5bc90eab1015548b5ab\` FOREIGN KEY (\`fromId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
+-- Constraints for table \`updated_container\`
+--
+ALTER TABLE \`updated_container\`
+  ADD CONSTRAINT \`FK_aed61f0ebbe447d8133a68b5dcb\` FOREIGN KEY (\`containerId\`) REFERENCES \`container\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`updated_container_products_product\`
+--
+ALTER TABLE \`updated_container_products_product\`
+  ADD CONSTRAINT \`FK_00bacabbad03567d6b290aa15d3\` FOREIGN KEY (\`productId\`) REFERENCES \`product\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_6c25f3b3c37db9812e3ae2db239\` FOREIGN KEY (\`updatedContainerContainerId\`) REFERENCES \`updated_container\` (\`containerId\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`updated_point_of_sale\`
+--
+ALTER TABLE \`updated_point_of_sale\`
+  ADD CONSTRAINT \`FK_05265354a3b84f882fe68349f4f\` FOREIGN KEY (\`pointOfSaleId\`) REFERENCES \`point_of_sale\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`updated_point_of_sale_containers_container\`
+--
+ALTER TABLE \`updated_point_of_sale_containers_container\`
+  ADD CONSTRAINT \`FK_18e428547adff0f47d2e91b5dc6\` FOREIGN KEY (\`containerId\`) REFERENCES \`container\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_7d0d7f029a07d3133137bc0eecc\` FOREIGN KEY (\`updatedPointOfSalePointOfSaleId\`) REFERENCES \`updated_point_of_sale\` (\`pointOfSaleId\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`updated_product\`
+--
+ALTER TABLE \`updated_product\`
+  ADD CONSTRAINT \`FK_41d61434f1a90cb169674f2bfd2\` FOREIGN KEY (\`vatId\`) REFERENCES \`vat_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_43e680991b2168755292d2280ed\` FOREIGN KEY (\`productId\`) REFERENCES \`product\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_ea95a6e5f0b010f862aaa119435\` FOREIGN KEY (\`categoryId\`) REFERENCES \`product_category\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`user_borrelkaart_group\`
+--
+ALTER TABLE \`user_borrelkaart_group\`
+  ADD CONSTRAINT \`FK_6501a68f43cba85a7e7f530cab9\` FOREIGN KEY (\`borrelkaartGroupId\`) REFERENCES \`borrelkaart_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_cd1a0ec76506b63b72afd073772\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
 -- Constraints for table \`write_off\`
 --
 ALTER TABLE \`write_off\`
+  ADD CONSTRAINT \`FK_e9033ba76807efc3e10682bab1a\` FOREIGN KEY (\`pdfId\`) REFERENCES \`write_off_pdf\` (\`id\`),
   ADD CONSTRAINT \`FK_write_off_toId\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE,
   ADD CONSTRAINT \`FK_write_off_transferId\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE CASCADE;
+
+--
+-- Constraints for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  ADD CONSTRAINT \`FK_e6c374b0d0b9d90697820ba88c9\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE;
 COMMIT;`;
 }

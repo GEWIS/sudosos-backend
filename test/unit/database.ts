@@ -94,11 +94,11 @@ describe('Database', async (): Promise<void> => {
     });
     it('should match the database relations with entity definition after migrations', async () => {
       const entities = dataSource.entityMetadatas;
+      const queryRunner = dataSource.createQueryRunner();
+      await queryRunner.connect();
+
       for (const entity of entities) {
         const tableName = entity.tableName;
-        const queryRunner = dataSource.createQueryRunner();
-        await queryRunner.connect();
-
         const table = await queryRunner.getTable(tableName);
         const tableFks: any[] = table.foreignKeys.map(relation => {
           return {
@@ -107,6 +107,8 @@ describe('Database', async (): Promise<void> => {
             referencedColumnNames: relation.referencedColumnNames,
             onDelete: relation.onDelete,
             onUpdate: relation.onUpdate,
+            fkName: relation.name,
+            tableName,
           };
         });
 
@@ -120,6 +122,8 @@ describe('Database', async (): Promise<void> => {
               referencedColumnNames: fk.referencedColumnNames,
               onDelete: fk.onDelete,
               onUpdate: fk.onUpdate,
+              fkName: fk.name,
+              tableName,
             });
           });
         });
