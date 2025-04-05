@@ -6,7 +6,9 @@
     "text",
     "cobertura",
     "html",
-    "json-summary"
+    "json-summary",
+    "lcov",
+    "text-summary"
   ],
   "all": true,
   "include": [
