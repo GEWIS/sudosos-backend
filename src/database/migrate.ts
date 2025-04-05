@@ -44,17 +44,10 @@ export default async function migrate() {
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   try {
-    application.logger.log('Starting synchronize + migrations.');
-    application.logger.debug('Synchronize...');
-    await application.connection.synchronize();
-    application.logger.debug('Fake migrations...');
-    await application.connection.runMigrations({ transaction: 'all', fake: true });
-    application.logger.debug('Revert last migration...');
-    await application.connection.undoLastMigration({ transaction: 'all' });
-    application.logger.debug('Run last migration...');
+    application.logger.log('Starting migrations.');
     await application.connection.runMigrations({ transaction: 'all' });
     await application.connection.destroy();
-    application.logger.log('Finished synchronize + migrations.');
+    application.logger.log('Finished migrations.');
   } catch (e) {
     application.logger.error('Error migrating db', e);
   }
