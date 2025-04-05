@@ -195,19 +195,14 @@ export default class BalanceController extends BaseController {
    * @param {string} date.query.required - The date for which to calculate the balance.
    * @return {TotalBalanceResponse} 200 - The requested user's balance
    * @return {string} 400 - Validation error
-   * @return {string} 404 - Could not calculate error
    * @return {string} 500 - Internal server error
    */
   private async calculateTotalBalances(req: RequestWithToken, res: Response): Promise<void> {
     try {
       const date = asDate(req.query.date);
 
-      try {
-        const balances = await new BalanceService().calculateTotalBalances(date);
-        res.json(balances);
-      } catch (error) {
-        res.status(404).json('Could not calculate the total balances');
-      }
+      const balances = await new BalanceService().calculateTotalBalances(date);
+      res.json(balances);
     } catch (error) {
       this.logger.error('Could not calculate the total balances', error);
       res.status(500).json('Internal server error.');
