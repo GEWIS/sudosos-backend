@@ -41,7 +41,7 @@ export class InitialSQLMigration1743601882766 implements MigrationInterface {
   }
 
   static readonly sql = `
-  SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -50,6 +50,16 @@ SET time_zone = "+00:00";
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: \`sudosos_prod\`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`assigned_role\`
+--
 
 CREATE TABLE \`assigned_role\` (
   \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
@@ -292,6 +302,23 @@ CREATE TABLE \`fine_handout_event\` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table \`flagged_transaction\`
+--
+
+CREATE TABLE \`flagged_transaction\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`id\` int(11) NOT NULL,
+  \`status\` int(11) DEFAULT NULL,
+  \`flaggedById\` int(11) NOT NULL,
+  \`transactionId\` int(11) NOT NULL,
+  \`reason\` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table \`gewis_user\`
 --
 
@@ -313,7 +340,7 @@ CREATE TABLE \`invoice\` (
   \`id\` int(11) NOT NULL,
   \`toId\` int(11) NOT NULL,
   \`addressee\` varchar(255) NOT NULL,
-  \`description\` varchar(255) NULL,
+  \`description\` varchar(255) DEFAULT NULL,
   \`transferId\` int(11) NOT NULL,
   \`reference\` varchar(255) NOT NULL,
   \`street\` varchar(255) NOT NULL,
@@ -321,7 +348,7 @@ CREATE TABLE \`invoice\` (
   \`city\` varchar(255) NOT NULL,
   \`country\` varchar(255) NOT NULL,
   \`pdfId\` int(11) DEFAULT NULL,
-  \`attention\` varchar(255) NULL DEFAULT '',
+  \`attention\` varchar(255) DEFAULT '',
   \`date\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
   \`creditTransferId\` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
@@ -689,7 +716,7 @@ CREATE TABLE \`product_revision\` (
   \`version\` int(11) NOT NULL,
   \`name\` varchar(64) NOT NULL,
   \`priceInclVat\` int(11) NOT NULL,
-  \`alcoholPercentage\` decimal(10,2) NOT NULL,
+  \`alcoholPercentage\` decimal(5,2) NOT NULL,
   \`productId\` int(11) NOT NULL,
   \`revision\` int(11) NOT NULL DEFAULT 1,
   \`vatId\` int(11) NOT NULL,
@@ -911,6 +938,75 @@ CREATE TABLE \`transfer\` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table \`updated_container\`
+--
+
+CREATE TABLE \`updated_container\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`containerId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_container_products_product\`
+--
+
+CREATE TABLE \`updated_container_products_product\` (
+  \`updatedContainerContainerId\` int(11) NOT NULL,
+  \`productId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_point_of_sale\`
+--
+
+CREATE TABLE \`updated_point_of_sale\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`useAuthentication\` tinyint(4) NOT NULL DEFAULT 0,
+  \`pointOfSaleId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_point_of_sale_containers_container\`
+--
+
+CREATE TABLE \`updated_point_of_sale_containers_container\` (
+  \`updatedPointOfSalePointOfSaleId\` int(11) NOT NULL,
+  \`containerId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`updated_product\`
+--
+
+CREATE TABLE \`updated_product\` (
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL,
+  \`name\` varchar(64) NOT NULL,
+  \`priceInclVat\` int(11) NOT NULL,
+  \`alcoholPercentage\` decimal(10,0) NOT NULL,
+  \`productId\` int(11) NOT NULL,
+  \`vatId\` int(11) NOT NULL,
+  \`categoryId\` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table \`user\`
 --
 
@@ -1007,7 +1103,25 @@ CREATE TABLE \`write_off\` (
   \`id\` int(11) NOT NULL,
   \`transferId\` int(11) DEFAULT NULL,
   \`amount\` int(11) NOT NULL,
-  \`toId\` int(11) NOT NULL
+  \`toId\` int(11) NOT NULL,
+  \`pdfId\` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table \`write_off_pdf\`
+--
+
+CREATE TABLE \`write_off_pdf\` (
+  \`id\` int(11) NOT NULL,
+  \`hash\` varchar(255) NOT NULL,
+  \`downloadName\` varchar(255) NOT NULL,
+  \`location\` varchar(255) NOT NULL,
+  \`createdById\` int(11) NOT NULL,
+  \`createdAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6),
+  \`updatedAt\` datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  \`version\` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf32 COLLATE=utf32_general_ci;
 
 --
@@ -1019,7 +1133,8 @@ CREATE TABLE \`write_off\` (
 --
 ALTER TABLE \`assigned_role\`
   ADD PRIMARY KEY (\`userId\`,\`roleId\`),
-  ADD KEY \`IDX_f51f7a75fd982f5f757dc76a24\` (\`createdAt\`);
+  ADD KEY \`IDX_f51f7a75fd982f5f757dc76a24\` (\`createdAt\`),
+  ADD KEY \`FK_f498caac8c930b8cd0532cca7c0\` (\`roleId\`);
 
 --
 -- Indexes for table \`balance\`
@@ -1090,7 +1205,8 @@ ALTER TABLE \`ean_authenticator\`
 --
 ALTER TABLE \`event\`
   ADD PRIMARY KEY (\`id\`),
-  ADD KEY \`IDX_77b45e61f3194ba2be468b0778\` (\`createdAt\`);
+  ADD KEY \`IDX_77b45e61f3194ba2be468b0778\` (\`createdAt\`),
+  ADD KEY \`FK_1d5a6b5f38273d74f192ae552a6\` (\`createdById\`);
 
 --
 -- Indexes for table \`event_shift\`
@@ -1111,11 +1227,10 @@ ALTER TABLE \`event_shifts_event_shift\`
 -- Indexes for table \`event_shift_answer\`
 --
 ALTER TABLE \`event_shift_answer\`
-  ADD PRIMARY KEY (\`userId\`, \`shiftId\`, \`eventId\`),
+  ADD PRIMARY KEY (\`userId\`,\`shiftId\`,\`eventId\`),
   ADD KEY \`IDX_cde8d23385a9e5db4b82ec3b36\` (\`createdAt\`),
-  ADD CONSTRAINT \`FK_a6887f089a4dd5fe71c41526695\` FOREIGN KEY (\`eventId\`) 
-    REFERENCES \`event\` (\`id\`) 
-    ON DELETE CASCADE;
+  ADD KEY \`FK_0f619764862ac181f7ebb2eed27\` (\`shiftId\`),
+  ADD KEY \`FK_a6887f089a4dd5fe71c41526695\` (\`eventId\`);
 
 --
 -- Indexes for table \`event_shift_roles_role\`
@@ -1130,14 +1245,26 @@ ALTER TABLE \`event_shift_roles_role\`
 ALTER TABLE \`fine\`
   ADD PRIMARY KEY (\`id\`),
   ADD UNIQUE KEY \`REL_dfd5d8c8fe1b3a4df17be3497d\` (\`transferId\`),
-  ADD KEY \`IDX_f218ae3b59a59b93ca62c683db\` (\`createdAt\`);
+  ADD KEY \`IDX_f218ae3b59a59b93ca62c683db\` (\`createdAt\`),
+  ADD KEY \`FK_93bc0945de8a9c712f46bd23fce\` (\`fineHandoutEventId\`),
+  ADD KEY \`FK_f66ed973a3f01de948b908d632e\` (\`userFineGroupId\`);
 
 --
 -- Indexes for table \`fine_handout_event\`
 --
 ALTER TABLE \`fine_handout_event\`
   ADD PRIMARY KEY (\`id\`),
-  ADD KEY \`IDX_3a87bd6247b8ef17621a3fdc1b\` (\`createdAt\`);
+  ADD KEY \`IDX_3a87bd6247b8ef17621a3fdc1b\` (\`createdAt\`),
+  ADD KEY \`FK_70f9f6498f6c166943cbb494724\` (\`createdById\`);
+
+--
+-- Indexes for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  ADD PRIMARY KEY (\`id\`),
+  ADD KEY \`FK_738bd6356590332e067456e1b4e\` (\`flaggedById\`),
+  ADD KEY \`FK_38807b7b1725fe57bd8b014772d\` (\`transactionId\`),
+  ADD KEY \`IDX_11928b9a88be0b95839cc72fff\` (\`createdAt\`);
 
 --
 -- Indexes for table \`gewis_user\`
@@ -1406,8 +1533,8 @@ ALTER TABLE \`server_setting\`
 ALTER TABLE \`stripe_deposit\`
   ADD PRIMARY KEY (\`id\`),
   ADD KEY \`FK_30003949e49a55ddef927ac3ea9\` (\`toId\`),
-  ADD KEY \`FK_e3de95c17c9760e68b9d2ac9409\` (\`transferId\`),
-  ADD KEY \`FK_996daa2cc2a7322684f827fa030\` (\`stripePaymentIntentId\`);
+  ADD KEY \`FK_996daa2cc2a7322684f827fa030\` (\`stripePaymentIntentId\`),
+  ADD KEY \`FK_e3de95c17c9760e68b9d2ac9409\` (\`transferId\`);
 
 --
 -- Indexes for table \`stripe_payment_intent\`
@@ -1441,9 +1568,9 @@ ALTER TABLE \`sub_transaction\`
 ALTER TABLE \`sub_transaction_row\`
   ADD PRIMARY KEY (\`id\`),
   ADD KEY \`FK_08486ddd45c1b59aac61c902057\` (\`productProductId\`,\`productRevision\`),
-  ADD KEY \`FK_f3b08edb69ad5d07a66d8772672\` (\`invoiceId\`),
   ADD KEY \`FK_43ce16296a2fb07d50c417bbf23\` (\`subTransactionId\`),
-  ADD KEY \`IDX_0a365df9c0df420ecf9a3be41e\` (\`createdAt\`);
+  ADD KEY \`IDX_0a365df9c0df420ecf9a3be41e\` (\`createdAt\`),
+  ADD KEY \`FK_f3b08edb69ad5d07a66d8772672\` (\`invoiceId\`);
 
 --
 -- Indexes for table \`transaction\`
@@ -1466,6 +1593,48 @@ ALTER TABLE \`transfer\`
   ADD KEY \`FK_982efd15d8f524a263dc0dacd1c\` (\`vatId\`);
 
 --
+-- Indexes for table \`updated_container\`
+--
+ALTER TABLE \`updated_container\`
+  ADD PRIMARY KEY (\`containerId\`),
+  ADD UNIQUE KEY \`REL_aed61f0ebbe447d8133a68b5dc\` (\`containerId\`),
+  ADD KEY \`IDX_973e5010e226f69bb1402281a7\` (\`createdAt\`);
+
+--
+-- Indexes for table \`updated_container_products_product\`
+--
+ALTER TABLE \`updated_container_products_product\`
+  ADD PRIMARY KEY (\`updatedContainerContainerId\`,\`productId\`),
+  ADD KEY \`IDX_6c25f3b3c37db9812e3ae2db23\` (\`updatedContainerContainerId\`),
+  ADD KEY \`IDX_00bacabbad03567d6b290aa15d\` (\`productId\`);
+
+--
+-- Indexes for table \`updated_point_of_sale\`
+--
+ALTER TABLE \`updated_point_of_sale\`
+  ADD PRIMARY KEY (\`pointOfSaleId\`),
+  ADD UNIQUE KEY \`REL_05265354a3b84f882fe68349f4\` (\`pointOfSaleId\`),
+  ADD KEY \`IDX_23023f77294bff8abe57ab6ab6\` (\`createdAt\`);
+
+--
+-- Indexes for table \`updated_point_of_sale_containers_container\`
+--
+ALTER TABLE \`updated_point_of_sale_containers_container\`
+  ADD PRIMARY KEY (\`updatedPointOfSalePointOfSaleId\`,\`containerId\`),
+  ADD KEY \`IDX_7d0d7f029a07d3133137bc0eec\` (\`updatedPointOfSalePointOfSaleId\`),
+  ADD KEY \`IDX_18e428547adff0f47d2e91b5dc\` (\`containerId\`);
+
+--
+-- Indexes for table \`updated_product\`
+--
+ALTER TABLE \`updated_product\`
+  ADD PRIMARY KEY (\`productId\`),
+  ADD UNIQUE KEY \`REL_43e680991b2168755292d2280e\` (\`productId\`),
+  ADD KEY \`FK_41d61434f1a90cb169674f2bfd2\` (\`vatId\`),
+  ADD KEY \`FK_ea95a6e5f0b010f862aaa119435\` (\`categoryId\`),
+  ADD KEY \`IDX_d0e7a0935cce6da8f78b8011d2\` (\`createdAt\`);
+
+--
 -- Indexes for table \`user\`
 --
 ALTER TABLE \`user\`
@@ -1479,14 +1648,16 @@ ALTER TABLE \`user\`
 ALTER TABLE \`user_fine_group\`
   ADD PRIMARY KEY (\`id\`),
   ADD UNIQUE KEY \`REL_81d497d07c08c585214949267a\` (\`waivedTransferId\`),
-  ADD KEY \`IDX_287aa509b39d191a3447a9fe00\` (\`createdAt\`);
+  ADD KEY \`IDX_287aa509b39d191a3447a9fe00\` (\`createdAt\`),
+  ADD KEY \`FK_69128dd1516a60ba9b89e83ef21\` (\`userId\`);
 
 --
 -- Indexes for table \`user_voucher_group\`
 --
 ALTER TABLE \`user_voucher_group\`
   ADD PRIMARY KEY (\`userId\`),
-  ADD UNIQUE KEY \`REL_e8a6a3a59081155d48fcb8e854\` (\`userId\`);
+  ADD UNIQUE KEY \`REL_e8a6a3a59081155d48fcb8e854\` (\`userId\`),
+  ADD KEY \`FK_17f2cfbf1f58c50f2bf43315b22\` (\`voucherGroupId\`);
 
 --
 -- Indexes for table \`vat_group\`
@@ -1508,8 +1679,16 @@ ALTER TABLE \`voucher_group\`
 --
 ALTER TABLE \`write_off\`
   ADD PRIMARY KEY (\`id\`),
-  ADD KEY \`FK_write_off_transferId\` (\`transferId\`),
-  ADD KEY \`FK_write_off_toId\` (\`toId\`);
+  ADD KEY \`FK_3d97c38c0e0e53c323c8353dece\` (\`toId\`),
+  ADD KEY \`FK_c53ae318ca3a0ac0859a79fd5b7\` (\`transferId\`),
+  ADD KEY \`FK_e9033ba76807efc3e10682bab1a\` (\`pdfId\`);
+
+--
+-- Indexes for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  ADD PRIMARY KEY (\`id\`),
+  ADD KEY \`FK_e6c374b0d0b9d90697820ba88c9\` (\`createdById\`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -1564,6 +1743,12 @@ ALTER TABLE \`fine_handout_event\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table \`invoice\`
 --
 ALTER TABLE \`invoice\`
@@ -1580,7 +1765,6 @@ ALTER TABLE \`invoice_pdf\`
 --
 ALTER TABLE \`invoice_status\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
-
 
 --
 -- AUTO_INCREMENT for table \`payout_request\`
@@ -1721,6 +1905,12 @@ ALTER TABLE \`write_off\`
   MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  MODIFY \`id\` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -1728,7 +1918,8 @@ ALTER TABLE \`write_off\`
 -- Constraints for table \`assigned_role\`
 --
 ALTER TABLE \`assigned_role\`
-  ADD CONSTRAINT \`FK_32eef7ed7f4c9e41ce2df201a8c\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT \`FK_32eef7ed7f4c9e41ce2df201a8c\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_f498caac8c930b8cd0532cca7c0\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`balance\`
@@ -1772,7 +1963,7 @@ ALTER TABLE \`container_revision\`
 -- Constraints for table \`container_revision_products_product_revision\`
 --
 ALTER TABLE \`container_revision_products_product_revision\`
-  ADD CONSTRAINT \`FK_0aff363152e31f6795fadc45d57\` FOREIGN KEY (\`productRevisionProductId\`,\`productRevisionRevision\`) REFERENCES \`product_revision\` (\`productId\`, \`revision\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_0aff363152e31f6795fadc45d57\` FOREIGN KEY (\`productRevisionProductId\`,\`productRevisionRevision\`) REFERENCES \`product_revision\` (\`productId\`, \`revision\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_1ebf86226729e5e2ebcead30054\` FOREIGN KEY (\`containerRevisionContainerId\`,\`containerRevisionRevision\`) REFERENCES \`container_revision\` (\`containerId\`, \`revision\`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
@@ -1782,11 +1973,53 @@ ALTER TABLE \`ean_authenticator\`
   ADD CONSTRAINT \`FK_36cdeedf28dd4a53fdce6b63d45\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
+-- Constraints for table \`event\`
+--
+ALTER TABLE \`event\`
+  ADD CONSTRAINT \`FK_1d5a6b5f38273d74f192ae552a6\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`event_shifts_event_shift\`
+--
+ALTER TABLE \`event_shifts_event_shift\`
+  ADD CONSTRAINT \`FK_4a5816ad85f83216ff9358452e8\` FOREIGN KEY (\`eventId\`) REFERENCES \`event\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_f37c7de1e636e65e2d45290cf91\` FOREIGN KEY (\`eventShiftId\`) REFERENCES \`event_shift\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`event_shift_answer\`
+--
+ALTER TABLE \`event_shift_answer\`
+  ADD CONSTRAINT \`FK_0f619764862ac181f7ebb2eed27\` FOREIGN KEY (\`shiftId\`) REFERENCES \`event_shift\` (\`id\`) ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_1e20b4b670a4b781ebb26671098\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_a6887f089a4dd5fe71c41526695\` FOREIGN KEY (\`eventId\`) REFERENCES \`event\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION;
+
+--
 -- Constraints for table \`event_shift_roles_role\`
 --
 ALTER TABLE \`event_shift_roles_role\`
-  ADD CONSTRAINT \`FK_ac36ca9f11e4cebf7a7fc4fd1e1\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE,
-  ADD CONSTRAINT \`FK_b7bc5f8d015ac4ab0fa9353cea0\` FOREIGN KEY (\`eventShiftId\`) REFERENCES \`event_shift\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_ac36ca9f11e4cebf7a7fc4fd1e1\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_b7bc5f8d015ac4ab0fa9353cea0\` FOREIGN KEY (\`eventShiftId\`) REFERENCES \`event_shift\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`fine\`
+--
+ALTER TABLE \`fine\`
+  ADD CONSTRAINT \`FK_93bc0945de8a9c712f46bd23fce\` FOREIGN KEY (\`fineHandoutEventId\`) REFERENCES \`fine_handout_event\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_dfd5d8c8fe1b3a4df17be3497d6\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_f66ed973a3f01de948b908d632e\` FOREIGN KEY (\`userFineGroupId\`) REFERENCES \`user_fine_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`fine_handout_event\`
+--
+ALTER TABLE \`fine_handout_event\`
+  ADD CONSTRAINT \`FK_70f9f6498f6c166943cbb494724\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`flagged_transaction\`
+--
+ALTER TABLE \`flagged_transaction\`
+  ADD CONSTRAINT \`FK_38807b7b1725fe57bd8b014772d\` FOREIGN KEY (\`transactionId\`) REFERENCES \`transaction\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_738bd6356590332e067456e1b4e\` FOREIGN KEY (\`flaggedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`gewis_user\`
@@ -1799,15 +2032,15 @@ ALTER TABLE \`gewis_user\`
 --
 ALTER TABLE \`invoice\`
   ADD CONSTRAINT \`FK_a0c7a052a624e9a630272fe96c6\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_ad265ea872d0ffc7d4ea17447ee\` FOREIGN KEY (\`creditTransferId\`) REFERENCES \`transfer\` (\`id\`),
+  ADD CONSTRAINT \`FK_ad265ea872d0ffc7d4ea17447ee\` FOREIGN KEY (\`creditTransferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_f1af5bbf5baeb15ee911f2c54ca\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_fd48ffbca7ab422836aaf73af5c\` FOREIGN KEY (\`pdfId\`) REFERENCES \`invoice_pdf\` (\`id\`);
+  ADD CONSTRAINT \`FK_fd48ffbca7ab422836aaf73af5c\` FOREIGN KEY (\`pdfId\`) REFERENCES \`invoice_pdf\` (\`id\`) ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`invoice_pdf\`
 --
 ALTER TABLE \`invoice_pdf\`
-  ADD CONSTRAINT \`FK_2c0caa648b45955e5b813fcd155\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_2c0caa648b45955e5b813fcd155\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`invoice_status\`
@@ -1826,8 +2059,14 @@ ALTER TABLE \`invoice_user\`
 -- Constraints for table \`inv_sub_tra_row_del_inv_sub_tra_row\`
 --
 ALTER TABLE \`inv_sub_tra_row_del_inv_sub_tra_row\`
-  ADD CONSTRAINT \`FK_4de5e0dbf807e44ea9a27b78640\` FOREIGN KEY (\`subTransactionRowId\`) REFERENCES \`sub_transaction_row\` (\`id\`) ON DELETE CASCADE,
-  ADD CONSTRAINT \`FK_d9eda7c96531aa0fa3d8a6faf4e\` FOREIGN KEY (\`invoiceId\`) REFERENCES \`invoice\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_4de5e0dbf807e44ea9a27b78640\` FOREIGN KEY (\`subTransactionRowId\`) REFERENCES \`sub_transaction_row\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_d9eda7c96531aa0fa3d8a6faf4e\` FOREIGN KEY (\`invoiceId\`) REFERENCES \`invoice\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`key_authenticator\`
+--
+ALTER TABLE \`key_authenticator\`
+  ADD CONSTRAINT \`FK_dd2cfdfc47f968d2b43f679085a\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`ldap_authenticator\`
@@ -1851,7 +2090,8 @@ ALTER TABLE \`local_user\`
 -- Constraints for table \`member_authenticator\`
 --
 ALTER TABLE \`member_authenticator\`
-  ADD CONSTRAINT \`FK_1b2c38d5eed7a76676147f66bc8\` FOREIGN KEY (\`authenticateAsId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT \`FK_1b2c38d5eed7a76676147f66bc8\` FOREIGN KEY (\`authenticateAsId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_915911173233837e76184d9187b\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`nfc_authenticator\`
@@ -1866,7 +2106,7 @@ ALTER TABLE \`payout_request\`
   ADD CONSTRAINT \`FK_5ff1718fd7ef4b1314c279124fb\` FOREIGN KEY (\`requestedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_956cef8545f8bc1944809f69c24\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_b48700107cc13b06f601a7332ec\` FOREIGN KEY (\`approvedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_c54ab0d505973c4a37a9d1ddeb0\` FOREIGN KEY (\`pdfId\`) REFERENCES \`payout_request_pdf\` (\`id\`);
+  ADD CONSTRAINT \`FK_c54ab0d505973c4a37a9d1ddeb0\` FOREIGN KEY (\`pdfId\`) REFERENCES \`payout_request_pdf\` (\`id\`) ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`payout_request_pdf\`
@@ -1884,7 +2124,7 @@ ALTER TABLE \`payout_request_status\`
 -- Constraints for table \`permission\`
 --
 ALTER TABLE \`permission\`
-  ADD CONSTRAINT \`FK_cdb4db95384a1cf7a837c4c683e\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_cdb4db95384a1cf7a837c4c683e\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`pin_authenticator\`
@@ -1897,14 +2137,14 @@ ALTER TABLE \`pin_authenticator\`
 --
 ALTER TABLE \`point_of_sale\`
   ADD CONSTRAINT \`FK_24fb8a721a293ac72c10ac5de61\` FOREIGN KEY (\`ownerId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_a0ccf55f761fcc887394bf4309b\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`);
+  ADD CONSTRAINT \`FK_a0ccf55f761fcc887394bf4309b\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`point_of_sale_cashier_roles_role\`
 --
 ALTER TABLE \`point_of_sale_cashier_roles_role\`
-  ADD CONSTRAINT \`FK_424767742bed3867b8edfb4c14e\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE,
-  ADD CONSTRAINT \`FK_d9c043a3957a31d7f699b0932f0\` FOREIGN KEY (\`pointOfSaleId\`) REFERENCES \`point_of_sale\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_424767742bed3867b8edfb4c14e\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_d9c043a3957a31d7f699b0932f0\` FOREIGN KEY (\`pointOfSaleId\`) REFERENCES \`point_of_sale\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table \`point_of_sale_revision\`
@@ -1930,7 +2170,7 @@ ALTER TABLE \`product\`
 -- Constraints for table \`product_category\`
 --
 ALTER TABLE \`product_category\`
-  ADD CONSTRAINT \`FK_569b30aa4b0a1ad42bcd30916aa\` FOREIGN KEY (\`parentId\`) REFERENCES \`product_category\` (\`id\`);
+  ADD CONSTRAINT \`FK_569b30aa4b0a1ad42bcd30916aa\` FOREIGN KEY (\`parentId\`) REFERENCES \`product_category\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`product_category_closure\`
@@ -1970,29 +2210,29 @@ ALTER TABLE \`reset_token\`
 -- Constraints for table \`role_user_type\`
 --
 ALTER TABLE \`role_user_type\`
-  ADD CONSTRAINT \`FK_618acabb65230c8f4f1dc431523\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_618acabb65230c8f4f1dc431523\` FOREIGN KEY (\`roleId\`) REFERENCES \`role\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`seller_payout\`
 --
 ALTER TABLE \`seller_payout\`
-  ADD CONSTRAINT \`FK_57f50cd5e7f8f80414395fdde40\` FOREIGN KEY (\`pdfId\`) REFERENCES \`seller_payout_pdf\` (\`id\`),
-  ADD CONSTRAINT \`FK_878c15e23faca012e8279d296a8\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`),
-  ADD CONSTRAINT \`FK_ba291220bb8a8198b41af5b3fc7\` FOREIGN KEY (\`requestedById\`) REFERENCES \`user\` (\`id\`);
+  ADD CONSTRAINT \`FK_57f50cd5e7f8f80414395fdde40\` FOREIGN KEY (\`pdfId\`) REFERENCES \`seller_payout_pdf\` (\`id\`) ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_878c15e23faca012e8279d296a8\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_ba291220bb8a8198b41af5b3fc7\` FOREIGN KEY (\`requestedById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`seller_payout_pdf\`
 --
 ALTER TABLE \`seller_payout_pdf\`
-  ADD CONSTRAINT \`FK_bb5ce24f6db4174ef68b12a94a2\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_bb5ce24f6db4174ef68b12a94a2\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`stripe_deposit\`
 --
 ALTER TABLE \`stripe_deposit\`
-  ADD CONSTRAINT \`FK_30003949e49a55ddef927ac3ea9\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE,
-  ADD CONSTRAINT \`FK_996daa2cc2a7322684f827fa030\` FOREIGN KEY (\`stripePaymentIntentId\`) REFERENCES \`stripe_payment_intent\` (\`id\`),
-  ADD CONSTRAINT \`FK_e3de95c17c9760e68b9d2ac9409\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_30003949e49a55ddef927ac3ea9\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_996daa2cc2a7322684f827fa030\` FOREIGN KEY (\`stripePaymentIntentId\`) REFERENCES \`stripe_payment_intent\` (\`id\`) ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_e3de95c17c9760e68b9d2ac9409\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`stripe_payment_intent_status\`
@@ -2014,7 +2254,7 @@ ALTER TABLE \`sub_transaction\`
 ALTER TABLE \`sub_transaction_row\`
   ADD CONSTRAINT \`FK_08486ddd45c1b59aac61c902057\` FOREIGN KEY (\`productProductId\`,\`productRevision\`) REFERENCES \`product_revision\` (\`productId\`, \`revision\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_43ce16296a2fb07d50c417bbf23\` FOREIGN KEY (\`subTransactionId\`) REFERENCES \`sub_transaction\` (\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_f3b08edb69ad5d07a66d8772672\` FOREIGN KEY (\`invoiceId\`) REFERENCES \`invoice\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+  ADD CONSTRAINT \`FK_f3b08edb69ad5d07a66d8772672\` FOREIGN KEY (\`invoiceId\`) REFERENCES \`invoice\` (\`id\`) ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`transaction\`
@@ -2029,14 +2269,75 @@ ALTER TABLE \`transaction\`
 --
 ALTER TABLE \`transfer\`
   ADD CONSTRAINT \`FK_06b33ebdc8919ff5d34646c6fe3\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT \`FK_982efd15d8f524a263dc0dacd1c\` FOREIGN KEY (\`vatId\`) REFERENCES \`vat_group\` (\`id\`) ON DELETE SET NULL,
+  ADD CONSTRAINT \`FK_982efd15d8f524a263dc0dacd1c\` FOREIGN KEY (\`vatId\`) REFERENCES \`vat_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT \`FK_9bc2f01e5bc90eab1015548b5ab\` FOREIGN KEY (\`fromId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`updated_container\`
+--
+ALTER TABLE \`updated_container\`
+  ADD CONSTRAINT \`FK_aed61f0ebbe447d8133a68b5dcb\` FOREIGN KEY (\`containerId\`) REFERENCES \`container\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`updated_container_products_product\`
+--
+ALTER TABLE \`updated_container_products_product\`
+  ADD CONSTRAINT \`FK_00bacabbad03567d6b290aa15d3\` FOREIGN KEY (\`productId\`) REFERENCES \`product\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_6c25f3b3c37db9812e3ae2db239\` FOREIGN KEY (\`updatedContainerContainerId\`) REFERENCES \`updated_container\` (\`containerId\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`updated_point_of_sale\`
+--
+ALTER TABLE \`updated_point_of_sale\`
+  ADD CONSTRAINT \`FK_05265354a3b84f882fe68349f4f\` FOREIGN KEY (\`pointOfSaleId\`) REFERENCES \`point_of_sale\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`updated_point_of_sale_containers_container\`
+--
+ALTER TABLE \`updated_point_of_sale_containers_container\`
+  ADD CONSTRAINT \`FK_18e428547adff0f47d2e91b5dc6\` FOREIGN KEY (\`containerId\`) REFERENCES \`container\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT \`FK_7d0d7f029a07d3133137bc0eecc\` FOREIGN KEY (\`updatedPointOfSalePointOfSaleId\`) REFERENCES \`updated_point_of_sale\` (\`pointOfSaleId\`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table \`updated_product\`
+--
+ALTER TABLE \`updated_product\`
+  ADD CONSTRAINT \`FK_41d61434f1a90cb169674f2bfd2\` FOREIGN KEY (\`vatId\`) REFERENCES \`vat_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_43e680991b2168755292d2280ed\` FOREIGN KEY (\`productId\`) REFERENCES \`product\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_ea95a6e5f0b010f862aaa119435\` FOREIGN KEY (\`categoryId\`) REFERENCES \`product_category\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`user\`
+--
+ALTER TABLE \`user\`
+  ADD CONSTRAINT \`FK_b42ca95830a90a240d46c70572c\` FOREIGN KEY (\`currentFinesId\`) REFERENCES \`user_fine_group\` (\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`user_fine_group\`
+--
+ALTER TABLE \`user_fine_group\`
+  ADD CONSTRAINT \`FK_69128dd1516a60ba9b89e83ef21\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_81d497d07c08c585214949267a4\` FOREIGN KEY (\`waivedTransferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`user_voucher_group\`
+--
+ALTER TABLE \`user_voucher_group\`
+  ADD CONSTRAINT \`FK_17f2cfbf1f58c50f2bf43315b22\` FOREIGN KEY (\`voucherGroupId\`) REFERENCES \`voucher_group\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_e8a6a3a59081155d48fcb8e8540\` FOREIGN KEY (\`userId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`write_off\`
 --
 ALTER TABLE \`write_off\`
-  ADD CONSTRAINT \`FK_write_off_toId\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE,
-  ADD CONSTRAINT \`FK_write_off_transferId\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_3d97c38c0e0e53c323c8353dece\` FOREIGN KEY (\`toId\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_c53ae318ca3a0ac0859a79fd5b7\` FOREIGN KEY (\`transferId\`) REFERENCES \`transfer\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  ADD CONSTRAINT \`FK_e9033ba76807efc3e10682bab1a\` FOREIGN KEY (\`pdfId\`) REFERENCES \`write_off_pdf\` (\`id\`) ON UPDATE NO ACTION;
+
+--
+-- Constraints for table \`write_off_pdf\`
+--
+ALTER TABLE \`write_off_pdf\`
+  ADD CONSTRAINT \`FK_e6c374b0d0b9d90697820ba88c9\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 COMMIT;`;
 }
