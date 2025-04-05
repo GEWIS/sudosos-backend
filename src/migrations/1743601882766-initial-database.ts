@@ -23,31 +23,31 @@
  * @hidden
  */
 
-import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+import { MigrationInterface, QueryRunner } from 'typeorm';
+import path from 'path';
+import fs from 'fs';
 
-export class SoftDeletes1720608140757 implements MigrationInterface {
+export class InitialSQLMigration1743601882766 implements MigrationInterface {
+
+  private static readonly hash = 'dbe826d61406e8d4ce533a7eab636cead8375a0dbded402dcff396d37fdb5cc9';
+
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.addColumn('product', new TableColumn({
-      name: 'deletedAt',
-      type: 'datetime(6)',
-      isNullable: true,
-    }));
-    await queryRunner.addColumn('container', new TableColumn({
-      name: 'deletedAt',
-      type: 'datetime(6)',
-      isNullable: true,
-    }));
-    await queryRunner.addColumn('point_of_sale', new TableColumn({
-      name: 'deletedAt',
-      type: 'datetime(6)',
-      isNullable: true,
-    }));
+    try {
+      const sqlFilePath = path.join(__dirname, 'initial-migration.sql');
+      const sql = fs.readFileSync(sqlFilePath, 'utf8');
+      const queries = sql.split(';').filter(query => query.trim() !== '');
+
+      for (const query of queries) {
+        await queryRunner.query(query);
+      }
+    } catch (error) {
+      console.error('Error executing SQL file:', error);
+      throw error;
+    }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query('ALTER TABLE product DROP COLUMN deletedAt');
-    await queryRunner.query('ALTER TABLE container DROP COLUMN deletedAt');
-    await queryRunner.query('ALTER TABLE point_of_sale DROP COLUMN deletedAt');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async down(_: QueryRunner): Promise<void> {
+    // no-op
   }
-
 }
