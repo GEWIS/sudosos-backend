@@ -1,12 +1,23 @@
 version: 2
 updates:
-  - package-ecosystem: "npm" # Specify npm as the package manager
+  - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly" # Set the update schedule to weekly
+      interval: "weekly"
+    target-branch: "develop"
     commit-message:
       prefix: "chore(deps)"
-    versioning-strategy: "increase" # This limits updates to patch and minor versions
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-major"] # Ignore major updates
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 15
+    groups:
+      development_minors_and_patches:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production_patches:
+        dependency-type: "production"
+        update-types:
+          - "patch"
