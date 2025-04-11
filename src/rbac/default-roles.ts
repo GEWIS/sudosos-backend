@@ -125,7 +125,7 @@ export default class DefaultRoles {
           create: { own: star },
         },
         Authenticator: {
-          update: { own: new Set(['pin']) },
+          update: { own: new Set(['pin', 'nfcCode']) },
         },
       },
     }, {
