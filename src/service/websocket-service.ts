@@ -18,11 +18,11 @@
  *  @license
  */
 
-
-import http from 'http';
-import express from 'express';
-import WebSocket from 'ws';
 import log4js, { Logger } from 'log4js';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/cluster-adapter';
+import { setupWorker } from '@socket.io/sticky';
 
 /**
  * This is the module page of the websocket-service.
@@ -31,28 +31,28 @@ import log4js, { Logger } from 'log4js';
  */
 
 export default class WebSocketService {
-  private static readonly httpServer = http.createServer(express());
 
-  private static webSocketServer = new WebSocket.Server({ server: this.httpServer });
-    
+  private static SERVER = createServer();
+
+  private static IO = new Server(this.SERVER);
+
   public static initiateWebSocket(): void {
-    const logger: Logger = log4js.getLogger('LDAP');
+    const logger: Logger = log4js.getLogger('WebSocket');
     logger.level = process.env.LOG_LEVEL;
 
-    const port = process.env.WEBSOCKET_PORT || 443;
-    this.httpServer.listen(port);
-    logger.info('Opened WebSocket server on port ' + port);
+    this.IO.adapter(createAdapter());
 
-    this.webSocketServer.on('maintenance-mode', (status) => {
-      this.webSocketServer.clients.forEach((client) => {
-        const message = 'maintenance-mode ' + status;
-        client.send(message);
-        logger.info('Sent \"' + message + '\" over WebSocket');
-      });
+    setupWorker(this.IO);
+
+    this.IO.on('connection', (socket) => {
+      logger.info(`connect ${socket.id}`);
     });
   }
 
   public static sendMaintenanceMode(enabled: boolean): void {
-    this.webSocketServer.emit('maintenance-mode', enabled);
+    const logger: Logger = log4js.getLogger('WebSocket');
+    logger.level = process.env.LOG_LEVEL;
+    logger.info('Set maintenance mode to ' + enabled);
+    this.IO.emit('maintenance-mode', enabled);
   }
 }

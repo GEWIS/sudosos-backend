@@ -79,6 +79,7 @@ import { ISettings } from './entity/server-setting';
 import ServerSettingsController from './controller/server-settings-controller';
 import TransactionSummaryController from './controller/transaction-summary-controller';
 import getAppLogger from './helpers/logging';
+import WebSocketService from './service/websocket-service';
 
 export class Application {
   app: express.Express;
@@ -256,6 +257,9 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
+
+  WebSocketService.initiateWebSocket();
+
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
   application.server = application.app.listen(process.env.HTTP_PORT);

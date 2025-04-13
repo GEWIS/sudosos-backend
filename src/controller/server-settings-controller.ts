@@ -46,7 +46,6 @@ export default class ServerSettingsController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
-    WebSocketService.initiateWebSocket();
   }
 
   public getPolicy(): Policy {
