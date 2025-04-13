@@ -48,6 +48,7 @@ import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { BaseTransactionResponse } from '../../../src/controller/response/transaction-response';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -647,7 +648,7 @@ describe('TransactionService', (): void => {
       const nrOfTransactions = actualTransactions.length;
 
       expect(records.length).to.equal(nrOfTransactions);
-      records.map((t) => {
+      records.map((t: BaseTransactionResponse): undefined => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
         return undefined;
@@ -673,7 +674,7 @@ describe('TransactionService', (): void => {
       const nrOfTransactions = actualTransactions.length;
 
       expect(records.length).to.equal(nrOfTransactions);
-      records.map((t) => {
+      records.map((t: BaseTransactionResponse): undefined => {
         verifyBaseTransactionEntity(ctx.spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
         return undefined;

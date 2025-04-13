@@ -156,7 +156,7 @@ jobs:
           comment_template_file: .github/coverage-template.md
           coverage_file: reports/coverage/coverage-summary.json
           base_coverage_file: reports/coverage-base/coverage-summary.json
-          sources_base_path: "/__w/sudosos-backend/sudosos-backend" #github.action_path does not work in Docker (https://github.com/actions/runner/issues/716)
+          sources_base_path: "/__w/sudosos-backend/sudosos-backend/"
       - name: "Upload code coverage report"
         if: ${{ matrix.typeorm-connection == 'mariadb' }}
         uses: actions/upload-artifact@v4
@@ -164,6 +164,12 @@ jobs:
           name: coverage
           path: reports/coverage/
           retention-days: 7
+      - name: "Upload coverage to Coveralls"
+        if: matrix.typeorm-connection == 'mariadb'
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./reports/coverage/lcov.info
 
   post-migration-test:
     runs-on: ubuntu-latest

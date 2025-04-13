@@ -74,10 +74,12 @@ export interface FineResponse extends BaseResponse {
  * @typedef {allOf|BaseResponse} BaseFineHandoutEventResponse
  * @property {string} referenceDate.required - Reference date of fines
  * @property {BaseUserResponse} createdBy.required - User that handed out the fines
+ * @property {number} count.required - The amount of fines that were handed out
  */
 export interface BaseFineHandoutEventResponse extends BaseResponse {
   referenceDate: string;
   createdBy: BaseUserResponse;
+  count: number;
 }
 
 /**

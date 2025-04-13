@@ -19,12 +19,11 @@
  */
 
 /**
- * This is the module page of the banner-request.
- *
- * @module banners
+ * @module Banners
  */
 
 /**
+ * API Request for creating a `banner` entity.
  * @typedef {object} BannerRequest
  * @property {string} name - Name/label of the banner
  * @property {number} duration - How long the banner should be shown (in seconds)

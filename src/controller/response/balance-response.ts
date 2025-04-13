@@ -63,6 +63,32 @@ export default interface BalanceResponse extends BaseUserResponse {
 }
 
 /**
+ * @typedef {object} UserTypeTotalBalanceResponse
+ * @property {string} userType.required - The user type
+ * @property {DineroObjectResponse} totalPositive.required - The total amount of positive balance for this user type
+ * @property {DineroObjectResponse} totalNegative.required - The total amount of negative balance for this uer type
+ */
+export interface UserTypeTotalBalanceResponse {
+  userType: UserType,
+  totalPositive: DineroObjectResponse,
+  totalNegative: DineroObjectResponse,
+}
+
+/**
+ * @typedef {object} TotalBalanceResponse
+ * @property {string} date.required - Date at which this total balance was calculated
+ * @property {number} totalPositive.required - The total amount of positive balance in SudoSOS
+ * @property {number} totalNegative.required - The total amount of negative balance in SudoSOS
+ * @property {UserTypeTotalBalanceResponse} userTypeBalances.required - The total balances for the different user types
+ */
+export interface TotalBalanceResponse {
+  date: string;
+  totalPositive: DineroObjectResponse;
+  totalNegative: DineroObjectResponse;
+  userTypeBalances: UserTypeTotalBalanceResponse[];
+}
+
+/**
  * @typedef {object} PaginatedBalanceResponse
  * @property {PaginationResult} _pagination - Pagination metadata
  * @property {Array<BalanceResponse>} records - Returned balance responses

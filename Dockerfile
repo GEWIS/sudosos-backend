@@ -1,25 +1,22 @@
 # Build in a different image to keep the target image clean
-FROM node:18-alpine as build
+FROM node:18-alpine AS build
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install
 COPY ./ ./
 RUN npm run build \
  && npm run swagger
+RUN npm ci --production
 
 # The target image that will be run
-FROM node:18-alpine as target
+FROM node:18-alpine AS target
 
 RUN apk add openssl
 
 WORKDIR /app
-COPY ./package.json ./package-lock.json ./
-RUN npm ci
+COPY --from=build --chown=node /app/node_modules /app/node_modules
 RUN npm install pm2 pm2-graceful-intercom -g
 RUN npm install -g typeorm
-ARG TYPEORM_USERNAME
-ARG TYPEORM_PASSWORD
-ARG TYPEORM_DATABASE
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
 COPY --from=build --chown=node /app/pm2.json /app/pm2.json

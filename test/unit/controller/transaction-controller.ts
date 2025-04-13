@@ -376,7 +376,7 @@ describe('TransactionController', (): void => {
       const spec = await Swagger.importSpecification();
       const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT;
       expect(transactions.length).to.equal(pagination);
-      transactions.map((t) => {
+      transactions.map((t: BaseTransactionResponse): undefined => {
         verifyBaseTransactionEntity(spec, t);
         expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
         return undefined;

@@ -71,6 +71,12 @@ export default class BalanceController extends BaseController {
           handler: this.getBalance.bind(this),
         },
       },
+      '/summary': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Balance', ['*']),
+          handler: this.calculateTotalBalances.bind(this),
+        },
+      },
     };
   }
 
@@ -176,6 +182,29 @@ export default class BalanceController extends BaseController {
     } catch (error) {
       const id = req?.params?.id ?? req.token.user.id;
       this.logger.error(`Could not get balance of user with id ${id}`, error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /balances/summary
+   * @summary Get the calculated total balances in SudoSOS
+   * @operationId calculateTotalBalances
+   * @tags balance - Operations of balance controller
+   * @security JWT
+   * @param {string} date.query.required - The date for which to calculate the balance.
+   * @return {TotalBalanceResponse} 200 - The requested user's balance
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  private async calculateTotalBalances(req: RequestWithToken, res: Response): Promise<void> {
+    try {
+      const date = asDate(req.query.date);
+
+      const balances = await new BalanceService().calculateTotalBalances(date);
+      res.json(balances);
+    } catch (error) {
+      this.logger.error('Could not calculate the total balances', error);
       res.status(500).json('Internal server error.');
     }
   }
