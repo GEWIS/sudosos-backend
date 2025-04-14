@@ -32,17 +32,23 @@ import { setupWorker } from '@socket.io/sticky';
 
 export default class WebSocketService {
 
-  private static SERVER = createServer();
+  private static readonly SERVER = createServer();
 
-  private static IO = new Server(this.SERVER);
+  private static readonly IO = new Server(this.SERVER);
 
   public static initiateWebSocket(): void {
     const logger: Logger = log4js.getLogger('WebSocket');
     logger.level = process.env.LOG_LEVEL;
 
-    this.IO.adapter(createAdapter());
+    if (process.env.NODE_ENV == 'production') {
+      this.IO.adapter(createAdapter());
 
-    setupWorker(this.IO);
+      setupWorker(this.IO);
+    } else {
+      this.SERVER.listen(8080, () => {
+        logger.info('WebSocket opened on port ' + 8080 + '.');
+      });
+    }
 
     this.IO.on('connection', (socket) => {
       logger.info(`connect ${socket.id}`);
