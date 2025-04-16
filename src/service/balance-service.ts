@@ -61,6 +61,7 @@ export interface GetBalanceParameters extends UpdateBalanceParameters {
   orderBy?: BalanceOrderColumn;
   orderDirection?: OrderingDirection;
   allowDeleted?: boolean;
+  inactive?: boolean;
 }
 
 
@@ -215,11 +216,12 @@ export default class BalanceService extends WithManager {
    * @param orderDirection column to order result at
    * @param orderBy order direction
    * @param allowDeleted allow balances of deleted users to be returned
+   * @param inactive only return inactive users
    * @param pagination pagination options
    * @returns the current balance of a user
    */
   public async getBalances({
-    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted,
+    ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted, inactive,
   }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
     // Return the empty response if request has no ids.
     if (ids?.length === 0) {
@@ -356,6 +358,7 @@ export default class BalanceService extends WithManager {
     if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
     if (userTypes !== undefined) query += `and u.type in (${userTypes.map((t) => `"${t}"`).join(',')}) `;
     if (!allowDeleted) query += 'and u.deleted = 0 ';
+    if (inactive) query += 'and u.active = 0 ';
 
     if (orderBy !== undefined) query += `order by ${orderBy} ${orderDirection ?? ''} `;
 
