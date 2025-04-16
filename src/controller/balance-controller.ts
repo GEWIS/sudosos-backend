@@ -117,6 +117,7 @@ export default class BalanceController extends BaseController {
    * @param {string} orderBy.query - Column to order balance by - eg: id,amount
    * @param {string} orderDirection.query - enum:ASC,DESC - Order direction
    * @param {boolean} allowDeleted.query - Whether to include deleted users
+   * @param {boolean} inactive.query - Whether to only return inactive users
    * @param {integer} take.query - How many transactions the endpoint should return
    * @param {integer} skip.query - How many transactions should be skipped (for pagination)
    * @return {PaginatedBalanceResponse} 200 - The requested user's balance
@@ -141,6 +142,7 @@ export default class BalanceController extends BaseController {
         orderBy: asBalanceOrderColumn(req.query.orderBy),
         orderDirection: asOrderingDirection(req.query.orderDirection),
         allowDeleted: asBoolean(req.query.allowDeleted),
+        inactive: asBoolean(req.query.inactive),
       };
       const pagination = parseRequestPagination(req);
       take = pagination.take;
