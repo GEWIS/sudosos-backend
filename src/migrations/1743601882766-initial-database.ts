@@ -1872,7 +1872,7 @@ ALTER TABLE \`payout_request\`
 -- Constraints for table \`payout_request_pdf\`
 --
 ALTER TABLE \`payout_request_pdf\`
-  ADD CONSTRAINT \`FK_ea897a3fed381cb32d4ba81fd5c\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE CASCADE;
+  ADD CONSTRAINT \`FK_ea897a3fed381cb32d4ba81fd5c\` FOREIGN KEY (\`createdById\`) REFERENCES \`user\` (\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --
 -- Constraints for table \`payout_request_status\`
