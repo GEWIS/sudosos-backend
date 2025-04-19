@@ -54,6 +54,7 @@
     "pdf-generator-client": "github:GEWIS/pdf-generator#04e040b",
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
     "stripe": "^16.12.0",
     "swagger-model-validator": "^3.0.21",
