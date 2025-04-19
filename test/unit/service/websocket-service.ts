@@ -27,7 +27,9 @@ describe('WebSocketService', () => {
   const ORIGINAL_ENV = process.env;
   let ioEmitSpy: sinon.SinonSpy;
   let loggerInfoSpy: sinon.SinonSpy;
+  let loggerTraceSpy: sinon.SinonSpy;
   let clientSocket: any;
+  let spies: sinon.SinonSpy[];
 
   before(() => {
     // Save original process.env and set test environment
@@ -39,6 +41,8 @@ describe('WebSocketService', () => {
     // Setup spies before initialization
     ioEmitSpy = sinon.spy(WebSocketService.io.sockets, 'emit');
     loggerInfoSpy = sinon.spy(WebSocketService.logger, 'info');
+    loggerTraceSpy = sinon.spy(WebSocketService.logger, 'trace');
+    spies = [ioEmitSpy, loggerInfoSpy, loggerTraceSpy];
 
     // Initialize WebSocket service
     WebSocketService.initiateWebSocket();
@@ -54,15 +58,13 @@ describe('WebSocketService', () => {
     if (clientSocket.connected) {
       clientSocket.disconnect();
     }
-    ioEmitSpy.resetHistory();
-    loggerInfoSpy.resetHistory();
+    spies.forEach((spy) => spy.resetHistory());
   });
 
   after(() => {
     // Clean up all resources
     WebSocketService.server.close();
-    ioEmitSpy.restore();
-    loggerInfoSpy.restore();
+    spies.forEach((spy) => spy.restore());
     process.env = ORIGINAL_ENV;
   });
 
@@ -74,7 +76,7 @@ describe('WebSocketService', () => {
 
     it('should handle client connection', (done) => {
       clientSocket.on('connect', () => {
-        expect(loggerInfoSpy.calledWith(`Client ${clientSocket.id} connected.`)).to.be.true;
+        expect(loggerTraceSpy.calledWith(`Client ${clientSocket.id} connected.`)).to.be.true;
         done();
       });
     });
@@ -86,7 +88,7 @@ describe('WebSocketService', () => {
         clientSocket.emit('subscribe', 'testRoom');
 
         setTimeout(() => {
-          expect(loggerInfoSpy.calledWith(`Client ${clientSocket.id} is joining room testRoom`)).to.be.true;
+          expect(loggerTraceSpy.calledWith(`Client ${clientSocket.id} is joining room testRoom`)).to.be.true;
           done();
         }, 100);
       });
@@ -100,7 +102,7 @@ describe('WebSocketService', () => {
           clientSocket.emit('unsubscribe', 'testRoom');
 
           setTimeout(() => {
-            expect(loggerInfoSpy.calledWith(`Client ${clientSocket.id} is leaving room testRoom`)).to.be.true;
+            expect(loggerTraceSpy.calledWith(`Client ${clientSocket.id} is leaving room testRoom`)).to.be.true;
             done();
           }, 100);
         }, 100);
@@ -112,7 +114,7 @@ describe('WebSocketService', () => {
     it('should emit maintenance-mode event to subscribed clients', (done) => {
       clientSocket.on('connect', () => {
         // Subscribe to maintenance room
-        clientSocket.emit('subscribe', 'maintenance');
+        clientSocket.emit('subscribe', 'system');
 
         // Listen for maintenance-mode event
         clientSocket.on('maintenance-mode', (status: boolean) => {
@@ -134,25 +136,32 @@ describe('WebSocketService', () => {
   });
 
   describe('environment handling', () => {
-    it('should use different setup in production mode', () => {
-      // Save original initiateWebSocket to restore later
-      const originalInitiate = WebSocketService.initiateWebSocket;
+    let setupAdapterStub: sinon.SinonStub;
 
-      // Override the method to test production path
-      // @ts-ignore
-      WebSocketService.setupAdapter = () => {
-        return true; // Production path taken
-      };
+    before(() => {
+      // Stub the setupAdapter method to prevent it from executing its production logic
+      // @ts-ignore to allow access to the private method
+      setupAdapterStub = sinon.stub(WebSocketService as any, 'setupAdapter').returns(undefined);
+    });
 
-      // Test with production environment
+    after(() => {
+      // Restore the original setupAdapter method
+      setupAdapterStub.restore();
+    });
+
+    it('should call setupAdapter if NODE_ENV is set to production', () => {
+      // Save and change NODE_ENV to production
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      expect(WebSocketService.initiateWebSocket()).to.be.true;
+      // Initiate the WebSocket
+      WebSocketService.initiateWebSocket();
 
-      // Reset environment and method
+      // Verify setupAdapter was called
+      expect(setupAdapterStub.calledOnce).to.be.true;
+
+      // Restore NODE_ENV
       process.env.NODE_ENV = originalEnv;
-      WebSocketService.initiateWebSocket = originalInitiate;
     });
   });
 });
