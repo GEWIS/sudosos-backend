@@ -40,13 +40,16 @@ export default class WebSocketService {
 
   public static readonly logger = log4js.getLogger('WebSocket');
 
+  private static setupAdapter(): void {
+    this.io.adapter(createAdapter());
+    setupWorker(this.io);
+  }
+
   public static initiateWebSocket(): void {
     this.logger.level = process.env.LOG_LEVEL;
 
     if (process.env.NODE_ENV == 'production') {
-      this.io.adapter(createAdapter());
-
-      setupWorker(this.io);
+      this.setupAdapter();
     } else {
       const port = process.env.WEBSOCKET_PORT || 8080;
 

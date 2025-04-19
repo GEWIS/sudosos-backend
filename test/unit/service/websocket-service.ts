@@ -132,4 +132,27 @@ describe('WebSocketService', () => {
       expect(loggerInfoSpy.calledWith('Set maintenance mode to false')).to.be.true;
     });
   });
+
+  describe('environment handling', () => {
+    it('should use different setup in production mode', () => {
+      // Save original initiateWebSocket to restore later
+      const originalInitiate = WebSocketService.initiateWebSocket;
+
+      // Override the method to test production path
+      // @ts-ignore
+      WebSocketService.setupAdapter = () => {
+        return true; // Production path taken
+      };
+
+      // Test with production environment
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      expect(WebSocketService.initiateWebSocket()).to.be.true;
+
+      // Reset environment and method
+      process.env.NODE_ENV = originalEnv;
+      WebSocketService.initiateWebSocket = originalInitiate;
+    });
+  });
 });
