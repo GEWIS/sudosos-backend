@@ -37,8 +37,8 @@ describe('WebSocketService', () => {
     };
 
     // Setup spies before initialization
-    ioEmitSpy = sinon.spy(WebSocketService.IO.sockets, 'emit');
-    loggerInfoSpy = sinon.spy(WebSocketService.LOGGER, 'info');
+    ioEmitSpy = sinon.spy(WebSocketService.io.sockets, 'emit');
+    loggerInfoSpy = sinon.spy(WebSocketService.logger, 'info');
 
     // Initialize WebSocket service
     WebSocketService.initiateWebSocket();
@@ -60,7 +60,7 @@ describe('WebSocketService', () => {
 
   after(() => {
     // Clean up all resources
-    WebSocketService.SERVER.close();
+    WebSocketService.server.close();
     ioEmitSpy.restore();
     loggerInfoSpy.restore();
     process.env = ORIGINAL_ENV;
@@ -68,7 +68,7 @@ describe('WebSocketService', () => {
 
   describe('initiateWebSocket function', () => {
     it('should start server on port 8080', () => {
-      expect(WebSocketService.SERVER.listening).to.be.true;
+      expect(WebSocketService.server.listening).to.be.true;
       expect(loggerInfoSpy.calledWith('WebSocket opened on port 8080.')).to.be.true;
     });
 
@@ -130,33 +130,6 @@ describe('WebSocketService', () => {
     it('should log maintenance mode status change', () => {
       WebSocketService.sendMaintenanceMode(false);
       expect(loggerInfoSpy.calledWith('Set maintenance mode to false')).to.be.true;
-    });
-  });
-
-  describe('environment handling', () => {
-    it('should use different setup in production mode', () => {
-      // Save original initiateWebSocket to restore later
-      const originalInitiate = WebSocketService.initiateWebSocket;
-
-      // Override the method to test production path
-      WebSocketService.initiateWebSocket = function () {
-        this.LOGGER.level = process.env.LOG_LEVEL;
-        // Just testing the condition
-        if (process.env.NODE_ENV == 'production') {
-          return true; // Production path taken
-        }
-        return false; // Development path taken
-      };
-
-      // Test with production environment
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
-
-      expect(WebSocketService.initiateWebSocket()).to.be.true;
-
-      // Reset environment and method
-      process.env.NODE_ENV = originalEnv;
-      WebSocketService.initiateWebSocket = originalInitiate;
     });
   });
 });

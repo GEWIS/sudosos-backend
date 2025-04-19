@@ -24,6 +24,8 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/cluster-adapter';
 import { setupWorker } from '@socket.io/sticky';
 
+const SYSTEM_ROOM = 'system';
+
 /**
  * This is the module page of the websocket-service.
  *
@@ -32,44 +34,44 @@ import { setupWorker } from '@socket.io/sticky';
 
 export default class WebSocketService {
 
-  public static readonly SERVER = createServer();
+  public static readonly server = createServer();
 
-  public static readonly IO = new Server(this.SERVER);
+  public static readonly io = new Server(this.server);
 
-  public static readonly LOGGER = log4js.getLogger('WebSocket');
+  public static readonly logger = log4js.getLogger('WebSocket');
 
   public static initiateWebSocket(): void {
-    this.LOGGER.level = process.env.LOG_LEVEL;
+    this.logger.level = process.env.LOG_LEVEL;
 
     if (process.env.NODE_ENV == 'production') {
-      this.IO.adapter(createAdapter());
+      this.io.adapter(createAdapter());
 
-      setupWorker(this.IO);
+      setupWorker(this.io);
     } else {
-      const port = 8080;
+      const port = process.env.WEBSOCKET_PORT || 8080;
 
-      this.SERVER.listen(port, () => {
-        this.LOGGER.info(`WebSocket opened on port ${port}.`);
+      this.server.listen(port, () => {
+        this.logger.info(`WebSocket opened on port ${port}.`);
       });
     }
 
-    this.IO.on('connection', client => {
-      this.LOGGER.info(`Client ${client.id} connected.`);
+    this.io.on('connection', client => {
+      this.logger.trace(`Client ${client.id} connected.`);
 
       client.on('subscribe', room => {
-        this.LOGGER.info(`Client ${client.id} is joining room ${room}`);
+        this.logger.trace(`Client ${client.id} is joining room ${room}`);
         void client.join(room);
       });
 
       client.on('unsubscribe', room => {
-        this.LOGGER.info(`Client ${client.id} is leaving room ${room}`);
+        this.logger.trace(`Client ${client.id} is leaving room ${room}`);
         void client.leave(room);
       });
     });
   }
 
   public static sendMaintenanceMode(enabled: boolean): void {
-    this.LOGGER.info('Set maintenance mode to ' + enabled);
-    this.IO.sockets.in('maintenance').emit('maintenance-mode', enabled);
+    this.logger.info('Set maintenance mode to ' + enabled);
+    this.io.sockets.in(SYSTEM_ROOM).emit('maintenance-mode', enabled);
   }
 }
