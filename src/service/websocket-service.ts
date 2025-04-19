@@ -25,13 +25,13 @@ import { createAdapter } from '@socket.io/cluster-adapter';
 import { setupWorker } from '@socket.io/sticky';
 
 const SYSTEM_ROOM = 'system';
+const WEBSOCKET_PORT = 8080;
 
 /**
  * This is the module page of the websocket-service.
  *
  * @module websocket
  */
-
 export default class WebSocketService {
 
   public static readonly server = createServer();
@@ -51,7 +51,7 @@ export default class WebSocketService {
     if (process.env.NODE_ENV == 'production') {
       this.setupAdapter();
     } else {
-      const port = process.env.WEBSOCKET_PORT || 8080;
+      const port = WEBSOCKET_PORT;
 
       this.server.listen(port, () => {
         this.logger.info(`WebSocket opened on port ${port}.`);
