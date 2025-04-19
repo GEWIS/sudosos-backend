@@ -18,7 +18,7 @@
  *  @license
  */
 
-import log4js, { Logger } from 'log4js';
+import log4js from 'log4js';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/cluster-adapter';
@@ -32,33 +32,44 @@ import { setupWorker } from '@socket.io/sticky';
 
 export default class WebSocketService {
 
-  private static readonly SERVER = createServer();
+  public static readonly SERVER = createServer();
 
-  private static readonly IO = new Server(this.SERVER);
+  public static readonly IO = new Server(this.SERVER);
+
+  public static readonly LOGGER = log4js.getLogger('WebSocket');
 
   public static initiateWebSocket(): void {
-    const logger: Logger = log4js.getLogger('WebSocket');
-    logger.level = process.env.LOG_LEVEL;
+    this.LOGGER.level = process.env.LOG_LEVEL;
 
     if (process.env.NODE_ENV == 'production') {
       this.IO.adapter(createAdapter());
 
       setupWorker(this.IO);
     } else {
-      this.SERVER.listen(8080, () => {
-        logger.info('WebSocket opened on port ' + 8080 + '.');
+      const port = 8080;
+
+      this.SERVER.listen(port, () => {
+        this.LOGGER.info(`WebSocket opened on port ${port}.`);
       });
     }
 
-    this.IO.on('connection', (socket) => {
-      logger.info(`connect ${socket.id}`);
+    this.IO.on('connection', client => {
+      this.LOGGER.info(`Client ${client.id} connected.`);
+
+      client.on('subscribe', room => {
+        this.LOGGER.info(`Client ${client.id} is joining room ${room}`);
+        void client.join(room);
+      });
+
+      client.on('unsubscribe', room => {
+        this.LOGGER.info(`Client ${client.id} is leaving room ${room}`);
+        void client.leave(room);
+      });
     });
   }
 
   public static sendMaintenanceMode(enabled: boolean): void {
-    const logger: Logger = log4js.getLogger('WebSocket');
-    logger.level = process.env.LOG_LEVEL;
-    logger.info('Set maintenance mode to ' + enabled);
-    this.IO.emit('maintenance-mode', enabled);
+    this.LOGGER.info('Set maintenance mode to ' + enabled);
+    this.IO.sockets.in('maintenance').emit('maintenance-mode', enabled);
   }
 }
