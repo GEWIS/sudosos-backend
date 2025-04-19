@@ -340,6 +340,17 @@ describe('BalanceService', (): void => {
         expect(balanceIds).to.include(u.id);
       });
     });
+    it('should return all inactive users', async () => {
+      const users = ctx.users.filter((u) => u.active === false);
+      const balances = await new BalanceService().getBalances({ inactive: true });
+      expect(balances.records.length).to.be.greaterThan(0);
+      expect(balances.records.length).to.equal(users.length);
+
+      const userIds = users.map((u) => u.id);
+      balances.records.forEach((bal) => {
+        expect(userIds).to.include(bal.id);
+      });
+    });
     it('should return all users with certain user type from set of types', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN];
       const users = ctx.users.filter((u) => userTypes.includes(u.type));
