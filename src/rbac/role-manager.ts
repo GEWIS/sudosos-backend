@@ -160,6 +160,7 @@ export default class RoleManager {
    */
   public async setRoleUsers(users: User[], roleName: string) {
     const role = await Role.findOne({ where: { name: roleName } });
+    this.logger.trace(`Setting role ${roleName} with ${users.length} users`);
     if (!role) return undefined;
 
     // Typeorm doesnt like empty deletes.

@@ -153,7 +153,10 @@ export default class LdapSyncService extends UserSyncService {
     this.logger.debug('Fetching user roles from LDAP');
     const roles = await this.adService.getLDAPGroups<LDAPGroup>(
       this.ldapClient, process.env.LDAP_ROLE_FILTER);
-    if (!roles) return;
+    if (!roles) {
+      this.logger.warn('Could not fetch LDAP roles (or no roles were found), skipping.');
+      return;
+    }
 
     const [dbRoles] = await RBACService.getRoles();
     const dbRoleNames = new Set(dbRoles.map((r) => r.name));
@@ -166,6 +169,7 @@ export default class LdapSyncService extends UserSyncService {
     const localRoles = roles.filter(ldapRole => dbRoleNames.has(ldapRole.cn));
     this.logger.trace(`Found ${localRoles.length} local roles`);
     for (const ldapRole of localRoles) {
+      this.logger.trace(`Updating role ${ldapRole.cn}`);
       await this.adService.updateRoleMembership(this.ldapClient, ldapRole, this.roleManager);
     }
   }
