@@ -15,7 +15,7 @@ RUN apk add openssl
 
 WORKDIR /app
 COPY --from=build --chown=node /app/node_modules /app/node_modules
-RUN npm install pm2 pm2-graceful-intercom -g
+RUN npm install @socket.io/pm2 pm2-graceful-intercom -g
 RUN npm install -g typeorm
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
