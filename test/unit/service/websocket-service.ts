@@ -22,14 +22,18 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import { io } from 'socket.io-client';
 import WebSocketService from '../../../src/service/websocket-service';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 describe('WebSocketService', () => {
   const ORIGINAL_ENV = process.env;
   let ioEmitSpy: sinon.SinonSpy;
   let loggerInfoSpy: sinon.SinonSpy;
   let loggerTraceSpy: sinon.SinonSpy;
+  let loggerErrorSpy: sinon.SinonSpy;
+  let serverSettingsMock: any;
   let clientSocket: any;
   let spies: sinon.SinonSpy[];
+  let getInstanceStub: sinon.SinonStub;
 
   before(() => {
     // Save original process.env and set test environment
@@ -42,7 +46,16 @@ describe('WebSocketService', () => {
     ioEmitSpy = sinon.spy(WebSocketService.io.sockets, 'emit');
     loggerInfoSpy = sinon.spy(WebSocketService.logger, 'info');
     loggerTraceSpy = sinon.spy(WebSocketService.logger, 'trace');
-    spies = [ioEmitSpy, loggerInfoSpy, loggerTraceSpy];
+    loggerErrorSpy = sinon.spy(WebSocketService.logger, 'error');
+    spies = [ioEmitSpy, loggerInfoSpy, loggerTraceSpy, loggerErrorSpy];
+
+    // Create a mock for ServerSettingsStore
+    serverSettingsMock = {
+      getSettingFromDatabase: sinon.stub(),
+    };
+
+    // Mock the getInstance method to return our mock
+    getInstanceStub = sinon.stub(ServerSettingsStore, 'getInstance').returns(serverSettingsMock);
 
     // Initialize WebSocket service
     WebSocketService.initiateWebSocket();
@@ -51,6 +64,9 @@ describe('WebSocketService', () => {
   beforeEach(() => {
     // Connect a client before each test
     clientSocket = io('http://localhost:8080');
+
+    // Reset mocks before each test
+    serverSettingsMock.getSettingFromDatabase.reset();
   });
 
   afterEach(() => {
@@ -65,6 +81,7 @@ describe('WebSocketService', () => {
     // Clean up all resources
     WebSocketService.server.close();
     spies.forEach((spy) => spy.restore());
+    getInstanceStub.restore();
     process.env = ORIGINAL_ENV;
   });
 
@@ -108,10 +125,49 @@ describe('WebSocketService', () => {
         }, 100);
       });
     });
+
+    it('should send current maintenance mode status when client subscribes to system room', (done) => {
+      // Configure ServerSettingsStore mock to return 'true' for maintenance mode
+      serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(true);
+
+      clientSocket.on('connect', () => {
+        // Set up listener for maintenance-mode event before subscribing
+        clientSocket.on('maintenance-mode', (status: boolean) => {
+          expect(status).to.equal(true);
+          expect(serverSettingsMock.getSettingFromDatabase.calledWith('maintenanceMode')).to.be.true;
+          expect(loggerInfoSpy.calledWith('Sent maintenance mode true to system')).to.be.true;
+          done();
+        });
+
+        // Subscribe to system room
+        clientSocket.emit('subscribe', 'system');
+      });
+    });
+
+    it('should handle errors when retrieving maintenance mode status', (done) => {
+      // Configure ServerSettingsStore mock to throw an error
+      const testError = new Error('Database connection failed');
+      serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').rejects(testError);
+
+      clientSocket.on('connect', () => {
+        // Subscribe to system room
+        clientSocket.emit('subscribe', 'system');
+
+        // Give some time for the async operation to complete
+        setTimeout(() => {
+          expect(serverSettingsMock.getSettingFromDatabase.calledWith('maintenanceMode')).to.be.true;
+          expect(loggerErrorSpy.calledWith(`Failed to retrieve maintenance mode setting: ${testError}`)).to.be.true;
+          done();
+        }, 200);
+      });
+    });
   });
 
   describe('sendMaintenanceMode function', () => {
     it('should emit maintenance-mode event to subscribed clients', (done) => {
+      // Configure ServerSettingsStore mock to return 'true' for maintenance mode
+      serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(true);
+
       clientSocket.on('connect', () => {
         // Subscribe to maintenance room
         clientSocket.emit('subscribe', 'system');
@@ -131,7 +187,7 @@ describe('WebSocketService', () => {
 
     it('should log maintenance mode status change', () => {
       WebSocketService.sendMaintenanceMode(false);
-      expect(loggerInfoSpy.calledWith('Set maintenance mode to false')).to.be.true;
+      expect(loggerInfoSpy.calledWith('Sent maintenance mode false to system')).to.be.true;
     });
   });
 

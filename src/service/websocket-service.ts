@@ -23,6 +23,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/cluster-adapter';
 import { setupWorker } from '@socket.io/sticky';
+import ServerSettingsStore from '../server-settings/server-settings-store';
 
 const SYSTEM_ROOM = 'system';
 const WEBSOCKET_PORT = 8080;
@@ -61,9 +62,18 @@ export default class WebSocketService {
     this.io.on('connection', client => {
       this.logger.trace(`Client ${client.id} connected.`);
 
-      client.on('subscribe', room => {
+      client.on('subscribe', async room => {
         this.logger.trace(`Client ${client.id} is joining room ${room}`);
         void client.join(room);
+
+        if (room === SYSTEM_ROOM) {
+          try {
+            const maintenanceMode = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as boolean;
+            WebSocketService.sendMaintenanceMode(maintenanceMode);
+          } catch (error) {
+            this.logger.error(`Failed to retrieve maintenance mode setting: ${error}`);
+          }
+        }
       });
 
       client.on('unsubscribe', room => {
@@ -74,7 +84,7 @@ export default class WebSocketService {
   }
 
   public static sendMaintenanceMode(enabled: boolean): void {
-    this.logger.info('Set maintenance mode to ' + enabled);
+    this.logger.info(`Sent maintenance mode ${enabled} to ${SYSTEM_ROOM}`);
     this.io.sockets.in(SYSTEM_ROOM).emit('maintenance-mode', enabled);
   }
 }
