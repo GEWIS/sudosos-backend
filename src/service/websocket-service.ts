@@ -67,8 +67,12 @@ export default class WebSocketService {
         void client.join(room);
 
         if (room === SYSTEM_ROOM) {
-          const maintenanceMode = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as boolean;
-          WebSocketService.sendMaintenanceMode(maintenanceMode);
+          try {
+            const maintenanceMode = await ServerSettingsStore.getInstance().getSettingFromDatabase('maintenanceMode') as boolean;
+            WebSocketService.sendMaintenanceMode(maintenanceMode);
+          } catch (error) {
+            this.logger.error(`Failed to retrieve maintenance mode setting: ${error}`);
+          }
         }
       });
 
@@ -80,7 +84,7 @@ export default class WebSocketService {
   }
 
   public static sendMaintenanceMode(enabled: boolean): void {
-    this.logger.info('Set maintenance mode to ' + enabled);
+    this.logger.info(`Sent maintenance mode ${enabled} to ${SYSTEM_ROOM}`);
     this.io.sockets.in(SYSTEM_ROOM).emit('maintenance-mode', enabled);
   }
 }
