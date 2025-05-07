@@ -501,14 +501,14 @@ describe('VoucherGroupService', async (): Promise<void> => {
 
     it('should get all voucher groups', async () => {
       const bkgRes = (await VoucherGroupService.getVoucherGroups({})).records;
-      await Promise.all(bkgRes.map(async (res, i) => {
-        bkgEq(paramss[i], res);
+      await Promise.all(bkgRes.map(async (res) => {
+        bkgEq(paramss[res.id - 1], res);
         await Promise.all(res.users.map(async (user) => {
           expect(user.active, 'user inactive').to.equal(false);
           const transfers = await Transfer.find({ where: { toId: user.id } });
           const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
           const balance = balanceAmounts.reduce((a, b) => a + b);
-          expect(balance, 'correct transfers').to.equal(paramss[i].balance.getAmount());
+          expect(balance, 'correct transfers').to.equal(paramss[res.id - 1].balance.getAmount());
         }));
       }));
     });
