@@ -46,8 +46,8 @@ export interface SeededRole {
 }
 
 export default class RbacSeeder extends WithManager {
-  public seed(roles: SeedRoleDefinition[]): Promise<SeededRole[]> {
-    return Promise.all(roles.map((role) => this.manager.save(Role, { name: role.name, systemDefault: role.systemDefault })
+  public async seed(roles: SeedRoleDefinition[], users?: User[]): Promise<SeededRole[]> {
+    const seededRoles = await Promise.all(roles.map((role) => this.manager.save(Role, { name: role.name, systemDefault: role.systemDefault })
       .then(async (r): Promise<SeededRole> => {
         if (role.userTypes && role.userTypes.length > 0) {
           r.roleUserTypes = await this.manager.save(RoleUserType, role.userTypes.map((userType): DeepPartial<RoleUserType> => ({
@@ -70,6 +70,16 @@ export default class RbacSeeder extends WithManager {
           assignmentCheck: role.assignmentCheck,
         };
       })));
+
+      if (users && users.length > 0) {
+        for (var i = 0; i < users.length; i += 1) {
+          const rolesToAssign = seededRoles.filter(() => i % 2);
+
+          await this.assignRoles(users[i], rolesToAssign);
+        }
+      }
+
+      return seededRoles;
   }
 
   public async assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
