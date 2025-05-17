@@ -36,7 +36,7 @@ import { PaginationParameters } from '../helpers/pagination';
 import { DeepPartial, FindManyOptions, FindOptionsRelations } from 'typeorm';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { UpdateRoleRequest } from '../controller/request/rbac-request';
-import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
+import { PaginatedUserResponse } from '../controller/response/user-response';
 import AssignedRole from '../entity/rbac/assigned-role';
 import UserService from './user-service';
 

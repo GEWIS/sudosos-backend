@@ -214,6 +214,18 @@ describe('RbacController', async (): Promise<void> => {
     });
   });
 
+  describe('GET /rbac/roles/{id}/users', () => {
+    it('should return an HTTP 200 and users', async () => {
+      const id = ctx.roles[0].id;
+
+      const res = await request(ctx.app)
+        .get(`/rbac/roles/${id}/users`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.be.equal(200);
+    });
+  });
+
   describe('POST /rbac/roles', () => {
     it('should return an HTTP 200 when creating new role', async () => {
       const params: UpdateRoleRequest = {
