@@ -40,6 +40,7 @@ import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controll
 import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
 import { RbacSeeder } from '../../seed';
+import AssignedRole from "../../../src/entity/rbac/assigned-role";
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
@@ -52,6 +53,7 @@ describe('RbacController', async (): Promise<void> => {
     userToken: string,
     adminToken: string,
     roles: Role[],
+    assignments: AssignedRole[],
   };
 
   // initialize context
@@ -76,6 +78,8 @@ describe('RbacController', async (): Promise<void> => {
     const roles = await DefaultRoles.synchronize();
     const roleManager = await new RoleManager().initialize();
 
+    const assignments = await AssignedRole.find();
+
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -99,6 +103,7 @@ describe('RbacController', async (): Promise<void> => {
       adminUser,
       userToken,
       adminToken,
+      assignments
     };
   });
 
@@ -214,8 +219,8 @@ describe('RbacController', async (): Promise<void> => {
     });
   });
 
-  describe('GET /rbac/roles/{id}/users', () => {
-    it('should return an HTTP 200 and users', async () => {
+  describe('GET /rbac/roles/{id}/all-users', () => {
+    it('should return an HTTP 200 and correct model', async () => {
       const id = ctx.roles[0].id;
 
       const res = await request(ctx.app)
@@ -223,6 +228,23 @@ describe('RbacController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(200);
+      expect(ctx.specification.validateModel(
+        'Array.<UserResponse.model>',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
+    it('should return an HTTP 404 if role does not exist', async () => {
+      const id = ctx.roles.length + 1;
+
+      const res = await request(ctx.app)
+        .get(`/rbac/roles/${id}/users`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Role not found.');
     });
   });
 
