@@ -78,7 +78,7 @@ export default class RbacController extends BaseController {
           handler: this.deleteRole.bind(this),
         },
       },
-      '/roles/:id(\\d+)/users': {
+      '/roles/:id(\\d+)/all-users': {
         GET: {
           policy: async () => true,
           handler: this.getRoleUsers.bind(this),
@@ -155,7 +155,7 @@ export default class RbacController extends BaseController {
   }
 
   /**
-   * GET /rbac/roles/{id}/users
+   * GET /rbac/roles/{id}/all-users
    * @summary Get all users linked to a specific role
    * @operationId getRoleUsers
    * @tags rbac - Operations of the rbac controller
@@ -174,6 +174,7 @@ export default class RbacController extends BaseController {
       const [[role]] = await RBACService.getRoles({ roleId });
       if (!role) {
         res.status(404).json('Role not found.');
+        return;
       }
 
       const users = await RBACService.getRoleUsers(roleId);

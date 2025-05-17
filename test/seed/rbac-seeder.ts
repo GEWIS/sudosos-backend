@@ -71,15 +71,15 @@ export default class RbacSeeder extends WithManager {
         };
       })));
 
-      if (users && users.length > 0) {
-        for (var i = 0; i < users.length; i += 1) {
-          const rolesToAssign = seededRoles.filter(() => i % 2);
+    if (users && users.length > 0) {
+      for (let i = 0; i < users.length; i += 1) {
+        const rolesToAssign = seededRoles.filter(() => i % 2);
 
-          await this.assignRoles(users[i], rolesToAssign);
-        }
+        await this.assignRoles(users[i], rolesToAssign);
       }
+    }
 
-      return seededRoles;
+    return seededRoles;
   }
 
   public async assignRole(user: User, { role, assignmentCheck }: SeededRole): Promise<AssignedRole | undefined> {
