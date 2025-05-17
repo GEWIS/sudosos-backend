@@ -40,7 +40,7 @@ import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controll
 import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
 import { RbacSeeder } from '../../seed';
-import AssignedRole from "../../../src/entity/rbac/assigned-role";
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
@@ -103,7 +103,7 @@ describe('RbacController', async (): Promise<void> => {
       adminUser,
       userToken,
       adminToken,
-      assignments
+      assignments,
     };
   });
 
@@ -224,7 +224,7 @@ describe('RbacController', async (): Promise<void> => {
       const id = ctx.roles[0].id;
 
       const res = await request(ctx.app)
-        .get(`/rbac/roles/${id}/users`)
+        .get(`/rbac/roles/${id}/all-users`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(200);
@@ -240,7 +240,7 @@ describe('RbacController', async (): Promise<void> => {
       const id = ctx.roles.length + 1;
 
       const res = await request(ctx.app)
-        .get(`/rbac/roles/${id}/users`)
+        .get(`/rbac/roles/${id}/all-users`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(404);

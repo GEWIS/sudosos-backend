@@ -178,10 +178,18 @@ export default class RBACService {
    * @param skip
    */
   public static async getRoleUsers(roleId: number, { take, skip }: PaginationParameters = {}): Promise<PaginatedUserResponse> {
-    const assignedRoles = await AssignedRole.find({ where: { roleId: roleId } });
-
+    const assignedRoles = await AssignedRole.find({ where: { roleId }, take, skip });
     const userIds = assignedRoles.map((role) => role.userId);
-    return UserService.getUsers({ id: userIds }, { take, skip });
+
+    const users = await UserService.getUsers({ id: userIds });
+    return {
+      _pagination: {
+        take,
+        skip,
+        count: users.records.length,
+      },
+      records: users.records,
+    };
   }
 
   /**
