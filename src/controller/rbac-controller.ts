@@ -78,6 +78,12 @@ export default class RbacController extends BaseController {
           handler: this.deleteRole.bind(this),
         },
       },
+      '/roles/:id(\\d+)/users': {
+        GET: {
+          policy: async () => true,
+          handler: this.getRoleUsers.bind(this),
+        },
+      },
       '/roles/:id(\\d+)/permissions': {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Permission', ['*']),
@@ -144,6 +150,36 @@ export default class RbacController extends BaseController {
       res.json(RBACService.asRoleResponse(role));
     } catch (error) {
       this.logger.error('Could not get single role:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /rbac/roles/{id}/users
+   * @summary Get all users linked to a specific role
+   * @operationId getRoleUsers
+   * @tags rbac - Operations of the rbac controller
+   * @param {integer} id.path.required - The ID of the role that the users are linked to
+   * @security JWT
+   * @return {PaginatedUserResponse} 200 - A list of all users linked to this role
+   * @return {string} 404 - Role not found error
+   */
+  public async getRoleUsers(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Get all users of role', id, 'by user', req.token.user);
+
+    try {
+      const roleId = Number(id);
+
+      const [[role]] = await RBACService.getRoles({ roleId });
+      if (!role) {
+        res.status(404).json('Role not found.');
+      }
+
+      const users = await RBACService.getRoleUsers(roleId);
+      res.json(users);
+    } catch (error) {
+      this.logger.error('Could not get users of role:', error);
       res.status(500).json('Internal server error.');
     }
   }
