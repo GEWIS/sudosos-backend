@@ -30,6 +30,8 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
 import Role from '../../../src/entity/rbac/role';
 import { RbacSeeder, UserSeeder } from '../../seed';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
+import UserService from '../../../src/service/user-service';
 
 const all = { all: new Set<string>(['*']) };
 const own = { own: new Set<string>(['*']) };
@@ -40,6 +42,7 @@ describe('RBACService', () => {
     users: User[];
     roles: SeededRole[];
     newRules: PermissionRule[];
+    assignments: AssignedRole[];
   };
 
   before(async () => {
@@ -68,6 +71,10 @@ describe('RBACService', () => {
       assignmentCheck: async () => true,
     }]);
 
+    const assignment =  await new RbacSeeder().assignRole(users[0], roles[0]);
+    const assignments = [];
+    assignments.push(assignment);
+
     const newRules: PermissionRule[] = [{
       entity: 'User',
       action: 'get',
@@ -85,6 +92,7 @@ describe('RBACService', () => {
       users,
       roles,
       newRules,
+      assignments,
     };
   });
 
@@ -263,6 +271,18 @@ describe('RBACService', () => {
       [roles, count] = await RBACService.getRoles({}, { skip, take });
       expect(roles.length).to.equal(1);
       expect(count).to.equal(ctx.roles.length);
+    });
+  });
+
+  describe('#getRoleUsers', () => {
+    it('should get all users from a role', async () => {
+      const assignments = ctx.assignments;
+      const userIds = assignments.map((asg) => asg.userId);
+
+      const users = await UserService.getUsers({ id: userIds });
+
+      const userResult = await RBACService.getRoleUsers(assignments[0].roleId);
+      expect(userResult.records).to.deep.equal(users.records);
     });
   });
 
