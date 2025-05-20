@@ -157,7 +157,7 @@ export default class RbacController extends BaseController {
   }
 
   /**
-   * GET /rbac/roles/{id}/all-users
+   * GET /rbac/roles/{id}/users
    * @summary Get all users linked to a specific role
    * @operationId getRoleUsers
    * @tags rbac - Operations of the rbac controller
