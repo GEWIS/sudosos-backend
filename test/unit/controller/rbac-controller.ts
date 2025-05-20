@@ -224,7 +224,7 @@ describe('RbacController', async (): Promise<void> => {
       const id = ctx.roles[0].id;
 
       const res = await request(ctx.app)
-        .get(`/rbac/roles/${id}/all-users`)
+        .get(`/rbac/roles/${id}/users`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(200);
