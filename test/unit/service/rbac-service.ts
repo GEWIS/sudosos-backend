@@ -30,6 +30,8 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { UpdateRoleRequest } from '../../../src/controller/request/rbac-request';
 import Role from '../../../src/entity/rbac/role';
 import { RbacSeeder, UserSeeder } from '../../seed';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
+import UserService from '../../../src/service/user-service';
 
 const all = { all: new Set<string>(['*']) };
 const own = { own: new Set<string>(['*']) };
@@ -40,6 +42,7 @@ describe('RBACService', () => {
     users: User[];
     roles: SeededRole[];
     newRules: PermissionRule[];
+    assignments: AssignedRole[];
   };
 
   before(async () => {
@@ -66,7 +69,9 @@ describe('RBACService', () => {
         Product: { get: own },
       },
       assignmentCheck: async () => true,
-    }]);
+    }], users);
+
+    const assignments = await AssignedRole.find();
 
     const newRules: PermissionRule[] = [{
       entity: 'User',
@@ -85,6 +90,7 @@ describe('RBACService', () => {
       users,
       roles,
       newRules,
+      assignments,
     };
   });
 
@@ -263,6 +269,33 @@ describe('RBACService', () => {
       [roles, count] = await RBACService.getRoles({}, { skip, take });
       expect(roles.length).to.equal(1);
       expect(count).to.equal(ctx.roles.length);
+    });
+  });
+
+  describe('#getRoleUsers', () => {
+    it('should get all users from a role', async () => {
+      const roleId = ctx.roles[0].role.id;
+
+      const assignments = ctx.assignments.filter((asg) => asg.roleId == roleId);
+      const userIds = assignments.map((asg) => asg.userId);
+
+      const users = await UserService.getUsers({ id: userIds });
+
+      const userResult = await RBACService.getRoleUsers(roleId);
+      expect(userResult.records).to.deep.equal(users.records);
+    });
+
+    it('should adhere to pagination', async () => {
+      const roleId = ctx.roles[0].role.id;
+
+      let take = 2;
+      let userResponse = await RBACService.getRoleUsers(roleId, { take });
+      expect(userResponse.records.length).to.be.equal(take);
+
+      const skip = ctx.assignments.filter((asg) => asg.roleId == roleId).length - 1;
+      take = 2;
+      userResponse = await RBACService.getRoleUsers(roleId, { skip, take });
+      expect(userResponse.records.length).to.be.equal(1);
     });
   });
 
