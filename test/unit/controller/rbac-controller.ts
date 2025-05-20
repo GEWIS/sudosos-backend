@@ -240,7 +240,7 @@ describe('RbacController', async (): Promise<void> => {
       const id = ctx.roles.length + 1;
 
       const res = await request(ctx.app)
-        .get(`/rbac/roles/${id}/all-users`)
+        .get(`/rbac/roles/${id}/users`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(404);
