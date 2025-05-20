@@ -415,7 +415,8 @@ describe('UserController', (): void => {
       // Search for the user
       const searchQuery = 'Één bier';
       const searchRes = await request(ctx.app)
-        .get(`/users?search=${searchQuery}`)
+        .get('/users')
+        .query({ search: searchQuery })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(searchRes.status).to.equal(200);
 
