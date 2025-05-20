@@ -219,7 +219,7 @@ describe('RbacController', async (): Promise<void> => {
     });
   });
 
-  describe('GET /rbac/roles/{id}/all-users', () => {
+  describe('GET /rbac/roles/{id}/users', () => {
     it('should return an HTTP 200 and correct model', async () => {
       const id = ctx.roles[0].id;
 
