@@ -39,7 +39,7 @@ describe('ServerSettingsStore', () => {
   });
 
   afterEach(async () => {
-    await ServerSetting.delete({});
+    await ServerSetting.clear();
   });
 
   after(async () => {
