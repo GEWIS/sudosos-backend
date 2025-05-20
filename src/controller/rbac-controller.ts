@@ -78,7 +78,7 @@ export default class RbacController extends BaseController {
           handler: this.deleteRole.bind(this),
         },
       },
-      '/roles/:id(\\d+)/all-users': {
+      '/roles/:id(\\d+)/users': {
         GET: {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', 'all', 'User', ['*'],
