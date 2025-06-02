@@ -61,7 +61,7 @@
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.24",
     "uuid": "^10.0.0",
-    "validator": "^13.12.0",
+    "validator": "^13.15.15",
     "vitepress-theme-openapi": "^0.0.3-alpha.30"
   },
   "devDependencies": {
@@ -85,7 +85,7 @@
     "@types/sinon-chai": "^3.2.12",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^10.0.0",
-    "@types/validator": "^13.12.2",
+    "@types/validator": "^13.15.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "chai": "^4.3.7",
