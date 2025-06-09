@@ -144,35 +144,24 @@ export default class UserService {
     QueryFilter.applyFilter(builder, filterMapping, f);
     // Note this is only for MySQL
     if (filters.search) {
-      const searchTerms = filters.search.split(' ', 2);
+      const escapeLikeWildcard = (value: string) => value.replace(/[%_]/g, '\\$&');
+      const searchTerms = filters.search.split(' ').slice(0, 2).map(term => `%${escapeLikeWildcard(term)}%`);
+      const fullNameSearch = `%${escapeLikeWildcard(filters.search)}%`;
 
-      if (searchTerms.length > 1) {
-        let searchTerm1 = `%${searchTerms[0]}%`;
-        let searchTerm2 = `%${searchTerms[1]}%`;
+      builder.andWhere(new Brackets(qb => {
+        qb.where('CONCAT(user.firstName, \' \', user.nickname, \' \', user.lastName) LIKE :name')
+          .orWhere('CONCAT(user.firstName, \' \', user.lastName) LIKE :name');
 
-        builder.andWhere(new Brackets(qb => {
-          qb.where('user.firstName LIKE :searchTerm1')
-            .orWhere('user.lastName LIKE :searchTerm2')
-            .orWhere('user.firstName LIKE :searchTerm2')
-            .orWhere('user.lastName LIKE :searchTerm1')
-            .orWhere('user.nickname LIKE :searchTerm2')
-            .orWhere('user.nickname LIKE :searchTerm1');
-        }), {
-          searchTerm1: searchTerm1,
-          searchTerm2: searchTerm2,
+        searchTerms.forEach((term, index) => {
+          qb.orWhere(`user.firstName LIKE :term${index}`)
+            .orWhere(`user.nickname LIKE :term${index}`)
+            .orWhere(`user.lastName LIKE :term${index}`)
+            .orWhere(`user.email LIKE :term${index}`);
         });
-      } else {
-        let searchTerm = `%${filters.search}%`;
-
-        builder.andWhere(new Brackets(qb => {
-          qb.where('user.firstName LIKE :search')
-            .orWhere('user.lastName LIKE :search')
-            .orWhere('user.nickname LIKE :search')
-            .orWhere('user.email LIKE :search');
-        }), {
-          search: searchTerm,
-        });
-      }
+      }), { 
+        name: fullNameSearch, 
+        ...Object.fromEntries(searchTerms.map((term, index) => [`term${index}`, term])),
+      });
     }
 
     builder.orderBy('user.id', 'DESC');
