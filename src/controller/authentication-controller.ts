@@ -21,7 +21,7 @@
 /**
  * This is the module page of authentication-controller.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import { Request, Response } from 'express';
@@ -52,9 +52,7 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
 
 /**
- * The authentication controller is responsible for:
- * - Verifying user authentications.
- * - Handing out json web tokens.
+ * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
  */
 export default class AuthenticationController extends BaseController {
   /**

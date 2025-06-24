@@ -21,7 +21,7 @@
 /**
  * This is the page of hash-based-authentication-method.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import { Column } from 'typeorm';

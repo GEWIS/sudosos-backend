@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of authentication-secure-controller.
- *
- * @module authentication
+ * @module Authentication
  */
 
 import { Response } from 'express';
@@ -40,6 +38,11 @@ import { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator'
 import WebSocketService from '../service/websocket-service';
 import QRService from '../service/qr-service';
 
+/**
+ * The authentication secure controller handles all requests related to authentication that require the user to be authenticated.
+ *
+ * Mostly used for refreshing tokens and authenticating Point of Sales.
+ */
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
 

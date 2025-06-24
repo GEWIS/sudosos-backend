@@ -21,7 +21,7 @@
 /**
  * This is the page of nfc-authenticator.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import {

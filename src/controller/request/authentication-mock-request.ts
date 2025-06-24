@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-mock-request.
  *
- * @module authentication
+ * @module Authentication
  */
 
 /**

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-response.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import { UserResponse } from './user-response';

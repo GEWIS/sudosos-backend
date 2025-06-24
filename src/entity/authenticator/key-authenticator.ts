@@ -21,7 +21,7 @@
 /**
  * This is the page of key-authenticator.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import {

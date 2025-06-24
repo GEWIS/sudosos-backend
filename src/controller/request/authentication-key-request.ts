@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-key-request.
  *
- * @module authentication
+ * @module Authentication
  */
 
 /**

@@ -19,7 +19,7 @@
  */
 
 /**
- * @module authentication
+ * @module Authentication
  */
 
 import {
