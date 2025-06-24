@@ -31,6 +31,7 @@ import swaggerUi from 'swagger-ui-express';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 import log4js, { Logger } from 'log4js';
+import { config } from 'dotenv';
 
 export default class Swagger {
   private static logger: Logger = log4js.getLogger('SwaggerGenerator');
@@ -148,6 +149,7 @@ export default class Swagger {
 }
 
 if (require.main === module) {
+  config();
   // Only execute directly if this is the main execution file.
   const app = express();
 

@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of authentication-secure-controller.
- *
- * @module authentication
+ * @module Authentication
  */
 
 import { Response } from 'express';
@@ -37,6 +35,11 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
 
+/**
+ * The authentication secure controller handles all requests related to authentication that require the user to be authenticated.
+ *
+ * Mostly used for refreshing tokens and authenticating Point of Sales.
+ */
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
 

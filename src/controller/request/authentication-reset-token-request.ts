@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-reset-token-request.
  *
- * @module authentication
+ * @module Authentication
  */
 
 /**

@@ -44,4 +44,25 @@ The VitePress configuration is straightforward. Most of the custom settings are 
 
 ---
 
+### Mermaid Diagrams
+
+We use the [vitepress-plugin-mermaid](https://github.com/emersonbottero/vitepress-plugin-mermaid) plugin to render [mermaid.js](https://mermaid.js.org/) diagrams in our documentation. To use this plugin, simply add the following (example) code block to the tsdoc comment:
+
+```ts
+/**
+ * ```mermaid
+ * graph TD
+ *     a --> b
+ * ```
+ */
+```
+
+This will render the following diagram:
+
+```mermaid
+graph TD
+    a --> b
+```
+---
+
 By adhering to these guidelines and making use of the tools mentioned, we can maintain high-quality documentation that is easy to navigate and continuously updated as the codebase evolves.

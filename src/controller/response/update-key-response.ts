@@ -21,7 +21,7 @@
 /**
  * This is the module page of the update-key-response.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import BaseResponse from './base-response';
