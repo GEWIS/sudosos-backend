@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-ldap-request.
  *
- * @module authentication
+ * @module Authentication
  */
 
 /**

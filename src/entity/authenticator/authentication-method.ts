@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the page of authentication-method.
- *
- * @module authentication
+ * @module Authentication
  */
 
 import {
@@ -31,6 +29,7 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 
 /**
+ * The AuthenticationMethod is the base class for all authentication methods. It simply stores the user it is for.
  * @typedef {BaseEntityWithoutId} AuthenticationMethod
  * @property {User.model} user.required - The user this authenticator is for
  */

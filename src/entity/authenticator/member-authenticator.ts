@@ -21,7 +21,7 @@
 /**
  * This is the page of member-authenticator.
  *
- * @module authentication
+ * @module Authentication
  */
 
 import {
