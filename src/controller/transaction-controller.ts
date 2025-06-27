@@ -60,7 +60,7 @@ export default class TransactionController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransactionController.filterRelation(req), 'Transaction', ['*']),
           handler: this.getAllTransactions.bind(this),
         },
         POST: {
@@ -307,6 +307,43 @@ export default class TransactionController extends BaseController {
     }
   }
 
+
+  /**
+   * Determines the relation between the user and the transaction (by filters in the request).
+   * - Returns 'own' if user is from, to, or createdBy.
+   * - Returns 'organ' if user shares an organ with any of those users.
+   * - Returns 'all' otherwise.
+   *
+   * @param req - Express request with user token and filters in query params.
+   * @returns 'own' | 'organ' | 'all'
+   */
+  static async filterRelation(
+    req: RequestWithToken,
+  ): Promise<'own' | 'organ' | 'all'> {
+    try {
+      const userId = req.token.user.id;
+      const { fromId, toId, createdById } = parseGetTransactionsFilters(req);
+
+      // Check direct involvement
+      if (fromId === userId || toId === userId || createdById === userId) {
+        return 'own';
+      }
+
+      // Check organ relation
+      if (
+        (fromId && await UserService.areInSameOrgan(userId, fromId)) ||
+          (toId && await UserService.areInSameOrgan(userId, toId)) ||
+          (createdById && await UserService.areInSameOrgan(userId, createdById))
+      ) {
+        return 'organ';
+      }
+
+      return 'all';
+    } catch (error) {
+      return 'all';
+    }
+  }
+  
   /**
    * Function to determine which credentials are needed to post transaction
    *    all if user is not connected to transaction
