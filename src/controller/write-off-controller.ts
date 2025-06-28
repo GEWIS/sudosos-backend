@@ -78,6 +78,8 @@ export default class WriteOffController extends BaseController {
    * @param {integer} amount.query - Filter on the amount of the write-off
    * @param {integer} take.query - Number of write-offs to return
    * @param {integer} skip.query - Number of write-offs to skip
+   * @param {string} fromDate.query - Start date for selected write-offs (inclusive)
+   * @param {string} tillDate.query - End date for selected write-offs (exclusive)
    * @return {PaginatedWriteOffResponse} 200 - All existing write-offs
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error

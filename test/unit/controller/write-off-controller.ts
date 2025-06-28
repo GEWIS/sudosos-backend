@@ -124,6 +124,73 @@ describe('WriteOffController', () => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
+    it('should filter by fromDate', async () => {
+      const fromDate = new Date(ctx.writeOffs[1].createdAt).getTime();
+      const res = await request(ctx.app)
+        .get('/writeoffs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: ctx.writeOffs[1].createdAt.toISOString() });
+      expect(res.status).to.equal(200);
+      const records = res.body.records as WriteOffResponse[];
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach(r => {
+        expect(new Date(r.createdAt).getTime()).to.be.at.least(fromDate);
+      });
+    });
+
+    it('should filter by tillDate', async () => {
+      const tillDate = new Date(ctx.writeOffs[1].createdAt).getTime();
+      const res = await request(ctx.app)
+        .get('/writeoffs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ tillDate: ctx.writeOffs[1].createdAt.toISOString() });
+      expect(res.status).to.equal(200);
+      const records = res.body.records as WriteOffResponse[];
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach(r => {
+        expect(new Date(r.createdAt).getTime()).to.be.at.most(tillDate);
+      });
+    });
+
+    it('should return 400 for invalid fromDate', async () => {
+      const res = await request(ctx.app)
+        .get('/writeoffs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: 'not a date' });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 for invalid tillDate', async () => {
+      const res = await request(ctx.app)
+        .get('/writeoffs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ tillDate: 'not a date' });
+      expect(res.status).to.equal(400);
+    });
+    
+    it('should filter by both fromDate and tillDate', async () => {
+      const onemin = 60000;
+      const f = new Date(new Date(ctx.writeOffs[1].createdAt).getTime() - onemin);
+      const t = new Date(new Date(ctx.writeOffs[ctx.writeOffs.length - 1].createdAt).getTime() + onemin);
+
+      const res = await request(ctx.app)
+        .get('/writeoffs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({
+          fromDate: f.toISOString(),
+          tillDate: t.toISOString(),
+        });
+
+      expect(res.status).to.equal(200);
+      const records = res.body.records as WriteOffResponse[];
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach(r => {
+        const created = new Date(r.createdAt).getTime();
+        expect(created).to.be.at.least(f.getTime());
+        expect(created).to.be.at.most(new Date(t).getTime());
+      });
+    });
+
   });
   describe('GET /writeoffs/:id', () => {
     it('should return correct model', async () => {
