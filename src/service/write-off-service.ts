@@ -45,7 +45,7 @@ import BalanceService from './balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import UserService from './user-service';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { asNumber } from '../helpers/validators';
+import { asDate, asNumber } from '../helpers/validators';
 import VatGroup from '../entity/vat-group';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import Transfer from '../entity/transactions/transfer';
@@ -61,12 +61,22 @@ export interface WriteOffFilterParameters {
    * Filter based on write-off id.
    */
   writeOffId?: number;
+  /**
+   * Filter based on the from date.
+   */
+  fromDate?: Date;
+  /**
+   * Filter based on the till date.
+   */
+  tillDate?: Date;
 }
 
 export function parseWriteOffFilterParameters(req: RequestWithToken): WriteOffFilterParameters {
   return {
     writeOffId: asNumber(req.query.writeOffId),
     toId: asNumber(req.query.toId),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
   };
 }
 export default class WriteOffService extends WithManager {
@@ -186,6 +196,7 @@ export default class WriteOffService extends WithManager {
 
     let where: FindOptionsWhere<ContainerRevision> = {
       ...QueryFilter.createFilterWhereClause(filterMapping, params),
+      createdAt: QueryFilter.createFilterWhereDate(params.fromDate, params.tillDate),
     };
 
     const options: FindManyOptions<WriteOff> = {
