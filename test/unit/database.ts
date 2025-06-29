@@ -92,5 +92,40 @@ describe('Database', async (): Promise<void> => {
         await queryRunner.release();
       }
     });
+    it('should match the database relations with entity definition after migrations', async () => {
+      const entities = dataSource.entityMetadatas;
+      for (const entity of entities) {
+        const tableName = entity.tableName;
+        const queryRunner = dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        const table = await queryRunner.getTable(tableName);
+        const tableFks: any[] = table.foreignKeys.map(relation => {
+          return {
+            columnNames: relation.columnNames,
+            referencedTableName: relation.referencedTableName,
+            referencedColumnNames: relation.referencedColumnNames,
+            onDelete: relation.onDelete,
+            onUpdate: relation.onUpdate,
+          };
+        });
+
+        const entityFks: any = [];
+
+        entity.relations.forEach(relation => {
+          relation.foreignKeys.forEach(fk => {
+            entityFks.push({
+              columnNames: fk.columnNames,
+              referencedTableName: fk.referencedTablePath,
+              referencedColumnNames: fk.referencedColumnNames,
+              onDelete: fk.onDelete,
+              onUpdate: fk.onUpdate,
+            });
+          });
+        });
+
+        expect(tableFks, `Matching entity ${entity.name} foreign keys`).to.deep.equalInAnyOrder(entityFks);
+      }
+    });
   });
 });
