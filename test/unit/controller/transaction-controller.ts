@@ -559,7 +559,87 @@ describe('TransactionController', (): void => {
         .query({ skip: '42 is erg Vo' });
       expect(res.status).to.equal(400);
     });
+
+    it('should return transactions where user is directly connected by from', async () => {
+      const fromId = ctx.users[0].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ fromId });
+      expect(res.status).to.equal(200);
+
+      // Only transactions where user is from
+      const expected = ctx.transactions.filter(
+        (t) => t.from.id === fromId,
+      );
+      const transactions = res.body.records as BaseTransactionResponse[];
+      expect(transactions.length).to.equal(expected.length);
+      transactions.forEach((t) => {
+        expect(t.from.id).to.equal(fromId);
+      });
+    });
+
+    it('should return forbidden if user is not directly connected by from', async () => {
+      const fromId = ctx.users[2].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ fromId });
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return transactions where user is directly connected by to', async () => {
+      // ctx.users[0] is the test user, adjust index if not!
+      const toId = ctx.users[0].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ toId });
+      expect(res.status).to.equal(200);
+
+      // Only transactions where user is to
+      const expected = ctx.transactions.filter(
+        (t) => t.subTransactions.some((st) => st.to.id === toId),
+      );
+      const transactions = res.body.records as BaseTransactionResponse[];
+      expect(transactions.length).to.equal(expected.length);
+    });
+
+    it('should return forbidden if user is not directly connected by to', async () => {
+      const toId = ctx.users[2].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ toId });
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return transactions where user is directly connected by createdBy', async () => {
+      const createdById = ctx.users[0].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ createdById });
+      expect(res.status).to.equal(200);
+
+      // Only transactions where user is createdBy
+      const expected = ctx.transactions.filter(
+        (t) => t.createdBy.id === createdById,
+      );
+      const transactions = res.body.records as BaseTransactionResponse[];
+      expect(transactions.length).to.equal(expected.length);
+    });
+
+    it('should return forbidden if user is not directly connected by createdBy', async () => {
+      const createdById = ctx.users[2].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .query({ createdById });
+      expect(res.status).to.equal(403);
+    });
   });
+
 
   describe('GET /transactions/{id}', () => {
     it('should return HTTP 200 and transaction if connected via organ', async () => {
@@ -817,6 +897,5 @@ describe('TransactionController', (): void => {
       expect(res.body).to.equal('Transaction is invalid');
       expect(res.status).to.equal(400);
     });
-
   });
 });
