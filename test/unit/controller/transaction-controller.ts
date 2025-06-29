@@ -539,7 +539,7 @@ describe('TransactionController', (): void => {
       const res = await request(ctx.app)
         .get('/transactions')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .query({ excludeFromId });
+        .query({ excludeFromId, take: 500 });
 
       expect(res.status).to.equal(200);
       const transactions = res.body.records as BaseTransactionResponse[];
