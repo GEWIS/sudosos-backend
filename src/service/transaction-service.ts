@@ -99,6 +99,7 @@ export interface TransactionFilterParameters {
   tillDate?: Date,
   invoiceId?: number,
   excludeById?: number,
+  excludeFromId?: number,
 }
 
 export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
@@ -125,6 +126,7 @@ export function parseGetTransactionsFilters(req: RequestWithToken): TransactionF
     tillDate: asDate(req.query.tillDate),
     invoiceId: asNumber(req.query.invoiceId),
     excludeById: asNumber(req.query.excludeById),
+    excludeFromId: asNumber(req.query.excludeFromId),
   };
 
   return filters;
@@ -583,6 +585,10 @@ export default class TransactionService extends WithManager {
     if (p.excludeById) {
       query.andWhere('createdById != :excludeById', { excludeById: p.excludeById });
     }
+    if (p.excludeFromId) {
+      query.andWhere('transaction.fromId != :excludeFromId', { excludeFromId: p.excludeFromId });
+    }
+
     if (fromDate) {
       query.andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
     }
