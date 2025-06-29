@@ -690,7 +690,10 @@ export default class TransactionService extends WithManager {
     ) AS merged
     ORDER BY merged.transaction_createdAt DESC
     ` + (take !== undefined && skip !== undefined ? ' LIMIT ? OFFSET ?' : '');
-    const allParams = [...valsFrom, ...valsTo, take, skip];
+
+    const allParams = take !== undefined && skip !== undefined
+      ? [...valsFrom, ...valsTo, take, skip]
+      : [...valsFrom, ...valsTo];
 
     const countSql = `
     SELECT COUNT(*) as total FROM (
