@@ -24,7 +24,7 @@
  * @module transactions
  */
 
-import { Brackets, In, IsNull, SelectQueryBuilder } from 'typeorm';
+import { In, IsNull, SelectQueryBuilder } from 'typeorm';
 import dinero from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
@@ -81,6 +81,7 @@ import {
 import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
 import ProductService from './product-service';
+import { convertToPositional } from '../helpers/params';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -213,7 +214,7 @@ export default class TransactionService extends WithManager {
       productId: req.product.id,
     });
     options.withDeleted = false;
-    
+
     const product = await this.manager.findOne(ProductRevision, options);
     if (!product) {
       return false;
@@ -510,12 +511,12 @@ export default class TransactionService extends WithManager {
       return undefined;
     }
 
-    const options = await ProductService.getOptions({ 
+    const options = await ProductService.getOptions({
       productRevision: req.product.revision,
       productId: req.product.id,
       allowDeleted: true,
     });
-    
+
     const product = await this.manager.findOne(ProductRevision, options);
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
@@ -534,39 +535,33 @@ export default class TransactionService extends WithManager {
     await new BalanceService().clearBalanceCache(userIds);
   }
 
-  private buildGetTransactionsQuery(
-    params: TransactionFilterParameters = {}, user?: User,
+  private buildGetTransactionsQueryBase(
+    params: TransactionFilterParameters = {},
   ): SelectQueryBuilder<Transaction> {
     // Extract fromDate and tillDate, as they cannot be directly passed to QueryFilter.
     const { fromDate, tillDate, ...p } = params;
 
-    function applySubTransactionFilters(query: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
-      const mapping: FilterMapping = {
-        transactionId: 'transaction.id',
-        toId: 'subTransaction.toId',
-        pointOfSaleId: 'transaction.pointOfSalePointOfSaleId',
-        pointOfSaleRevision: 'transaction.pointOfSaleRevision',
-        containerId: 'subTransaction.containerContainerId',
-        containerRevision: 'subTransaction.containerRevision',
-        productId: 'subTransactionRow.productProductId',
-        invoiceId: 'subTransactionRow.invoice',
-        productRevision: 'subTransactionRow.productRevision',
-      };
+    // Mapping for sub-transaction-related filters
+    const subFilterMapping: FilterMapping = {
+      transactionId: 'transaction.id',
+      toId: 'subTransaction.toId',
+      pointOfSaleId: 'transaction.pointOfSalePointOfSaleId',
+      pointOfSaleRevision: 'transaction.pointOfSaleRevision',
+      containerId: 'subTransaction.containerContainerId',
+      containerRevision: 'subTransaction.containerRevision',
+      productId: 'subTransactionRow.productProductId',
+      invoiceId: 'subTransactionRow.invoice',
+      productRevision: 'subTransactionRow.productRevision',
+    };
 
-      return QueryFilter.applyFilter(query, mapping, p);
-    }
+    // Mapping for main transaction filters
+    const mainFilterMapping: FilterMapping = {
+      fromId: 'transaction.fromId',
+      createdById: 'transaction.createdById',
+    };
 
+    // Build the query with all necessary joins
     const query = this.manager.createQueryBuilder(Transaction, 'transaction')
-      .addSelect((qb) => {
-        const subquery = qb.subQuery()
-          .select('sum(subTransactionRow.amount * product.priceInclVat) as value')
-          .from(SubTransaction, 'subTransaction')
-          .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-          .leftJoin('subTransactionRow.product', 'product')
-          .where('subTransaction.transactionId = transaction.id');
-
-        return applySubTransactionFilters(subquery);
-      }, 'value')
       .leftJoinAndSelect('transaction.from', 'from')
       .leftJoinAndSelect('transaction.createdBy', 'createdBy')
       .leftJoinAndSelect('transaction.pointOfSale', 'pointOfSaleRev')
@@ -575,28 +570,152 @@ export default class TransactionService extends WithManager {
       .withDeleted()
       .leftJoin('transaction.subTransactions', 'subTransaction')
       .leftJoin('subTransaction.subTransactionRows', 'subTransactionRow')
-      .distinct(true);
+      .leftJoin('subTransactionRow.product', 'product')
+      .addSelect('SUM(subTransactionRow.amount * product.priceInclVat)', 'value')
+      .groupBy('transaction.id')
+      .addGroupBy('from.id')
+      .addGroupBy('createdBy.id')
+      .addGroupBy('pointOfSaleRev.pointOfSaleId')
+      .addGroupBy('pointOfSaleRev.revision')
+      .addGroupBy('pointOfSale.id');
 
-    query.orderBy({ 'transaction.createdAt': 'DESC' });
-
-    if (p.excludeById) query.andWhere('createdById != :excludeById', { excludeById: p.excludeById });
-    if (fromDate) query.andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
-    if (tillDate) query.andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
-
-    const mapping = {
-      fromId: 'transaction.fromId',
-      createdById: 'transaction.createdById',
-    };
-    QueryFilter.applyFilter(query, mapping, p);
-
-    if (user) {
-      query.andWhere(new Brackets((qb) => {
-        qb.where('transaction.fromId = :userId', { userId: user.id })
-          .orWhere('subTransaction.toId = :userId', { userId: user.id });
-      }));
+    // Transaction main filters
+    if (p.excludeById) {
+      query.andWhere('createdById != :excludeById', { excludeById: p.excludeById });
+    }
+    if (fromDate) {
+      query.andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) });
+    }
+    if (tillDate) {
+      query.andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
     }
 
-    return applySubTransactionFilters(query);
+    QueryFilter.applyFilter(query, mainFilterMapping, p);
+    QueryFilter.applyFilter(query, subFilterMapping, p);
+
+    return query;
+  }
+
+  private buildGetTransactionsQuery(
+    params: TransactionFilterParameters = {},
+  ): SelectQueryBuilder<Transaction> {
+    const query = this.buildGetTransactionsQueryBase(params);
+    query.orderBy({ 'transaction.createdAt': 'DESC' });
+    return query;
+  }
+
+  /**
+   * Converts a raw transaction object to a BaseTransactionResponse
+   * @param o - The raw transaction object
+   * @private
+   */
+  private mapRawTransactionToResponse(o: any): BaseTransactionResponse {
+    const value = DineroTransformer.Instance.from(o.value || 0);
+    return {
+      id: o.transaction_id,
+      createdAt: utcToDate(o.transaction_createdAt).toISOString(),
+      updatedAt: utcToDate(o.transaction_updatedAt).toISOString(),
+      from: {
+        id: o.from_id,
+        createdAt: utcToDate(o.from_createdAt).toISOString(),
+        updatedAt: utcToDate(o.from_updatedAt).toISOString(),
+        firstName: o.from_firstName,
+        lastName: o.from_lastName,
+      },
+      createdBy: o.createdBy_id ? {
+        id: o.createdBy_id,
+        createdAt: utcToDate(o.createdBy_createdAt).toISOString(),
+        updatedAt: utcToDate(o.createdBy_updatedAt).toISOString(),
+        firstName: o.createdBy_firstName,
+        lastName: o.createdBy_lastName,
+      } : undefined,
+      pointOfSale: {
+        id: o.pointOfSale_id,
+        createdAt: utcToDate(o.pointOfSale_createdAt).toISOString(),
+        updatedAt: utcToDate(o.pointOfSaleRev_updatedAt).toISOString(),
+        name: o.pointOfSaleRev_name,
+      },
+      value: value.toObject(),
+    };
+  }
+
+  /**
+   * Returns all transactions requested with the filter
+   *
+   * We split the queries into two parts, instead of using a OR WHERE clause.
+   * This is because "OR" queries between table indices require a full table scan.
+   *
+   * We use UNION to combine the two queries, and then apply the pagination.
+   *
+   * @param {TransactionFilterParameters} params - the filter parameters
+   * @param {PaginationParameters} pagination
+   * @param user - A user that is involved in all transactions
+   * @private
+   */
+  private async getUsersTransactionQuery(
+    params: TransactionFilterParameters,
+    pagination: PaginationParameters,
+    user: User,
+  ): Promise<PaginatedBaseTransactionResponse> {
+    const { take, skip } = pagination;
+
+    // For the "from" side
+    const qbFrom = this.buildGetTransactionsQueryBase({
+      ...params,
+      fromId: user.id,
+    });
+
+    // For the "to" side
+    const qbTo = this.buildGetTransactionsQueryBase({
+      ...params,
+      toId: user.id,
+    });
+
+    // Convert to positional SQL and params
+    const { sql: sqlFromPos, values: valsFrom } = convertToPositional(
+      qbFrom.getQuery(),
+      qbFrom.getParameters(),
+    );
+    const { sql: sqlToPos, values: valsTo } = convertToPositional(
+      qbTo.getQuery(),
+      qbTo.getParameters(),
+    );
+
+    // Combine for UNION, use positional params
+    const unionSql = `
+    SELECT * FROM (
+      ${sqlFromPos}
+      UNION
+      ${sqlToPos}
+    ) AS merged
+    ORDER BY merged.transaction_createdAt DESC
+    ` + (take !== undefined && skip !== undefined ? ' LIMIT ? OFFSET ?' : '');
+
+    const allParams = take !== undefined && skip !== undefined
+      ? [...valsFrom, ...valsTo, take, skip]
+      : [...valsFrom, ...valsTo];
+
+    const countSql = `
+    SELECT COUNT(*) as total FROM (
+      ${sqlFromPos}
+      UNION
+      ${sqlToPos}
+    ) AS merged
+  `;
+    const countParams = [...valsFrom, ...valsTo];
+
+    const recordsRaw = await this.manager.query(unionSql, allParams);
+    const [{ total }] = await this.manager.query(countSql, countParams);
+    const records = recordsRaw.map(this.mapRawTransactionToResponse);
+
+    return {
+      records,
+      _pagination: {
+        take,
+        skip,
+        count: Number(total),
+      },
+    };
   }
 
   /**
@@ -611,42 +730,17 @@ export default class TransactionService extends WithManager {
   ): Promise<PaginatedBaseTransactionResponse> {
     const { take, skip } = pagination;
 
-    const builder = this.buildGetTransactionsQuery(params, user);
+    if (user) {
+      return this.getUsersTransactionQuery(params, pagination, user);
+    }
+
+    const builder = this.buildGetTransactionsQuery(params);
     const results = await Promise.all([
       builder.limit(take).offset(skip).getRawMany(),
       builder.getCount(),
     ]);
 
-    const records = results[0].map((o) => {
-      const value = DineroTransformer.Instance.from(o.value || 0);
-      const v: BaseTransactionResponse = {
-        id: o.transaction_id,
-        createdAt: utcToDate(o.transaction_createdAt).toISOString(),
-        updatedAt: utcToDate(o.transaction_updatedAt).toISOString(),
-        from: {
-          id: o.from_id,
-          createdAt: utcToDate(o.from_createdAt).toISOString(),
-          updatedAt: utcToDate(o.from_updatedAt).toISOString(),
-          firstName: o.from_firstName,
-          lastName: o.from_lastName,
-        },
-        createdBy: o.createdBy_id ? {
-          id: o.createdBy_id,
-          createdAt: utcToDate(o.createdBy_createdAt).toISOString(),
-          updatedAt: utcToDate(o.createdBy_updatedAt).toISOString(),
-          firstName: o.createdBy_firstName,
-          lastName: o.createdBy_lastName,
-        } : undefined,
-        pointOfSale: {
-          id: o.pointOfSale_id,
-          createdAt: utcToDate(o.pointOfSale_createdAt).toISOString(),
-          updatedAt: utcToDate(o.pointOfSaleRev_updatedAt).toISOString(),
-          name: o.pointOfSaleRev_name,
-        },
-        value: value.toObject(),
-      };
-      return v;
-    });
+    const records = results[0].map(this.mapRawTransactionToResponse);
 
     return {
       _pagination: {
