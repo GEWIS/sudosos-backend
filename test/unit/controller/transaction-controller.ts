@@ -43,6 +43,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import { RbacSeeder } from '../../seed';
+import { SeededRole } from '../../seed/rbac-seeder';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -61,6 +62,7 @@ describe('TransactionController', (): void => {
     swaggerspec: SwaggerSpecification,
     logger: Logger,
     tokenHandler: TokenHandler,
+    roles: SeededRole[],
   };
 
   // eslint-disable-next-line func-names
@@ -125,6 +127,7 @@ describe('TransactionController', (): void => {
       tokenHandler: undefined,
       validTransReq,
       ...database,
+      roles: [],
     };
 
     ctx.tokenHandler = new TokenHandler({
@@ -160,7 +163,7 @@ describe('TransactionController', (): void => {
           update: own,
         },
       },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
+      assignmentCheck: async (user: User) => [UserType.LOCAL_USER, UserType.MEMBER].includes(user.type),
     }, {
       name: 'Seller',
       permissions: {
@@ -174,7 +177,7 @@ describe('TransactionController', (): void => {
       assignmentCheck: async (user) => user.id === ctx.users[7].id,
     }]);
     const roleManager = await new RoleManager().initialize();
-
+    ctx.roles = roles;
     ctx.userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '39');
     ctx.adminToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '39');
     ctx.organMemberToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
@@ -529,6 +532,51 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query({ skip: 'Wie dit leest trekt een bak' });
       expect(res.status).to.equal(400);
+    });
+
+    it('should return all transactions except from the user themself', async () => {
+      const excludeFromId = ctx.users[0].id;
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ excludeFromId });
+
+      expect(res.status).to.equal(200);
+      const transactions = res.body.records as BaseTransactionResponse[];
+      const actualTransactions = ctx.transactions.filter(
+        (transaction) => transaction.from.id !== excludeFromId,
+      );
+
+      const spec = await Swagger.importSpecification();
+      expect(transactions.length).to.equal(actualTransactions.length);
+      transactions.forEach((transaction: BaseTransactionResponse) => {
+        verifyBaseTransactionEntity(spec, transaction);
+      });
+    });
+
+    it('should return all transactions created by the user for someone else', async () => {
+      // Existing tokens don't have the correct transactions to test
+      const u = ctx.users.find((us) => us.id === 15);
+      const userId = u.id;
+      const token = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(u, ctx.roles), '39');
+
+      const res = await request(ctx.app)
+        .get('/transactions')
+        .set('Authorization', `Bearer ${token}`)
+        .query({ createdById: userId, excludeFromId: userId });
+
+      expect(res.status).to.equal(200);
+      const transactions = res.body.records as BaseTransactionResponse[];
+      expect(transactions.length).to.not.equal(0);
+
+      const databaseTransactions = ctx.transactions.filter(
+        (transaction) => transaction.createdBy.id === userId && transaction.from.id !== userId,
+      );
+
+      expect(transactions.length).to.equal(databaseTransactions.length);
+      transactions.forEach((transaction: BaseTransactionResponse) => {
+        verifyBaseTransactionEntity(ctx.swaggerspec, transaction);
+      });
     });
 
     it('should return all transactions except for the ones createdby a user themself', async () => {
