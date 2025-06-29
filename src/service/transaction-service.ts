@@ -214,7 +214,7 @@ export default class TransactionService extends WithManager {
       productId: req.product.id,
     });
     options.withDeleted = false;
-    
+
     const product = await this.manager.findOne(ProductRevision, options);
     if (!product) {
       return false;
@@ -511,12 +511,12 @@ export default class TransactionService extends WithManager {
       return undefined;
     }
 
-    const options = await ProductService.getOptions({ 
+    const options = await ProductService.getOptions({
       productRevision: req.product.revision,
       productId: req.product.id,
       allowDeleted: true,
     });
-    
+
     const product = await this.manager.findOne(ProductRevision, options);
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
@@ -689,8 +689,7 @@ export default class TransactionService extends WithManager {
       ${sqlToPos}
     ) AS merged
     ORDER BY merged.transaction_createdAt DESC
-    LIMIT ? OFFSET ?
-  `;
+    ` + (take !== undefined && skip !== undefined ? ' LIMIT ? OFFSET ?' : '');
     const allParams = [...valsFrom, ...valsTo, take, skip];
 
     const countSql = `
