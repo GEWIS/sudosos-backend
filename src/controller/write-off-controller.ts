@@ -203,9 +203,10 @@ export default class WriteOffController extends BaseController {
     try {
       const writeOff = await WriteOff.findOne({ where: { id: writeOffId }, relations: ['transfer'] });
       if (!writeOff) {
-        res.status(404).json('Unknown write off ID.');
+        res.status(404).json('Write Off not found.');
         return;
       }
+
       const pdf = await writeOff.getOrCreatePdf();
 
       res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);

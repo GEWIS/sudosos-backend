@@ -32,6 +32,11 @@ import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { RbacSeeder, WriteOffSeeder } from '../../seed';
+import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import sinon from 'sinon';
+import { Client } from 'pdf-generator-client';
+import { WRITE_OFF_PDF_LOCATION } from '../../../src/files/storage';
+import fs from 'fs';
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
   return a.to.id === b.to.id
@@ -259,6 +264,51 @@ describe('WriteOffController', () => {
         expect(res.status).to.equal(400);
         expect(res.body).to.equal('User has balance, cannot create write off');
       });
+    });
+  });
+
+  describe('GET /writeoffs/{id}/pdf', () => {
+    let clientStub: sinon.SinonStubbedInstance<Client>;
+
+    function resolveSuccessful() {
+      clientStub.generateWriteOff.resolves({
+        data: new Blob(),
+        status: 200,
+      });
+    }
+    
+    beforeEach(() => {
+      clientStub = sinon.createStubInstance(Client);
+      sinon.stub(BasePdfService, 'getClient').returns(clientStub);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should return HTTP 200 with the write off PDF belonging to the write off', async () => {
+      fs.mkdirSync(WRITE_OFF_PDF_LOCATION, { recursive: true });
+      resolveSuccessful();
+      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
+      const res = await request(ctx.app)
+        .get(`/writeoffs/${writeOff.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+    });
+    it('should return HTTP 404 if write off does not exist', async () => {
+      const id = (await WriteOff.count()) + 1;
+      const res = await request(ctx.app)
+        .get(`/writeoffs/${id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Write Off not found.');
+    });
+    it('should return HTTP 403 if not admin', async () => {
+      const writeOff = ctx.writeOffs[0];
+      const res = await request(ctx.app)
+        .get(`/writeoffs/${writeOff.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
     });
   });
 });
