@@ -121,6 +121,7 @@ export abstract class PdfService<S extends Pdf, T extends IPdfAble<S>, R extends
     try {
       const res = await this.generator(routeParams);
       const blob = res.data;
+      console.log(blob);
       const buffer = Buffer.from(await blob.arrayBuffer());
       return await this.fileService.uploadPdf<T, S>(entity, this.pdfConstructor, buffer, user);
     } catch (res: any) {

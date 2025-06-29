@@ -18,21 +18,18 @@
  *  @license
  */
 
+
 /**
- * This is the module page of the locations.
+ * This is the module page of write-off-pdf.
  *
- * @module internal/files/storage
+ * @module write-offs
  */
 
-export const ROOT_FILE_LOCATION = './data';
-export const SIMPLE_FILE_LOCATION = './data/simple';
-export const PRODUCT_IMAGE_LOCATION = './data/products';
-export const BANNER_IMAGE_LOCATION = './data/banners';
+import { Entity } from 'typeorm';
+import Pdf from './pdf-file';
 
-export const INVOICE_PDF_LOCATION = './data/invoices';
-
-export const SELLER_PAYOUT_PDF_LOCATION = './data/seller_payouts';
-
-export const PAYOUT_REQUEST_PDF_LOCATION = './data/payout_requests';
-
-export const WRITE_OFF_PDF_LOCATION = './data/write-offs';
+/**
+ * @typedef {Pdf} WriteOffPdf
+ */
+@Entity()
+export default class WriteOffPdf extends Pdf {}
