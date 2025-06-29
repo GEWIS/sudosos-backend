@@ -24,7 +24,7 @@
  * @module transactions
  */
 
-import { Brackets, In, IsNull, SelectQueryBuilder } from 'typeorm';
+import { In, IsNull, SelectQueryBuilder } from 'typeorm';
 import dinero from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
