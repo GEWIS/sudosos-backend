@@ -23,19 +23,22 @@
  * to SQL with positional (?) placeholders and a matching array.
  * Handles each parameter only in the order it appears in the SQL.
  */
-export function convertToPositional(sql: string, params: Record<string, any>): { sql: string; values: any[] } {
+export function convertToPositional<T extends Record<string, unknown>>(
+  sql: string,
+  params: T,
+): { sql: string; values: Array<T[keyof T]> } {
   const paramNames: string[] = [];
   // Collect names as they appear in SQL (including repeats)
   const newSql = sql.replace(/:(\w+)/g, (_match, name) => {
     paramNames.push(name);
     return '?';
   });
-    // Build array by order of appearance
+  // Build array by order of appearance
   const values = paramNames.map(name => {
     if (!(name in params)) {
       throw new Error(`Missing param: ${name}`);
     }
     return params[name];
-  });
+  }) as Array<T[keyof T]>;
   return { sql: newSql, values };
 }
