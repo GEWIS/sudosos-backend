@@ -35,4 +35,4 @@ export const SELLER_PAYOUT_PDF_LOCATION = './data/seller_payouts';
 
 export const PAYOUT_REQUEST_PDF_LOCATION = './data/payout_requests';
 
-export const WRITE_OFF_PDF_LOCATION = './data/write-offs';
+export const WRITE_OFF_PDF_LOCATION = './data/write_offs';
