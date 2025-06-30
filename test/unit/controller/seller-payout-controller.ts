@@ -334,7 +334,8 @@ describe('SellerPayoutController', () => {
       const sellerPayout = await SellerPayout.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
       const res = await request(ctx.app)
         .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ force: true });
       expect(res.status).to.equal(502);
     });
   });

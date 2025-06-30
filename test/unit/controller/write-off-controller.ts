@@ -315,7 +315,8 @@ describe('WriteOffController', () => {
       const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
       const res = await request(ctx.app)
         .get(`/writeoffs/${writeOff.id}/pdf`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ force: true });
       expect(res.status).to.equal(502);
     });
   });
