@@ -310,7 +310,7 @@ describe('WriteOffController', () => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
-    xit('should return HTTP 502 if pdf generation fails', async () => {
+    it('should return HTTP 502 if pdf generation fails', async () => {
       clientStub.generateWriteOff.rejects(new Error('Failed to generate PDF'));
       const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
       const res = await request(ctx.app)

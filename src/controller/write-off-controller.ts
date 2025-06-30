@@ -38,6 +38,7 @@ import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import { PdfError } from '../errors';
 import { PdfUrlResponse } from './response/simple-file-response';
+import { asBoolean } from '../helpers/validators';
 
 export default class WriteOffController extends BaseController {
   private logger: Logger = log4js.getLogger(' WriteOffController');
@@ -191,6 +192,7 @@ export default class WriteOffController extends BaseController {
    * @tags writeoffs - Operations of the writeoff controller
    * @security JWT
    * @param {integer} id.path.required - The ID of the write-off object that should be returned
+   * @param {boolean} force.query - Whether to force regeneration of the pdf
    * @return {PdfUrlResponse} 200 - The pdf location information.
    * @return {string} 404 - Nonexistent write off id
    * @return {string} 500 - Internal server error
@@ -201,13 +203,14 @@ export default class WriteOffController extends BaseController {
     this.logger.trace('Get write off pdf', id, 'by user', req.token.user);
 
     try {
+      const force = !!asBoolean(req.query.force);
       const writeOff = await WriteOff.findOne({ where: { id: writeOffId }, relations: ['transfer'] });
       if (!writeOff) {
         res.status(404).json('Write Off not found.');
         return;
       }
 
-      const pdf = await writeOff.getOrCreatePdf();
+      const pdf = await writeOff.getOrCreatePdf(force);
 
       res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {
