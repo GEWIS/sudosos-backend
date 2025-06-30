@@ -34,9 +34,13 @@ import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 // eslint-disable-next-line import/no-cycle
 import Transfer from '../transactions/transfer';
+import { PdfAble } from '../file/pdf-able';
+import { WRITE_OFF_PDF_LOCATION } from '../../files/storage';
+import WriteOffPdfService from '../../service/pdf/write-off-pdf-service';
+import WriteOffPdf from '../file/write-off-pdf';
 
 @Entity()
-export default class WriteOff extends BaseEntity {
+export default class WriteOff extends PdfAble(BaseEntity) {
   @ManyToOne(() => User, { nullable: false, eager: true })
   @JoinColumn()
   public to: User;
@@ -50,4 +54,17 @@ export default class WriteOff extends BaseEntity {
     transformer: DineroTransformer.Instance,
   })
   public amount: Dinero;
+
+  @Column({ nullable: true })
+  public pdfId?: number;
+
+  @OneToOne(() => WriteOffPdf, { eager: true, nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn()
+  public pdf?: WriteOffPdf;
+  
+  pdfService = new WriteOffPdfService(WRITE_OFF_PDF_LOCATION);
+
+  async getOwner(): Promise<User> {
+    return this.to;
+  }
 }

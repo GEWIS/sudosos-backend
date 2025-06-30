@@ -41,19 +41,23 @@ export default class WriteOffSeeder extends WithManager {
 
     const writeOffs: WriteOff[] = [];
     for (const u of users) {
-      const writeOff = await this.manager.save(WriteOff, {
+      // Correct: use new WriteOff() for prototype chain (pdfable)
+      const writeOff = Object.assign(new WriteOff(), {
         to: u,
         amount: dinero({ amount: 1000 }),
       });
-      writeOff.transfer = (await this.manager.save(Transfer, {
+
+      await this.manager.save(writeOff);
+
+      writeOff.transfer = await this.manager.save(Transfer, {
         amountInclVat: dinero({ amount: 1000 }),
         toId: u.id,
         description: 'WriteOff',
         fromId: null,
         writeOff,
-      }));
-      await this.manager.save(WriteOff, writeOff);
+      });
 
+      await this.manager.save(writeOff);
       writeOffs.push(writeOff);
     }
     return writeOffs;

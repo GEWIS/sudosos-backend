@@ -104,6 +104,8 @@ import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-typ
 import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-custom-invoice-entries';
 import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller-payout-pdf';
 import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
+import { WriteOffPdf1751233624778 } from '../migrations/1751233624778-write-off-pdf';
+import WriteOffPdf from '../entity/file/write-off-pdf';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -145,6 +147,7 @@ const options: DataSourceOptions = {
     CustomInvoiceEntries1725388477226,
     SellerPayoutPdf1726066600389,
     LDAPObjectGUID1726689003147,
+    WriteOffPdf1751233624778,
   ],
   extra: {
     authPlugins: {
@@ -208,6 +211,7 @@ const options: DataSourceOptions = {
     EventShift,
     EventShiftAnswer,
     WriteOff,
+    WriteOffPdf,
   ],
   subscribers: [
     TransactionSubscriber,

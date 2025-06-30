@@ -36,6 +36,9 @@ import WriteOff from '../entity/transactions/write-off';
 import WriteOffRequest from './request/write-off-request';
 import User from '../entity/user/user';
 import BalanceService from '../service/balance-service';
+import { PdfError } from '../errors';
+import { PdfUrlResponse } from './response/simple-file-response';
+import { asBoolean } from '../helpers/validators';
 
 export default class WriteOffController extends BaseController {
   private logger: Logger = log4js.getLogger(' WriteOffController');
@@ -62,6 +65,12 @@ export default class WriteOffController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'WriteOff', ['*']),
           handler: this.getSingleWriteOff.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'WriteOff', ['*']),
+          handler: this.getWriteOffPdf.bind(this),
         },
       },
     };
@@ -176,4 +185,42 @@ export default class WriteOffController extends BaseController {
     }
   }
 
+  /**
+   * GET /writeoffs/{id}/pdf
+   * @summary Get a write-off pdf
+   * @operationId getWriteOffPdf
+   * @tags writeoffs - Operations of the writeoff controller
+   * @security JWT
+   * @param {integer} id.path.required - The ID of the write-off object that should be returned
+   * @param {boolean} force.query - Whether to force regeneration of the pdf
+   * @return {PdfUrlResponse} 200 - The pdf location information.
+   * @return {string} 404 - Nonexistent write off id
+   * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
+   */
+  public async getWriteOffPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const writeOffId = parseInt(id, 10);
+    this.logger.trace('Get write off pdf', id, 'by user', req.token.user);
+
+    try {
+      const force = !!asBoolean(req.query.force);
+      const writeOff = await WriteOff.findOne({ where: { id: writeOffId }, relations: ['transfer'] });
+      if (!writeOff) {
+        res.status(404).json('Write Off not found.');
+        return;
+      }
+
+      const pdf = await writeOff.getOrCreatePdf(force);
+
+      res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
+    } catch (error) {
+      this.logger.error('Could get write off PDF:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
+      res.status(500).json('Internal server error.');
+    }
+  }
 }

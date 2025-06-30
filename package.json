@@ -51,7 +51,7 @@
     "mysql2": "^3.14.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
-    "pdf-generator-client": "github:GEWIS/pdf-generator#0d6a6804d301be46b1664f28341f1c3774da127e",
+    "pdf-generator-client": "github:GEWIS/pdf-generator#31a8c6914b12e284a88f18317c1808ce8a1c0229",
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",

@@ -47,6 +47,8 @@ import {
   SellerPayoutSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
 } from '../../seed';
+import { SELLER_PAYOUT_PDF_LOCATION } from '../../../src/files/storage';
+import fs from 'fs';
 
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
@@ -302,11 +304,8 @@ describe('SellerPayoutController', () => {
       sinon.restore();
     });
 
-    // TODO
-    //  Turns out we have never tested the full pdf download flow.
-    //  The fileservice errors if the dir does not exist, and these are created with the init_scripts.
-    //  I propose we skip this test for now, and decide how to handle this later.
-    xit('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
+    it('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
+      fs.mkdirSync(SELLER_PAYOUT_PDF_LOCATION, { recursive: true });
       resolveSuccessful();
       const sellerPayout = ctx.sellerPayouts[0];
       const res = await request(ctx.app)
@@ -329,6 +328,15 @@ describe('SellerPayoutController', () => {
         .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
+    });
+    it('should return HTTP 502 if pdf generation fails', async () => {
+      clientStub.generateDisbursement.rejects(new Error('Failed to generate PDF'));
+      const sellerPayout = await SellerPayout.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
+      const res = await request(ctx.app)
+        .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ force: true });
+      expect(res.status).to.equal(502);
     });
   });
 
