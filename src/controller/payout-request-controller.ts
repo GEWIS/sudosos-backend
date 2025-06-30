@@ -287,6 +287,7 @@ export default class PayoutRequestController extends BaseController {
    * @return {PdfUrlResponse} 200 - The pdf location information.
    * @return {string} 404 - Nonexistent payout request id
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getPayoutRequestPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;

@@ -196,6 +196,7 @@ export default class WriteOffController extends BaseController {
    * @return {PdfUrlResponse} 200 - The pdf location information.
    * @return {string} 404 - Nonexistent write off id
    * @return {string} 500 - Internal server error
+   * @return {string} 502 - PDF generation failed
    */
   public async getWriteOffPdf(req: RequestWithToken, res: Response): Promise<void> {
     const { id } = req.params;
