@@ -198,6 +198,7 @@ export default class DefaultRoles {
       permissions: {
         Maintenance: {
           override: { all: star },
+          update: { all: star },
         },
         Authenticator: admin,
         Balance: admin,
