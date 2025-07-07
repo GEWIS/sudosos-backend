@@ -121,14 +121,22 @@ export default class GewisDBSyncService extends UserSyncService {
     if (!await GewisDBSyncService.getAllowDelete()) return;
 
     const currentBalance = await new BalanceService().getBalance(entity.id);
-    await UserService.closeUser(entity.id, true).then(() => {
-      this.logger.trace(`User ${entity.id} closed`);
-      Mailer.getInstance().send(entity, new MembershipExpiryNotification({
-        balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
-      }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
-    }).catch((e) => {
-      this.logger.error('Syncing error for', entity, e);
-    });
+    const shouldDelete = currentBalance.amount.amount === 0;
+
+    try {
+      this.logger.trace(`Down user ${entity.id}, with balance ${currentBalance.amount.amount} (should delete: ${shouldDelete})`);
+      await UserService.closeUser(entity.id, shouldDelete);
+
+      // Send notification to user
+      if (!shouldDelete) {
+        this.logger.trace(`User ${entity.id} closed`);
+        Mailer.getInstance().send(entity, new MembershipExpiryNotification({
+          balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
+        }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
+      }
+    } catch (e) {
+      this.logger.error(`Down user ${entity.id} failed with error ${e}`);
+    }
   }
 
   fetch(): Promise<void> {
