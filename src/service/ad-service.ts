@@ -147,7 +147,7 @@ export default class ADService extends WithManager {
     // Turn the ldapMembers into SudoSOS users
     const members = await this.getUsers(ldapMembers, true);
 
-    await roleManager.setRoleUsers(members, ldapRole.dn);
+    await roleManager.setRoleUsers(members, ldapRole.cn);
   }
 
   /**
