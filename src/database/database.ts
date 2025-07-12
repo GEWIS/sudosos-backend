@@ -106,6 +106,10 @@ import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller
 import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
 import { WriteOffPdf1751233624778 } from '../migrations/1751233624778-write-off-pdf';
 import WriteOffPdf from '../entity/file/write-off-pdf';
+import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
+import {
+  UserAdministrativeCost1729266426571,
+} from '../migrations/1729266426571-user-administrative-cost';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -148,6 +152,7 @@ const options: DataSourceOptions = {
     SellerPayoutPdf1726066600389,
     LDAPObjectGUID1726689003147,
     WriteOffPdf1751233624778,
+    UserAdministrativeCost1729266426571,
   ],
   extra: {
     authPlugins: {
@@ -166,6 +171,7 @@ const options: DataSourceOptions = {
     PointOfSale,
     PointOfSaleRevision,
     Transfer,
+    InactiveAdministrativeCost,
     StripeDeposit,
     StripePaymentIntent,
     StripePaymentIntentStatus,
