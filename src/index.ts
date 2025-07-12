@@ -81,6 +81,7 @@ import ServerSettingsController from './controller/server-settings-controller';
 import TransactionSummaryController from './controller/transaction-summary-controller';
 import getAppLogger from './helpers/logging';
 import WebSocketService from './service/websocket-service';
+import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 
 export class Application {
   app: express.Express;
@@ -256,6 +257,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/transactions', new TransactionController(options).getRouter());
   application.app.use('/v1/vouchergroups', new VoucherGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
+  application.app.use('/v1/inactiveAdministrativeCosts', new InactiveAdministrativeCostController(options).getRouter());
   application.app.use('/v1/fines', new DebtorController(options).getRouter());
   application.app.use('/v1/stripe', new StripeController(options).getRouter());
   application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());

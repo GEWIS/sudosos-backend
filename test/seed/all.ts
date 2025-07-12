@@ -56,6 +56,8 @@ import seedGEWISUsers from '../../src/gewis/database/seed';
 import BannerSeeder from './banner-seeder';
 import QRAuthenticatorSeeder from './qr-authenticator-seeder';
 import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
+import InactiveAdministrativeCost from '../../src/entity/transactions/inactive-administrative-cost';
+import InactiveAdministrativeCostSeeder from './ledger/inactive-administrative-cost-seeder';
 
 export interface DatabaseContent {
   users: User[],
@@ -75,6 +77,7 @@ export interface DatabaseContent {
   transactions: Transaction[],
   transfers: Transfer[],
   fines: Fine[],
+  inactiveAdministrativeCosts: InactiveAdministrativeCost[],
   userFineGroups: UserFineGroup[],
   payoutRequests: PayoutRequest[],
   stripeDeposits: StripeDeposit[],
@@ -111,6 +114,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, beginDate, endDate);
   const transfers = await new TransferSeeder().seed(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seed(users, transactions, transfers);
+  const { inactiveAdministrativeCosts, inactiveAdministrativeCostsTransfers } = await  new InactiveAdministrativeCostSeeder().seed(users, beginDate, endDate);
   const { payoutRequests, payoutRequestTransfers } = await new PayoutRequestSeeder().seed(users);
   const { invoices, invoiceTransfers } = await new InvoiceSeeder().seed(users, transactions);
   const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seed(users);
@@ -133,8 +137,9 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     transactions,
     stripeDeposits,
     invoices,
-    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers),
+    transfers: transfers.concat(fineTransfers).concat(payoutRequestTransfers).concat(invoiceTransfers).concat(stripeDepositTransfers).concat(inactiveAdministrativeCostsTransfers),
     fines,
+    inactiveAdministrativeCosts,
     userFineGroups,
     payoutRequests,
     banners,
