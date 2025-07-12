@@ -125,11 +125,15 @@ export default class GewisDBSyncService extends UserSyncService {
 
     try {
       this.logger.trace(`Down user ${entity.id}, with balance ${currentBalance.amount.amount} (should delete: ${shouldDelete})`);
-      await UserService.closeUser(entity.id, shouldDelete);
+      const oldActive = entity.active;
+      const u = await UserService.closeUser(entity.id, shouldDelete);
+
+      // If the user was active, and is now inactive, we send a notification
+      const isFallingEdge = oldActive !== u.active && u.active === false;
 
       // Send notification to user
-      if (!shouldDelete) {
-        this.logger.trace(`User ${entity.id} closed`);
+      if (!shouldDelete && isFallingEdge) {
+        this.logger.trace(`User ${u.id} closed`);
         Mailer.getInstance().send(entity, new MembershipExpiryNotification({
           balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
         }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
