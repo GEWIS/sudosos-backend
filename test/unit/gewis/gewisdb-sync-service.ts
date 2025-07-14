@@ -269,21 +269,40 @@ describe('GewisDBSyncService', () => {
             await generateBalance(100, gewisUser.user.id);
             await syncService.down(gewisUser.user);
             const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
-            expect(dbUser.active).to.be.true;
+            expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.false;
-            expect(dbUser.canGoIntoDebt).to.be.true;
-            expect(sendMailFake).to.be.callCount(0);
+            expect(dbUser.canGoIntoDebt).to.be.false;
+            expect(sendMailFake).to.be.callCount(1);
           },
         );
       });
-      it('should send an email to the user', async () => {
+      it('should not send an email twice to the user', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await generateBalance(100, gewisUser.user.id);
+            await syncService.down(gewisUser.user);
+
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            await syncService.down(dbUser);
+            expect(sendMailFake).to.be.callCount(1);
+          },
+        );
+      });
+      it('should not send an email to the use if balance is 0r', async () => {
         await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
             const gewisUser = await createGewisUser(user, user.id);
             await syncService.down(gewisUser.user);
-            expect(sendMailFake).to.be.callCount(1);
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.be.false;
+            expect(dbUser.deleted).to.be.true;
+            expect(dbUser.canGoIntoDebt).to.be.false;
+            expect(sendMailFake).to.be.callCount(0);
           });
       });
     });
