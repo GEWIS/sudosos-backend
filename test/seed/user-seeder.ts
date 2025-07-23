@@ -71,8 +71,8 @@ export default class UserSeeder extends WithManager {
         nickname: nr % 4 === 0 ? `Nickname${start + nr}` : null,
         type,
         active,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        extensiveDataProcessing: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED, 
+        inactiveNotificationSend: nr % 3 === 0,
       }) as User);
     }
     return users;
