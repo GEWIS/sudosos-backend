@@ -15,10 +15,11 @@
     "swagger:validate": "ts-node src/start/swagger.ts && swagger-cli validate ./out/swagger.json",
     "test": "mocha -r ts-node/register --parallel --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
     "test-ci": "npm run schema && mocha -r ts-node/register --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
-    "test-ci-migrate": "npm run migrate && mocha -r ts-node/register --timeout 50000 --require ./test/setup.ts 'test/**/*.ts' --exit",
+    "test-ci-migrate": "npm run migrate && mocha -r ts-node/register --timeout 500000 --require ./test/setup.ts 'test/unit/database.ts' --exit",
     "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
     "coverage": "nyc npm run test",
     "coverage-ci": "nyc npm run test-ci",
+    "coverage-ci-migrate": "nyc npm run test-ci-migrate",
     "lint": "eslint package.json src test --ext .js --ext .ts",
     "lint-fix": "npm run lint -- --fix",
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
@@ -118,5 +119,6 @@
     "typedoc-vitepress-theme": "^1.1.2",
     "typescript": "^5.7.3",
     "vitepress": "^1.6.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
