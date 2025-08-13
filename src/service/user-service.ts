@@ -47,6 +47,7 @@ import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
 import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
+import Role from '../entity/rbac/role';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -158,8 +159,8 @@ export default class UserService {
             .orWhere(`user.lastName LIKE :term${index}`)
             .orWhere(`user.email LIKE :term${index}`);
         });
-      }), { 
-        name: fullNameSearch, 
+      }), {
+        name: fullNameSearch,
         ...Object.fromEntries(searchTerms.map((term, index) => [`term${index}`, term])),
       });
     }
@@ -214,7 +215,7 @@ export default class UserService {
         throw e;
       });
     } else {
-      Mailer.getInstance().send(user, new WelcomeToSudosos({ })).then().catch((e) => {
+      Mailer.getInstance().send(user, new WelcomeToSudosos({})).then().catch((e) => {
         throw e;
       });
     }
@@ -325,6 +326,33 @@ export default class UserService {
       },
       records: mutationRecords,
     };
+  }
+
+  /**
+   * Assgins a role to a user.
+   * Does not error if user does already have the role.
+   * @param userId - User to remove role from
+   * @param roleId - Role to remove
+   */
+  public static async addUserRole(user: User, role: Role) {
+    if (await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })) return;
+
+    const assignedRole = new AssignedRole();
+    assignedRole.userId = user.id;
+    assignedRole.roleId = role.id;
+    return assignedRole.save();
+  }
+
+  /**
+   * Removes assgined role from user.
+   * Does not error if user does not have role.
+   * @param userId - User to remove role from
+   * @param roleId - Role to remove
+   */
+  public static async deleteUserRole(userId: number, roleId: number) {
+    const assignedRole = await AssignedRole.findOne({ where: { userId, roleId } });
+    if (!assignedRole) return;
+    return assignedRole.remove();
   }
 
   /**
