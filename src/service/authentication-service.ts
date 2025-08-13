@@ -251,7 +251,7 @@ export default class AuthenticationService extends WithManager {
    * @param onNewUser - Callback function when user does not exist in local system.
    * @constructor
    */
-  public async LDAPAuthentication(uid:string, password: string,
+  public async LDAPAuthentication(uid: string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
     const logger: Logger = log4js.getLogger('LDAP');
     logger.level = process.env.LOG_LEVEL;
@@ -401,11 +401,12 @@ export default class AuthenticationService extends WithManager {
   public async getSaltedToken(
     user: User, context: AuthenticationContext, lesser = true, salt?: string, expiry?: number,
   ): Promise<AuthenticationResponse> {
-    const [roles, organs] = await Promise.all([
+    const [froles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
       context.roleManager.getUserOrgans(user),
     ]);
-    const roleNames = roles.map((r)  => r.name);
+    const roles = froles.filter((role) => role);
+    const roleNames = roles.map((r) => r.name);
     const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
     const contents = await this.makeJsonWebToken(user, roles, organs, lesser, overrideMaintenance);
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
