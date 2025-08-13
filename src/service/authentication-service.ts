@@ -408,7 +408,7 @@ export default class AuthenticationService extends WithManager {
     const roles = froles.filter((role) => role);
     const roleNames = roles.map((r) => {
       return r.name;
-    });
+    const roleNames = roles.map(r => r.name);
     const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
     const contents = await this.makeJsonWebToken(user, roles, organs, lesser, overrideMaintenance);
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
