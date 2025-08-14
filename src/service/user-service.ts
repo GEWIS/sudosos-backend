@@ -344,7 +344,7 @@ export default class UserService {
   }
 
   /**
-   * Removes assgined role from user.
+   * Removes assigned role from user.
    * Does not error if user does not have role.
    * @param userId - User to remove role from
    * @param roleId - Role to remove
