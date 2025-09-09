@@ -438,6 +438,36 @@ describe('BalanceController', (): void => {
       expect(balanceResponse.totalPositive.amount).to.eq(positiveBalances);
       expect(balanceResponse.totalNegative.amount).to.eq(negativeBalances);
     });
+    it('should correctly return the amounts with deleted users', async () => {
+      const date = new Date('2021-11-30');
+      const deletedUser = ctx.users[0];
+      deletedUser.deleted = true;
+      await deletedUser.save();
+
+      const res = await request(ctx.app)
+        .get('/balances/summary')
+        .query({ date: date, allowDeleted: true })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const { positiveBalances, negativeBalances } = ctx.users.map((user) => calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date))
+        .reduce((acc, balance) => {
+          const amount = balance.amount.getAmount();
+          if (amount > 0) {
+            acc.positiveBalances += amount;
+          } else {
+            acc.negativeBalances += amount;
+          }
+          return acc;
+        },
+        { positiveBalances: 0, negativeBalances: 0 },
+        );
+
+      const balanceResponse = res.body as TotalBalanceResponse;
+      expect(balanceResponse.totalPositive.amount).to.eq(positiveBalances);
+      expect(balanceResponse.totalNegative.amount).to.eq(negativeBalances);
+    });
     it('should return 403 if not admin', async () => {
       const res = await request(ctx.app)
         .get('/balances/summary')
