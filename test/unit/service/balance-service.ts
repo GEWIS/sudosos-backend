@@ -864,4 +864,28 @@ describe('BalanceService', (): void => {
       });
     });
   });
+  it('should return the total balances including deleted users', async () => {
+    const date = new Date('2021-01-01');
+    await new BalanceService().clearBalanceCache();
+
+    const allBalances = await new BalanceService().getBalances({
+      date,
+      allowDeleted: true,
+    });
+
+    const { positiveBalances, negativeBalances } = allBalances.records
+      .reduce((acc, balance) => {
+        const amount = balance.amount.amount;
+        if (amount > 0) {
+          acc.positiveBalances += amount;
+        } else {
+          acc.negativeBalances += amount;
+        }
+        return acc;
+      }, { positiveBalances: 0, negativeBalances: 0 });
+
+    const totalBalanceResponse = await new BalanceService().calculateTotalBalances(date, true);
+    expect(totalBalanceResponse.totalPositive.amount).to.eq(positiveBalances);
+    expect(totalBalanceResponse.totalNegative.amount).to.eq(negativeBalances);
+  });
 });

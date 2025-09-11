@@ -394,12 +394,13 @@ export default class BalanceService extends WithManager {
   /**
    * Get the total balance of SudoSOS and
    * @param date Date to check the balances for
+   * @param allowDeleted allow balances of deleted users to be returned
    */
-  public async calculateTotalBalances(date: Date): Promise<TotalBalanceResponse> {
+  public async calculateTotalBalances(date: Date, allowDeleted?: boolean): Promise<TotalBalanceResponse> {
     const posBalanceRes = (await this.getBalances(
-      { date, minBalance: DineroTransformer.Instance.from(0) })).records;
+      { date, minBalance: DineroTransformer.Instance.from(0), allowDeleted })).records;
     const negBalanceRes = (await this.getBalances(
-      { date, maxBalance: DineroTransformer.Instance.from(0) })).records;
+      { date, maxBalance: DineroTransformer.Instance.from(0), allowDeleted })).records;
 
     const totalPos =  BalanceService.calculateTotal(posBalanceRes);
     const totalNeg = BalanceService.calculateTotal(negBalanceRes);
@@ -413,9 +414,9 @@ export default class BalanceService extends WithManager {
 
     for (const [index, type] of userTypes.entries()) {
       promises.push(this.getBalances(
-        { userTypes: [type], date, minBalance: DineroTransformer.Instance.from(0) })
+        { userTypes: [type], date, minBalance: DineroTransformer.Instance.from(0), allowDeleted })
         .then((r) => typedPosBalance[index] = r.records));
-      promises.push(this.getBalances({ userTypes: [type], date, maxBalance: DineroTransformer.Instance.from(0) })
+      promises.push(this.getBalances({ userTypes: [type], date, maxBalance: DineroTransformer.Instance.from(0), allowDeleted })
         .then((r) => typedNegBalance[index] = r.records));
     }
 

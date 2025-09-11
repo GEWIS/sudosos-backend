@@ -195,6 +195,7 @@ export default class BalanceController extends BaseController {
    * @tags balance - Operations of balance controller
    * @security JWT
    * @param {string} date.query.required - The date for which to calculate the balance.
+   * @param {boolean} allowDeleted.query - Whether to include deleted users
    * @return {TotalBalanceResponse} 200 - The requested user's balance
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -202,8 +203,9 @@ export default class BalanceController extends BaseController {
   private async calculateTotalBalances(req: RequestWithToken, res: Response): Promise<void> {
     try {
       const date = asDate(req.query.date);
+      const allowDeleted = asBoolean(req.query.allowDeleted);
 
-      const balances = await new BalanceService().calculateTotalBalances(date);
+      const balances = await new BalanceService().calculateTotalBalances(date, allowDeleted);
       res.json(balances);
     } catch (error) {
       this.logger.error('Could not calculate the total balances', error);
