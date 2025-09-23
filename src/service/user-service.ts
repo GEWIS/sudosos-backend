@@ -331,8 +331,8 @@ export default class UserService {
   /**
    * Assigns a role to a user.
    * Does not error if user does already have the role.
-   * @param userId - User to remove role from
-   * @param roleId - Role to remove
+   * @param user - User to remove role from
+   * @param role - Role to remove
    */
   public static async addUserRole(user: User, role: Role) {
     if (await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })) return;
@@ -346,11 +346,11 @@ export default class UserService {
   /**
    * Removes assigned role from user.
    * Does not error if user does not have role.
-   * @param userId - User to remove role from
-   * @param roleId - Role to remove
+   * @param user - User to remove role from
+   * @param role - Role to remove
    */
-  public static async deleteUserRole(userId: number, roleId: number) {
-    const assignedRole = await AssignedRole.findOne({ where: { userId, roleId } });
+  public static async deleteUserRole(user: User, role: Role) {
+    const assignedRole = await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } });
     if (!assignedRole) return;
     return assignedRole.remove();
   }
