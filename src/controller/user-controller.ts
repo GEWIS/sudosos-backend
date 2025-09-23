@@ -1731,7 +1731,7 @@ export default class UserController extends BaseController {
       return;
     }
 
-    await UserService.deleteUserRole(userId, roleId);
+    await UserService.deleteUserRole(user, role);
     res.status(204).send();
   }
 
