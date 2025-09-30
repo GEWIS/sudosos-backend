@@ -78,8 +78,17 @@ export interface UpdateUserRequest extends Partial<BaseUserRequest> {
  */
 export interface UpdateInvoiceUserRequest {
   street: string;
-  postalCode:string;
+  postalCode: string;
   city: string;
   country: string;
   automatic: boolean,
+}
+
+
+/**
+ * @typedef {object} AddRoleRequest
+ * @property {number} roleId.required - Role to add to the user.
+ */
+export interface AddRoleRequest {
+  roleId: number;
 }

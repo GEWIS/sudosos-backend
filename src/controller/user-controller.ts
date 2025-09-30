@@ -30,7 +30,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import BaseUserRequest, { CreateUserRequest, UpdateUserRequest } from './request/user-request';
+import BaseUserRequest, { AddRoleRequest, CreateUserRequest, UpdateUserRequest } from './request/user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
@@ -72,6 +72,7 @@ import { reportPDFhelper } from '../helpers/express-pdf';
 import { PdfError } from '../errors';
 import { WaiveFinesRequest } from './request/debtor-request';
 import Dinero from 'dinero.js';
+import Role from '../entity/rbac/role';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -244,6 +245,20 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Roles', ['*'],
           ),
           handler: this.getUserRoles.bind(this),
+        },
+        POST: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'create', UserController.getRelation(req), 'Roles', ['*'],
+          ),
+          handler: this.addUserRole.bind(this),
+        },
+      },
+      '/:id(\\d+)/roles/:roleId(\\d+)': {
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'delete', UserController.getRelation(req), 'Roles', ['*'],
+          ),
+          handler: this.deleteUserRole.bind(this),
         },
       },
       '/:id(\\d+)/containers': {
@@ -552,7 +567,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      if (await NfcAuthenticator.count({ where: { userId:  parseInt(parameters.id, 10) } }) == 0) {
+      if (await NfcAuthenticator.count({ where: { userId: parseInt(parameters.id, 10) } }) == 0) {
         res.status(403).json('No saved nfc');
         return;
       }
@@ -1687,5 +1702,66 @@ export default class UserController extends BaseController {
       res.status(500).send();
       this.logger.error(e);
     }
+  }
+
+  /**
+   * DELETE /users/{id}/roles/{roleId}
+   * @summary Deletes a role from a user
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {integer} roleId.path.required - The id of the role
+   * @operationId deleteUserRole
+   * @security JWT
+   * @return 204 - Success
+   */
+  public async deleteUserRole(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId, roleId: rawRoleId } = req.params;
+
+    const userId = parseInt(rawUserId, 10);
+    const roleId = parseInt(rawRoleId, 10);
+
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json('user not found');
+      return;
+    }
+    const role = await Role.findOne({ where: { id: roleId } });
+    if (!role) {
+      res.status(404).json('role not found');
+      return;
+    }
+
+    await UserService.deleteUserRole(user, role);
+    res.status(204).send();
+  }
+
+  /**
+   * POST /users/{id}/roles
+   * @summary Adds a role to a user
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {AddRoleRequest} request.body.required
+   * @operationId addUserRole
+   * @security JWT
+   * @return 204 - Success
+   */
+  public async addUserRole(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+    const userId = parseInt(rawUserId, 10);
+    const { roleId } = req.body as AddRoleRequest;
+
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json('user not found');
+      return;
+    }
+    const role = await Role.findOne({ where: { id: roleId } });
+    if (!role) {
+      res.status(404).json('role not found');
+      return;
+    }
+
+    await UserService.addUserRole(user, role);
+    res.status(204).send();
   }
 }
