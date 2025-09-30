@@ -80,6 +80,7 @@ import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { RbacSeeder } from '../../seed';
 import Dinero from 'dinero.js';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -196,6 +197,8 @@ describe('UserController', (): void => {
         },
         Roles: {
           get: all,
+          delete: all,
+          create: all,
         },
         Fine: {
           get: all,
@@ -2640,6 +2643,122 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
         expect(res.status).to.equal(404);
+      });
+    });
+  });
+
+  describe('DELETE /users/{id}/roles/{roleId}', () => {
+    it('should return an HTTP 204 and remove the role from user if admin', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+
+        // Create a new role
+        const [role] = await new RbacSeeder().seed([{
+          name: 'Test 1',
+          permissions: {
+          },
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          assignmentCheck: async (_: User) => false,
+        }]);
+
+        // Assign the role to the user
+        await AssignedRole.save({
+          userId: user.id,
+          roleId: role.role.id,
+        });
+
+        // Sanity check
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.not.be.undefined;
+
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/roles/${role.role.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(204);
+
+        // Sanity check
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.be.null;
+      });
+    });
+
+    it('should return an HTTP 204 if user does not have the role', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/roles/1`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(204);
+      });
+    });
+
+    it('should return 403 if not admin', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/roles/1`)
+          .set('Authorization', `Bearer ${ctx.userToken}`);
+        expect(res.status).to.equal(403);
+      });
+
+    });
+
+    it('should return 404 if user does not exist', async () => {
+      const res = await request(ctx.app)
+        .delete('/users/999999999/roles/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('user not found');
+    });
+
+    it('should return 404 if role does not exist', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const res = await request(ctx.app)
+          .delete(`/users/${user.id}/roles/999999999`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('role not found');
+      });
+    });
+  });
+  describe('POST /users/{id}/roles', () => {
+    it('should return an HTTP 204 and add the role to user if admin', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        // Create a new role
+        const [role] = await new RbacSeeder().seed([{
+          name: 'Test 2',
+          permissions: {
+          },
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          assignmentCheck: async (_: User) => false,
+        }]);
+
+        // Sanity check
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.be.null;
+
+        const res = await request(ctx.app)
+          .post(`/users/${user.id}/roles`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send({ roleId: role.role.id });
+        expect(res.status).to.equal(204);
+
+        // Sanity check
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.not.be.null;
+      });
+    });
+    it('should return an HTTP 404 if role does not exist', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const res = await request(ctx.app)
+          .post(`/users/${user.id}/roles`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send({ roleId: 999999999 });
+        expect(res.status).to.equal(404);
+        expect(res.body).to.equal('role not found');
+      });
+    });
+
+    it('should return 403 if not admin', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const res = await request(ctx.app)
+          .post(`/users/${user.id}/roles`)
+          .set('Authorization', `Bearer ${ctx.userToken}`)
+          .send({ roleId: 1 });
+        expect(res.status).to.equal(403);
       });
     });
   });

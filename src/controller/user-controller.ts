@@ -248,7 +248,7 @@ export default class UserController extends BaseController {
         },
         POST: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'post', UserController.getRelation(req), 'Roles', ['*'],
+            req.token.roles, 'create', UserController.getRelation(req), 'Roles', ['*'],
           ),
           handler: this.addUserRole.bind(this),
         },
