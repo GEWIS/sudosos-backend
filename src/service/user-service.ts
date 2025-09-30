@@ -331,8 +331,8 @@ export default class UserService {
   /**
    * Assigns a role to a user.
    * Does not error if user does already have the role.
-   * @param user - User to remove role from
-   * @param role - Role to remove
+   * @param user - User to add role to
+   * @param role - Role to add
    */
   public static async addUserRole(user: User, role: Role) {
     if (await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })) return;
