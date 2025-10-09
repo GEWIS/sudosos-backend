@@ -73,6 +73,7 @@ export default class UserSeeder extends WithManager {
         active,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
         extensiveDataProcessing: true,
+        email: type === UserType.LOCAL_USER || type === UserType.LOCAL_ADMIN ? `user${start + nr}@example.com` : '',
       }) as User);
     }
     return users;
