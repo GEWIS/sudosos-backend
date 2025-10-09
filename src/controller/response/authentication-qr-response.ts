@@ -40,7 +40,7 @@ export interface QRCodeResponse {
 
 /**
  * @typedef {object} QRStatusResponse
- * @property {QRAuthenticatorStatus} status.required - The status of the QR code
+ * @property {string} status.required - The status of the QR code
  */
 export interface QRStatusResponse {
   status: QRAuthenticatorStatus;
