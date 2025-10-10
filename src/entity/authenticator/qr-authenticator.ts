@@ -46,9 +46,9 @@ const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN ? pa
  * @property {string} sessionId.required - Unique session identifier
  * @property {User.model} user - The user that confirmed the session (null if pending)
  * @property {string} status.required - The status of the session
- * @property {Date} expiresAt.required - When the session expires
- * @property {Date} createdAt.required - When the session was created
- * @property {Date} confirmedAt - When the session was confirmed
+ * @property {string} expiresAt.required - When the session expires
+ * @property {string} createdAt.required - When the session was created
+ * @property {string} confirmedAt - When the session was confirmed
  */
 @Entity()
 export default class QRAuthenticator extends BaseEntityWithoutId {
@@ -68,10 +68,13 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
   })
   public status: QRAuthenticatorStatus;
 
-  @Column()
+  @Column({
+    type: 'datetime',
+  })
   public expiresAt: Date;
 
   @Column({
+    type: 'datetime',
     nullable: true,
   })
   public confirmedAt: Date | null;
