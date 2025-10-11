@@ -76,35 +76,17 @@ import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
-import { InvoiceRefactor1707251162194 } from '../migrations/1707251162194-invoice-refactor';
 import dotenv from 'dotenv';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
-import { PayoutRequestPdf1720610649657 } from '../migrations/1720610649657-payout-request-pdf';
-import { SoftDeletes1720608140757 } from '../migrations/1720608140757-soft-deletes';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
-import { DatabaseRbac1720624912620 } from '../migrations/1720624912260-database-rbac';
 import RoleUserType from '../entity/rbac/role-user-type';
-import { TransfersVat1721916495084 } from '../migrations/1721916495084-transfers-vat';
-import { PosCashiers1722022351000 } from '../migrations/1722022351000-pos-cashiers';
 import WriteOff from '../entity/transactions/write-off';
-import { WriteOffs1722004753128 } from '../migrations/1722004753128-write-offs';
 import ServerSetting from '../entity/server-setting';
-import { ServerSettings1722083254200 } from '../migrations/1722083254200-server-settings';
-import { PosUsers1722084520361 } from '../migrations/1722084520361-pos-users';
-import { InvoiceRework1622118077157 } from '../migrations/1722118077157-invoice-rework';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
-import { StripePaymentIntents1722869409448 } from '../migrations/1722869409448-stripe-payment-intents';
-import { NestedProductCategories1722517212441 } from '../migrations/1722517212441-nested-product-categories';
 import SellerPayout from '../entity/transactions/payout/seller-payout';
-import { InvoiceAsTopups1724506999318 } from '../migrations/1724506999318-invoice-as-topups';
-import { SellerPayouts1724855153990 } from '../migrations/1724855153990-seller-payouts';
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
-import { UserTypeEnums1725196803203 } from '../migrations/1725196803203-user-type-enums';
-import { CustomInvoiceEntries1725388477226 } from '../migrations/1725388477226-custom-invoice-entries';
-import { SellerPayoutPdf1726066600389 } from '../migrations/1726066600389-seller-payout-pdf';
-import { LDAPObjectGUID1726689003147 } from '../migrations/1726689003147-ldap-objectguid';
-import { WriteOffPdf1751233624778 } from '../migrations/1751233624778-write-off-pdf';
+import { InitialSQLMigration1743601882766 } from '../migrations/1743601882766-initial-database';
 import WriteOffPdf from '../entity/file/write-off-pdf';
 
 // We need to load the dotenv to prevent the env from being undefined.
@@ -129,25 +111,7 @@ const options: DataSourceOptions = {
   synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
   logging: process.env.TYPEORM_LOGGING === 'true',
   migrations: [
-    InvoiceRefactor1707251162194,
-    SoftDeletes1720608140757,
-    PayoutRequestPdf1720610649657,
-    DatabaseRbac1720624912620,
-    TransfersVat1721916495084,
-    PosCashiers1722022351000,
-    ServerSettings1722083254200,
-    PosUsers1722084520361,
-    WriteOffs1722004753128,
-    InvoiceRework1622118077157,
-    StripePaymentIntents1722869409448,
-    NestedProductCategories1722517212441,
-    InvoiceAsTopups1724506999318,
-    SellerPayouts1724855153990,
-    UserTypeEnums1725196803203,
-    CustomInvoiceEntries1725388477226,
-    SellerPayoutPdf1726066600389,
-    LDAPObjectGUID1726689003147,
-    WriteOffPdf1751233624778,
+    InitialSQLMigration1743601882766,
   ],
   extra: {
     authPlugins: {

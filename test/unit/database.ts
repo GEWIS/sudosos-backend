@@ -19,9 +19,10 @@
  */
 
 import Database from '../../src/database/database';
-import { DataSource } from 'typeorm';
+import { DataSource, TableForeignKey } from 'typeorm';
 import { expect } from 'chai';
 import { finishTestDB } from '../helpers/test-helpers';
+
 describe('Database', async (): Promise<void> => {
   describe('#initialize', () => {
     it('should be able to synchronize schema', async function () {
@@ -91,6 +92,121 @@ describe('Database', async (): Promise<void> => {
 
         await queryRunner.release();
       }
+    });
+
+    it('should match the database relations with entity definition after migrations', async () => {
+      const entities = dataSource.entityMetadatas;
+      const queryRunner = dataSource.createQueryRunner();
+      await queryRunner.connect();
+
+      for (const entity of entities) {
+        const tableName = entity.tableName;
+
+        // Skip junction tables, they are not actual entities but tables created by TypeORM for ManyToMany relationships
+        if (tableName.includes('_') && (
+          tableName.includes('_roles_role') ||
+          tableName.includes('_products_product') ||
+          tableName.includes('_containers_container') ||
+          tableName.includes('_shifts_') ||
+          tableName.includes('_del_') ||
+          tableName.includes('_closure')
+        )) {
+          continue;
+        }
+
+        const table = await queryRunner.getTable(tableName);
+        const tableFks: any[] = table.foreignKeys.map((relation: TableForeignKey) => {
+          return {
+            columnNames: relation.columnNames,
+            referencedTableName: relation.referencedTableName,
+            referencedColumnNames: relation.referencedColumnNames,
+            onDelete: relation.onDelete,
+            onUpdate: relation.onUpdate,
+            // fkName: relation.name,
+            tableName,
+          };
+        });
+
+        const entityFks: any = [];
+
+        entity.relations.forEach(relation => {
+          // Skip ManyToMany relations as their foreign keys are in junction tables, not the main table
+          if (relation.relationType === 'many-to-many') {
+            return;
+          }
+
+          relation.foreignKeys.forEach(fk => {
+            entityFks.push({
+              columnNames: fk.columnNames,
+              referencedTableName: fk.referencedTablePath,
+              referencedColumnNames: fk.referencedColumnNames,
+              onDelete: fk.onDelete,
+              onUpdate: fk.onUpdate,
+              // fkName: fk.name,
+              tableName,
+            });
+          });
+        });
+
+        const names = table.foreignKeys.map(fk => fk.name);
+        expect(tableFks).to.deep.equalInAnyOrder(entityFks, names.join(','));
+      }
+
+      await queryRunner.release();
+    });
+
+    it('should match junction table foreign keys for ManyToMany relationships', async () => {
+      const entities = dataSource.entityMetadatas;
+      const queryRunner = dataSource.createQueryRunner();
+      await queryRunner.connect();
+
+      for (const entity of entities) {
+        for (const relation of entity.relations) {
+          // Only check ManyToMany relations
+          if (relation.relationType !== 'many-to-many') {
+            continue;
+          }
+
+          // Get the junction table name
+          const junctionTableName = relation.joinTableName;
+          if (!junctionTableName) {
+            continue;
+          }
+
+          // Get the junction table from database
+          const junctionTable = await queryRunner.getTable(junctionTableName);
+          if (!junctionTable) {
+            throw new Error(`Junction table ${junctionTableName} not found in database`);
+          }
+
+          // Get foreign keys from junction table
+          const junctionTableFks = junctionTable.foreignKeys.map((fk: TableForeignKey) => ({
+            columnNames: fk.columnNames,
+            referencedTableName: fk.referencedTableName,
+            referencedColumnNames: fk.referencedColumnNames,
+            onDelete: fk.onDelete,
+            onUpdate: fk.onUpdate,
+            // fkName: fk.name,
+            tableName: junctionTableName,
+          }));
+
+          // Get expected foreign keys from entity relation
+          const expectedFks = relation.foreignKeys.map(fk => ({
+            columnNames: fk.columnNames,
+            referencedTableName: fk.referencedTablePath,
+            referencedColumnNames: fk.referencedColumnNames,
+            onDelete: fk.onDelete,
+            onUpdate: fk.onUpdate,
+            // fkName: fk.name,
+            tableName: junctionTableName,
+          }));
+
+          const names = junctionTable.foreignKeys.map(fk => fk.name);
+          expect(junctionTableFks).to.deep.equalInAnyOrder(expectedFks, names.join(','));
+        }
+      }
+
+      await queryRunner.release();
     });
   });
 });
