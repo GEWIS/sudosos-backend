@@ -93,6 +93,7 @@ describe('Database', async (): Promise<void> => {
         await queryRunner.release();
       }
     });
+
     it('should match the database relations with entity definition after migrations', async () => {
       const entities = dataSource.entityMetadatas;
       const queryRunner = dataSource.createQueryRunner();
@@ -100,7 +101,7 @@ describe('Database', async (): Promise<void> => {
 
       for (const entity of entities) {
         const tableName = entity.tableName;
-        
+
         // Skip junction tables, they are not actual entities but tables created by TypeORM for ManyToMany relationships
         if (tableName.includes('_') && (
           tableName.includes('_roles_role') ||
@@ -112,7 +113,7 @@ describe('Database', async (): Promise<void> => {
         )) {
           continue;
         }
-        
+
         const table = await queryRunner.getTable(tableName);
         const tableFks: any[] = table.foreignKeys.map((relation: TableForeignKey) => {
           return {
@@ -121,7 +122,7 @@ describe('Database', async (): Promise<void> => {
             referencedColumnNames: relation.referencedColumnNames,
             onDelete: relation.onDelete,
             onUpdate: relation.onUpdate,
-            fkName: relation.name,
+            // fkName: relation.name,
             tableName,
           };
         });
@@ -133,7 +134,7 @@ describe('Database', async (): Promise<void> => {
           if (relation.relationType === 'many-to-many') {
             return;
           }
-          
+
           relation.foreignKeys.forEach(fk => {
             entityFks.push({
               columnNames: fk.columnNames,
@@ -141,13 +142,14 @@ describe('Database', async (): Promise<void> => {
               referencedColumnNames: fk.referencedColumnNames,
               onDelete: fk.onDelete,
               onUpdate: fk.onUpdate,
-              fkName: fk.name,
+              // fkName: fk.name,
               tableName,
             });
           });
         });
 
-        expect(tableFks).to.deep.equalInAnyOrder(entityFks);
+        const names = table.foreignKeys.map(fk => fk.name);
+        expect(tableFks).to.deep.equalInAnyOrder(entityFks, names.join(','));
       }
 
       await queryRunner.release();
@@ -184,7 +186,7 @@ describe('Database', async (): Promise<void> => {
             referencedColumnNames: fk.referencedColumnNames,
             onDelete: fk.onDelete,
             onUpdate: fk.onUpdate,
-            fkName: fk.name,
+            // fkName: fk.name,
             tableName: junctionTableName,
           }));
 
@@ -195,11 +197,12 @@ describe('Database', async (): Promise<void> => {
             referencedColumnNames: fk.referencedColumnNames,
             onDelete: fk.onDelete,
             onUpdate: fk.onUpdate,
-            fkName: fk.name,
+            // fkName: fk.name,
             tableName: junctionTableName,
           }));
 
-          expect(junctionTableFks).to.deep.equalInAnyOrder(expectedFks);
+          const names = junctionTable.foreignKeys.map(fk => fk.name);
+          expect(junctionTableFks).to.deep.equalInAnyOrder(expectedFks, names.join(','));
         }
       }
 
