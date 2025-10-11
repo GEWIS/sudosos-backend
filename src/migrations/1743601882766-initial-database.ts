@@ -1088,7 +1088,7 @@ export class InitialSQLMigration1743601882766 implements MigrationInterface {
         { name: 'city', type: 'varchar', length: '255', isNullable: false },
         { name: 'country', type: 'varchar', length: '255', isNullable: false },
         { name: 'pdfId', type: 'int', isNullable: true },
-        { name: 'attention', type: 'varchar', length: '255', default: null, isNullable: true },
+        { name: 'attention', type: 'varchar', length: '255', default: "''", isNullable: true },
         { name: 'date', type: 'datetime(6)', default: 'CURRENT_TIMESTAMP(6)', isNullable: false },
         { name: 'creditTransferId', type: 'int', isNullable: true },
       ],
