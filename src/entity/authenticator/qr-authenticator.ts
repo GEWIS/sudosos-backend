@@ -82,7 +82,7 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
   response(): QRCodeResponse {
     return {
       sessionId: this.sessionId,
-      qrCodeUrl: `${process.env.URL || 'http://10.0.3.7:5173'}/auth/qr/confirm?sessionId=${this.sessionId}`,
+      qrCodeUrl: `${process.env.URL || 'http://localhost:5173'}/auth/qr/confirm?sessionId=${this.sessionId}`,
       expiresAt: this.expiresAt.toISOString(),
     };
   }
