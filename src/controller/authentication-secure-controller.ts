@@ -81,6 +81,7 @@ export default class AuthenticationSecureController extends BaseController {
         POST: {
           policy: async () => Promise.resolve(true),
           handler: this.confirmQRCode.bind(this),
+          restrictions: { lesser: false },
         },
       },
     };
