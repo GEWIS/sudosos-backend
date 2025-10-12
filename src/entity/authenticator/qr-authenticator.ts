@@ -39,7 +39,10 @@ export enum QRAuthenticatorStatus {
   CANCELLED = 'CANCELLED',
 }
 
-const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN ? parseInt(process.env.QR_AUTHENTICATOR_EXPIRES_IN, 10) : 5 * 60 * 1000;
+const DEFAULT_QR_AUTHENTICATOR_EXPIRES_IN_MS = 5 * 60 * 1000;
+const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN
+  ? parseInt(process.env.QR_AUTHENTICATOR_EXPIRES_IN, 10)
+  : DEFAULT_QR_AUTHENTICATOR_EXPIRES_IN_MS;
 
 /**
  * @typedef {BaseEntityWithoutId} QRAuthenticator

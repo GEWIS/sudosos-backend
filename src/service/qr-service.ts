@@ -27,6 +27,7 @@
 import WithManager from '../database/with-manager';
 import QRAuthenticator, { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
 import User from '../entity/user/user';
+import log4js from 'log4js';
 
 export default class QRService extends WithManager {
   /**
@@ -43,6 +44,8 @@ export default class QRService extends WithManager {
       }
       return qr;
     } catch (error) {
+      const logger = log4js.getLogger('QRService');
+      logger.error('Failed to get QR authenticator', error);
       return null;
     }
   }

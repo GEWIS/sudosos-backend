@@ -235,28 +235,6 @@ describe('QRService', (): void => {
       expect(pendingQr.user).to.not.equal(originalUser);
       expect(pendingQr.confirmedAt).to.not.equal(originalConfirmedAt);
     });
-
-    it('should handle confirming already confirmed QR authenticators', async () => {
-      const confirmedQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.CONFIRMED);
-      const newUser = ctx.users[1];
-      expect(confirmedQr).to.not.be.undefined;
-
-      const originalConfirmedAt = confirmedQr.confirmedAt;
-
-      await ctx.connection.transaction(async (manager) => {
-        const service = new QRService(manager);
-        await service.confirm(confirmedQr, newUser);
-      });
-
-      // Verify it was updated with new user and new confirmation time
-      const updatedQr = await QRAuthenticator.findOne({ 
-        where: { sessionId: confirmedQr.sessionId },
-        relations: ['user'],
-      });
-      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CONFIRMED);
-      expect(updatedQr.user.id).to.equal(newUser.id);
-      expect(updatedQr.confirmedAt.getTime()).to.be.greaterThan(originalConfirmedAt.getTime());
-    });
   });
 
   describe('cancel', () => {

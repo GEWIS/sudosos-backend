@@ -29,7 +29,7 @@ import { QRAuthenticatorSeeder } from '../../seed';
 import QRService from '../../../src/service/qr-service';
 import sinon from 'sinon';
 
-function qrStatusResponseEq(a: QRAuthenticator, b: QRStatusResponse): Boolean {
+function qrStatusResponseEq(a: QRAuthenticator, b: QRStatusResponse): boolean {
   return a.status === b.status;
 }
 
