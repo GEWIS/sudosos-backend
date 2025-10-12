@@ -96,7 +96,8 @@ export default class WebSocketService {
   }
 
   public static emitQRConfirmed(qr: QRAuthenticator, token: AuthenticationResponse): void {
-    this.logger.info(`Emitting QR confirmed for session ${qr.sessionId}, ${token}`);
+    // Only log non-sensitive token properties (e.g., userId) instead of the full token object
+    this.logger.info(`Emitting QR confirmed for session ${qr.sessionId}, userId: ${token.userId ?? 'unknown'}`);
     this.io.to(`qr-session-${qr.sessionId}`).emit('qr-confirmed', {
       sessionId: qr.sessionId,
       token,
