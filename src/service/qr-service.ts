@@ -37,7 +37,7 @@ export default class QRService extends WithManager {
   async get(sessionId: string): Promise<QRAuthenticator | null> {
     try {
       const qr = await this.manager.findOne<QRAuthenticator>(QRAuthenticator, { where: { sessionId } });
-      if (qr.expiresAt < new Date() && qr.status === QRAuthenticatorStatus.PENDING) {
+      if (qr && qr.expiresAt < new Date() && qr.status === QRAuthenticatorStatus.PENDING) {
         qr.status = QRAuthenticatorStatus.EXPIRED;
         await this.manager.save(QRAuthenticator, qr);
       }
