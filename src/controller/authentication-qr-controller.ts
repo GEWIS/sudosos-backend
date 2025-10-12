@@ -133,7 +133,7 @@ export default class AuthenticationQRController extends BaseController {
       const qr = await (new QRService()).get(sessionId);
 
       if (!qr) {
-        res.status(204);
+        res.status(204).send();
         return;
       }
 

@@ -205,7 +205,7 @@ describe('QRService', (): void => {
       // Verify the confirmation was saved
       const updatedQr = await QRAuthenticator.findOne({ 
         where: { sessionId: pendingQr.sessionId },
-        relations: ['user']
+        relations: ['user'],
       });
       expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CONFIRMED);
       expect(updatedQr.user.id).to.equal(user.id);
@@ -251,7 +251,7 @@ describe('QRService', (): void => {
       // Verify it was updated with new user and new confirmation time
       const updatedQr = await QRAuthenticator.findOne({ 
         where: { sessionId: confirmedQr.sessionId },
-        relations: ['user']
+        relations: ['user'],
       });
       expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CONFIRMED);
       expect(updatedQr.user.id).to.equal(newUser.id);
