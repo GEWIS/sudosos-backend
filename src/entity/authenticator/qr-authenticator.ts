@@ -58,7 +58,7 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
   })
   public sessionId: string;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'userId' })
   public user: User | null;
 
