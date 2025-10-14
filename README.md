@@ -90,7 +90,6 @@ npm run test
 ```bash
 # For SQLite (recommended for development)
 npm run init:schema
-````
 
 ```bash
 # OR for MariaDB/MySQL
