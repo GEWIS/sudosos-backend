@@ -190,6 +190,9 @@ src/
 - **Development**: `http://localhost:3000/api-docs`
 - **Production**: `https://sudosos.gewis.nl/api/api-docs/`
 
+### Comprehensive Documentation
+For detailed documentation, API references, and examples, visit the SudoSOS documentation site [here](http://sudosos.gewis.nl/docs):
+
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these guidelines:
