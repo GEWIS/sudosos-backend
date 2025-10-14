@@ -286,9 +286,9 @@ describe('QRService', (): void => {
         await service.cancel(confirmedQr);
       });
 
-      // Verify it was cancelled
+      // Verify it was not cancelled
       const updatedQr = await QRAuthenticator.findOne({ where: { sessionId: confirmedQr.sessionId } });
-      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CANCELLED);
+      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CONFIRMED);
     });
   });
 

@@ -228,7 +228,7 @@ describe('AuthenticationQRController', () => {
       expect(res.status).to.equal(204);
     });
 
-    it('should cancel a confirmed session', async () => {
+    it('should not cancel a confirmed session', async () => {
       const confirmedQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.CONFIRMED);
       expect(confirmedQr).to.not.be.undefined;
 
@@ -239,7 +239,7 @@ describe('AuthenticationQRController', () => {
       // Verify the session was cancelled in the database
       const updatedQr = await QRAuthenticator.findOne({ where: { sessionId: confirmedQr.sessionId } });
       expect(updatedQr).to.not.be.null;
-      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CANCELLED);
+      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.CONFIRMED);
     });
 
     it('should return 204 for already cancelled session', async () => {
