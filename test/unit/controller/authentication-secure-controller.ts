@@ -563,7 +563,7 @@ describe('AuthenticationSecureController', () => {
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
       const [user, context] = authenticationServiceStub.getSaltedToken.getCall(0).args;
       expect(user.id).to.equal(ctx.memberUser.id);
-      expect(context.roleManager).to.be.an('object'); // roleManager is an object
+      expect(context.roleManager).to.be.an('object');
       expect(context.tokenHandler).to.equal(ctx.tokenHandler);
     });
   });

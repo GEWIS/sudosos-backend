@@ -48,9 +48,6 @@ export default class QRAuthenticatorSeeder extends WithManager {
     for (let nr = 0; nr < count; nr += 1) {
       const authenticator = new QRAuthenticator();
       
-      // Override the default values based on parameters
-      authenticator.status = status;
-      
       if (expired) {
         // Create expired authenticators (expired 1 hour ago)
         authenticator.expiresAt = new Date(now.getTime() - 60 * 60 * 1000);
@@ -72,13 +69,9 @@ export default class QRAuthenticatorSeeder extends WithManager {
         authenticator.confirmedAt = null;
       }
 
-      // Set confirmedAt for cancelled authenticators (cancelled before expiry)
+      // Set cancelled flag for cancelled authenticators
       if (status === QRAuthenticatorStatus.CANCELLED) {
-        authenticator.confirmedAt = getRandomDate(
-          new Date(now.getTime() - 5 * 60 * 1000), // 5 minutes ago
-          now,
-          nr,
-        );
+        authenticator.cancelled = true;
       }
 
       authenticators.push(authenticator);

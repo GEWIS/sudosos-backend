@@ -99,10 +99,9 @@ describe('QRService', (): void => {
       });
     });
 
-    it('should mark expired pending QR authenticators as expired', async () => {
+    it('should return EXPIRED status for expired pending QR authenticators', async () => {
       // Create an expired pending QR authenticator
       const expiredQr = new QRAuthenticator();
-      expiredQr.status = QRAuthenticatorStatus.PENDING;
       expiredQr.expiresAt = new Date(Date.now() - 1000); // Expired 1 second ago
       await QRAuthenticator.save(expiredQr);
 
@@ -113,10 +112,6 @@ describe('QRService', (): void => {
         expect(result).to.not.be.null;
         expect(result.status).to.equal(QRAuthenticatorStatus.EXPIRED);
       });
-
-      // Verify the status was updated in the database
-      const updatedQr = await QRAuthenticator.findOne({ where: { sessionId: expiredQr.sessionId } });
-      expect(updatedQr.status).to.equal(QRAuthenticatorStatus.EXPIRED);
     });
 
     it('should not change status of already expired QR authenticators', async () => {

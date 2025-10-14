@@ -25,24 +25,19 @@
  */
 
 import WithManager from '../database/with-manager';
-import QRAuthenticator, { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
+import QRAuthenticator from '../entity/authenticator/qr-authenticator';
 import User from '../entity/user/user';
 import log4js from 'log4js';
 
 export default class QRService extends WithManager {
   /**
-   * Fetches a QR authenticator by session ID and updates its status if expired.
+   * Fetches a QR authenticator by session ID.
    * @param {string} sessionId - The session identifier.
    * @returns {Promise<QRAuthenticator|null>} The found QR authenticator or null.
    */
   async get(sessionId: string): Promise<QRAuthenticator | null> {
     try {
-      const qr = await this.manager.findOne<QRAuthenticator>(QRAuthenticator, { where: { sessionId } });
-      if (qr && qr.expiresAt < new Date() && qr.status === QRAuthenticatorStatus.PENDING) {
-        qr.status = QRAuthenticatorStatus.EXPIRED;
-        await this.manager.save(QRAuthenticator, qr);
-      }
-      return qr;
+      return await this.manager.findOne<QRAuthenticator>(QRAuthenticator, { where: { sessionId } });
     } catch (error) {
       const logger = log4js.getLogger('QRService');
       logger.error('Failed to get QR authenticator', error);
@@ -68,7 +63,6 @@ export default class QRService extends WithManager {
    */
   async confirm(qr: QRAuthenticator, user: User): Promise<void> {
     qr.user = user;
-    qr.status = QRAuthenticatorStatus.CONFIRMED;
     qr.confirmedAt = new Date();
     await this.manager.save(QRAuthenticator, qr);
   }
@@ -79,7 +73,7 @@ export default class QRService extends WithManager {
    * @returns {Promise<void>}
    */
   async cancel(qr: QRAuthenticator): Promise<void> {
-    qr.status = QRAuthenticatorStatus.CANCELLED;
+    qr.cancelled = true;
     await this.manager.save(QRAuthenticator, qr);
   }
 }

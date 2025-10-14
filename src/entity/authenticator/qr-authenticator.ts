@@ -48,7 +48,7 @@ const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN
  * @typedef {BaseEntityWithoutId} QRAuthenticator
  * @property {string} sessionId.required - Unique session identifier
  * @property {User.model} user - The user that confirmed the session (null if pending)
- * @property {string} status.required - The status of the session
+ * @property {boolean} cancelled.required - Whether the session was cancelled
  * @property {string} expiresAt.required - When the session expires
  * @property {string} createdAt.required - When the session was created
  * @property {string} confirmedAt - When the session was confirmed
@@ -66,10 +66,10 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
   public user: User | null;
 
   @Column({
-    default: QRAuthenticatorStatus.PENDING,
+    default: false,
     nullable: false,
   })
-  public status: QRAuthenticatorStatus;
+  public cancelled: boolean;
 
   @Column({
     type: 'datetime',
@@ -81,6 +81,19 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
     nullable: true,
   })
   public confirmedAt: Date | null;
+
+  public get status(): QRAuthenticatorStatus {
+    if (this.confirmedAt !== null) {
+      return QRAuthenticatorStatus.CONFIRMED;
+    }
+    if (this.cancelled) {
+      return QRAuthenticatorStatus.CANCELLED;
+    }
+    if (this.expiresAt < new Date()) {
+      return QRAuthenticatorStatus.EXPIRED;
+    }
+    return QRAuthenticatorStatus.PENDING;
+  }
 
   response(): QRCodeResponse {
     return {
@@ -94,7 +107,7 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
     super();
     this.sessionId = uuidv4();
     this.user = null;
-    this.status = QRAuthenticatorStatus.PENDING;
+    this.cancelled = false;
     this.expiresAt = new Date(Date.now() + QR_AUTHENTICATOR_EXPIRES_IN);
     this.confirmedAt = null;
   }

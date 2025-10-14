@@ -44,10 +44,10 @@ export class QrAuthenticator1743601882766 implements MigrationInterface {
           isNullable: true,
         },
         {
-          name: 'status',
-          type: 'varchar(255)',
+          name: 'cancelled',
+          type: 'boolean',
           isNullable: false,
-          default: "'PENDING'",
+          default: false,
         },
         {
           name: 'expiresAt',
@@ -102,8 +102,8 @@ export class QrAuthenticator1743601882766 implements MigrationInterface {
     }));
 
     await queryRunner.createIndex('qr_authenticator', new TableIndex({
-      name: 'IDX_qr_authenticator_status',
-      columnNames: ['status'],
+      name: 'IDX_qr_authenticator_cancelled',
+      columnNames: ['cancelled'],
     }));
 
     await queryRunner.createIndex('qr_authenticator', new TableIndex({
@@ -115,7 +115,7 @@ export class QrAuthenticator1743601882766 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop indexes
     await queryRunner.dropIndex('qr_authenticator', 'IDX_qr_authenticator_userId');
-    await queryRunner.dropIndex('qr_authenticator', 'IDX_qr_authenticator_status');
+    await queryRunner.dropIndex('qr_authenticator', 'IDX_qr_authenticator_cancelled');
     await queryRunner.dropIndex('qr_authenticator', 'IDX_qr_authenticator_expiresAt');
     await queryRunner.dropIndex('qr_authenticator', 'IDX_qr_authenticator_createdAt');
 

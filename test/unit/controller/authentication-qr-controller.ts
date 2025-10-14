@@ -285,7 +285,6 @@ describe('AuthenticationQRController', () => {
     it('should handle expired sessions correctly', async () => {
       // Create an expired QR authenticator
       const expiredQr = new QRAuthenticator();
-      expiredQr.status = QRAuthenticatorStatus.PENDING;
       expiredQr.expiresAt = new Date(Date.now() - 1000); // Expired 1 second ago
       await expiredQr.save();
 
