@@ -90,6 +90,7 @@ npm run test
 ```bash
 # For SQLite (recommended for development)
 npm run init:schema
+```
 
 ```bash
 # OR for MariaDB/MySQL
@@ -122,7 +123,6 @@ Visit `http://localhost:3000/api-docs` to access the Swagger UI for API document
 3. Use this token to authenticate API requests
 
 ## 🛠️ Development Setup
-
 
 ### Available Scripts
 
