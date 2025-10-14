@@ -25,7 +25,7 @@ import { expect, request } from 'chai';
 import { QRCodeResponse, QRStatusResponse } from '../../../src/controller/response/authentication-qr-response';
 import AuthenticationQRController from '../../../src/controller/authentication-qr-controller';
 import { json } from 'body-parser';
-import { QRAuthenticatorSeeder } from '../../seed';
+import { QRAuthenticatorSeeder, UserSeeder } from '../../seed';
 import QRService from '../../../src/service/qr-service';
 import sinon from 'sinon';
 
@@ -46,7 +46,10 @@ describe('AuthenticationQRController', () => {
     const controller = new AuthenticationQRController({ specification: c.specification, roleManager: c.roleManager }, c.tokenHandler);
     c.app.use('/authentication/qr', controller.getRouter());
 
-    ctx = { ...c,  qrAuthenticators: await new QRAuthenticatorSeeder().seed() };
+    const users = await new UserSeeder().seed();
+    const qrAuthenticators = await new QRAuthenticatorSeeder().seed(users);
+
+    ctx = { ...c,  qrAuthenticators };
   });
 
   after(async () => {
