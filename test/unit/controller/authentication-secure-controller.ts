@@ -240,7 +240,6 @@ describe('AuthenticationSecureController', () => {
   });
 
   describe('POST /authentication/qr/{sessionId}/confirm', () => {
-    let websocketEmitStub: sinon.SinonStub;
     let qrServiceStub: sinon.SinonStubbedInstance<QRService>;
     let authenticationServiceStub: sinon.SinonStubbedInstance<AuthenticationService>;
     let mockSocketIO: any;
