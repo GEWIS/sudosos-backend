@@ -18,15 +18,17 @@
  *  @license
  */
 
-export * from './catalogue';
-export * from './ledger';
+/**
+ * This is the module page of the authentication-qr-request.
+ *
+ * @module authentication
+ */
 
-export { default as EventSeeder } from './event-seeder';
-export { default as QRAuthenticatorSeeder } from './qr-authenticator-seeder';
-export { default as RbacSeeder } from './rbac-seeder';
-export { default as UserSeeder } from './user-seeder';
-export { DatabaseContent, default as seedDatabase } from './all';
 
-import seedDatabase from './all';
-
-export default seedDatabase;
+/**
+ * @typedef {object} AuthenticationQRConfirmRequest
+ * @property {string} sessionId.required
+ */
+export default interface AuthenticationQRConfirmRequest {
+  sessionId: string;
+}

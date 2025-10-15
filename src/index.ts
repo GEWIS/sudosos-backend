@@ -55,6 +55,7 @@ import VoucherGroupController from './controller/voucher-group-controller';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import AuthenticationQRController from './controller/authentication-qr-controller';
 import TransferController from './controller/transfer-controller';
 import PointOfSaleController from './controller/point-of-sale-controller';
 import ContainerController from './controller/container-controller';
@@ -152,6 +153,16 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     process.env.GEWISWEB_JWT_SECRET,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
+
+  // Define QR authentication controller and bind before middleware.
+  const qrController = new AuthenticationQRController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
+  application.app.use('/v1/authentication/qr', qrController.getRouter());
 
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();

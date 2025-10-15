@@ -88,6 +88,8 @@ import SellerPayout from '../entity/transactions/payout/seller-payout';
 import SellerPayoutPdf from '../entity/file/seller-payout-pdf';
 import { InitialSQLMigration1743601882766 } from '../migrations/1743601882766-initial-database';
 import WriteOffPdf from '../entity/file/write-off-pdf';
+import QRAuthenticator from '../entity/authenticator/qr-authenticator';
+import { QrAuthenticator1743601882766 } from '../migrations/1743601882766-qr-authenticator';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -112,6 +114,7 @@ const options: DataSourceOptions = {
   logging: process.env.TYPEORM_LOGGING === 'true',
   migrations: [
     InitialSQLMigration1743601882766,
+    QrAuthenticator1743601882766,
   ],
   extra: {
     authPlugins: {
@@ -176,6 +179,7 @@ const options: DataSourceOptions = {
     EventShiftAnswer,
     WriteOff,
     WriteOffPdf,
+    QRAuthenticator,
   ],
   subscribers: [
     TransactionSubscriber,
