@@ -185,7 +185,8 @@ export default class AuthenticationSecureController extends BaseController {
         tokenHandler: this.tokenHandler,
       }, req.token.lesser);
 
-      await (new QRService()).confirm(qrAuthenticator, req.token.user);
+      // Let the service handle all business logic validation
+      await (new QRService()).confirm(qrAuthenticator, user);
 
       // Notify WebSocket clients about the confirmation
       WebSocketService.emitQRConfirmed(qrAuthenticator, token);

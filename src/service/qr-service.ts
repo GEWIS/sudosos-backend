@@ -25,7 +25,7 @@
  */
 
 import WithManager from '../database/with-manager';
-import QRAuthenticator from '../entity/authenticator/qr-authenticator';
+import QRAuthenticator, { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
 import User from '../entity/user/user';
 import log4js from 'log4js';
 
@@ -62,6 +62,10 @@ export default class QRService extends WithManager {
    * @returns {Promise<void>}
    */
   async confirm(qr: QRAuthenticator, user: User): Promise<void> {
+    if (qr.status !== QRAuthenticatorStatus.PENDING) {
+      throw new Error(`QR authenticator cannot be confirmed. Current status: ${qr.status}`);
+    }
+
     qr.user = user;
     qr.confirmedAt = new Date();
     await this.manager.save(QRAuthenticator, qr);
