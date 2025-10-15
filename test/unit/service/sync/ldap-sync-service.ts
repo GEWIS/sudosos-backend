@@ -234,7 +234,7 @@ describe('LdapSyncService', () => {
             const UUID = Buffer.from('8989', 'hex');
             await addLDAPAuthenticator(UUID, organ);
 
-            // Intentionally "mess up" the user
+            // Intentionally "mess up" the user and snapshot the 'wrong' values
             await AppDataSource.manager.update(User, organ.id, {
               firstName: 'Wrong',
               lastName: 'Wrong',
@@ -242,12 +242,15 @@ describe('LdapSyncService', () => {
               acceptedToS: TermsOfServiceStatus.ACCEPTED,
               active: false,
             });
-
-            const originalFirstName = organ.firstName;
-            const originalLastName = organ.lastName;
-            const originalCanGoIntoDebt = organ.canGoIntoDebt;
-            const originalAcceptedToS = organ.acceptedToS;
-            const originalActive = organ.active;
+            // Snapshot database state after the mess up
+            const dbUserBefore = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            const messedUpState = {
+              firstName: dbUserBefore.firstName,
+              lastName: dbUserBefore.lastName,
+              canGoIntoDebt: dbUserBefore.canGoIntoDebt,
+              acceptedToS: dbUserBefore.acceptedToS,
+              active: dbUserBefore.active,
+            };
 
             const displayName = `${organ.firstName} Updated`;
             const stub = sinon.stub(Client.prototype, 'search');
@@ -260,13 +263,13 @@ describe('LdapSyncService', () => {
             await ldapSyncService.pre();
             expect(await ldapSyncService.sync(organ, true)).to.be.true;
             
-            // Check that the user was not actually updated in the database
-            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
-            expect(dbUser.firstName).to.eq(originalFirstName);
-            expect(dbUser.lastName).to.eq(originalLastName);
-            expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
-            expect(dbUser.acceptedToS).to.eq(originalAcceptedToS);
-            expect(dbUser.active).to.eq(originalActive);
+            // The user in the database should remain unchanged from the 'messed up' values
+            const dbUserAfter = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            expect(dbUserAfter.firstName).to.eq(messedUpState.firstName);
+            expect(dbUserAfter.lastName).to.eq(messedUpState.lastName);
+            expect(dbUserAfter.canGoIntoDebt).to.eq(messedUpState.canGoIntoDebt);
+            expect(dbUserAfter.acceptedToS).to.eq(messedUpState.acceptedToS);
+            expect(dbUserAfter.active).to.eq(messedUpState.active);
           },
         );
       });
