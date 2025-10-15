@@ -226,6 +226,50 @@ describe('LdapSyncService', () => {
           },
         );
       });
+
+      it('should return true but not update user in dry-run mode', async () => {
+        await inUserContext(
+          await (await UserFactory(await ORGAN_USER())).clone(1),
+          async (organ: User) => {
+            const UUID = Buffer.from('8989', 'hex');
+            await addLDAPAuthenticator(UUID, organ);
+
+            // Intentionally "mess up" the user
+            await AppDataSource.manager.update(User, organ.id, {
+              firstName: 'Wrong',
+              lastName: 'Wrong',
+              canGoIntoDebt: true,
+              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              active: false,
+            });
+
+            const originalFirstName = organ.firstName;
+            const originalLastName = organ.lastName;
+            const originalCanGoIntoDebt = organ.canGoIntoDebt;
+            const originalAcceptedToS = organ.acceptedToS;
+            const originalActive = organ.active;
+
+            const displayName = `${organ.firstName} Updated`;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, {
+              searchReferences: [], searchEntries: [{
+                displayName,
+              }],
+            }, stubs);
+
+            await ldapSyncService.pre();
+            expect(await ldapSyncService.sync(organ, true)).to.be.true;
+            
+            // Check that the user was not actually updated in the database
+            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            expect(dbUser.firstName).to.eq(originalFirstName);
+            expect(dbUser.lastName).to.eq(originalLastName);
+            expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
+            expect(dbUser.acceptedToS).to.eq(originalAcceptedToS);
+            expect(dbUser.active).to.eq(originalActive);
+          },
+        );
+      });
       it('should return true and update user if user is of type INTEGRATION with known LDAPAuthenticator', async () => {
         await inUserContext(
           await (await UserFactory(await INTEGRATION_USER())).clone(1),
@@ -307,6 +351,53 @@ describe('LdapSyncService', () => {
             const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
             expect(dbUser.deleted).to.be.true;
             expect(dbUser.active).to.be.false;
+          },
+        );
+      });
+
+      it('should not remove LDAPAuthenticator in dry-run mode', async () => {
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (member: User) => {
+            const UUID = Buffer.from((member.id.toString().length % 2 ? '0' : '') + member.id.toString(), 'hex');
+            expect(await ldapSyncService.guard(member)).to.be.false;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [] }, stubs);
+            await ldapSyncService.pre();
+
+            await addLDAPAuthenticator(UUID, member);
+            expect(await ldapSyncService.sync(member)).to.be.false;
+
+            await ldapSyncService.down(member, true);
+            const auth = await LDAPAuthenticator.findOne({ where: { UUID } });
+            expect(auth).to.not.be.null;
+          },
+        );
+      });
+
+      it('should not set users to deleted and inactive in dry-run mode', async () => {
+        await inUserContext(
+          await (await UserFactory(await ORGAN_USER())).clone(1),
+          async (organ: User) => {
+            const UUID = Buffer.from((organ.id.toString().length % 2 ? '0' : '') + organ.id.toString(), 'hex');
+            expect(await ldapSyncService.guard(organ)).to.be.true;
+            const stub = sinon.stub(Client.prototype, 'search');
+            stubGUIDSearch(stub, UUID, { searchReferences: [], searchEntries: [] }, stubs);
+            await ldapSyncService.pre();
+
+            await addLDAPAuthenticator(UUID, organ);
+            expect(await ldapSyncService.sync(organ)).to.be.false;
+
+            const originalDeleted = organ.deleted;
+            const originalActive = organ.active;
+
+            await ldapSyncService.down(organ, true);
+            const auth = await LDAPAuthenticator.findOne({ where: { UUID } });
+            expect(auth).to.not.be.null;
+
+            const dbUser = await AppDataSource.manager.findOne(User, { where: { id: organ.id } });
+            expect(dbUser.deleted).to.eq(originalDeleted);
+            expect(dbUser.active).to.eq(originalActive);
           },
         );
       });

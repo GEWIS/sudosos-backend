@@ -190,6 +190,37 @@ describe('GewisDBSyncService', () => {
       );
     });
 
+    it('should not update user details in dry-run mode', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(1),
+        async (user: User) => {
+          const gewisUser = await createGewisUser(user, user.id);
+          const originalFirstName = gewisUser.user.firstName;
+          const originalLastName = gewisUser.user.lastName;
+          const originalEmail = gewisUser.user.email;
+          const originalOfAge = gewisUser.user.ofAge;
+
+          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          updatedResponse.given_name = 'UpdatedName';
+          updatedResponse.family_name = 'UpdatedFamily';
+          updatedResponse.email = 'updated@example.com';
+          updatedResponse.is_18_plus = true;
+
+          membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
+
+          const result = await syncService.sync(gewisUser.user, true);
+          expect(result).to.be.true;
+
+          // Check that the user was not actually updated in the database
+          const dbUser = await GewisUser.findOne({ where: { userId: gewisUser.user.id }, relations: ['user'] });
+          expect(dbUser.user.firstName).to.eq(originalFirstName);
+          expect(dbUser.user.lastName).to.eq(originalLastName);
+          expect(dbUser.user.email).to.eq(originalEmail);
+          expect(dbUser.user.ofAge).to.eq(originalOfAge);
+        },
+      );
+    });
+
     it('should return false if user has no GEWISDB entry', async () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
@@ -304,6 +335,50 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.canGoIntoDebt).to.be.false;
             expect(sendMailFake).to.be.callCount(0);
           });
+      });
+
+      it('should not delete the user in dry-run mode', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            const originalActive = user.active;
+            const originalDeleted = user.deleted;
+            const originalCanGoIntoDebt = user.canGoIntoDebt;
+
+            await syncService.down(gewisUser.user, true);
+            
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.eq(originalActive);
+            expect(dbUser.deleted).to.eq(originalDeleted);
+            expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
+            expect(sendMailFake).to.be.callCount(0);
+          },
+        );
+      });
+
+      it('should not send email in dry-run mode even with non-zero balance', async () => {
+        await serverSettingsStore.setSetting('allowGewisSyncDelete', true);
+        await inUserContext(
+          await (await UserFactory()).clone(1),
+          async (user: User) => {
+            const gewisUser = await createGewisUser(user, user.id);
+            await generateBalance(100, gewisUser.user.id);
+            
+            const originalActive = user.active;
+            const originalDeleted = user.deleted;
+            const originalCanGoIntoDebt = user.canGoIntoDebt;
+
+            await syncService.down(gewisUser.user, true);
+            
+            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            expect(dbUser.active).to.eq(originalActive);
+            expect(dbUser.deleted).to.eq(originalDeleted);
+            expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
+            expect(sendMailFake).to.be.callCount(0);
+          },
+        );
       });
     });
   });
