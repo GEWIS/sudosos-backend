@@ -243,10 +243,29 @@ describe('AuthenticationSecureController', () => {
     let websocketEmitStub: sinon.SinonStub;
     let qrServiceStub: sinon.SinonStubbedInstance<QRService>;
     let authenticationServiceStub: sinon.SinonStubbedInstance<AuthenticationService>;
+    let mockSocketIO: any;
+    let mockToMethod: sinon.SinonStub;
+    let mockEmitMethod: sinon.SinonStub;
 
     beforeEach(() => {
-      // Setup WebSocket stub
-      websocketEmitStub = sinon.stub(WebSocketService, 'emitQRConfirmed');
+      // Create comprehensive WebSocket mocking
+      mockEmitMethod = sinon.stub();
+      mockToMethod = sinon.stub().returns({
+        emit: mockEmitMethod,
+      });
+
+      mockSocketIO = {
+        to: mockToMethod,
+        sockets: {
+          in: sinon.stub().returns({
+            emit: sinon.stub(),
+          }),
+        },
+        on: sinon.stub(),
+      };
+
+      // Mock the WebSocketService.io property
+      sinon.stub(WebSocketService, 'io').value(mockSocketIO);
 
       // Setup service stubs
       qrServiceStub = sinon.createStubInstance(QRService);
@@ -303,11 +322,12 @@ describe('AuthenticationSecureController', () => {
       expect(qrServiceStub.confirm.calledWithMatch(pendingQr, sinon.match({ id: ctx.memberUser.id }))).to.be.true;
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
 
-      // Verify WebSocket emission
-      expect(websocketEmitStub.calledOnce).to.be.true;
-      const [emittedQr, emittedToken] = websocketEmitStub.getCall(0).args;
-      expect(emittedQr).to.equal(pendingQr);
-      expect(emittedToken).to.equal(mockToken);
+      // Verify WebSocket emission through mocked Socket.IO
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
     });
 
     it('should return 404 for non-existent session', async () => {
@@ -322,7 +342,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Session not found.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 410 for expired session', async () => {
@@ -339,7 +360,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Session has expired.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 400 for already confirmed session', async () => {
@@ -356,7 +378,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Session is no longer pending.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 400 for cancelled session', async () => {
@@ -373,7 +396,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Session is no longer pending.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 500 on QR service error', async () => {
@@ -388,7 +412,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Internal server error.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 500 on authentication service error', async () => {
@@ -404,7 +429,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Internal server error.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should return 500 on QR confirm service error', async () => {
@@ -441,7 +467,8 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.equal('Internal server error.');
 
       // Verify no WebSocket emission
-      expect(websocketEmitStub.called).to.be.false;
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
     });
 
     it('should work with admin user', async () => {
@@ -480,10 +507,11 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.deep.equal({ message: 'QR code confirmed successfully.' });
 
       // Verify WebSocket emission with admin user
-      expect(websocketEmitStub.calledOnce).to.be.true;
-      const [emittedQr, emittedToken] = websocketEmitStub.getCall(0).args;
-      expect(emittedQr).to.equal(pendingQr);
-      expect(emittedToken).to.equal(mockToken);
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
     });
 
     it('should handle WebSocket emission error gracefully', async () => {
@@ -515,7 +543,7 @@ describe('AuthenticationSecureController', () => {
       authenticationServiceStub.getSaltedToken.resolves(mockToken);
 
       // Make WebSocket emission throw an error
-      websocketEmitStub.throws(new Error('WebSocket error'));
+      mockEmitMethod.throws(new Error('WebSocket error'));
 
       const res = await request(ctx.app)
         .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
@@ -565,6 +593,41 @@ describe('AuthenticationSecureController', () => {
       expect(user.id).to.equal(ctx.memberUser.id);
       expect(context.roleManager).to.be.an('object');
       expect(context.tokenHandler).to.equal(ctx.tokenHandler);
+    });
+
+    it('should test WebSocketService.emitQRConfirmed method directly', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      // Call WebSocketService.emitQRConfirmed directly
+      WebSocketService.emitQRConfirmed(pendingQr, mockToken);
+
+      // Verify the WebSocket methods were called correctly
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
     });
   });
 });
