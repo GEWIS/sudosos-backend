@@ -179,7 +179,7 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should not return deleted users', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Deleted',
         lastName: 'User',
         type: UserType.MEMBER,
@@ -202,7 +202,7 @@ describe('UserSyncManager', (): void => {
 
   describe('run', (): void => {
     it('should successfully sync users and return results', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Member',
         lastName: 'User',
         type: UserType.MEMBER,
@@ -211,7 +211,7 @@ describe('UserSyncManager', (): void => {
         canGoIntoDebt: true,
       });
 
-      const organ = await User.save({
+      await User.save({
         firstName: 'Organ',
         lastName: 'User',
         type: UserType.ORGAN,
@@ -299,7 +299,7 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should abort on pre() error', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Member',
         lastName: 'User',
         type: UserType.MEMBER,
@@ -320,7 +320,7 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should call post() even after errors', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Member',
         lastName: 'User',
         type: UserType.MEMBER,
@@ -346,7 +346,7 @@ describe('UserSyncManager', (): void => {
 
   describe('runDry', (): void => {
     it('should perform dry run and return results', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Member',
         lastName: 'User',
         type: UserType.MEMBER,
@@ -365,7 +365,7 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should call down() for failed users in dry run', async (): Promise<void> => {
-      const member = await User.save({
+      await User.save({
         firstName: 'Member',
         lastName: 'User',
         type: UserType.MEMBER,
