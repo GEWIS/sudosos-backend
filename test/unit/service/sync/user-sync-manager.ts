@@ -24,7 +24,6 @@ import UserSyncManager from '../../../../src/service/sync/user/user-sync-manager
 import { UserSyncService } from '../../../../src/service/sync/user/user-sync-service';
 import User, { UserType } from '../../../../src/entity/user/user';
 import { defaultAfter, defaultBefore, DefaultContext } from '../../../helpers/test-helpers';
-import { UserFactory } from '../../../helpers/user-factory';
 
 /**
  * Test implementation of UserSyncService for testing purposes.
@@ -37,6 +36,10 @@ class TestSyncService extends UserSyncService {
   public shouldFail = false;
 
   public shouldThrow = false;
+
+  public shouldThrowInPre = false;
+
+  public shouldThrowInSync = false;
 
   public preCalled = false;
 
@@ -56,9 +59,9 @@ class TestSyncService extends UserSyncService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected async sync(user: User, isDryRun?: boolean): Promise<boolean> {
+  public async sync(user: User, isDryRun?: boolean): Promise<boolean> {
     this.syncCalled = true;
-    if (this.shouldThrow) {
+    if (this.shouldThrowInSync) {
       throw new Error('Test sync error');
     }
     return !this.shouldFail;
@@ -81,7 +84,7 @@ class TestSyncService extends UserSyncService {
 
   async pre(): Promise<void> {
     this.preCalled = true;
-    if (this.shouldThrow) {
+    if (this.shouldThrowInPre) {
       throw new Error('Test pre error');
     }
   }
@@ -97,6 +100,8 @@ class TestSyncService extends UserSyncService {
     this.shouldSkip = false;
     this.shouldFail = false;
     this.shouldThrow = false;
+    this.shouldThrowInPre = false;
+    this.shouldThrowInSync = false;
     this.preCalled = false;
     this.postCalled = false;
     this.fetchCalled = false;
@@ -120,7 +125,10 @@ describe('UserSyncManager', (): void => {
     await defaultAfter(ctx);
   });
 
-  beforeEach((): void => {
+  beforeEach(async (): Promise<void> => {
+    // Clean up any existing users before each test
+    await ctx.connection.query('DELETE FROM user');
+    
     testService1 = new TestSyncService();
     testService2 = new TestSyncService();
     syncManager = new UserSyncManager([testService1, testService2]);
@@ -133,16 +141,33 @@ describe('UserSyncManager', (): void => {
 
   describe('getTargets', (): void => {
     it('should return users of types targeted by services', async (): Promise<void> => {
-      // Create test users
-      const [member] = await (await UserFactory()).clone(1);
-      const [organ] = await (await UserFactory()).clone(1);
-      const [localUser] = await (await UserFactory()).clone(1);
+      // Create test users directly
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
-      member.type = UserType.MEMBER;
-      organ.type = UserType.ORGAN;
-      localUser.type = UserType.LOCAL_USER;
+      const organ = await User.save({
+        firstName: 'Organ',
+        lastName: 'User',
+        type: UserType.ORGAN,
+        active: true,
+        acceptedToS: 'NOT_REQUIRED' as any,
+        canGoIntoDebt: true,
+      });
 
-      await User.save([member, organ, localUser]);
+      const localUser = await User.save({
+        firstName: 'Local',
+        lastName: 'User',
+        type: UserType.LOCAL_USER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       const targets = await syncManager.getTargets();
 
@@ -154,10 +179,15 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should not return deleted users', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      member.deleted = true;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Deleted',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        deleted: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       const targets = await syncManager.getTargets();
       expect(targets).to.have.length(0);
@@ -172,12 +202,23 @@ describe('UserSyncManager', (): void => {
 
   describe('run', (): void => {
     it('should successfully sync users and return results', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      const [organ] = await (await UserFactory()).clone(1);
-      
-      member.type = UserType.MEMBER;
-      organ.type = UserType.ORGAN;
-      await User.save([member, organ]);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
+
+      const organ = await User.save({
+        firstName: 'Organ',
+        lastName: 'User',
+        type: UserType.ORGAN,
+        active: true,
+        acceptedToS: 'NOT_REQUIRED' as any,
+        canGoIntoDebt: true,
+      });
 
       const results = await syncManager.run();
 
@@ -191,11 +232,18 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should handle skipped users', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
+      // Make both services skip the user
       testService1.shouldSkip = true;
+      testService2.shouldSkip = true;
 
       const results = await syncManager.run();
 
@@ -206,11 +254,18 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should handle failed syncs', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
+      // Make both services fail
       testService1.shouldFail = true;
+      testService2.shouldFail = true;
 
       const results = await syncManager.run();
 
@@ -222,11 +277,18 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should handle sync errors gracefully', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
-      testService1.shouldThrow = true;
+      // Make both services throw errors in sync
+      testService1.shouldThrowInSync = true;
+      testService2.shouldThrowInSync = true;
 
       const results = await syncManager.run();
 
@@ -237,13 +299,17 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should abort on pre() error', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       // Make pre() throw an error
-      testService1.shouldThrow = true;
-      const preStub = sinon.stub(testService1, 'pre').rejects(new Error('Pre error'));
+      testService1.shouldThrowInPre = true;
 
       const results = await syncManager.run();
 
@@ -251,29 +317,43 @@ describe('UserSyncManager', (): void => {
       expect(results.failed).to.have.length(0);
       expect(results.skipped).to.have.length(0);
       expect(testService1.syncCalled).to.be.false;
-
-      preStub.restore();
     });
 
     it('should call post() even after errors', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
-      testService1.shouldThrow = true;
+      // Make only the sync method throw, not post
+      const syncStub = sinon.stub(testService1, 'sync').callsFake(async (): Promise<boolean> => {
+        testService1.syncCalled = true;
+        throw new Error('Test sync error');
+      });
 
       await syncManager.run();
 
       expect(testService1.postCalled).to.be.true;
       expect(testService2.postCalled).to.be.true;
+
+      syncStub.restore();
     });
   });
 
   describe('runDry', (): void => {
     it('should perform dry run and return results', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       const results = await syncManager.runDry();
 
@@ -285,9 +365,14 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should call down() for failed users in dry run', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       testService1.shouldFail = true;
       testService2.shouldFail = true;
@@ -314,28 +399,49 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should handle fetch errors gracefully', async (): Promise<void> => {
-      testService1.shouldThrow = true;
+      // Make only the fetch method throw, not post
+      const originalFetch = testService1.fetch;
+      testService1.fetch = async (): Promise<void> => {
+        testService1.fetchCalled = true;
+        throw new Error('Test fetch error');
+      };
 
       // Should not throw, but handle error gracefully
       await expect(syncManager.fetch()).to.not.be.rejected;
       expect(testService1.postCalled).to.be.true;
+
+      // Restore original method
+      testService1.fetch = originalFetch;
     });
 
     it('should call post() even after fetch errors', async (): Promise<void> => {
-      testService1.shouldThrow = true;
+      // Make only the fetch method throw, not post
+      const originalFetch = testService1.fetch;
+      testService1.fetch = async (): Promise<void> => {
+        testService1.fetchCalled = true;
+        throw new Error('Test fetch error');
+      };
 
       await syncManager.fetch();
 
       expect(testService1.postCalled).to.be.true;
       expect(testService2.postCalled).to.be.true;
+
+      // Restore original method
+      testService1.fetch = originalFetch;
     });
   });
 
   describe('sync', (): void => {
     it('should aggregate results from multiple services', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       // Service 1 succeeds, Service 2 fails
       testService1.shouldFail = false;
@@ -350,9 +456,14 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should return skipped=true if all services skip', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       testService1.shouldSkip = true;
       testService2.shouldSkip = true;
@@ -364,9 +475,14 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should return result=false if all services fail', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       testService1.shouldFail = true;
       testService2.shouldFail = true;
@@ -380,9 +496,14 @@ describe('UserSyncManager', (): void => {
 
   describe('down', (): void => {
     it('should call down on all services', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       await syncManager.down(member);
 
@@ -391,9 +512,14 @@ describe('UserSyncManager', (): void => {
     });
 
     it('should handle down errors gracefully', async (): Promise<void> => {
-      const [member] = await (await UserFactory()).clone(1);
-      member.type = UserType.MEMBER;
-      await User.save(member);
+      const member = await User.save({
+        firstName: 'Member',
+        lastName: 'User',
+        type: UserType.MEMBER,
+        active: true,
+        acceptedToS: 'ACCEPTED' as any,
+        canGoIntoDebt: true,
+      });
 
       testService1.shouldThrow = true;
 
