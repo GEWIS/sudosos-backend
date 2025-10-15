@@ -115,11 +115,13 @@ async function createCronTasks(): Promise<void> {
   });
 
   if (syncServices.length !== 0) {
+    application.logger.info('Registering user sync tasks', syncServices.map(s => s.constructor.name));
     const syncManager = new UserSyncManager(syncServices);
 
     const userSyncer = cron.schedule('41 1 * * *', async () => {
       logger.debug('Syncing users.');
-      await syncManager.run();
+      const results = await syncManager.run();
+      logger.debug(`Sync completed: ${results.passed.length} passed, ${results.failed.length} failed, ${results.skipped.length} skipped`);
     });
     application.tasks.push(userSyncer);
 
@@ -128,6 +130,8 @@ async function createCronTasks(): Promise<void> {
       await syncManager.fetch();
     });
     application.tasks.push(userFetcher);
+  } else {
+    application.logger.warn('Skipping user syncing');
   }
 
   application.logger.info('Tasks registered');

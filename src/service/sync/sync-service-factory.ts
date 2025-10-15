@@ -46,7 +46,7 @@ export interface SyncServiceFactoryOptions {
  * based on environment variables and configuration.
  * 
  * @template T The entity type that the sync services operate on
- * @template S The specific sync service type that extends SyncService<T>
+ * @template S The specific sync service type that extends SyncService
  */
 export default abstract class SyncServiceFactory<T, S extends SyncService<T>> {
   

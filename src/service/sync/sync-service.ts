@@ -54,14 +54,14 @@ export abstract class SyncService<T> extends WithManager {
    * Up is a wrapper around `sync` that handles the guard.
    *
    * @param entity
-   *
+   * @param isDryRun - Whether this is a dry run (no actual changes)
    * @returns {Promise<SyncResult>} The result of the sync.
    */
-  async up(entity: T): Promise<SyncResult> {
+  async up(entity: T, isDryRun: boolean = false): Promise<SyncResult> {
     const guardResult = await this.guard(entity);
     if (!guardResult) return { skipped: true, result: false };
 
-    const result = await this.sync(entity);
+    const result = await this.sync(entity, isDryRun);
     return { skipped: false, result };
   }
 
@@ -69,9 +69,10 @@ export abstract class SyncService<T> extends WithManager {
    * Synchronizes the user data with the external data source.
    *
    * @param entity The user to synchronize.
+   * @param isDryRun - Whether this is a dry run (no actual changes)
    * @returns {Promise<boolean>} True if the user was synchronized, false otherwise.
    */
-  protected abstract sync(entity: T): Promise<boolean>;
+  protected abstract sync(entity: T, isDryRun?: boolean): Promise<boolean>;
 
   /**
    * Fetches the user data from the external data source.
@@ -87,8 +88,9 @@ export abstract class SyncService<T> extends WithManager {
    * This should be revertible and idempotent!
    *
    * @param entity
+   * @param isDryRun - Whether this is a dry run (no actual changes)
    */
-  abstract down(entity: T): Promise<void>;
+  abstract down(entity: T, isDryRun?: boolean): Promise<void>;
 
   /**
    * Called before a sync batch is started.

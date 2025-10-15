@@ -75,7 +75,7 @@ export default class GewisDBSyncService extends UserSyncService {
     }
   }
 
-  async sync(entity: User): Promise<boolean> {
+  async sync(entity: User, isDryRun: boolean = false): Promise<boolean> {
     const gewisUser = await this.manager.findOne(GewisUser, { where: { user: { id: entity.id } }, relations: ['user'] });
     if (!gewisUser) {
       throw new Error('GEWIS User not found.');
@@ -100,7 +100,10 @@ export default class GewisDBSyncService extends UserSyncService {
       user.lastName = update.lastName;
       user.email = update.email;
       user.ofAge = update.ofAge;
-      await this.manager.save(user);
+      
+      if (!isDryRun) {
+        await this.manager.save(user);
+      }
       return true;
     }
     return true;
@@ -110,7 +113,7 @@ export default class GewisDBSyncService extends UserSyncService {
     return ServerSettingsStore.getInstance().getSetting('allowGewisSyncDelete') as ISettings['allowGewisSyncDelete'];
   }
 
-  async down(entity: User): Promise<void> {
+  async down(entity: User, isDryRun: boolean = false): Promise<void> {
     const gewisUser = await this.manager.findOne(GewisUser, { where: { user: { id: entity.id } } });
     if (!gewisUser) return;
     
@@ -125,18 +128,21 @@ export default class GewisDBSyncService extends UserSyncService {
 
     try {
       this.logger.trace(`Down user ${entity.id}, with balance ${currentBalance.amount.amount} (should delete: ${shouldDelete})`);
-      const oldActive = entity.active;
-      const u = await UserService.closeUser(entity.id, shouldDelete);
+      
+      if (!isDryRun) {
+        const oldActive = entity.active;
+        const u = await UserService.closeUser(entity.id, shouldDelete);
 
-      // If the user was active, and is now inactive, we send a notification
-      const isFallingEdge = oldActive !== u.active && u.active === false;
+        // If the user was active, and is now inactive, we send a notification
+        const isFallingEdge = oldActive !== u.active && u.active === false;
 
-      // Send notification to user
-      if (!shouldDelete && isFallingEdge) {
-        this.logger.trace(`User ${u.id} closed`);
-        Mailer.getInstance().send(entity, new MembershipExpiryNotification({
-          balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
-        }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
+        // Send notification to user
+        if (!shouldDelete && isFallingEdge) {
+          this.logger.trace(`User ${u.id} closed`);
+          Mailer.getInstance().send(entity, new MembershipExpiryNotification({
+            balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
+          }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
+        }
       }
     } catch (e) {
       this.logger.error(`Down user ${entity.id} failed with error ${e}`);
