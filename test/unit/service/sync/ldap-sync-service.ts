@@ -231,7 +231,7 @@ describe('LdapSyncService', () => {
         await inUserContext(
           await (await UserFactory(await ORGAN_USER())).clone(1),
           async (organ: User) => {
-            const UUID = Buffer.from('8989', 'hex');
+            const UUID = Buffer.from('9999', 'hex');
             await addLDAPAuthenticator(UUID, organ);
 
             // Intentionally "mess up" the user and snapshot the 'wrong' values
