@@ -115,6 +115,7 @@ async function createCronTasks(): Promise<void> {
   });
 
   if (syncServices.length !== 0) {
+    application.logger.info('Registering user sync tasks', syncServices.map(s => s.constructor.name));
     const syncManager = new UserSyncManager(syncServices);
 
     const userSyncer = cron.schedule('41 1 * * *', async () => {
@@ -128,6 +129,8 @@ async function createCronTasks(): Promise<void> {
       await syncManager.fetch();
     });
     application.tasks.push(userFetcher);
+  } else {
+    application.logger.warn('Skipping user syncing');
   }
 
   application.logger.info('Tasks registered');
