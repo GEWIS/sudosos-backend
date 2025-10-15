@@ -1,13 +1,15 @@
 <div align="center">
 
 <!-- Centered Logo Image -->
-<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
+<a href="https://github.com/GEWIS/sudosos-backend">
+  <img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
+</a>
 
 <!-- Centered Name Beneath Logo -->
-<h1>SudoSOS Backend</h1>
+<h1><a href="https://github.com/GEWIS/sudosos-backend">SudoSOS Backend</a></h1>
 
 <p align="center">
-  <strong>A comprehensive Point of Sale and Financial Management System for Study Association GEWIS</strong>
+  <strong>A comprehensive Point of Sale and Financial Management System for <a href="https://gewis.nl">Study Association GEWIS</a></strong>
 </p>
 
 [![Coverage Status](https://coveralls.io/repos/github/GEWIS/sudosos-backend/badge.svg?branch=develop)](https://coveralls.io/github/GEWIS/sudosos-backend?branch=develop)
@@ -17,25 +19,28 @@
 [![Issues](https://img.shields.io/github/issues/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/issues)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/commits/develop)
 [![Code Size](https://img.shields.io/github/languages/code-size/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend)
-[![License](https://img.shields.io/github/license/GEWIS/sudosos-backend.svg)](./LICENSE)
+[![License](https://img.shields.io/github/license/GEWIS/sudosos-backend.svg)](https://github.com/GEWIS/sudosos-backend/blob/develop/LICENSE)
 
 </div>
 
 ## 🎯 Overview
 
-SudoSOS Backend is a comprehensive Point of Sale (POS) and financial management system designed specifically for Study Association GEWIS. It provides a robust API for managing transactions, user accounts, products, payments, and financial operations within the association.
+[SudoSOS Backend](https://github.com/GEWIS/sudosos-backend) is a comprehensive Point of Sale (POS) and financial management system designed for [Study Association GEWIS](https://gewis.nl).  
+It provides a robust API for managing transactions, user accounts, products, payments, and financial operations within the association.
 
 ## 🔧 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js 22+** - [Download here](https://nodejs.org/)
-- **Git** - [Download here](https://git-scm.com/)
-- **OpenSSL** - Usually pre-installed on most systems
+- **Node.js 22+** – [Download here](https://nodejs.org/)
+- **Git** – [Download here](https://git-scm.com/)
+- **OpenSSL** – Usually pre-installed on most systems
 - **Database** (choose one):
-  - **SQLite** (default for development) - No additional setup required
-  - **MariaDB/MySQL** - For production environments
-- **SQLite Viewer** (optional) - [DB Browser for SQLite](https://sqlitebrowser.org/) or [DataGrip](https://www.jetbrains.com/datagrip/)
+  - **SQLite** (default for development) – No additional setup required
+  - **MariaDB/MySQL** – For production environments
+- **SQLite Viewer** (optional):
+  - [DB Browser for SQLite](https://sqlitebrowser.org/)
+  - [DataGrip](https://www.jetbrains.com/datagrip/)
 
 ## 🚀 Quick Start
 
@@ -51,7 +56,7 @@ npm install
 
 # Copy environment configuration
 cp .env.example .env
-```
+````
 
 ### 2. Generate JWT Key
 
@@ -61,6 +66,7 @@ openssl genrsa -out config/jwt.key 2048
 ```
 
 Verify the key was created correctly:
+
 ```bash
 # Should start with -----BEGIN RSA PRIVATE KEY-----
 head -1 config/jwt.key
@@ -69,7 +75,7 @@ head -1 config/jwt.key
 ### 3. Build and Test
 
 ```bash
-# Generate swagger specification
+# Generate Swagger specification
 npm run swagger
 
 # Build the project
@@ -82,11 +88,13 @@ npm run test
 ### 4. Initialize Database
 
 > [!WARNING]
-> **IMPORTANT: Clear your database before initializing!**
-> - For SQLite: Delete the `local.sqlite` file if it exists
-> - For MariaDB: Drop all tables in your database
+> **IMPORTANT:** Clear your database before initializing!
+>
+> * For SQLite: Delete the `local.sqlite` file if it exists
+> * For MariaDB: Drop all tables in your database
 
 **Quick Start for Development:**
+
 ```bash
 # For SQLite (recommended for development)
 npm run init:schema
@@ -98,10 +106,11 @@ npm run init:migrate
 ```
 
 This command will:
-- Create the database schema
-- Seed it with initial data
-- Run maintenance tasks
-- Set up default roles and permissions
+
+* Create the database schema
+* Seed it with initial data
+* Run maintenance tasks
+* Set up default roles and permissions
 
 ### 5. Start Development Server
 
@@ -110,17 +119,17 @@ This command will:
 npm run watch
 ```
 
-The server will be available at `http://localhost:3000`
+The server will be available at [http://localhost:3000](http://localhost:3000)
 
 ### 6. Access API Documentation
 
-Visit `http://localhost:3000/api-docs` to access the Swagger UI for API documentation.
+Visit [http://localhost:3000/api-docs](http://localhost:3000/api-docs) to access the Swagger UI for API documentation.
 
 ### 7. Get Authentication Token
 
-1. Use the `/authentication/mock` endpoint with a valid userId to get a JWT token
-2. In Swagger UI, simply enter the JWT token returned by the `/authentication/mock` endpoint
-3. Use this token to authenticate API requests
+1. Use the [`/authentication/mock`](http://localhost:3000/api-docs#/authentication/mock) endpoint with a valid `userId` to get a JWT token.
+2. In Swagger UI, enter the JWT token returned by the `/authentication/mock` endpoint.
+3. Use this token to authenticate API requests.
 
 ## 🛠️ Development Setup
 
@@ -147,7 +156,7 @@ Visit `http://localhost:3000/api-docs` to access the Swagger UI for API document
 
 ## 📁 Project Structure
 
-```
+```text
 src/
 ├── authentication/        # JWT token handling and authentication
 ├── controller/            # API controllers and request/response handling
@@ -186,41 +195,52 @@ src/
 ## 📚 API Documentation
 
 ### Swagger UI
-- **Development**: `http://localhost:3000/api-docs`
-- **Production**: `https://sudosos.gewis.nl/api/api-docs/`
+
+* **Development:** [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+* **Production:** [https://sudosos.gewis.nl/api/api-docs/](https://sudosos.gewis.nl/api/api-docs/)
 
 ### Comprehensive Documentation
-For detailed documentation, API references, and examples, visit the SudoSOS documentation site [here](http://sudosos.gewis.nl/docs):
+
+For detailed documentation, API references, and examples, visit the [SudoSOS Documentation Site](https://sudosos.gewis.nl/docs).
 
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these guidelines:
 
 ### Development Workflow
+
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
+2. Create a feature branch:
+   `git checkout -b feature/your-feature-name`
 3. Make your changes
 4. Run tests: `npm run test`
 5. Run linting: `npm run lint-fix`
-6. Commit your changes: `git commit -m "feat: Add your feature"` ([follow the conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/))
-7. Push to your branch: `git push origin feature/your-feature-name`
-8. Create a Pull Request
+6. Commit changes:
+   `git commit -m "feat: Add your feature"` ([Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/))
+7. Push your branch:
+   `git push origin feature/your-feature-name`
+8. [Create a Pull Request](https://github.com/GEWIS/sudosos-backend/pulls)
 
 ### IDE Setup (IntelliJ/WebStorm)
+
 For easy ESLint integration:
-1. Go to Preferences → Languages & Frameworks → JavaScript → Code Quality Tools → ESLint
-2. Check "Run ESLint --fix on save"
+
+1. Go to **Preferences → Languages & Frameworks → JavaScript → Code Quality Tools → ESLint**
+2. Check **"Run ESLint --fix on save"**
 3. Apply changes
 
 ## 📄 License
 
-This project is licensed under the GNU Affero General Public License v3.0 or later. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the [GNU Affero General Public License v3.0 or later](https://www.gnu.org/licenses/agpl-3.0.html).
+See the [LICENSE](https://github.com/GEWIS/sudosos-backend/blob/develop/LICENSE) file for details.
 
 ## 👥 Contributors
 
-This project exists thanks to all the people who contribute code.
+This project exists thanks to all who contribute code.
 
-<a href="https://github.com/GEWIS/sudosos-backend/graphs/contributors"><img src="https://contributors.aika.dev/GEWIS/sudosos-backend/contributors.svg?max=44" alt="Code contributors" /></a>
+<a href="https://github.com/GEWIS/sudosos-backend/graphs/contributors">
+  <img src="https://contributors.aika.dev/GEWIS/sudosos-backend/contributors.svg?max=44" alt="Code contributors" />
+</a>
 
 ---
 
