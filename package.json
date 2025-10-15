@@ -27,7 +27,10 @@
     "typedoc": "typedoc",
     "docs:dev": "vitepress dev docs",
     "docs:build": "NODE_OPTIONS=--max-old-space-size=12288 vitepress build docs --mode production",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "maintenance": "ts-node src/maintenance.ts",
+    "init:migrate": "npm run migrate && npm run seed && npm run maintenance",
+    "init:schema": "npm run schema && npm run seed && npm run maintenance"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",
