@@ -290,6 +290,7 @@ describe('UserSyncManager', (): void => {
       await User.save(member);
 
       testService1.shouldFail = true;
+      testService2.shouldFail = true;
 
       const results = await syncManager.runDry();
 
