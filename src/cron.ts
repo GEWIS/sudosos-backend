@@ -120,7 +120,8 @@ async function createCronTasks(): Promise<void> {
 
     const userSyncer = cron.schedule('41 1 * * *', async () => {
       logger.debug('Syncing users.');
-      await syncManager.run();
+      const results = await syncManager.run();
+      logger.debug(`Sync completed: ${results.passed.length} passed, ${results.failed.length} failed, ${results.skipped.length} skipped`);
     });
     application.tasks.push(userSyncer);
 
