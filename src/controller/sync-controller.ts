@@ -89,11 +89,11 @@ export default class SyncController extends BaseController {
       // Parse and validate service filter from query parameters
       let serviceFilter: UserSyncServiceType[] = [];
       if (req.query.service) {
-        const services = Array.isArray(req.query.service) ? req.query.service : [req.query.service];
+        const services = (Array.isArray(req.query.service) ? req.query.service : [req.query.service]) as string[];
         for (let i = 0; i < services.length; i++) {
-          if (services[i].toLowerCase === 'ldap') {
+          if (services[i].toLowerCase() === 'ldap') {
             serviceFilter.push(UserSyncServiceType.LDAP);
-          } else if (services[i].toLowerCase === 'gewisdb') {
+          } else if (services[i].toLowerCase() === 'gewisdb') {
             serviceFilter.push(UserSyncServiceType.GEWISDB);
           } else {
             res.status(400).json('Invalid service: ' + services[i] + '.');
