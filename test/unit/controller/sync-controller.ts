@@ -27,7 +27,6 @@ import SyncController from '../../../src/controller/sync-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
 import { RbacSeeder } from '../../seed';
-import UserSyncServiceFactory, { UserSyncServiceType } from '../../../src/service/sync/user/user-sync-service-factory';
 
 describe('SyncController', () => {
   let ctx: DefaultContext & {
