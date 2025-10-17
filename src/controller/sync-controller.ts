@@ -91,9 +91,9 @@ export default class SyncController extends BaseController {
       if (req.query.service) {
         const services = Array.isArray(req.query.service) ? req.query.service : [req.query.service];
         for (let i = 0; i < services.length; i++) {
-          if (services[i] === 'ldap') {
+          if (services[i].toLowerCase === 'ldap') {
             serviceFilter.push(UserSyncServiceType.LDAP);
-          } else if (services[i] === 'gewisdb') {
+          } else if (services[i].toLowerCase === 'gewisdb') {
             serviceFilter.push(UserSyncServiceType.GEWISDB);
           } else {
             res.status(400).json('Invalid service: ' + services[i] + '.');
@@ -117,27 +117,18 @@ export default class SyncController extends BaseController {
       const syncManager = new UserSyncManager(syncServices);
       const results: SyncResults<User> = await syncManager.runDry();
 
-      // Format response with minimal user information
+      const toView = (user: User) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        type: user.type,
+      });
+
       const response = {
         users: {
-          passed: results.passed.map(user => ({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            type: user.type,
-          })),
-          failed: results.failed.map(user => ({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            type: user.type,
-          })),
-          skipped: results.skipped.map(user => ({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            type: user.type,
-          })),
+          passed: results.passed.map(toView),
+          failed: results.failed.map(toView),
+          skipped: results.skipped.map(toView),
         },
       };
 
