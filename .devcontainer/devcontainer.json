@@ -1,0 +1,80 @@
+{
+  "name": "SudoSOS Backend Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  
+  "features": {},
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-eslint",
+
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode-remote.remote-containers"
+      ],
+      "settings": {
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "eslint.validate": ["typescript", "javascript"],
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/out": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [3000, 8080, 3306],
+  "portsAttributes": {
+    "3000": {
+      "label": "Backend API",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "WebSocket",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MariaDB",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "npm install",
+  "postStartCommand": "",
+
+  "remoteEnv": {
+    "NODE_ENV": "development",
+    "TYPEORM_CONNECTION": "mariadb",
+    "TYPEORM_HOST": "mariadb",
+    "TYPEORM_PORT": "3306",
+    "TYPEORM_USERNAME": "sudosos",
+    "TYPEORM_PASSWORD": "sudosos",
+    "TYPEORM_DATABASE": "sudosos_dev",
+    "TYPEORM_SYNCHRONIZE": "false",
+    "TYPEORM_LOGGING": "false",
+    "HTTP_PORT": "3000",
+    "API_HOST": "localhost/api",
+    "API_BASEPATH": "/v1",
+    "CURRENCY_CODE": "EUR",
+    "CURRENCY_PRECISION": "2",
+    "LOG_LEVEL": "trace",
+    "FILE_STORAGE_METHOD": "disk",
+    "ENABLE_LDAP": "false",
+    "PAGINATION_DEFAULT": "20",
+    "PAGINATION_MAX": "500",
+    "RESET_TOKEN_EXPIRES": "3600"
+  },
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/data,target=/workspace/data,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/config,target=/workspace/config,type=bind,consistency=cached"
+  ]
+}

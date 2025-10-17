@@ -18,15 +18,30 @@
  *  @license
  */
 
-export * from './catalogue';
-export * from './ledger';
+/**
+ * This is the module page of the authentication-qr-response.
+ *
+ * @module authentication
+ */
 
-export { default as EventSeeder } from './event-seeder';
-export { default as QRAuthenticatorSeeder } from './qr-authenticator-seeder';
-export { default as RbacSeeder } from './rbac-seeder';
-export { default as UserSeeder } from './user-seeder';
-export { DatabaseContent, default as seedDatabase } from './all';
+import { QRAuthenticatorStatus } from '../../entity/authenticator/qr-authenticator';
 
-import seedDatabase from './all';
+/**
+ * @typedef {object} QRCodeResponse
+ * @property {string} sessionId.required - The session ID
+ * @property {string} qrCodeUrl.required - The QR code URL
+ * @property {string} expiresAt.required - The expiry date of the QR code
+ */
+export interface QRCodeResponse {
+  sessionId: string;
+  qrCodeUrl: string;
+  expiresAt: string;
+}
 
-export default seedDatabase;
+/**
+ * @typedef {object} QRStatusResponse
+ * @property {string} status.required - enum:PENDING,CONFIRMED,EXPIRED,CANCELLED - The status of the QR code
+ */
+export interface QRStatusResponse {
+  status: QRAuthenticatorStatus;
+}

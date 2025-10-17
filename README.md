@@ -1,10 +1,14 @@
 <div align="center">
 
 <!-- Centered Logo Image -->
-<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="Logo" style="width:200px;height:auto;">
+<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
 
 <!-- Centered Name Beneath Logo -->
 <h1>SudoSOS Backend</h1>
+
+<p align="center">
+  <strong>A comprehensive Point of Sale and Financial Management System for Study Association GEWIS</strong>
+</p>
 
 [![Coverage Status](https://coveralls.io/repos/github/GEWIS/sudosos-backend/badge.svg?branch=develop)](https://coveralls.io/github/GEWIS/sudosos-backend?branch=develop)
 [![Uptime](https://uptime.gewis.nl/api/badge/2/uptime)](https://sudosos.gewis.nl/api/v1/ping)
@@ -17,55 +21,209 @@
 
 </div>
 
-## Quick start
-This quick start first states what software needs to be installed to be able to work with the project and then explains how to get the project started.
+## 🎯 Overview
 
-Prerequisites:
--	Have Node.js installed. Version 18 is required.
-     - Note that NPM 14.16 (latest) might not run the coverage on Linux. This is probably a race condition in the package and is being addressed.
-- Have Git and possibly a Git manager installed
-- Have OpenSSL installed (if you're using Git Bash you already have OpenSSL)
-- Have a SQLite viewer installed (optional, you can also set it to be saved in another database, but SQLite is the default). Recommended tools are [DB Browser for SQLite](https://sqlitebrowser.org/) or [DataGrip](https://www.jetbrains.com/datagrip/).
+SudoSOS Backend is a comprehensive Point of Sale (POS) and financial management system designed specifically for Study Association GEWIS. It provides a robust API for managing transactions, user accounts, products, payments, and financial operations within the association.
 
-Installing:
-- Checkout the Git to your favorite directory
-     -- If your path contains spaces you are basically begging for problems, and that is entirely your own fault
-- Copy `.env.example` to `.env`
-- Run `npm install` in this base directory
-- Run `openssl genrsa -out config/jwt.key 2048`
-- Check that there exists a jwt.key file in the config directory starting with `-----BEGIN RSA PRIVATE KEY-----`
-- Run `npm run swagger`
-- Run `npm run build`
-- Run `npm run test` - All of these should now pass
+## 🔧 Prerequisites
 
-Running:
-- OR without seed
-  - Run `npm run schema`
-  - Check that `local.sqlite` exists and open it
-  -	Create an entry in the user table (`INSERT INTO "user"(createdAt, updatedAt, version, firstName, lastName, active, deleted, "type") VALUES(datetime('NOW'), datetime('NOW'), 1, 'firstName', 'lastName', 1, 0, 1)`)
-  - Remember the userId (probably 1)
-- OR with seed
-  - Run `npm run seed`
+Before you begin, ensure you have the following installed:
 
+- **Node.js 22+** - [Download here](https://nodejs.org/)
+- **Git** - [Download here](https://git-scm.com/)
+- **OpenSSL** - Usually pre-installed on most systems
+- **Database** (choose one):
+  - **SQLite** (default for development) - No additional setup required
+  - **MariaDB/MySQL** - For production environments
+- **SQLite Viewer** (optional) - [DB Browser for SQLite](https://sqlitebrowser.org/) or [DataGrip](https://www.jetbrains.com/datagrip/)
 
-- Run `npm run watch` to start the application in development mode
-- Check that http://localhost:3000/api-docs shows a swagger ui
-- You can get a JWT key by using `/authentication/mock` using a valid userId.
-You can then use this token to for example set a password to log in on the frontend
-- **IN SWAGGER UI USE `Bearer <token>` TO GET THINGS TO WORK!!**
+## 🚀 Quick Start
 
-## Intellij hints
-### Easy ESLint intergration
-To make sure ESLint fixes your code on save do the following:
-- Have Webstorm version 2020.1 or higher installed
-- Go to Preferences - Language and Frameworks - Javascript - Code Quality Tools - Eslint
-- check `Run ESLint --fix on save`
-- Apply changes and press ok
+### 1. Clone and Setup
 
-## Contributors
+```bash
+# Clone the repository
+git clone https://github.com/GEWIS/sudosos-backend.git
+cd sudosos-backend
+
+# Install dependencies
+npm install
+
+# Copy environment configuration
+cp .env.example .env
+```
+
+### 2. Generate JWT Key
+
+```bash
+# Generate RSA private key for JWT authentication
+openssl genrsa -out config/jwt.key 2048
+```
+
+Verify the key was created correctly:
+```bash
+# Should start with -----BEGIN RSA PRIVATE KEY-----
+head -1 config/jwt.key
+```
+
+### 3. Build and Test
+
+```bash
+# Generate swagger specification
+npm run swagger
+
+# Build the project
+npm run build
+
+# Run tests to verify everything works
+npm run test
+```
+
+### 4. Initialize Database
+
+> [!WARNING]
+> **IMPORTANT: Clear your database before initializing!**
+> - For SQLite: Delete the `local.sqlite` file if it exists
+> - For MariaDB: Drop all tables in your database
+
+**Quick Start for Development:**
+```bash
+# For SQLite (recommended for development)
+npm run init:schema
+```
+
+```bash
+# OR for MariaDB/MySQL
+npm run init:migrate
+```
+
+This command will:
+- Create the database schema
+- Seed it with initial data
+- Run maintenance tasks
+- Set up default roles and permissions
+
+### 5. Start Development Server
+
+```bash
+# Start the development server with hot reload
+npm run watch
+```
+
+The server will be available at `http://localhost:3000`
+
+### 6. Access API Documentation
+
+Visit `http://localhost:3000/api-docs` to access the Swagger UI for API documentation.
+
+### 7. Get Authentication Token
+
+1. Use the `/authentication/mock` endpoint with a valid userId to get a JWT token
+2. In Swagger UI, simply enter the JWT token returned by the `/authentication/mock` endpoint
+3. Use this token to authenticate API requests
+
+## 🛠️ Development Setup
+
+### Available Scripts
+
+| Script                    | Description                                  |
+|---------------------------|----------------------------------------------|
+| `npm run build`           | Compile TypeScript to JavaScript             |
+| `npm run watch`           | Start development server with hot reload     |
+| `npm run test`            | Run all tests                                |
+| `npm run test-ci`         | Run tests with schema setup                  |
+| `npm run test-ci-migrate` | Run tests with migration setup               |
+| `npm run coverage`        | Generate test coverage report                |
+| `npm run lint`            | Run ESLint                                   |
+| `npm run lint-fix`        | Fix ESLint issues automatically              |
+| `npm run schema`          | Create/update database schema (SQLite)       |
+| `npm run migrate`         | Run database migrations (MariaDB/MySQL)      |
+| `npm run seed`            | Seed database with initial data              |
+| `npm run init:schema`     | Complete setup for SQLite development        |
+| `npm run init:migrate`    | Complete setup for MariaDB/MySQL development |
+| `npm run maintenance`     | Run maintenance tasks                        |
+| `npm run cron`            | Start cron job scheduler                     |
+| `npm run serve`           | Start production server                      |
+
+## 📁 Project Structure
+
+```
+src/
+├── authentication/        # JWT token handling and authentication
+├── controller/            # API controllers and request/response handling
+│   ├── request/           # Request DTOs and validation
+│   └── response/          # Response DTOs
+├── database/              # Database configuration and migrations
+├── entity/                # TypeORM entities and data models
+│   ├── authenticator/     # Authentication method entities
+│   ├── container/         # Product container entities
+│   ├── event/             # Event management entities
+│   ├── file/              # File management entities
+│   ├── invoices/          # Invoice-related entities
+│   ├── point-of-sale/     # POS system entities
+│   ├── product/           # Product catalog entities
+│   ├── rbac/              # Role-based access control entities
+│   ├── stripe/            # Payment processing entities
+│   ├── transactions/      # Transaction and financial entities
+│   └── user/              # User management entities
+├── errors/                # Custom error classes
+├── files/                 # File handling utilities
+├── gewis/                 # GEWIS-specific integrations
+├── helpers/               # Utility functions and helpers
+├── mailer/                # Email functionality
+├── middleware/            # Express middleware
+├── migrations/            # Database migration files
+├── rbac/                  # Role-based access control logic
+├── server-settings/       # Server configuration management
+├── service/               # Business logic services
+├── start/                 # Application startup and Swagger setup
+├── subscriber/            # Database event subscribers
+├── index.ts               # Main application entry point
+├── cron.ts                # Scheduled task definitions
+└── maintenance.ts         # Development maintenance script
+```
+
+## 📚 API Documentation
+
+### Swagger UI
+- **Development**: `http://localhost:3000/api-docs`
+- **Production**: `https://sudosos.gewis.nl/api/api-docs/`
+
+### Comprehensive Documentation
+For detailed documentation, API references, and examples, visit the SudoSOS documentation site [here](http://sudosos.gewis.nl/docs):
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes
+4. Run tests: `npm run test`
+5. Run linting: `npm run lint-fix`
+6. Commit your changes: `git commit -m "feat: Add your feature"` ([follow the conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/))
+7. Push to your branch: `git push origin feature/your-feature-name`
+8. Create a Pull Request
+
+### IDE Setup (IntelliJ/WebStorm)
+For easy ESLint integration:
+1. Go to Preferences → Languages & Frameworks → JavaScript → Code Quality Tools → ESLint
+2. Check "Run ESLint --fix on save"
+3. Apply changes
+
+## 📄 License
+
+This project is licensed under the GNU Affero General Public License v3.0 or later. See the [LICENSE](./LICENSE) file for details.
+
+## 👥 Contributors
 
 This project exists thanks to all the people who contribute code.
 
-[//]: # (TODO create a CONTRIBUTING.md)
-[//]: # (If you'd like to help, see [our guide to contributing code]&#40;CONTRIBUTING.md&#41;.)
 <a href="https://github.com/GEWIS/sudosos-backend/graphs/contributors"><img src="https://contributors.aika.dev/GEWIS/sudosos-backend/contributors.svg?max=44" alt="Code contributors" /></a>
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by <a href="https://gewis.nl">Study Association GEWIS</a></p>
+</div>

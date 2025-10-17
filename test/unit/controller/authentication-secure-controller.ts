@@ -38,7 +38,14 @@ import AuthenticationResponse from '../../../src/controller/response/authenticat
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { PointOfSaleSeeder, RbacSeeder, UserSeeder, QRAuthenticatorSeeder } from '../../seed';
+import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/authenticator/qr-authenticator';
+import WebSocketService from '../../../src/service/websocket-service';
+import QRService from '../../../src/service/qr-service';
+import AuthenticationService from '../../../src/service/authentication-service';
+import { UserResponse } from '../../../src/controller/response/user-response';
+import { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import sinon from 'sinon';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -56,6 +63,7 @@ describe('AuthenticationSecureController', () => {
     organUser: User,
     pointOfSaleUsers: User[],
     pointsOfSale: PointOfSale[],
+    qrAuthenticators: QRAuthenticator[],
   };
 
   before(async () => {
@@ -72,6 +80,7 @@ describe('AuthenticationSecureController', () => {
     );
 
     const { pointsOfSale, pointOfSaleUsers } = await new PointOfSaleSeeder().seed(users);
+    const qrAuthenticators = await new QRAuthenticatorSeeder().seed(users);
 
     await DefaultRoles.synchronize();
     const roleManager = new RoleManager();
@@ -109,6 +118,7 @@ describe('AuthenticationSecureController', () => {
       memberAuthenticators,
       pointsOfSale,
       pointOfSaleUsers,
+      qrAuthenticators,
     };
   });
 
@@ -226,6 +236,397 @@ describe('AuthenticationSecureController', () => {
 
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
+    });
+  });
+
+  describe('POST /authentication/qr/{sessionId}/confirm', () => {
+    let qrServiceStub: sinon.SinonStubbedInstance<QRService>;
+    let authenticationServiceStub: sinon.SinonStubbedInstance<AuthenticationService>;
+    let mockSocketIO: any;
+    let mockToMethod: sinon.SinonStub;
+    let mockEmitMethod: sinon.SinonStub;
+
+    beforeEach(() => {
+      // Create comprehensive WebSocket mocking
+      mockEmitMethod = sinon.stub();
+      mockToMethod = sinon.stub().returns({
+        emit: mockEmitMethod,
+      });
+
+      mockSocketIO = {
+        to: mockToMethod,
+        sockets: {
+          in: sinon.stub().returns({
+            emit: sinon.stub(),
+          }),
+        },
+        on: sinon.stub(),
+      };
+
+      // Mock the WebSocketService.io property
+      sinon.stub(WebSocketService, 'io').value(mockSocketIO);
+
+      // Setup service stubs
+      qrServiceStub = sinon.createStubInstance(QRService);
+      authenticationServiceStub = sinon.createStubInstance(AuthenticationService);
+
+      // Stub the service constructors
+      sinon.stub(QRService.prototype, 'get').callsFake(qrServiceStub.get);
+      sinon.stub(QRService.prototype, 'confirm').callsFake(qrServiceStub.confirm);
+      sinon.stub(AuthenticationService.prototype, 'getSaltedToken').callsFake(authenticationServiceStub.getSaltedToken);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should successfully confirm a pending QR session', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      // Setup stubs
+      qrServiceStub.get.resolves(pendingQr);
+      qrServiceStub.confirm.resolves();
+      authenticationServiceStub.getSaltedToken.resolves(mockToken);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal({ message: 'QR code confirmed successfully.' });
+
+      // Verify service calls
+      expect(qrServiceStub.get.calledOnceWith(pendingQr.sessionId)).to.be.true;
+      expect(qrServiceStub.confirm.calledWithMatch(pendingQr, sinon.match({ id: ctx.memberUser.id }))).to.be.true;
+      expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
+
+      // Verify WebSocket emission through mocked Socket.IO
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
+    });
+
+    it('should return 404 for non-existent session', async () => {
+      const nonExistentSessionId = '00000000-0000-0000-0000-000000000000';
+      qrServiceStub.get.resolves(null);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${nonExistentSessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Session not found.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 410 for expired session', async () => {
+      const expiredQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.EXPIRED);
+      expect(expiredQr).to.not.be.undefined;
+
+      qrServiceStub.get.resolves(expiredQr);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${expiredQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(410);
+      expect(res.body).to.equal('Session has expired.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 400 for already confirmed session', async () => {
+      const confirmedQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.CONFIRMED);
+      expect(confirmedQr).to.not.be.undefined;
+
+      qrServiceStub.get.resolves(confirmedQr);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${confirmedQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Session is no longer pending.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 400 for cancelled session', async () => {
+      const cancelledQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.CANCELLED);
+      expect(cancelledQr).to.not.be.undefined;
+
+      qrServiceStub.get.resolves(cancelledQr);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${cancelledQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Session is no longer pending.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 500 on QR service error', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      qrServiceStub.get.rejects(new Error('Database error'));
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 500 on authentication service error', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      qrServiceStub.get.resolves(pendingQr);
+      authenticationServiceStub.getSaltedToken.rejects(new Error('Token generation error'));
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should return 500 on QR confirm service error', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      qrServiceStub.get.resolves(pendingQr);
+      authenticationServiceStub.getSaltedToken.resolves(mockToken);
+      qrServiceStub.confirm.rejects(new Error('Database save error'));
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+
+      // Verify no WebSocket emission
+      expect(mockToMethod.called).to.be.false;
+      expect(mockEmitMethod.called).to.be.false;
+    });
+
+    it('should work with admin user', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.adminUser.id,
+        firstName: ctx.adminUser.firstName,
+        lastName: ctx.adminUser.lastName,
+        active: ctx.adminUser.active,
+        deleted: ctx.adminUser.deleted,
+        type: ctx.adminUser.type,
+        canGoIntoDebt: ctx.adminUser.canGoIntoDebt,
+        acceptedToS: ctx.adminUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      qrServiceStub.get.resolves(pendingQr);
+      qrServiceStub.confirm.resolves();
+      authenticationServiceStub.getSaltedToken.resolves(mockToken);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal({ message: 'QR code confirmed successfully.' });
+
+      // Verify WebSocket emission with admin user
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
+    });
+
+    it('should handle WebSocket emission error gracefully', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      qrServiceStub.get.resolves(pendingQr);
+      qrServiceStub.confirm.resolves();
+      authenticationServiceStub.getSaltedToken.resolves(mockToken);
+
+      // Make WebSocket emission throw an error
+      mockEmitMethod.throws(new Error('WebSocket error'));
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+    });
+
+    it('should verify correct token parameters passed to authentication service', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      qrServiceStub.get.resolves(pendingQr);
+      qrServiceStub.confirm.resolves();
+      authenticationServiceStub.getSaltedToken.resolves(mockToken);
+
+      const res = await request(ctx.app)
+        .post(`/authentication/qr/${pendingQr.sessionId}/confirm`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+
+      // Verify authentication service was called with correct parameters
+      expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
+      const [user, context] = authenticationServiceStub.getSaltedToken.getCall(0).args;
+      expect(user.id).to.equal(ctx.memberUser.id);
+      expect(context.roleManager).to.be.an('object');
+      expect(context.tokenHandler).to.equal(ctx.tokenHandler);
+    });
+
+    it('should test WebSocketService.emitQRConfirmed method directly', async () => {
+      const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
+      expect(pendingQr).to.not.be.undefined;
+
+      const mockUserResponse: UserResponse = {
+        id: ctx.memberUser.id,
+        firstName: ctx.memberUser.firstName,
+        lastName: ctx.memberUser.lastName,
+        active: ctx.memberUser.active,
+        deleted: ctx.memberUser.deleted,
+        type: ctx.memberUser.type,
+        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
+        acceptedToS: ctx.memberUser.acceptedToS,
+      };
+
+      const mockToken: AuthenticationResponse = {
+        token: 'mock-jwt-token',
+        user: mockUserResponse,
+        roles: [],
+        organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        rolesWithPermissions: [],
+      };
+
+      // Call WebSocketService.emitQRConfirmed directly
+      WebSocketService.emitQRConfirmed(pendingQr, mockToken);
+
+      // Verify the WebSocket methods were called correctly
+      expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
+      expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
+        sessionId: pendingQr.sessionId,
+        token: mockToken,
+      })).to.be.true;
     });
   });
 });

@@ -75,8 +75,9 @@ export default class LdapSyncService extends UserSyncService {
    * Sync user based on LDAPAuthenticator.
    * Only organs are actually updated.
    * @param user
+   * @param isDryRun - Whether this is a dry run (no actual changes)
    */
-  async sync(user: User): Promise<boolean> {
+  async sync(user: User, isDryRun: boolean = false): Promise<boolean> {
     const ldapAuth = await this.manager.findOne(LDAPAuthenticator, { where: { user: { id: user.id } } });
     if (!ldapAuth) return false;
 
@@ -94,7 +95,10 @@ export default class LdapSyncService extends UserSyncService {
     user.canGoIntoDebt = false;
     user.acceptedToS = TermsOfServiceStatus.NOT_REQUIRED;
     user.active = true;
-    await this.manager.save(user);
+    
+    if (!isDryRun) {
+      await this.manager.save(user);
+    }
 
     return true;
   }
@@ -102,11 +106,14 @@ export default class LdapSyncService extends UserSyncService {
   /**
    * Removes the LDAPAuthenticator for the given user.
    * @param user
+   * @param isDryRun - Whether this is a dry run (no actual changes)
    */
-  async down(user: User): Promise<void> {
+  async down(user: User, isDryRun: boolean = false): Promise<void> {
     this.logger.trace('Running down for user', user);
     const ldapAuth = await this.manager.findOne(LDAPAuthenticator, { where: { user: { id: user.id } } });
-    if (ldapAuth) await this.manager.delete(LDAPAuthenticator, { userId: user.id });
+    if (ldapAuth && !isDryRun) {
+      await this.manager.delete(LDAPAuthenticator, { userId: user.id });
+    }
 
     // For members, we only remove the authenticator.
     if (user.type === UserType.MEMBER) return;
@@ -115,7 +122,10 @@ export default class LdapSyncService extends UserSyncService {
     // TODO: closing organ active with non-zero balance?
     user.deleted = true;
     user.active = false;
-    await this.manager.save(user);
+    
+    if (!isDryRun) {
+      await this.manager.save(user);
+    }
   }
 
 

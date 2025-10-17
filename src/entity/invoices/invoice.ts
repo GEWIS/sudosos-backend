@@ -166,8 +166,9 @@ export default class Invoice extends PdfAble(BaseEntity) {
   @OneToMany(() => SubTransactionRow, (row) => row.invoice, { cascade: false })
   public subTransactionRows: SubTransactionRow[];
 
+  // Force junction table name to match mysql table name
   @ManyToMany(() => SubTransactionRow, { cascade: false })
-  @JoinTable()
+  @JoinTable({ name: 'inv_sub_tra_row_del_inv_sub_tra_row' })
   public subTransactionRowsDeletedInvoice: SubTransactionRow[];
 
   pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);

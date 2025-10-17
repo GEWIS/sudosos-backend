@@ -24,6 +24,8 @@ import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/cluster-adapter';
 import { setupWorker } from '@socket.io/sticky';
 import ServerSettingsStore from '../server-settings/server-settings-store';
+import QRAuthenticator from '../entity/authenticator/qr-authenticator';
+import AuthenticationResponse from '../controller/response/authentication-response';
 
 const SYSTEM_ROOM = 'system';
 const WEBSOCKET_PORT = 8080;
@@ -80,6 +82,25 @@ export default class WebSocketService {
         this.logger.trace(`Client ${client.id} is leaving room ${room}`);
         void client.leave(room);
       });
+
+      client.on('subscribe-qr-session', sessionId => {
+        this.logger.trace(`Client ${client.id} is subscribing to QR session ${sessionId}`);
+        void client.join(`qr-session-${sessionId}`);
+      });
+
+      client.on('unsubscribe-qr-session', sessionId => {
+        this.logger.trace(`Client ${client.id} is unsubscribing from QR session ${sessionId}`);
+        void client.leave(`qr-session-${sessionId}`);
+      });
+    });
+  }
+
+  public static emitQRConfirmed(qr: QRAuthenticator, token: AuthenticationResponse): void {
+    // Only log non-sensitive token properties (e.g., userId) instead of the full token object
+    this.logger.info(`Emitting QR confirmed for session ${qr.sessionId}, userId: ${token.user.id ?? 'unknown'}`);
+    this.io.to(`qr-session-${qr.sessionId}`).emit('qr-confirmed', {
+      sessionId: qr.sessionId,
+      token,
     });
   }
 

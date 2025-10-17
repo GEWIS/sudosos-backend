@@ -15,5 +15,8 @@
     "out/**/*",
     "src/**/*"
   ],
+  "exclude": [
+    "src/migrations/**"
+  ],
   "report-dir": "./reports/coverage"
 }

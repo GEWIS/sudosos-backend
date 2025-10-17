@@ -55,6 +55,7 @@ import VoucherGroupController from './controller/voucher-group-controller';
 import BalanceController from './controller/balance-controller';
 import RbacController from './controller/rbac-controller';
 import GewisAuthenticationController from './gewis/controller/gewis-authentication-controller';
+import AuthenticationQRController from './controller/authentication-qr-controller';
 import TransferController from './controller/transfer-controller';
 import PointOfSaleController from './controller/point-of-sale-controller';
 import ContainerController from './controller/container-controller';
@@ -78,6 +79,7 @@ import SellerPayoutController from './controller/seller-payout-controller';
 import { ISettings } from './entity/server-setting';
 import ServerSettingsController from './controller/server-settings-controller';
 import TransactionSummaryController from './controller/transaction-summary-controller';
+import SyncController from './controller/sync-controller';
 import getAppLogger from './helpers/logging';
 import WebSocketService from './service/websocket-service';
 
@@ -152,6 +154,16 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     process.env.GEWISWEB_JWT_SECRET,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
+
+  // Define QR authentication controller and bind before middleware.
+  const qrController = new AuthenticationQRController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
+  application.app.use('/v1/authentication/qr', qrController.getRouter());
 
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();
@@ -253,6 +265,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/writeoffs', new WriteOffController(options).getRouter());
   application.app.use('/v1/seller-payouts', new SellerPayoutController(options).getRouter());
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
+  application.app.use('/v1/sync', new SyncController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());

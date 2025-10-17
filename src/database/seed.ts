@@ -31,7 +31,6 @@ import Database from './database';
 import { Application } from '../index';
 import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
-import BalanceService from '../service/balance-service';
 import { truncateAllTables } from '../../test/setup';
 
 export default async function createApp() {
@@ -55,10 +54,7 @@ export default async function createApp() {
   initializeDiskStorage();
 
   try {
-    await application.connection.synchronize();
-    await application.connection.runMigrations({ fake: true });
     await seedDatabase();
-    await new BalanceService().updateBalances({});
     application.logger.info('Seeding successful');
   } catch (e) {
     application.logger.error('Seeding failed', e);

@@ -36,6 +36,9 @@ import PointOfSaleController from './point-of-sale-controller';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
+import { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
+import WebSocketService from '../service/websocket-service';
+import QRService from '../service/qr-service';
 
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
@@ -72,6 +75,13 @@ export default class AuthenticationSecureController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'authenticate', await PointOfSaleController.getRelation(req), 'User', ['pointOfSale']),
           handler: this.authenticatePointOfSale.bind(this),
+        },
+      },
+      '/qr/:sessionId/confirm': {
+        POST: {
+          policy: async () => Promise.resolve(true),
+          handler: this.confirmQRCode.bind(this),
+          restrictions: { lesser: false },
         },
       },
     };
@@ -131,6 +141,58 @@ export default class AuthenticationSecureController extends BaseController {
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /authentication/qr/{sessionId}/confirm
+   * @summary Confirm QR code authentication from mobile app
+   * @operationId confirmQRCode
+   * @tags authenticate - Operations of authentication controller
+   * @param {string} sessionId.path.required - The session ID
+   * @security JWT
+   * @return 200 - Successfully confirmed
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Session not found
+   * @return {string} 410 - Session expired
+   * @return {string} 500 - Internal server error
+   */
+  private async confirmQRCode(req: RequestWithToken, res: Response): Promise<void> {
+    const { sessionId } = req.params;
+    this.logger.trace('Confirming QR code for session', sessionId, 'by user', req.token.user);
+
+    try {
+      const qrAuthenticator = await (new QRService()).get(sessionId);
+      if (!qrAuthenticator) {
+        res.status(404).json('Session not found.');
+        return;
+      }
+
+      if (qrAuthenticator.status === QRAuthenticatorStatus.EXPIRED) {
+        res.status(410).json('Session has expired.');
+        return;
+      }
+
+      if (qrAuthenticator.status !== QRAuthenticatorStatus.PENDING) {
+        res.status(400).json('Session is no longer pending.');
+        return;
+      }
+
+      const user = await User.findOne({ where: { id: req.token.user.id } });
+      const token = await new AuthenticationService().getSaltedToken(user, {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      }, req.token.lesser);
+
+      // Let the service handle all business logic validation
+      await (new QRService()).confirm(qrAuthenticator, user);
+
+      // Notify WebSocket clients about the confirmation
+      WebSocketService.emitQRConfirmed(qrAuthenticator, token);
+      res.status(200).json({ message: 'QR code confirmed successfully.' });
+    } catch (error) {
+      this.logger.error('Could not confirm QR code:', error);
       res.status(500).json('Internal server error.');
     }
   }

@@ -54,6 +54,8 @@ import {
 } from './index';
 import seedGEWISUsers from '../../src/gewis/database/seed';
 import BannerSeeder from './banner-seeder';
+import QRAuthenticatorSeeder from './qr-authenticator-seeder';
+import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
 
 export interface DatabaseContent {
   users: User[],
@@ -82,6 +84,7 @@ export interface DatabaseContent {
   pinUsers: PinAuthenticator[],
   localUsers: LocalAuthenticator[],
   writeOffs: WriteOff[],
+  qrAuthenticators: QRAuthenticator[],
 }
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
@@ -113,6 +116,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { stripeDeposits, stripeDepositTransfers } = await new DepositSeeder().seed(users);
   const writeOffs = await new WriteOffSeeder().seed();
   const { banners } = await new BannerSeeder().seed(users);
+  const qrAuthenticators = await new QRAuthenticatorSeeder().seed(users);
 
   return {
     users,
@@ -141,5 +145,6 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     eventShifts,
     eventShiftAnswers,
     writeOffs,
+    qrAuthenticators,
   };
 }

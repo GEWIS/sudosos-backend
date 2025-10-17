@@ -19,6 +19,7 @@
     "test-file": "mocha -r ts-node/register --timeout 10000 --require ./test/setup.ts",
     "coverage": "nyc npm run test",
     "coverage-ci": "nyc npm run test-ci",
+    "coverage-ci-migrate": "nyc npm run test-ci-migrate",
     "lint": "eslint package.json src test --ext .js --ext .ts",
     "lint-fix": "npm run lint -- --fix",
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
@@ -26,7 +27,10 @@
     "typedoc": "typedoc",
     "docs:dev": "vitepress dev docs",
     "docs:build": "NODE_OPTIONS=--max-old-space-size=12288 vitepress build docs --mode production",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "maintenance": "ts-node src/maintenance.ts",
+    "init:migrate": "npm run migrate && npm run seed && npm run maintenance",
+    "init:schema": "npm run schema && npm run seed && npm run maintenance"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",
@@ -48,7 +52,7 @@
     "ldapts": "^7.4.0",
     "log4js": "^6.9.1",
     "mime-types": "^2.1.35",
-    "mysql2": "^3.14.4",
+    "mysql2": "^3.15.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
     "pdf-generator-client": "github:GEWIS/pdf-generator#31a8c6914b12e284a88f18317c1808ce8a1c0229",
@@ -78,7 +82,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^2.1.4",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.18",
+    "@types/node": "^20.19.19",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
     "@types/sinon": "^17.0.3",
@@ -116,7 +120,7 @@
     "typedoc-plugin-markdown": "^4.9.0",
     "typedoc-plugin-merge-modules": "^7.0.0",
     "typedoc-vitepress-theme": "^1.1.2",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "vitepress": "^1.6.4"
   }
 }

@@ -34,10 +34,8 @@ import RoleManager from './rbac/role-manager';
 import Gewis from './gewis/gewis';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
-import LdapSyncService from './service/sync/user/ldap-sync-service';
-import { UserSyncService } from './service/sync/user/user-sync-service';
+import UserSyncServiceFactory from './service/sync/user/user-sync-service-factory';
 import UserSyncManager from './service/sync/user/user-sync-manager';
-import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
 
@@ -109,24 +107,21 @@ async function createCronTasks(): Promise<void> {
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();
 
-  const syncServices: UserSyncService[] = [];
-
-  if (process.env.ENABLE_LDAP === 'true') {
-    const ldapSyncService = new LdapSyncService(application.roleManager);
-    syncServices.push(ldapSyncService);
-  }
-
-  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL) {
-    const gewisDBSyncService = new GewisDBSyncService();
-    syncServices.push(gewisDBSyncService);
-  }
+  // Create sync services using the factory
+  const syncServiceFactory = new UserSyncServiceFactory();
+  const syncServices = syncServiceFactory.createSyncServices({
+    roleManager: application.roleManager,
+    manager: application.connection.manager,
+  });
 
   if (syncServices.length !== 0) {
+    application.logger.info('Registering user sync tasks', syncServices.map(s => s.constructor.name));
     const syncManager = new UserSyncManager(syncServices);
 
     const userSyncer = cron.schedule('41 1 * * *', async () => {
       logger.debug('Syncing users.');
-      await syncManager.run();
+      const results = await syncManager.run();
+      logger.debug(`Sync completed: ${results.passed.length} passed, ${results.failed.length} failed, ${results.skipped.length} skipped`);
     });
     application.tasks.push(userSyncer);
 
@@ -135,6 +130,8 @@ async function createCronTasks(): Promise<void> {
       await syncManager.fetch();
     });
     application.tasks.push(userFetcher);
+  } else {
+    application.logger.warn('Skipping user syncing');
   }
 
   application.logger.info('Tasks registered');
