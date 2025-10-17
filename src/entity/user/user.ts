@@ -71,6 +71,13 @@ export const NotifyDebtUserTypes: UserType[] = [
 ];
 
 /**
+ * All users that have made inactive administrative costs.
+ */
+export const EligibleInactiveUsers: UserType[] = [
+  UserType.LOCAL_ADMIN, UserType.LOCAL_USER, UserType.MEMBER,
+];
+
+/**
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
@@ -144,6 +151,11 @@ export default class User extends BaseEntity {
     default: false,
   })
   public extensiveDataProcessing: boolean;
+
+  @Column({
+    default: false,
+  })
+  public inactiveNotificationSend: boolean;
 
   @OneToOne(() => UserFineGroup, {
     nullable: true,

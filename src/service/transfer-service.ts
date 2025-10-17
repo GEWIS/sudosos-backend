@@ -43,6 +43,7 @@ import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
 import WithManager from '../database/with-manager';
+import UserService from './user-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -164,6 +165,7 @@ export default class TransferService extends WithManager {
         payoutRequest: { payoutRequestStatus: true, requestedBy: true },
         fine: { userFineGroup: { user: true } },
         waivedFines: { fines: { userFineGroup: true } },
+        inactiveAdministrativeCost: {  transfer: true  },
       },
       take,
       skip,
@@ -186,6 +188,9 @@ export default class TransferService extends WithManager {
 
   public async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
     const transfer = await this.createTransfer(request);
+    if (transfer.from != undefined && transfer.from.inactiveNotificationSend == true) {
+      await UserService.updateUser(transfer.fromId, { inactiveNotificationSend: false });
+    }
     return TransferService.asTransferResponse(transfer);
   }
 

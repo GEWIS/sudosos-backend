@@ -72,6 +72,7 @@ export default class UserSeeder extends WithManager {
         type,
         active,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        inactiveNotificationSend: nr % 3 === 0,
         extensiveDataProcessing: true,
         email: type === UserType.LOCAL_USER || type === UserType.LOCAL_ADMIN ? `user${start + nr}@example.com` : '',
       }) as User);
