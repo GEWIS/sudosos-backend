@@ -275,6 +275,23 @@ export default class DebtorService extends WithManager {
   }
 
   /**
+   * Delete a fine handout event with its transfers
+   * @param id
+   */
+  public async deleteFineHandout(id: number): Promise<void> {
+    const fineHandoutEvent = await this.manager.findOne(FineHandoutEvent, { where: { id }, relations: ['fines', 'fines.transfer', 'fines.userFineGroup', 'fines.userFineGroup.fines'] });
+    if (fineHandoutEvent == null) return;
+
+    const fines = this.manager.find(Fine, { where: { fineHandoutEvent: { id: fineHandoutEvent.id } }, relations: ['userFineGroup', 'userFineGroup.fines', 'transfer'] });
+
+    for (const fine of await fines) {
+      await this.deleteFine(fine.id);
+    }
+
+    await this.manager.remove(FineHandoutEvent, fineHandoutEvent);
+  }
+
+  /**
    * Delete a fine with its transfer, but keep the FineHandoutEvent (they can be empty)
    * @param id
    */

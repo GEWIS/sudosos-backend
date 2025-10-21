@@ -38,6 +38,7 @@ import { HandoutFinesRequest } from './request/debtor-request';
 import Fine from '../entity/fine/fine';
 import { ReturnFileType } from 'pdf-generator-client';
 import { PdfError } from '../errors';
+import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
@@ -78,6 +79,12 @@ export default class DebtorController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'Fine', ['*']),
           handler: this.handoutFines.bind(this),
           body: { modelName: 'HandoutFinesRequest' },
+        },
+      },
+      '/handout/:id(\\d+)': {
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
+          handler: this.deleteFineHandout.bind(this),
         },
       },
       '/notify': {
@@ -265,6 +272,37 @@ export default class DebtorController extends BaseController {
       res.json(result);
     } catch (error) {
       this.logger.error('Could not handout fines:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * DELETE /fines/handout/{id}
+   * @summary Delete a fine handout event
+   * @tags debtors - Operations of the debtor controller
+   * @operationId deleteFineHandout
+   * @security JWT
+   * @param {integer} id.path.required - The id of the fine handout event which should be deleted
+   * @return 204 - Success
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async deleteFineHandout(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete fine handout', id, 'by', req.token.user);
+
+    try {
+      const parsedId = Number.parseInt(id, 10);
+      const handoutEvent = await FineHandoutEvent.findOne({ where: { id: parsedId } });
+      if (handoutEvent == null) {
+        res.status(404).send();
+        return;
+      }
+
+      await new DebtorService().deleteFineHandout(parsedId);
+      res.status(204).send();
+    } catch (error) {
       res.status(500).json('Internal server error.');
     }
   }
