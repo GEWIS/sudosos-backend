@@ -303,6 +303,7 @@ export default class DebtorController extends BaseController {
       await new DebtorService().deleteFineHandout(parsedId);
       res.status(204).send();
     } catch (error) {
+      this.logger.error('Could not delete fine handout:', error);
       res.status(500).json('Internal server error.');
     }
   }

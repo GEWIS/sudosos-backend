@@ -282,9 +282,7 @@ export default class DebtorService extends WithManager {
     const fineHandoutEvent = await this.manager.findOne(FineHandoutEvent, { where: { id }, relations: ['fines', 'fines.transfer', 'fines.userFineGroup', 'fines.userFineGroup.fines'] });
     if (fineHandoutEvent == null) return;
 
-    const fines = this.manager.find(Fine, { where: { fineHandoutEvent: { id: fineHandoutEvent.id } }, relations: ['userFineGroup', 'userFineGroup.fines', 'transfer'] });
-
-    for (const fine of await fines) {
+    for (const fine of fineHandoutEvent.fines) {
       await this.deleteFine(fine.id);
     }
 
