@@ -50,7 +50,7 @@ const bufferTransformer = {
  * 5. **AC** returns a `403 Forbidden` error if the user is not found, or the password is incorrect.
  * 7. **AC** returns a `200 OK` response if the user is found in the LDAP server and the bind succeeds.
  *
- * If a user can log in but does not hava a **bound** account in SudoSOS, one will be created and bound (see {@link AuthenticationService#LDAPAuthentication}).
+ * If a user can log in but does not have a **bound** account in SudoSOS, one will be created and bound (see {@link AuthenticationService#LDAPAuthentication}).
  * Accounts are bounded using the **objectGUID** of the AD user, which will be saved and stored in the database using the `LDAPAuthenticator` entity.
  * This UUID is the source of "truth" for which AD account a user is bound to.
  * In the future, this should remain as the source of truth. For example, it should override any linked ids.
