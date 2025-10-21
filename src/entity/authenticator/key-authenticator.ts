@@ -51,7 +51,7 @@ import HashBasedAuthenticationMethod from './hash-based-authentication-method';
  *
  * @typedef {HashBasedAuthenticationMethod} KeyAuthenticator
  * @property {string} hash.required - The API key of this user (hashed using bcrypt)
- * 
+ *
  * @promote
  */
 @Entity()
