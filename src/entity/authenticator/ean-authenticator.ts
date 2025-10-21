@@ -33,6 +33,8 @@ import AuthenticationMethod from './authentication-method';
  *
  * @typedef {AuthenticationMethod} EanAuthenticator
  * @property {string} eanCode.required - The EAN code
+ *
+ * @promote
  */
 @Entity()
 export default class EanAuthenticator extends AuthenticationMethod {

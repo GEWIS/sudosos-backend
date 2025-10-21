@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of the authentication-service.
- *
- * @module authentication
+ * @module internal/services
  */
 
 import bcrypt from 'bcrypt';

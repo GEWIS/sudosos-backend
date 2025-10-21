@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of hash-based-authentication-method.
- *
  * @module authentication
  */
 
@@ -28,6 +26,8 @@ import { Column } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 
 /**
+ * HashBasedAuthenticationMethod is the base class for all authentication methods that use a hash.
+ *
  * @typedef {AuthenticationMethod} HashBasedAuthenticationMethod
  * @property {string} hash.required - The hash of the authentication
  */
