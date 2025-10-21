@@ -342,6 +342,60 @@ describe('DebtorService', (): void => {
     });
   });
 
+  describe('deleteFineHandout', () => {
+    it('removes fine handout event and associated fines/transfers', async () => {
+      const debtorService = new DebtorService();
+      const referenceDate = new Date('2021-01-30');
+
+      const usersToFine = await debtorService.calculateFinesOnDate({ referenceDates: [referenceDate] });
+      expect(usersToFine.length).to.be.greaterThan(0);
+
+      const actor = (await ctx.connection.getRepository('User').findOne({ where: { id: 1 } })) as any;
+      const handoutResp = await debtorService.handOutFines({
+        userIds: usersToFine.map((u) => u.id),
+        referenceDate,
+      }, actor);
+
+      const eventId = handoutResp.id;
+      const dbEvent = await FineHandoutEvent.findOne({ where: { id: eventId }, relations: ['fines', 'fines.transfer'] });
+      expect(dbEvent).to.not.be.undefined;
+      expect(dbEvent!.fines.length).to.equal(handoutResp.fines.length);
+
+      // Collect transfer ids associated with the created fines
+      const transferIds = dbEvent!.fines.map((f) => (f.transfer ? f.transfer.id : null)).filter((id) => id != null) as number[];
+      expect(transferIds.length).to.be.greaterThan(0);
+
+      // Call the service to delete the handout event
+      await debtorService.deleteFineHandout(eventId);
+
+      // Event should be removed
+      const dbEventAfter = await FineHandoutEvent.findOne({ where: { id: eventId } });
+      expect(dbEventAfter).to.be.null;
+
+      // All fines that belonged to the event should be removed
+      const fines = await Fine.find({ where: { fineHandoutEvent: { id: eventId } } });
+      expect(fines.length).to.equal(0);
+
+      // Transfers that were created for those fines should also be removed
+      for (const tId of transferIds) {
+        const t = await Transfer.findOne({ where: { id: tId } });
+        expect(t).to.be.null;
+      }
+    });
+
+    it('does not throw when deleting non-existing event id', async () => {
+      const debtorService = new DebtorService();
+      const nonExistingId = 9999999;
+
+      // Should not throw
+      await debtorService.deleteFineHandout(nonExistingId);
+
+      // Ensure no unexpected events exist with that id
+      const dbEvent = await FineHandoutEvent.findOne({ where: { id: nonExistingId } });
+      expect(dbEvent).to.be.null;
+    });
+  });
+
   describe('waiveFines', () => {
     it('should correctly waive all fines', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
