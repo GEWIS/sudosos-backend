@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of nfc-authenticator.
- *
  * @module Authentication
  */
 
@@ -30,8 +28,30 @@ import {
 import AuthenticationMethod from './authentication-method';
 
 /**
+ * The NFC Authenticator is used for Near Field Communication (NFC) card-based authentication.
+ * This authentication method allows users to authenticate using physical NFC cards or tags
+ * by simply tapping them against an NFC reader.
+ *
+ * NFC Authentication is a _direct authentication method_. Unlike hash-based methods, the
+ * NFC code (UID) is stored directly in the database and compared against the scanned value.
+ * This provides fast authentication suitable for point-of-sale scenarios.
+ *
+ * ## NFC Authentication Flow
+ * 1. **User** taps their NFC card against an NFC reader.
+ * 2. **Reader** captures the NFC UID and sends it to `/authentication/nfc`.
+ * 3. **Authentication Controller** looks up the NfcAuthenticator by the provided UID.
+ * 4. **Authentication Controller** retrieves the associated user.
+ * 5. **Authentication Controller** returns a JWT token if the NFC code is valid.
+ *
+ * ## Security Considerations
+ * - NFC codes are stored in plain text (not hashed) for fast lookup
+ * - NFC authentication returns a "lesser" JWT token to limit access scope
+ * - Physical possession of the NFC card is required for authentication
+ *
  * @typedef {AuthenticationMethod} NfcAuthenticator
- * @property {string} nfcCode.required - The UID of the NFC chip
+ * @property {string} nfcCode.required - The unique identifier (UID) of the NFC chip
+ *
+ * @promote
  */
 @Entity()
 export default class NfcAuthenticator extends AuthenticationMethod {

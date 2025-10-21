@@ -19,9 +19,17 @@
  */
 
 /**
- * This is the module page of the authentication-qr-controller.
+ * Handles QR code authentication session management for cross-device authentication flows.
+ * Manages session lifecycle from generation to cancellation.
  *
- * @module authentication
+ * ## Internal Implementation Notes
+ * - Uses QRService for business logic and session management
+ * - Session expiration is configurable via environment variables (default: 5 minutes)
+ * - Status endpoint returns computed status from QRAuthenticator entity
+ * - Cancel endpoint gracefully handles non-existent sessions
+ *
+ * @module Internal/Controllers
+ * @promote
  */
 
 import { Request, Response } from 'express';

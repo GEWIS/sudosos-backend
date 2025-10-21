@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of member-authenticator.
- *
  * @module Authentication
  */
 
@@ -31,9 +29,16 @@ import User from '../user/user';
 import AuthenticationMethod from './authentication-method';
 
 /**
+ * The Member Authenticator enables shared account functionality by allowing multiple users
+ * to authenticate as another user. This creates a proxy authentication relationship.
+ *
+ * @deprecated This functionality will be deprecated in the future to prevent hiding/delegating rights.
+ * Users should use explicit role assignments instead of proxy authentication.
+ *
  * @typedef {AuthenticationMethod} MemberAuthenticator
- * @property {User.model} authenticateAs.required - The user entity this user wants to
- * authenticate as.
+ * @property {User.model} authenticateAs.required - The user entity this user wants to authenticate as
+ *
+ * @promote
  */
 @Entity()
 export default class MemberAuthenticator extends AuthenticationMethod {

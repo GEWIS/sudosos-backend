@@ -59,8 +59,9 @@ export function load(app) {
              * Recursively traverse the sidebar items and promote matching items one level higher.
              * @param {Array} currentItems - The array of items to process.
              * @param {Array} parentContainer - The container array in which the currentItems reside.
+             * @param {boolean} isTopLevel - Whether we're processing a top-level section.
              */
-            function recursivelyPromote(currentItems, parentContainer) {
+            function recursivelyPromote(currentItems, parentContainer, isTopLevel = false) {
                 if (!Array.isArray(currentItems)) return;
                 const itemsToPromote = [];
                 for (let i = currentItems.length - 1; i >= 0; i--) {
@@ -71,15 +72,30 @@ export function load(app) {
                         removed.promoteIndex = promoteData.index;
                         itemsToPromote.push(removed);
                     } else if (item.items && Array.isArray(item.items)) {
-                        recursivelyPromote(item.items, currentItems);
+                        recursivelyPromote(item.items, currentItems, false);
                     }
                 }
-                if (itemsToPromote.length > 0 && parentContainer) {
-                    // Sort promoted items by promoteIndex (items without an index go last)
+                if (itemsToPromote.length > 0 && parentContainer && !isTopLevel) {
+                    // Sort promoted items by promoteIndex (items without an index are sorted alphabetically)
                     itemsToPromote.sort((a, b) => {
-                        const indexA = a.promoteIndex !== undefined ? a.promoteIndex : Infinity;
-                        const indexB = b.promoteIndex !== undefined ? b.promoteIndex : Infinity;
-                        return indexA - indexB;
+                        const indexA = a.promoteIndex;
+                        const indexB = b.promoteIndex;
+                        
+                        // If both have indices, sort by index
+                        if (indexA !== undefined && indexB !== undefined) {
+                            return indexA - indexB;
+                        }
+                        
+                        // If only one has an index, the one with index comes first
+                        if (indexA !== undefined && indexB === undefined) {
+                            return -1;
+                        }
+                        if (indexA === undefined && indexB !== undefined) {
+                            return 1;
+                        }
+                        
+                        // If neither has an index, sort alphabetically by text
+                        return a.text.localeCompare(b.text);
                     });
                     // Insert them into the parent container (i.e. one level higher)
                     parentContainer.unshift(...itemsToPromote);
@@ -90,7 +106,7 @@ export function load(app) {
                 // For each top-level section, promote nested items one level higher.
                 sidebar.forEach((section) => {
                     if (section.items && Array.isArray(section.items)) {
-                        recursivelyPromote(section.items, sidebar);
+                        recursivelyPromote(section.items, sidebar, true);
                     }
                 });
             }

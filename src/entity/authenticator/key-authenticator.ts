@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of key-authenticator.
- *
  * @module Authentication
  */
 
@@ -30,7 +28,31 @@ import {
 import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
- * @typedef {AuthenticationMethod} KeyAuthenticator
+ * The Key Authenticator is used for API key-based authentication in SudoSOS.
+ * This authentication method allows programmatic access to the system using
+ * pre-generated API keys instead of user credentials.
+ *
+ * Key Authentication is a _hash-based authentication method_. This means that the
+ * API key is hashed using bcrypt and stored in the database, and later compared
+ * against the input during authentication attempts.
+ *
+ * ## Key Authentication Flow
+ * 1. **Client** sends a request to the `/authentication/key` endpoint with user ID and API key.
+ * 2. **Authentication Controller** looks up the user by ID.
+ * 3. **Authentication Controller** retrieves the associated KeyAuthenticator.
+ * 4. **Authentication Service** compares the provided key against the stored hash.
+ * 5. **Authentication Controller** returns a JWT token if authentication succeeds.
+ *
+ * ## Use Cases
+ * - Automated systems that need to access the SudoSOS API
+ * - Third-party integrations
+ * - Scripts and tools that require programmatic access
+ * - Testing and development environments
+ *
+ * @typedef {HashBasedAuthenticationMethod} KeyAuthenticator
+ * @property {string} hash.required - The API key of this user (hashed using bcrypt)
+ * 
+ * @promote
  */
 @Entity()
 export default class KeyAuthenticator extends HashBasedAuthenticationMethod {}

@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the page of qr-authenticator.
- *
- * @module authentication
+ * @module Authentication
  */
 
 import {
@@ -45,13 +43,45 @@ const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN
   : DEFAULT_QR_AUTHENTICATOR_EXPIRES_IN_MS;
 
 /**
+ * The QR Authenticator enables QR code-based authentication in SudoSOS.
+ * This authentication method allows users to authenticate by scanning a QR code
+ * with their mobile device, providing a convenient and secure authentication flow.
+ *
+ * QR Authentication is a _session-based authentication method_. It creates temporary
+ * sessions that can be confirmed by authenticated users, allowing for secure
+ * authentication flows without requiring direct credential input.
+ *
+ * ## QR Authentication Flow
+ * 1. **Client** requests a QR code via `/authentication/qr/generate`.
+ * 2. **QR Service** creates a QRAuthenticator with a unique session ID and expiration time.
+ * 3. **Client** displays the QR code to the user.
+ * 4. **User** scans the QR code with their mobile device.
+ * 5. **Mobile App** opens the confirmation URL with the session ID.
+ * 6. **Authenticated User** confirms the session via `/authentication/qr/{sessionId}/confirm`.
+ * 7. **System** generates a JWT token and notifies the original client via WebSocket.
+ *
+ * ## Session States
+ * - **PENDING**: Session is waiting for user confirmation
+ * - **CONFIRMED**: Session has been confirmed by an authenticated user
+ * - **EXPIRED**: Session has exceeded its expiration time
+ * - **CANCELLED**: Session was explicitly cancelled
+ *
+ * ## Security Features
+ * - Sessions have a configurable expiration time (default: 5 minutes)
+ * - Each session has a unique UUID that cannot be guessed
+ * - Sessions can be cancelled to prevent unauthorized access
+ * - JWT tokens are only delivered via WebSocket, making them difficult to intercept
+ *
+ *
  * @typedef {BaseEntityWithoutId} QRAuthenticator
- * @property {string} sessionId.required - Unique session identifier
+ * @property {string} sessionId.required - Unique session identifier (UUID)
  * @property {User.model} user - The user that confirmed the session (null if pending)
  * @property {boolean} cancelled.required - Whether the session was cancelled
  * @property {string} expiresAt.required - When the session expires
  * @property {string} createdAt.required - When the session was created
  * @property {string} confirmedAt - When the session was confirmed
+ *
+ * @promote
  */
 @Entity()
 export default class QRAuthenticator extends BaseEntityWithoutId {
