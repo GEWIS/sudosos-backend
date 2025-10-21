@@ -40,11 +40,6 @@
  * @mergeTarget
  */
 
-/**
- * Test test!
- * @document ..\..\docs\content\test.md
- * @module authentication
- */
 
 import User from '../entity/user/user';
 
