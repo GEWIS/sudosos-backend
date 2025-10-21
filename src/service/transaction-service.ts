@@ -82,6 +82,7 @@ import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
 import ProductService from './product-service';
 import { convertToPositional } from '../helpers/params';
+import UserService from './user-service';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -766,6 +767,9 @@ export default class TransactionService extends WithManager {
     const transaction = await this.asTransaction(req);
 
     await transaction.save();
+    if (transaction.from.inactiveNotificationSend === true) {
+      await UserService.updateUser(transaction.from.id, { inactiveNotificationSend: false });
+    }
 
     // save transaction and return response
     return this.asTransactionResponse(transaction);
