@@ -19,7 +19,7 @@
  */
 
 /**
- * @module Authentication
+ * @module authentication
  */
 
 import { Response } from 'express';

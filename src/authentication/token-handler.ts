@@ -21,7 +21,7 @@
 /**
  * This is the module page of token-handler.
  *
- * @module Authentication
+ * @module authentication
  */
 
 import assert from 'assert';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of authentication-controller.
  *
- * @module Authentication
+ * @module authentication
  */
 
 import { Request, Response } from 'express';

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the authentication-nfc-request.
  *
- * @module Authentication
+ * @module authentication
  */
 
 /**

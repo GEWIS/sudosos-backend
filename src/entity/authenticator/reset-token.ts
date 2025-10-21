@@ -21,7 +21,7 @@
 /**
  * This is the page of reset-token.
  *
- * @module Authentication
+ * @module authentication
  */
 
 import { Column, Entity } from 'typeorm';

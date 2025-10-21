@@ -21,7 +21,7 @@
 /**
  * This is the module page of the reset-local-request.
  *
- * @module Authentication
+ * @module authentication
  */
 
 /**

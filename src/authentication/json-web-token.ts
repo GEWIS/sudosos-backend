@@ -36,14 +36,14 @@
  * Most of these methods are a {@link HashBasedAuthenticationMethod | hash-based authentication method}, where a secret is hashed and stored in the database,
  * and later compared against the input of the user.
  *
- * @module Authentication
+ * @module authentication
  * @mergeTarget
  */
 
 /**
  * Test test!
  * @document ..\..\docs\content\test.md
- * @module Authentication
+ * @module authentication
  */
 
 import User from '../entity/user/user';
