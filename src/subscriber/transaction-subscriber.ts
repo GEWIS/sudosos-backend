@@ -24,44 +24,83 @@
  * @module internal/subscribers/transaction-subscriber
  */
 
-import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm';
-import Transaction from '../entity/transactions/transaction';
-import User, { NotifyDebtUserTypes } from '../entity/user/user';
-import BalanceService from '../service/balance-service';
-import Mailer from '../mailer';
-import UserDebtNotification from '../mailer/messages/user-debt-notification';
-import DineroTransformer from '../entity/transformer/dinero-transformer';
-import log4js from 'log4js';
+import {
+  EntitySubscriberInterface,
+  EventSubscriber,
+  InsertEvent,
+} from "typeorm";
+import Transaction from "../entity/transactions/transaction";
+import User, { NotifyDebtUserTypes } from "../entity/user/user";
+import BalanceService from "../service/balance-service";
+import Mailer from "../mailer";
+import UserDebtNotification from "../mailer/messages/user-debt-notification";
+import DineroTransformer from "../entity/transformer/dinero-transformer";
+import log4js from "log4js";
 
 @EventSubscriber()
-export default class TransactionSubscriber implements EntitySubscriberInterface {
+export default class TransactionSubscriber
+  implements EntitySubscriberInterface
+{
   listenTo(): Function | string {
     return Transaction;
   }
 
   async afterInsert(event: InsertEvent<Transaction>): Promise<void> {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env.NODE_ENV === "test") return;
     let { entity } = event;
-    if (entity.subTransactions == null
-      || (entity.subTransactions.length > 0 && entity.subTransactions[0].subTransactionRows == null)
-      || (entity.subTransactions.length > 0 && entity.subTransactions[0].subTransactionRows.length > 0 && entity.subTransactions[0].subTransactionRows[0].product == null)) {
+    if (
+      entity.subTransactions == null ||
+      (entity.subTransactions.length > 0 &&
+        entity.subTransactions[0].subTransactionRows == null) ||
+      (entity.subTransactions.length > 0 &&
+        entity.subTransactions[0].subTransactionRows.length > 0 &&
+        entity.subTransactions[0].subTransactionRows[0].product == null)
+    ) {
       entity = await event.manager.findOne(Transaction, {
         where: { id: entity.id },
-        relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.product'],
+        relations: [
+          "subTransactions",
+          "subTransactions.subTransactionRows",
+          "subTransactions.subTransactionRows.product",
+        ],
       });
     }
 
-    const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
+    const user = await event.manager.findOne(User, {
+      where: { id: entity.from.id },
+    });
     const balance = await new BalanceService().getBalance(user.id);
 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
       // Check if subTransactions exists, is not empty, and subTransactionRows exists and is not empty
-      if (entity.subTransactions?.length > 0 && entity.subTransactions[0].subTransactionRows?.length > 0) {
+      if (
+        entity.subTransactions?.length > 0 &&
+        entity.subTransactions[0].subTransactionRows?.length > 0
+      ) {
+        for (const subTrans of entity.subTransactions) {
+          for (const subTransRow of subTrans.subTransactionRows) {
+            // Ensure the amount and product.priceInclVat.getAmount() exist before performing the calculation
+            if (
+              subTransRow.amount &&
+              typeof subTransRow.product?.priceInclVat?.getAmount === "function"
+            ) {
+              currentBalance -=
+                subTransRow.amount *
+                subTransRow.product.priceInclVat.getAmount();
+            }
+          }
+        }
+      } else {
         const subTransaction = entity.subTransactions[0].subTransactionRows[0];
         // Ensure the amount and product.priceInclVat.getAmount() exist before performing the calculation
-        if (subTransaction.amount && typeof subTransaction.product?.priceInclVat?.getAmount === 'function') {
-          currentBalance -= subTransaction.amount * subTransaction.product.priceInclVat.getAmount();
+        if (
+          subTransaction.amount &&
+          typeof subTransaction.product?.priceInclVat?.getAmount === "function"
+        ) {
+          currentBalance -=
+            subTransaction.amount *
+            subTransaction.product.priceInclVat.getAmount();
         }
       }
     }
@@ -71,7 +110,7 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
 
     const balanceBefore = await new BalanceService().getBalance(
       user.id,
-      new Date(entity.createdAt.getTime() - 1),
+      new Date(entity.createdAt.getTime() - 1)
     );
 
     if (balanceBefore.amount.amount < 0) return;
@@ -80,9 +119,14 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     if (!NotifyDebtUserTypes.includes(user.type)) return;
     // User should be notified of debt
 
-    Mailer.getInstance().send(user, new UserDebtNotification({
-      balance: DineroTransformer.Instance.from(currentBalance),
-      url: '',
-    })).catch((e) => log4js.getLogger('Transaction').error(e));
+    Mailer.getInstance()
+      .send(
+        user,
+        new UserDebtNotification({
+          balance: DineroTransformer.Instance.from(currentBalance),
+          url: "",
+        })
+      )
+      .catch((e) => log4js.getLogger("Transaction").error(e));
   }
 }
