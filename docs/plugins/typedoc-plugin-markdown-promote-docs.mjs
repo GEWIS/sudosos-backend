@@ -76,26 +76,11 @@ export function load(app) {
                     }
                 }
                 if (itemsToPromote.length > 0 && parentContainer && !isTopLevel) {
-                    // Sort promoted items by promoteIndex (items without an index are sorted alphabetically)
+                    // Sort promoted items by promoteIndex (items without an index go last)
                     itemsToPromote.sort((a, b) => {
-                        const indexA = a.promoteIndex;
-                        const indexB = b.promoteIndex;
-                        
-                        // If both have indices, sort by index
-                        if (indexA !== undefined && indexB !== undefined) {
-                            return indexA - indexB;
-                        }
-                        
-                        // If only one has an index, the one with index comes first
-                        if (indexA !== undefined && indexB === undefined) {
-                            return -1;
-                        }
-                        if (indexA === undefined && indexB !== undefined) {
-                            return 1;
-                        }
-                        
-                        // If neither has an index, sort alphabetically by text
-                        return a.text.localeCompare(b.text);
+                        const indexA = a.promoteIndex !== undefined ? a.promoteIndex : Infinity;
+                        const indexB = b.promoteIndex !== undefined ? b.promoteIndex : Infinity;
+                        return indexA - indexB;
                     });
                     // Insert them into the parent container (i.e. one level higher)
                     parentContainer.unshift(...itemsToPromote);
