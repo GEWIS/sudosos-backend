@@ -46,8 +46,8 @@ import {
 } from '../../seed';
 import { rootStubs } from '../../root-hooks';
 import { SubTransactionRequest } from '../../../src/controller/request/transaction-request';
-import {inUserContext, UserFactory} from "../../helpers/user-factory";
-import UserDebtNotification from "../../../src/mailer/messages/user-debt-notification";
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import UserDebtNotification from '../../../src/mailer/messages/user-debt-notification';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 describe('TransactionSubscriber', () => {
@@ -267,7 +267,7 @@ describe('TransactionSubscriber', () => {
       expect(sendMailFake).to.not.be.called;
     });
 
-    it('should send an email if someone goes in debt after a multi-item transaction (issue #596)', async () => {
+    it('should send an email if someone goes in debt after a multi-item transaction', async () => {
 
       const pos = ctx.pointOfSales[0];
       const container = ctx.containers[0];
@@ -293,7 +293,6 @@ describe('TransactionSubscriber', () => {
         
         // test case goes here
         const balance = await new BalanceService().getBalance(u.id);
-        const priceCents = pricePerItemDinero.getAmount();
         const balanceCents = balance.amount.amount;
 
         expect(balanceCents).to.be.at.least(0);        
@@ -301,9 +300,8 @@ describe('TransactionSubscriber', () => {
         const amount = 1;
 
         const pricePerItem: DineroObjectRequest = pricePerItemDinero.toObject();
-        const totalPriceInclVat: DineroObjectRequest = pricePerItemDinero.multiply(amount).toObject();
+        const totalPriceInclVat: DineroObjectRequest = pricePerItemDinero.multiply(2).toObject();
 
-        expect(amount).to.be.at.least(1);
 
         // Stub BalanceService.getBalance so the subscriber sees the pre-transaction snapshot
         // This exploits the poor transaction-subscriber logic which only checks the first row
