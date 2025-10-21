@@ -19,7 +19,7 @@
  */
 
 /**
- * @module Internal/Service
+ * @module internal/services
  * @promote
  */
 

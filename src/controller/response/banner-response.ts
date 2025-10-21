@@ -19,7 +19,7 @@
  */
 
 /**
- * @module Banners
+ * @module banners
  */
 
 import BaseResponse from './base-response';

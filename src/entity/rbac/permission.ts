@@ -48,7 +48,7 @@
  * Permissions are evaluated by the RoleManager's `can()` method, which checks if a user's roles
  * have the necessary permissions to perform a specific action on an entity with given attributes.
  *
- * @module RBAC
+ * @module rbac
  */
 
 import { BaseEntity, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';

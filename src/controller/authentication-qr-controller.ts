@@ -28,7 +28,7 @@
  * - Status endpoint returns computed status from QRAuthenticator entity
  * - Cancel endpoint gracefully handles non-existent sessions
  *
- * @module Internal/Controllers
+ * @module internal/controllers
  * @promote
  */
 

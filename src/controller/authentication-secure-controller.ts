@@ -48,7 +48,7 @@ import QRService from '../service/qr-service';
  * - QR confirmation integrates with WebSocket service for real-time notifications
  * - All methods use the role manager for permission validation
  *
- * @module Internal/Controllers
+ * @module internal/controllers
  * @promote
  */
 export default class AuthenticationSecureController extends BaseController {

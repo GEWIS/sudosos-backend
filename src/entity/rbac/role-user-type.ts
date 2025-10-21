@@ -19,7 +19,7 @@
  */
 
 /**
- * @module RBAC
+ * @module rbac
  */
 
 import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';

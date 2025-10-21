@@ -19,7 +19,7 @@
  */
 
 /**
- * @module Banners
+ * @module banners
  */
 
 import { Response } from 'express';
