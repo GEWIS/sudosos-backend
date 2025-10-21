@@ -9,7 +9,7 @@
     "typedoc-plugin-merge-modules",
     "typedoc-vitepress-theme",
     "typedoc-plugin-markdown",
-    "./docs/plugins/typedoc-plugin-markdown-promote-docs.mjs",
+    "./docs/plugins/typedoc-plugin-markdown-promote-docs.mjs"
   ],
   "mergeModulesRenameDefaults": true,
   "mergeModulesMergeMode": "module",
