@@ -294,13 +294,13 @@ export default class DebtorController extends BaseController {
 
     try {
       const parsedId = Number.parseInt(id, 10);
-      const handoutEvent = await FineHandoutEvent.findOne({ where: { id: parsedId } });
-      if (handoutEvent == null) {
+      const event = await FineHandoutEvent.findOne({ where: { id: parsedId }, relations: ['fines'] });
+      if (event == null) {
         res.status(404).send();
         return;
       }
 
-      await new DebtorService().deleteFineHandout(parsedId);
+      await new DebtorService().deleteFineHandout(event);
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete fine handout:', error);

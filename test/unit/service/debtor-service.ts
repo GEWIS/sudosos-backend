@@ -366,7 +366,7 @@ describe('DebtorService', (): void => {
       expect(transferIds.length).to.be.greaterThan(0);
 
       // Call the service to delete the handout event
-      await debtorService.deleteFineHandout(eventId);
+      await debtorService.deleteFineHandout(dbEvent);
 
       // Event should be removed
       const dbEventAfter = await FineHandoutEvent.findOne({ where: { id: eventId } });
@@ -383,16 +383,9 @@ describe('DebtorService', (): void => {
       }
     });
 
-    it('does not throw when deleting non-existing event id', async () => {
-      const debtorService = new DebtorService();
-      const nonExistingId = 9999999;
-
-      // Should not throw
-      await debtorService.deleteFineHandout(nonExistingId);
-
-      // Ensure no unexpected events exist with that id
-      const dbEvent = await FineHandoutEvent.findOne({ where: { id: nonExistingId } });
-      expect(dbEvent).to.be.null;
+    it('does throw when fine relation not loaded', async () => {
+      const dbEvent = await FineHandoutEvent.findOne({ where: { id: 1 } });
+      await expect(new DebtorService().deleteFineHandout(dbEvent)).to.eventually.be.rejectedWith('fine relation not loaded');
     });
   });
 
