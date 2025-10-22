@@ -1276,7 +1276,7 @@ describe('UserController', (): void => {
           'TransactionReportResponse',
           res.body,
           false,
-          false,
+          true,
         );
         expect(validation.valid).to.be.true;
       });

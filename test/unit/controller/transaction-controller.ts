@@ -701,7 +701,7 @@ describe('TransactionController', (): void => {
         'TransactionResponse',
         res.body,
         false,
-        false);
+        true);
       expect(valid.valid).to.be.true;
       expect(res.body.id).to.equal(trans.id);
     });
