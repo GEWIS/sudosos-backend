@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of the authentication-service.
- *
- * @module authentication
+ * @module internal/services
  */
 
 import bcrypt from 'bcrypt';
@@ -60,6 +58,9 @@ export interface ResetTokenInfo {
   password: string,
 }
 
+/**
+ * The authentication service is responsible for verifying user authentications and handing out json web tokens.
+ */
 export default class AuthenticationService extends WithManager {
   /**
    * Amount of salt rounds to use.

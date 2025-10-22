@@ -19,9 +19,7 @@
  */
 
 /**
- * This is the module page of authentication-secure-controller.
- *
- * @module authentication
+ * @module internal/controllers
  */
 
 import { Response } from 'express';
@@ -40,6 +38,18 @@ import { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator'
 import WebSocketService from '../service/websocket-service';
 import QRService from '../service/qr-service';
 
+/**
+ * Handles authenticated-only authentication endpoints for token management and specialized flows.
+ * All endpoints require valid JWT tokens and build upon existing authentication.
+ *
+ * ## Internal Implementation Notes
+ * - Token refresh maintains the same access level (lesser/full) as the original token
+ * - POS authentication uses custom expiry settings from server settings
+ * - QR confirmation integrates with WebSocket service for real-time notifications
+ * - All methods use the role manager for permission validation
+ *
+ * @promote
+ */
 export default class AuthenticationSecureController extends BaseController {
   private logger: Logger = log4js.getLogger('AuthenticationController');
 

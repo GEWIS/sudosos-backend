@@ -66,7 +66,7 @@
     "typeorm": "^0.3.27",
     "uuid": "^10.0.0",
     "validator": "^13.15.15",
-    "vitepress-theme-openapi": "^0.0.3-alpha.30"
+    "vitepress-theme-openapi": "^0.0.3-alpha.34"
   },
   "devDependencies": {
     "@apidevtools/swagger-cli": "^4.0.4",
@@ -121,6 +121,7 @@
     "typedoc-plugin-merge-modules": "^7.0.0",
     "typedoc-vitepress-theme": "^1.1.2",
     "typescript": "^5.9.3",
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
   }
 }

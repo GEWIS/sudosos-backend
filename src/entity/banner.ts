@@ -28,7 +28,7 @@
  *
  * For API interactions, refer to the [Swagger Documentation](https://sudosos.gewis.nl/api/api-docs/#/banners).
  *
- * @module Banners
+ * @module banners
  * @mergeTarget
  */
 

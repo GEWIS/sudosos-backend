@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of ean-authenticator.
- *
  * @module authentication
  */
 
@@ -29,11 +27,16 @@ import {
 } from 'typeorm';
 import AuthenticationMethod from './authentication-method';
 
-@Entity()
 /**
+ * The EAN Authenticator is used to authenticate users using EAN codes.
+ * These are only used by "voucher" accounts, see {@link User}.
+ *
  * @typedef {AuthenticationMethod} EanAuthenticator
  * @property {string} eanCode.required - The EAN code
+ *
+ * @promote
  */
+@Entity()
 export default class EanAuthenticator extends AuthenticationMethod {
   @Column()
   public eanCode: string;
