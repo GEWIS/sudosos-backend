@@ -156,6 +156,7 @@ export default class ProductService {
     return {
       id: revision.productId,
       name: revision.name,
+      revision: revision.revision,
       priceInclVat: revision.priceInclVat.toObject(),
       vat: {
         id: revision.vat.id,

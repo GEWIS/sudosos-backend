@@ -74,6 +74,8 @@ export function parsePOSToBasePOS(
   return {
     id: pos.pointOfSale.id,
     name: pos.name,
+    revision: pos.revision,
+    useAuthentication: pos.useAuthentication,
     createdAt: timestamps ? pos.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? pos.updatedAt.toISOString() : undefined,
   } as BasePointOfSaleResponse;

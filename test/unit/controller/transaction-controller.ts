@@ -697,13 +697,11 @@ describe('TransactionController', (): void => {
         .get(`/transactions/${trans.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
       expect(res.status).to.equal(200);
-      // TODO Fix disallowExtraProperties to be `true`
-      //  See https://github.com/GEWIS/sudosos-backend/issues/117
       const valid = ctx.specification.validateModel(
         'TransactionResponse',
         res.body,
         false,
-        false);
+        true);
       expect(valid.valid).to.be.true;
       expect(res.body.id).to.equal(trans.id);
     });

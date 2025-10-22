@@ -1272,13 +1272,11 @@ describe('UserController', (): void => {
           .set('Authorization', `Bearer ${ctx.adminToken}`)
           .query(parameters);
         expect(res.status).to.equal(200);
-        // TODO Fix disallowExtraProperties to be `true`
-        //  See https://github.com/GEWIS/sudosos-backend/issues/117
         const validation = ctx.specification.validateModel(
           'TransactionReportResponse',
           res.body,
           false,
-          false,
+          true,
         );
         expect(validation.valid).to.be.true;
       });

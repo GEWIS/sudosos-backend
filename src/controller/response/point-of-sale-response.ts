@@ -33,9 +33,14 @@ import RoleResponse from './rbac/role-response';
 /**
  * @typedef {allOf|BaseResponse} BasePointOfSaleResponse
  * @property {string} name.required - The name of the point-of-sale.
+ * @property {number} revision.required - Revision of the POS
+ * @property {boolean} useAuthentication.required - Whether this POS requires users to
+ * authenticate themselves before making a transaction
  */
 export interface BasePointOfSaleResponse extends BaseResponse {
   name: string,
+  revision: number,
+  useAuthentication: boolean,
 }
 /**
  * @typedef {allOf|BasePointOfSaleResponse} PointOfSaleResponse

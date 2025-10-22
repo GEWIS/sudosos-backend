@@ -34,18 +34,19 @@ import { BaseVatGroupResponse } from './vat-group-response';
 /**
  * @typedef {allOf|BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
+ * @property {integer} revision.required - The product revision ID
  * @property {DineroObjectResponse} priceInclVat.required - The price of the product.
  * @property {BaseVatGroupResponse} vat.required - The VAT percentage
  */
 export interface BaseProductResponse extends BaseResponse {
   name: string,
+  revision: number,
   priceInclVat: DineroObjectResponse,
   vat: BaseVatGroupResponse,
 }
 
 /**
  * @typedef {allOf|BaseProductResponse} ProductResponse
- * @property {integer} revision.required - The product revision ID
  * @property {BaseUserResponse} owner.required - The owner of the product.
  * @property {ProductCategoryResponse} category.required -
  *           The category the product belongs to.
