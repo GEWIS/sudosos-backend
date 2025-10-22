@@ -275,8 +275,10 @@ export default class DebtorService extends WithManager {
   }
 
   /**
-   * Delete a fine handout event with its transfers
+   * Deletes a fine handout event, all its associated fines, and the transfers linked to those fines.
+   * Throws an Error if the 'fines' relation is not loaded on the provided fine handout event.
    * @param fineHandoutEvent - The fine handout event to delete
+   * @throws Error if the 'fines' relation is not loaded
    */
   public async deleteFineHandout(fineHandoutEvent: FineHandoutEvent): Promise<void> {
     if (!Array.isArray(fineHandoutEvent.fines)) throw new Error('fine relation not loaded');
