@@ -122,6 +122,29 @@ Visit `http://localhost:3000/api-docs` to access the Swagger UI for API document
 2. In Swagger UI, simply enter the JWT token returned by the `/authentication/mock` endpoint
 3. Use this token to authenticate API requests
 
+### 8. Stripe Configuration (Optional)
+
+For deposit functionality, configure Stripe with **restricted keys only**:
+
+**Required Environment Variables:**
+- `STRIPE_PUBLIC_KEY` - Your Stripe publishable key (safe for frontend)
+- `STRIPE_PRIVATE_KEY` - Your Stripe restricted secret key (see permissions below)
+- `STRIPE_WEBHOOK_SECRET` - Webhook endpoint secret for validation
+- `STRIPE_RETURN_URL` - URL to redirect users after payment
+
+**Required Stripe Permissions:**
+When creating your restricted API key, grant only these permissions:
+- ✅ "Write access on all webhooks"
+- ✅ "Write access on payment intents"
+
+```bash
+# Add these to your .env file
+STRIPE_PUBLIC_KEY=pk_test_your_publishable_key_here
+STRIPE_PRIVATE_KEY=sk_test_your_restricted_secret_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+STRIPE_RETURN_URL=https://your-domain.com/return
+```
+
 ## 🛠️ Development Setup
 
 ### Available Scripts
