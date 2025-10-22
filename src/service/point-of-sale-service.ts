@@ -82,6 +82,8 @@ export default class PointOfSaleService {
     return {
       id: revision.pointOfSaleId,
       name: revision.name,
+      revision: revision.revision,
+      useAuthentication: revision.useAuthentication,
     };
   }
 
