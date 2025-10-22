@@ -92,6 +92,11 @@ export default class GewisDBSyncService extends UserSyncService {
       return false;
     }
 
+    if (dbMember.deleted) {
+      this.logger.log(`User ${gewisUser.gewisId} is deleted.`);
+      return false;
+    }
+
     const update = webResponseToUpdate(dbMember);
     if (GewisDBSyncService.isUpdateNeeded(gewisUser, update)) {
       this.logger.log(`Updating user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
@@ -100,6 +105,7 @@ export default class GewisDBSyncService extends UserSyncService {
       user.lastName = update.lastName;
       user.email = update.email;
       user.ofAge = update.ofAge;
+      user.active = true;
       
       if (!isDryRun) {
         await this.manager.save(user);
@@ -158,6 +164,7 @@ export default class GewisDBSyncService extends UserSyncService {
     return gewisUser.user.firstName !== update.firstName ||
         gewisUser.user.lastName !== update.lastName ||
         gewisUser.user.ofAge !== update.ofAge ||
-        gewisUser.user.email !== update.email;
+        gewisUser.user.email !== update.email ||
+        !gewisUser.user.active;
   }
 }
