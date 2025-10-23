@@ -164,12 +164,12 @@ export default class GewisAuthenticationController extends BaseController {
         relations: ['user'],
       });
       if (!gewisUser) {
-        // If
+        this.logger.log('User not found in database, creating user');
         gewisUser = await new Gewis().createUserFromWeb(gewisweb);
       } else {
         //
         const update = webResponseToUpdate(gewisweb);
-        await UserService.updateUser(gewisUser.user.id, update);
+        await UserService.updateUser(gewisUser.user.id, { ...update, active: true });
       }
 
       const response = await new AuthenticationService().getSaltedToken(
