@@ -38,7 +38,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { defaultPagination, maxPagination, PAGINATION_DEFAULT, PaginationResult } from '../../../src/helpers/pagination';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
@@ -758,13 +758,13 @@ describe('TransactionController', (): void => {
     it('should return an HTTP 200 and the saved transaction when user is connected to createdBy via organ', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
         async (user: User, otherUser: User) => {
-          await (Object.assign(new MemberAuthenticator(), {
+          await (Object.assign(new OrganMembership(), {
             user,
-            authenticateAs: ctx.users[0],
+            organ: ctx.users[0],
           })).save();
-          await (Object.assign(new MemberAuthenticator(), {
+          await (Object.assign(new OrganMembership(), {
             user: otherUser,
-            authenticateAs: ctx.users[0],
+            organ: ctx.users[0],
           })).save();
 
           const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');

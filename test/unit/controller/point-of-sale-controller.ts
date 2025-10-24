@@ -57,7 +57,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { SeededRole } from '../../seed/rbac-seeder';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import { ContainerSeeder, PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
@@ -405,7 +405,7 @@ describe('PointOfSaleController', async () => {
       const pos = res.body as PointOfSaleAssociateUsersResponse;
       expect(pos.owner.id).to.equal(pointOfSale.owner.id);
 
-      const members = await MemberAuthenticator.find({ where: { authenticateAsId: pos.owner.id } });
+      const members = await OrganMembership.find({ where: { organId: pos.owner.id } });
       expect(pos.ownerMembers.length).to.be.at.least(1);
       expect(pos.ownerMembers).to.be.lengthOf(members.length);
       expect(pos.ownerMembers.map((r) => r.id)).to.deep.equalInAnyOrder(members.map((m) => m.userId));

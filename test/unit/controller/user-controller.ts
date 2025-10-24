@@ -46,7 +46,7 @@ import { TransactionResponse } from '../../../src/controller/response/transactio
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import Transfer from '../../../src/entity/transactions/transfer';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UpdatePinRequest from '../../../src/controller/request/update-pin-request';
 import {
@@ -659,11 +659,11 @@ describe('UserController', (): void => {
     it('should return an HTTP 200 and all the members of the organ', async () => {
       await inUserContext(await (await UserFactory()).clone(3), async (...users: User[]) => {
         const organ = (await User.find({ where: { type: UserType.ORGAN } }))[2];
-        const promises: Promise<MemberAuthenticator>[] = [];
+        const promises: Promise<OrganMembership>[] = [];
         users.forEach((user) => {
-          const auth = Object.assign(new MemberAuthenticator(), {
+          const auth = Object.assign(new OrganMembership(), {
             user,
-            authenticateAs: organ,
+            organ,
           });
           promises.push(auth.save());
         });
@@ -1585,33 +1585,6 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('POST /users/{id}/authenticate', () => {
-    it('should return an HTTP 403 if unauthorized', async () => {
-      const user = ctx.users[0];
-      expect(await MemberAuthenticator
-        .findOne({ where: { authenticateAs: { id: user.id } } })).to.be.null;
-
-      const res = await request(ctx.app)
-        .post(`/users/${user.id}/authenticate`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-
-      expect(res.status).to.equal(403);
-    });
-    it('should return an HTTP 200 if authorized', async () => {
-      const user = ctx.users[1];
-      expect(await MemberAuthenticator
-        .find({ where: { authenticateAs: { id: user.id } } })).to.be.empty;
-      const auth = Object.assign(new MemberAuthenticator(), {
-        user: ctx.users[6],
-        authenticateAs: user,
-      });
-      await auth.save();
-      const res = await request(ctx.app)
-        .post(`/users/${user.id}/authenticate`)
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-    });
-  });
   describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
@@ -1989,47 +1962,6 @@ describe('UserController', (): void => {
     });
   });
 
-  describe('GET /users/{id}/authenticate', () => {
-    it('should return an HTTP 200 and all users that user can authenticate as', async () => {
-      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
-
-        const auth = Object.assign(new MemberAuthenticator(), {
-          user,
-          authenticateAs: ctx.users[0],
-        });
-        await auth.save();
-        const auths = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((u) => u.authenticateAs.id);
-
-        const res = await request(ctx.app)
-          .get(`/users/${user.id}/authenticate`)
-          .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(200);
-        expect((res.body as UserResponse[]).map((u) => u.id))
-          .to.deep.equalInAnyOrder(auths);
-      });
-    });
-    it('should return an HTTP 404 if user does not exist', async () => {
-      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
-
-        const res = await request(ctx.app)
-          .get('/users/0/authenticate')
-          .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(404);
-      });
-    });
-    it('should return an HTTP 403 if insufficient rights', async () => {
-      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
-
-        const res = await request(ctx.app)
-          .get(`/users/${ctx.users[0].id}/authenticate`)
-          .set('Authorization', `Bearer ${userToken}`);
-        expect(res.status).to.equal(403);
-      });
-    });
-  });
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {

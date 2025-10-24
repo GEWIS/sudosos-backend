@@ -23,7 +23,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user
 import InvoiceUser from '../../src/entity/user/invoice-user';
 import bcrypt from 'bcrypt';
 import HashBasedAuthenticationMethod from '../../src/entity/authenticator/hash-based-authentication-method';
-import MemberAuthenticator from '../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../src/entity/organ/organ-membership';
 
 /**
  * Seeder for users and their login methods
@@ -141,19 +141,19 @@ export default class UserSeeder extends WithManager {
   }
 
   /**
-   * Seed some member authenticators
-   * @param users Users that can authenticate as organs
-   * @param authenticateAs
+   * Seed some organ memberships
+   * @param users Users who are members of organs
+   * @param organs The organs that the users are members of
    */
-  public async seedMemberAuthenticators(users: User[], authenticateAs: User[]): Promise<MemberAuthenticator[]> {
-    const memberAuthenticators: MemberAuthenticator[] = [];
-    await Promise.all(authenticateAs.map(async (as, i) => {
+  public async seedMemberAuthenticators(users: User[], organs: User[]): Promise<OrganMembership[]> {
+    const memberAuthenticators: OrganMembership[] = [];
+    await Promise.all(organs.map(async (organ, i) => {
       return Promise.all(users.map(async (user, j) => {
         if ((i + j) % 7 > 1) return;
-        const authenticator = Object.assign(new MemberAuthenticator(), {
+        const authenticator = Object.assign(new OrganMembership(), {
           userId: user.id,
-          authenticateAsId: as.id,
-        } as MemberAuthenticator);
+          organId: organ.id,
+        } as OrganMembership);
         await authenticator.save();
         memberAuthenticators.push(authenticator);
       }));

@@ -53,7 +53,7 @@ import Role from './role';
  * Users can receive roles through multiple mechanisms:
  * 1. **User Type Assignment**: Automatic roles based on user type (RoleUserType)
  * 2. **Individual Assignment**: Explicit role assignment (AssignedRole)
- * 3. **Organ Membership**: Additional roles through organ membership (MemberAuthenticator)
+ * 3. **Organ Membership**: Additional roles through organ membership (OrganMembership)
  *
  * ## Database Design
  * The entity uses a composite primary key (userId, roleId) to ensure that each user

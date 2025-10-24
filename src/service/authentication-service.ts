@@ -34,7 +34,7 @@ import AuthenticationResponse from '../controller/response/authentication-respon
 import TokenHandler from '../authentication/token-handler';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import OrganMembership from '../entity/organ/organ-membership';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
@@ -314,44 +314,44 @@ export default class AuthenticationService extends WithManager {
   }
 
   /**
-   * Get a list of all users this user can authenticate as, including itself.
+   * Get a list of all organs this user is a member of.
    * @param user
    */
   public async getMemberAuthenticators(user: User): Promise<User[]> {
-    const users = (await this.manager.find(MemberAuthenticator, { where: { user: { id: user.id } }, relations: ['authenticateAs'] }))
-      .map((auth) => auth.authenticateAs);
+    const users = (await this.manager.find(OrganMembership, { where: { user: { id: user.id } }, relations: ['organ'] }))
+      .map((auth) => auth.organ);
 
     users.push(user);
     return users;
   }
 
   /**
-   * Gives the array of users access to the authenticateAs user.
+   * Gives the array of users membership to the organ.
    * Used for shared accounts. Note that this replaces the
-   * existing authentication for this authenticateAs.
+   * existing memberships for this organ.
    * @param manager - EntityManager used for single transaction.
-   * @param users - The users that gain access.
-   * @param authenticateAs - The account that needs to be accessed.
+   * @param users - The users that gain membership.
+   * @param organ - The organ account that the users become members of.
    */
-  public async setMemberAuthenticator(users: User[], authenticateAs: User) {
-    // First drop all rows containing authenticateAs
+  public async setMemberAuthenticator(users: User[], organ: User) {
+    // First drop all rows containing organ
     // We check if there is anything to drop or else type orm will complain.
-    const toRemove: MemberAuthenticator[] = await this.manager
-      .find(MemberAuthenticator, { where: { authenticateAs: { id: authenticateAs.id } } });
+    const toRemove: OrganMembership[] = await this.manager
+      .find(OrganMembership, { where: { organ: { id: organ.id } } });
 
     if (toRemove.length !== 0) {
-      await this.manager.delete(MemberAuthenticator, { authenticateAs });
+      await this.manager.delete(OrganMembership, { organ });
     }
 
-    const promises: Promise<MemberAuthenticator>[] = [];
+    const promises: Promise<OrganMembership>[] = [];
 
-    // Create MemberAuthenticator object for each user in users.
+    // Create OrganMembership object for each user in users.
     users.forEach((user) => {
-      const authenticator = Object.assign(new MemberAuthenticator(), {
+      const authenticator = Object.assign(new OrganMembership(), {
         userId: user.id,
-        authenticateAsId: authenticateAs.id,
+        organId: organ.id,
       });
-      promises.push(this.manager.save(MemberAuthenticator, authenticator));
+      promises.push(this.manager.save(OrganMembership, authenticator));
     });
 
     await Promise.all(promises);

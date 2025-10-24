@@ -36,7 +36,7 @@ import {
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -222,7 +222,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       const owner = usersOwningAPos[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({
+      const memberAuthenticators = await OrganMembership.find({
         where: { user: { id: owner.id } },
       });
       expect(memberAuthenticators.length).to.equal(0);
@@ -243,7 +243,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: { id: owner.id } });
+      await OrganMembership.delete({ user: { id: owner.id } });
     });
   });
   describe('createPointOfSale function', () => {
