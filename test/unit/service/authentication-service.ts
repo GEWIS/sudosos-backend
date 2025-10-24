@@ -38,6 +38,7 @@ import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/has
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import { truncateAllTables } from '../../setup';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -298,6 +299,149 @@ describe('AuthenticationService', (): void => {
         const tokenInfo = await new AuthenticationService().createResetToken(user);
         expect(tokenInfo.resetToken.user).to.eq(user);
         expect(tokenInfo.resetToken.expires).to.be.greaterThan(new Date());
+      });
+    });
+  });
+
+  describe('setMemberAuthenticator function', () => {
+    it('should assign indices to new organ members', async () => {
+      await inUserContext(await (await UserFactory()).clone(4), async (...users: User[]) => {
+        const organ = users[0];
+        organ.type = UserType.ORGAN;
+        await organ.save();
+
+        const members = [users[1], users[2], users[3]];
+
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator(members, organ);
+        });
+
+        const memberships = await OrganMembership.find({
+          where: { organId: organ.id },
+          order: { index: 'ASC' },
+        });
+
+        expect(memberships).to.have.length(3);
+        // Verify each membership has an index
+        memberships.forEach((membership, idx) => {
+          expect(membership.index).to.be.a('number');
+          expect(membership.index).to.equal(idx); // Should be 0, 1, 2
+        });
+
+        // Clean up
+        await OrganMembership.delete({ organId: organ.id });
+      });
+    });
+
+    it('should preserve indices for existing members when membership is updated', async () => {
+      await inUserContext(await (await UserFactory()).clone(5), async (...users: User[]) => {
+        const organ = users[0];
+        organ.type = UserType.ORGAN;
+        await organ.save();
+
+        const initialMembers = [users[1], users[2], users[3]];
+
+        // First, create initial memberships
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator(initialMembers, organ);
+        });
+
+        const initialMemberships = await OrganMembership.find({
+          where: { organId: organ.id },
+          order: { index: 'ASC' },
+        });
+
+        expect(initialMemberships).to.have.length(3);
+        const user1Index = initialMemberships.find(m => m.userId === users[1].id).index;
+        const user3Index = initialMemberships.find(m => m.userId === users[3].id).index;
+
+        // Now update: remove user[2], keep user[1] and user[3], add user[4]
+        const updatedMembers = [users[1], users[3], users[4]];
+
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator(updatedMembers, organ);
+        });
+
+        const updatedMemberships = await OrganMembership.find({
+          where: { organId: organ.id },
+        });
+
+        expect(updatedMemberships).to.have.length(3);
+
+        // Verify user[1] kept their index
+        const user1After = updatedMemberships.find(m => m.userId === users[1].id);
+        expect(user1After.index).to.equal(user1Index);
+
+        // Verify user[3] kept their index
+        const user3After = updatedMemberships.find(m => m.userId === users[3].id);
+        expect(user3After.index).to.equal(user3Index);
+
+        // Verify user[4] got a new index (should be the lowest available, which is user[2]'s old index)
+        const user4After = updatedMemberships.find(m => m.userId === users[4].id);
+        expect(user4After.index).to.be.a('number');
+
+        // Clean up
+        await OrganMembership.delete({ organId: organ.id });
+      });
+    });
+
+    it('should assign lowest available index to new members', async () => {
+      await inUserContext(await (await UserFactory()).clone(6), async (...users: User[]) => {
+        const organ = users[0];
+        organ.type = UserType.ORGAN;
+        await organ.save();
+
+        // Create memberships with users[1], users[2], users[3]
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator([users[1], users[2], users[3]], organ);
+        });
+
+        // Remove user[2] (index 1), creating a gap
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator([users[1], users[3]], organ);
+        });
+
+        let memberships = await OrganMembership.find({
+          where: { organId: organ.id },
+          order: { index: 'ASC' },
+        });
+
+        expect(memberships).to.have.length(2);
+        const usedIndices = new Set(memberships.map(m => m.index));
+
+        // Now add user[4] and user[5] - they should fill gaps starting from 0
+        await ctx.connection.transaction(async (manager) => {
+          const service = new AuthenticationService(manager);
+          await service.setMemberAuthenticator([users[1], users[3], users[4], users[5]], organ);
+        });
+
+        memberships = await OrganMembership.find({
+          where: { organId: organ.id },
+          order: { index: 'ASC' },
+        });
+
+        expect(memberships).to.have.length(4);
+
+        // User[4] should have gotten the lowest available index (the gap left by user[2])
+        const user4Membership = memberships.find(m => m.userId === users[4].id);
+        const user5Membership = memberships.find(m => m.userId === users[5].id);
+
+        // Both should have valid numeric indices
+        expect(user4Membership.index).to.be.a('number');
+        expect(user5Membership.index).to.be.a('number');
+
+        // Verify no duplicate indices
+        const allIndices = memberships.map(m => m.index);
+        const uniqueIndices = new Set(allIndices);
+        expect(uniqueIndices.size).to.equal(allIndices.length);
+
+        // Clean up
+        await OrganMembership.delete({ organId: organ.id });
       });
     });
   });
