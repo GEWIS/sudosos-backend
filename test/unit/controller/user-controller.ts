@@ -660,10 +660,11 @@ describe('UserController', (): void => {
       await inUserContext(await (await UserFactory()).clone(3), async (...users: User[]) => {
         const organ = (await User.find({ where: { type: UserType.ORGAN } }))[2];
         const promises: Promise<OrganMembership>[] = [];
-        users.forEach((user) => {
+        users.forEach((user, index) => {
           const auth = Object.assign(new OrganMembership(), {
             user,
             organ,
+            index,
           });
           promises.push(auth.save());
         });
