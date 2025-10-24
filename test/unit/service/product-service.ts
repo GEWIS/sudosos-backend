@@ -43,7 +43,7 @@ import { CreateContainerParams } from '../../../src/controller/request/container
 import ContainerService from '../../../src/service/container-service';
 import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import AuthenticationService from '../../../src/service/authentication-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -287,7 +287,7 @@ describe('ProductService', async (): Promise<void> => {
       const owner = usersOwningAProd[0];
 
       // Sanity check
-      const memberAuthenticators = await MemberAuthenticator.find({
+      const memberAuthenticators = await OrganMembership.find({
         where: { user: { id: owner.id } },
       });
       expect(memberAuthenticators.length).to.equal(0);
@@ -308,7 +308,7 @@ describe('ProductService', async (): Promise<void> => {
       });
 
       // Cleanup
-      await MemberAuthenticator.delete({ user: { id: owner.id } });
+      await OrganMembership.delete({ user: { id: owner.id } });
     });
     it('should return products which are featured', async () => {
       const params: ProductFilterParameters = {

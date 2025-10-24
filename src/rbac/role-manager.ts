@@ -30,7 +30,7 @@ import Role from '../entity/rbac/role';
 import log4js, { Logger } from 'log4js';
 import Permission from '../entity/rbac/permission';
 import { In } from 'typeorm';
-import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import OrganMembership from '../entity/organ/organ-membership';
 import { SELLER_ROLE } from './default-roles';
 import { AllowedAttribute } from './role-definitions';
 
@@ -126,7 +126,7 @@ export default class RoleManager {
    * @param user
    */
   public async getUserOrgans(user: User) {
-    const organs = (await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] })).map((organ) => organ.authenticateAs);
+    const organs = (await OrganMembership.find({ where: { user: { id: user.id } }, relations: ['organ'] })).map((organ) => organ.organ);
     return organs.filter((organ) => organ.type === UserType.ORGAN);
   }
 

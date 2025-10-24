@@ -30,7 +30,7 @@ import { PaginationParameters } from '../helpers/pagination';
 import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
-import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import OrganMembership from '../entity/organ/organ-membership';
 import { CreateUserRequest, UpdateUserRequest } from '../controller/request/user-request';
 import TransactionService, { TransactionFilterParameters } from './transaction-service';
 import {
@@ -118,8 +118,8 @@ export default class UserService {
     const f = filters;
     if (filters.organId) {
       // This allows us to search for organ members
-      const userIds = await MemberAuthenticator
-        .find({ where: { authenticateAs: { id: filters.organId } }, relations: ['user'] });
+      const userIds = await OrganMembership
+        .find({ where: { organ: { id: filters.organId } }, relations: ['user'] });
       f.id = userIds.map((auth) => auth.user.id);
     }
     if (filters.assignedRoleIds) {
@@ -361,11 +361,11 @@ export default class UserService {
    * @param right - User to check
    */
   public static async areInSameOrgan(left: number, right: number) {
-    const leftAuth = await MemberAuthenticator.find({ where: { user: { id: left } }, relations: ['authenticateAs'] });
-    const rightAuth = await MemberAuthenticator.find({ where: { user: { id: right } }, relations: ['authenticateAs'] });
+    const leftAuth = await OrganMembership.find({ where: { user: { id: left } }, relations: ['organ'] });
+    const rightAuth = await OrganMembership.find({ where: { user: { id: right } }, relations: ['organ'] });
 
-    const rightIds = leftAuth.map((u) => u.authenticateAs.id);
-    const overlap = rightAuth.map((u) => u.authenticateAs.id)
+    const rightIds = leftAuth.map((u) => u.organ.id);
+    const overlap = rightAuth.map((u) => u.organ.id)
       .filter((u) => rightIds.indexOf(u) !== -1);
 
     return overlap.length > 0;
