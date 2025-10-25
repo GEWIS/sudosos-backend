@@ -368,6 +368,113 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
   });
+  describe('GET /pointsofsale/:id/:revision', () => {
+    it('should return correct model', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/${pos.currentRevision}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'PointOfSaleWithContainersResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+    it('should return an HTTP 200 and the specific revision of the point of sale if admin', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const revision = 1;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/${revision}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const body = res.body as PointOfSaleWithContainersResponse;
+      expect(body.id).to.equal(pos.id);
+      expect(body.revision).to.equal(revision);
+    });
+    it('should return an HTTP 200 and the specific revision if connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organUser.id } } });
+      expect(pos).to.not.be.undefined;
+      const revision = pos.currentRevision;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/${revision}`)
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`);
+
+      expect(res.status).to.equal(200);
+      const body = res.body as PointOfSaleWithContainersResponse;
+      expect(body.id).to.equal(pos.id);
+      expect(body.revision).to.equal(revision);
+    });
+    it('should return different data for different revisions', async () => {
+      const pos = ctx.pointsOfSale[0];
+      if (pos.currentRevision < 2) {
+        const updateRequest: UpdatePointOfSaleRequest = {
+          id: pos.id,
+          name: 'Updated Name',
+          containers: ctx.validPOSRequest.containers,
+          useAuthentication: true,
+        };
+        await request(ctx.app)
+          .patch(`/pointsofsale/${pos.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(updateRequest);
+      }
+
+      const res1 = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/1`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      const res2 = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/2`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res1.status).to.equal(200);
+      expect(res2.status).to.equal(200);
+
+      const body1 = res1.body as PointOfSaleWithContainersResponse;
+      const body2 = res2.body as PointOfSaleWithContainersResponse;
+
+      expect(body1.revision).to.equal(1);
+      expect(body2.revision).to.equal(2);
+      expect(body1.id).to.equal(body2.id);
+    });
+    it('should return an HTTP 403 if not admin and not connected via organ', async () => {
+      const pos = await PointOfSale.findOne({ where: { owner: { id: ctx.organUser.id } } });
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/${pos.currentRevision}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return an HTTP 404 if the point of sale is soft deleted', async () => {
+      const pos = ctx.deletedPointsOfSale[0];
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/1`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
+    it('should return an HTTP 404 if the point of sale does not exist', async () => {
+      const nonExistentId = (await PointOfSale.count({ withDeleted: true })) + 1;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${nonExistentId}/1`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale not found.');
+    });
+    it('should return an HTTP 404 if the revision does not exist', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const nonExistentRevision = 999;
+      const res = await request(ctx.app)
+        .get(`/pointsofsale/${pos.id}/${nonExistentRevision}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Point of Sale revision not found.');
+    });
+  });
   describe('GET /pointsofsale/:id/associates', () => {
     let pointOfSale: PointOfSaleWithContainersResponse;
 
