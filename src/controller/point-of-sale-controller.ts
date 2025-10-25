@@ -92,6 +92,12 @@ export default class PointOfSaleController extends BaseController {
           handler: this.deletePointOfSale.bind(this),
         },
       },
+      '/:id(\\d+)/:revision(\\d+)': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
+          handler: this.returnSinglePointOfSaleRevision.bind(this),
+        },
+      },
       '/:id(\\d+)/associates': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', await PointOfSaleController.getRelation(req), 'PointOfSale', ['*']),
@@ -223,6 +229,51 @@ export default class PointOfSaleController extends BaseController {
       }
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /pointsofsale/{id}/{revision}
+   * @summary Returns a specific revision of the requested Point of Sale
+   * @operationId getSinglePointOfSaleRevision
+   * @tags pointofsale - Operations of the point of sale controller
+   * @param {integer} id.path.required - The id of the Point of Sale which should be returned
+   * @param {integer} revision.path.required - The revision number of the Point of Sale
+   * @security JWT
+   * @return {PointOfSaleWithContainersResponse} 200 - The requested point of sale revision
+   * @return {string} 404 - Not found error
+   * @return {string} 500 - Internal server error
+   */
+  public async returnSinglePointOfSaleRevision(req: RequestWithToken, res: Response): Promise<void> {
+    const { id, revision } = req.params;
+    this.logger.trace('Get single point of sale revision', id, revision, 'by user', req.token.user);
+
+    try {
+      const pointOfSaleId = parseInt(id, 10);
+      const pointOfSaleRevision = parseInt(revision, 10);
+
+      // Check if point of sale exists.
+      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
+        res.status(404).json('Point of Sale not found.');
+        return;
+      }
+
+      const result = await PointOfSaleService.getPointsOfSale({
+        pointOfSaleId,
+        pointOfSaleRevision,
+        returnContainers: true,
+        returnProducts: true,
+      });
+
+      if (!result.records[0]) {
+        res.status(404).json('Point of Sale revision not found.');
+        return;
+      }
+
+      res.json(result.records[0]);
+    } catch (error) {
+      this.logger.error('Could not return point of sale revision:', error);
       res.status(500).json('Internal server error.');
     }
   }
