@@ -56,7 +56,7 @@ const userGotInactiveAdministrativeCostEnglish = new MailContentBuilder<UserGotI
   This means that ${formatBalance(context.amount)} will be deducted from your account. 
   `,
   getSubject: () => 'Administration costs SudoSOS',
-  getTitle: 'Administrationcosts',
+  getTitle: 'Administration costs',
   getText: (context) => `
   You haven't made any transfers on SudoSOS for the last 3 years. This means that you will pay an administration fee.
   This means that ${formatBalance(context.amount)} will be deducted from your account.

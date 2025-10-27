@@ -92,10 +92,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
     return Transfer.getRepository()
       .createQueryBuilder('transfer')
       .select('MAX(transfer.createdAt) as createdAt')
-      .where('transfer.inactiveAdministrativeCost = NULL')
+      .where('transfer.inactiveAdministrativeCost is NULL')
       .andWhere(`transfer.fromId = ${userId}`)
-      .leftJoin(InactiveAdministrativeCost, 'inactiveAdministrativeCost', 'inactiveAdministrativeCost.transferId = inactiveAdministrativeCost.id')
-      .where('inactiveAdministrativeCost.id is NULL')
+      .leftJoin(InactiveAdministrativeCost, 'inactiveAdministrativeCost', 'inactiveAdministrativeCost.transferId = transfer.id')
+      .andWhere('inactiveAdministrativeCost.id is NULL')
       .getOne();
   }
 
