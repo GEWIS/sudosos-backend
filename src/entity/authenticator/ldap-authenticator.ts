@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the page of ldap-authenticator.
- *
  * @module authentication
  */
 
@@ -41,8 +39,55 @@ const bufferTransformer = {
 };
 
 /**
+ * The LDAP Authenticator is used to authenticate users using LDAP.
+ * This process contains some design decisions that are highlighted below.
+ *
+ * ## LDAP Authentication Flow
+ * 1. **User** sends a request to the `/authentication/LDAP` endpoint.
+ * 2. **Authentication Controller (AC)** uses a **bind user** and bind password to establish a connection to the LDAP server.
+ * 3. **AC** searches for the user in the LDAP server.
+ * 4. **AC** attempts to bind the user to the LDAP server.
+ * 5. **AC** returns a `403 Forbidden` error if the user is not found, or the password is incorrect.
+ * 7. **AC** returns a `200 OK` response if the user is found in the LDAP server and the bind succeeds.
+ *
+ * If a user can log in but does not have a **bound** account in SudoSOS, one will be created and bound (see {@link AuthenticationService#LDAPAuthentication}).
+ * Accounts are bounded using the **objectGUID** of the AD user, which will be saved and stored in the database using the `LDAPAuthenticator` entity.
+ * This UUID is the source of "truth" for which AD account a user is bound to.
+ * In the future, this should remain as the source of truth. For example, it should override any linked ids.
+ *
+ * The following flowchart shows the LDAP authentication process.
+ * <details>
+ *
+ * ```mermaid
+ * graph TD
+ *     A[Start] --> B{Receive LDAP Login Request}
+ *     B --> C[Parse Request Body]
+ *     C --> D[Establish LDAP Connection]
+ *     D --> E{Search LDAP for User}
+ *     E -->|Found| F[Attempt User Bind]
+ *     E -->|Not Found| G[Return 403 Error]
+ *
+ *     F --> H{Bind Successful?}
+ *     H -->|Yes| I{Check Local User Account}
+ *     H -->|No| J[Return 403 Error]
+ *
+ *     I -->|Exists| M[Generate JWT Token]
+ *     I -->|Not Exists| K[Create Local User & Bind]
+ *     K --> M
+ *
+ *     M --> N[Return JWT Token]
+ *
+ *     style G fill:#f66
+ *     style J fill:#f66
+ *     style N stroke:#0a0,stroke-width:2px
+ * ```
+ * </details>
+ *
  * @typedef {AuthenticationMethod} LDAPAuthenticator
  * @property {string} accountName.required - The associated AD account name
+ * @property {Buffer} UUID.required - The associated AD account UUID
+ * @promote
+ * @index 1
  */
 @Entity()
 export default class LDAPAuthenticator extends AuthenticationMethod {

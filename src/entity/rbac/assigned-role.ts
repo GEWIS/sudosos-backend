@@ -32,12 +32,41 @@ import User from '../user/user';
 import Role from './role';
 
 /**
- * Basically the many-to-many relationship between users and roles, but still exists
- * for testing and legacy.
+ * The AssignedRole entity represents the many-to-many relationship between users and roles
+ * in the Role-Based Access Control (RBAC) system. This entity allows individual users
+ * to be assigned specific roles, granting them the permissions associated with those roles.
+ *
+ * ## Purpose and Usage
+ * While the RBAC system primarily uses user types for automatic role assignment (via RoleUserType),
+ * AssignedRole provides explicit role assignment for individual users. This is useful for:
+ * - **Custom Role Assignments**: Granting specific roles to individual users
+ * - **Testing**: Assigning roles for testing purposes
+ * - **Legacy Support**: Maintaining compatibility with existing role assignment systems
+ * - **Administrative Overrides**: Manually assigning roles that differ from user type defaults
+ *
+ * ## Relationship Model
+ * - **User**: Each assignment is linked to a specific user
+ * - **Role**: Each assignment grants a specific role to the user
+ * - **Composite Key**: The combination of userId and roleId forms a unique constraint
+ *
+ * ## Role Assignment Hierarchy
+ * Users can receive roles through multiple mechanisms:
+ * 1. **User Type Assignment**: Automatic roles based on user type (RoleUserType)
+ * 2. **Individual Assignment**: Explicit role assignment (AssignedRole)
+ * 3. **Organ Membership**: Additional roles through organ membership (MemberAuthenticator)
+ *
+ * ## Database Design
+ * The entity uses a composite primary key (userId, roleId) to ensure that each user
+ * can only have one instance of each role. The relationship includes cascade delete
+ * behavior to maintain referential integrity.
+ *
+ * ## Integration with Role Manager
+ * The RoleManager's `getRoles()` method considers both user type assignments and
+ * individual role assignments when determining a user's effective roles.
  *
  * @typedef {BaseEntityWithoutId} AssignedRole
  * @property {User.model} user.required - The user being assigned a role
- * @property {string} role.required - The name of the role
+ * @property {Role.model} role.required - The role being assigned to the user
  */
 @Entity()
 export default class AssignedRole extends BaseEntityWithoutId {

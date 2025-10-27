@@ -19,7 +19,34 @@
  */
 
 /**
- * This is the module page of the permission.
+ * The Permission entity represents a specific permission within the Role-Based Access Control (RBAC) system.
+ * Permissions define what actions a role can perform on specific entities and attributes, with
+ * granular control over ownership relations and access scopes.
+ *
+ * ## Permission Structure
+ * Each permission consists of four key components:
+ * - **Entity**: The type of resource being accessed (e.g., 'User', 'Product', 'Transaction')
+ * - **Action**: The operation being performed (e.g., 'create', 'read', 'update', 'delete')
+ * - **Relation**: The ownership relationship (e.g., 'own', 'created', 'all', 'organ')
+ * - **Attributes**: Specific fields or properties that can be accessed (e.g., ['name', 'email'] or ['*'])
+ *
+ * ## Permission Examples
+ * - `entity: 'User', action: 'read', relation: 'own', attributes: ['*']` - Can read all own user data
+ * - `entity: 'Product', action: 'create', relation: 'all', attributes: ['name', 'price']` - Can create products with name and price
+ * - `entity: 'Transaction', action: 'update', relation: 'organ', attributes: ['status']` - Can update transaction status for organ
+ *
+ * ## Attribute Wildcards
+ * The special attribute '*' grants access to all attributes of the entity, providing full access
+ * to all properties regardless of the specific attribute list.
+ *
+ * ## Database Design
+ * The permission uses a composite primary key consisting of roleId, action, relation, and entity,
+ * ensuring that each role can have only one permission per unique combination of these fields.
+ * The attributes are stored as a JSON array in the database.
+ *
+ * ## Integration with Role Manager
+ * Permissions are evaluated by the RoleManager's `can()` method, which checks if a user's roles
+ * have the necessary permissions to perform a specific action on an entity with given attributes.
  *
  * @module rbac
  */

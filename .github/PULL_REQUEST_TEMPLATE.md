@@ -21,3 +21,14 @@ Format issues on GitHub as `#XXX`. Tickets from support.gewis.nl can also be aut
 - Documentation improvement
 - Style _(Change that do not affect the functionality of the code)_
 - CI/CD _(Changes to the CI/CD configuration)_
+
+---
+
+## ✅ PR Checklist
+
+- [ ] **Test Coverage**: New functionality has appropriate test coverage and all tests pass (`npm run test`)
+- [ ] **Documentation**: New functionality is documented with TypeDoc comments and API documentation is updated
+- [ ] **Database Changes**: Database migrations created (if applicable) and tested with both SQLite and MariaDB
+
+## 🔗 Additional Notes
+<!-- Any additional information that reviewers should know -->

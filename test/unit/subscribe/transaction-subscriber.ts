@@ -45,6 +45,10 @@ import {
   UserSeeder,
 } from '../../seed';
 import { rootStubs } from '../../root-hooks';
+import { SubTransactionRequest } from '../../../src/controller/request/transaction-request';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import UserDebtNotification from '../../../src/mailer/messages/user-debt-notification';
+import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -189,6 +193,7 @@ describe('TransactionSubscriber', () => {
       const container = ctx.containers[0];
       const product = ctx.products[0];
 
+
       const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount());
       expect(amount).to.be.at.least(1);
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
@@ -232,6 +237,7 @@ describe('TransactionSubscriber', () => {
 
       const amount = 1;
       const totalPriceInclVat = product.priceInclVat.toObject();
+
       await (new TransactionService()).createTransaction({
         from: user.id,
         pointOfSale: {
@@ -259,6 +265,97 @@ describe('TransactionSubscriber', () => {
       });
 
       expect(sendMailFake).to.not.be.called;
+    });
+
+    it('should send an email if someone goes in debt after a multi-item transaction', async () => {
+
+      const pos = ctx.pointOfSales[0];
+      const container = ctx.containers[0];
+      const product = ctx.products[0];
+      const pricePerItemDinero = product.priceInclVat;
+
+      const notificationConstructorSpy = sandbox.spy();
+      const origGetOptions = UserDebtNotification.prototype.getOptions;
+      sandbox.stub(UserDebtNotification.prototype, 'getOptions').callsFake(function (to, language) {
+        // record the constructor options passed when the message was created
+        notificationConstructorSpy((this as any).contentOptions);
+        // return the original getOptions result so sendMail receives a proper options object
+        return origGetOptions.apply(this, [to, language]);
+      });
+
+
+      const builder = await (await UserFactory()).addBalance(pricePerItemDinero.getAmount()); // ensure enough balance to buy one item
+      const newUser = await builder.get();
+      // Ensure user has an email so the mailer receives a valid recipient
+      newUser.email = 'test@example.com';
+      await User.save(newUser);
+      await inUserContext([newUser], async function (u: User) {
+        
+        // test case goes here
+        const balance = await new BalanceService().getBalance(u.id);
+        const balanceCents = balance.amount.amount;
+
+        expect(balanceCents).to.be.at.least(0);        
+
+        const amount = 1;
+
+        const pricePerItem: DineroObjectRequest = pricePerItemDinero.toObject();
+        const totalPriceInclVat: DineroObjectRequest = pricePerItemDinero.multiply(2).toObject();
+
+
+        // Stub BalanceService.getBalance so the subscriber sees the pre-transaction snapshot
+        // This exploits the poor transaction-subscriber logic which only checks the first row
+        const origGetBalance = BalanceService.prototype.getBalance;
+        const getBalanceStub = sandbox.stub(BalanceService.prototype, 'getBalance').callsFake(async function (id: number, date?: Date) {
+          if (id === u.id) {
+            // Return the pre-transaction balance for any call (current or snapshot)
+            return balance;
+          }
+          // For other calls use the original
+          return origGetBalance.apply(this, [id, date]);
+        });
+
+        let subTransactionRow = {
+          product: {
+            id: product.productId,
+            revision: product.revision,
+          },
+          amount,
+          totalPriceInclVat: pricePerItem,
+        };
+
+        let subTransaction : SubTransactionRequest;
+        subTransaction = {
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [ subTransactionRow, subTransactionRow ], // buy two items
+          // User should go into debt after second item
+        };
+
+        await (new TransactionService()).createTransaction({
+          from: u.id,
+          pointOfSale: {
+            id: pos.pointOfSaleId,
+            revision: pos.revision,
+          },
+          createdBy: u.id,
+          totalPriceInclVat,
+          subTransactions: [subTransaction],
+        });
+
+        // restore getBalance so we can query the true current balance
+        getBalanceStub.restore();
+
+        // Query user balance after transaction
+        const newBalance = await new BalanceService().getBalance(u.id);
+
+        expect(newBalance.amount.amount).to.be.below(0);
+        expect(sendMailFake).to.be.called;
+      });
     });
   });
 });

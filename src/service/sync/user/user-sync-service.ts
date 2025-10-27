@@ -39,4 +39,8 @@ export abstract class UserSyncService extends SyncService<User> {
   guard(user: User): Promise<boolean> {
     return Promise.resolve(this.targets.includes(user.type));
   }
+
+  protected abstract sync(user: User, isDryRun?: boolean): Promise<boolean>;
+
+  abstract down(user: User, isDryRun?: boolean): Promise<void>;
 }

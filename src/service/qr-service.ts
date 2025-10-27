@@ -19,9 +19,8 @@
  */
 
 /**
- * This is the module page of the qr-service.
- *
- * @module authentication
+ * @module internal/services
+ * @promote
  */
 
 import WithManager from '../database/with-manager';

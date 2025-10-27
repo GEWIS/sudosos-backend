@@ -57,11 +57,22 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
       // Check if subTransactions exists, is not empty, and subTransactionRows exists and is not empty
-      if (entity.subTransactions?.length > 0 && entity.subTransactions[0].subTransactionRows?.length > 0) {
-        const subTransaction = entity.subTransactions[0].subTransactionRows[0];
-        // Ensure the amount and product.priceInclVat.getAmount() exist before performing the calculation
-        if (subTransaction.amount && typeof subTransaction.product?.priceInclVat?.getAmount === 'function') {
-          currentBalance -= subTransaction.amount * subTransaction.product.priceInclVat.getAmount();
+      if (
+        entity.subTransactions?.length > 0 &&
+        entity.subTransactions[0].subTransactionRows?.length > 0
+      ) {
+        for (const subTrans of entity.subTransactions) {
+          for (const subTransRow of subTrans.subTransactionRows) {
+            // Ensure the amount and product.priceInclVat.getAmount() exist before performing the calculation
+            if (
+              subTransRow.amount &&
+              typeof subTransRow.product?.priceInclVat?.getAmount === 'function'
+            ) {
+              currentBalance -=
+                subTransRow.amount *
+                subTransRow.product.priceInclVat.getAmount();
+            }
+          }
         }
       }
     }

@@ -22,6 +22,12 @@ import WithManager from '../../database/with-manager';
 import { SyncResult, SyncService } from './sync-service';
 import log4js, { Logger } from 'log4js';
 
+export interface SyncResults<T> {
+  passed: T[];
+  failed: T[];
+  skipped: T[];
+}
+
 export default abstract class SyncManager<T, S extends SyncService<T>> extends WithManager {
 
   protected readonly services: S[];
@@ -36,45 +42,60 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
 
   abstract getTargets(): Promise<T[]>;
 
-  async run() {
-    this.logger.trace('Start sync job');
+  async run(isDryRun: boolean = false): Promise<SyncResults<T>> {
+    this.logger.trace(isDryRun ? 'Start dry-run sync job' : 'Start sync job');
     const entities = await this.getTargets();
+    const result: SyncResults<T> = {
+      passed: [],
+      failed: [],
+      skipped: [],
+    };
 
     try {
       await this.pre();
     } catch (error) {
       this.logger.error('Aborting sync due to error', error);
-      return;
+      return result;
     }
+
     for (const entity of entities) {
       try {
-        const result = await this.sync(entity);
+        const syncResult = await this.sync(entity, isDryRun);
 
-        if (result.skipped) {
+        if (syncResult.skipped) {
           this.logger.trace('Syncing skipped for', entity);
+          result.skipped.push(entity);
           continue;
         }
 
-        if (result.result === false) {
+        if (syncResult.result === false) {
           this.logger.warn('Sync result: false for', entity);
-          await this.down(entity);
+          result.failed.push(entity);
+          await this.down(entity, isDryRun);
         } else {
           this.logger.trace('Sync result: true for', entity);
+          result.passed.push(entity);
         }
 
       } catch (error) {
         this.logger.error('Syncing error for', entity, error);
+        result.failed.push(entity);
       }
     }
     await this.post();
+    return result;
   }
 
-  async sync(entity: T): Promise<SyncResult> {
+  async runDry(): Promise<SyncResults<T>> {
+    return this.run(true);
+  }
+
+  async sync(entity: T, isDryRun: boolean = false): Promise<SyncResult> {
     const syncResult: SyncResult = { skipped: true, result: false };
 
     // Aggregate results from all services
     for (const service of this.services) {
-      const result = await service.up(entity);
+      const result = await service.up(entity, isDryRun);
 
       if (!result.skipped) syncResult.skipped = false;
       if (result.result) syncResult.result = true;
@@ -83,10 +104,10 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
     return syncResult;
   }
 
-  async down(entity: T): Promise<void> {
+  async down(entity: T, isDryRun: boolean = false): Promise<void> {
     for (const service of this.services) {
       try {
-        await service.down(entity);
+        await service.down(entity, isDryRun);
       } catch (error) {
         this.logger.error('Could not down', entity, error);
       }

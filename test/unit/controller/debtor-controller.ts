@@ -403,6 +403,38 @@ describe('DebtorController', () => {
     });
   });
 
+  describe('DELETE /fines/handout/{id}', () => {
+    it('should delete fine handout event if admin', async () => {
+      const fineHandoutEvent = ctx.fineHandoutEvents[1];
+      const res = await request(ctx.app)
+        .delete(`/fines/handout/${fineHandoutEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+    });
+
+    it('should return 404 if fine handout event does not exist', async () => {
+      const id = 9999999;
+      const fineHandoutEvent = await FineHandoutEvent.findOne({ where: { id } });
+      expect(fineHandoutEvent).to.be.null;
+
+      const res = await request(ctx.app)
+        .delete(`/fines/handout/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
+      expect(res.body).to.be.empty;
+    });
+
+    it('should return 403 if not admin', async () => {
+      const fineHandoutEvent = ctx.fineHandoutEvents[0];
+      const res = await request(ctx.app)
+        .delete(`/fines/handout/${fineHandoutEvent.id}`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+  });
+
   describe('POST /fines/handout', () => {
     it('should correctly hand out fines to given users', async () => {
       const res = await request(ctx.app)

@@ -641,6 +641,8 @@ export default class TransactionService extends WithManager {
         createdAt: utcToDate(o.pointOfSale_createdAt).toISOString(),
         updatedAt: utcToDate(o.pointOfSaleRev_updatedAt).toISOString(),
         name: o.pointOfSaleRev_name,
+        revision: o.pointOfSaleRev_revision,
+        useAuthentication: Boolean(o.pointOfSaleRev_useAuthentication),
       },
       value: value.toObject(),
     };

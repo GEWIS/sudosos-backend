@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.dev
+    volumes:
+      - ..:/workspace:cached
+      - /workspace/node_modules
+    working_dir: /workspace
+    command: npm run watch
+    environment:
+      - NODE_ENV=development
+      - TYPEORM_CONNECTION=mariadb
+      - TYPEORM_HOST=mariadb
+      - TYPEORM_PORT=3306
+      - TYPEORM_USERNAME=sudosos
+      - TYPEORM_PASSWORD=sudosos
+      - TYPEORM_DATABASE=sudosos_dev
+      - TYPEORM_SYNCHRONIZE=false
+      - TYPEORM_LOGGING=false
+      - HTTP_PORT=3000
+      - API_HOST=localhost/api
+      - API_BASEPATH=/v1
+      - CURRENCY_CODE=EUR
+      - CURRENCY_PRECISION=2
+      - LOG_LEVEL=trace
+      - FILE_STORAGE_METHOD=disk
+      - ENABLE_LDAP=false
+      - PAGINATION_DEFAULT=20
+      - PAGINATION_MAX=500
+      - RESET_TOKEN_EXPIRES=3600
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    depends_on:
+      - mariadb
+    networks:
+      - sudosos-network
+
+  mariadb:
+    image: mariadb:lts
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: sudosos_dev
+      MARIADB_USER: sudosos
+      MARIADB_PASSWORD: sudosos
+    ports:
+      - "3306:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --init-connect="SET NAMES utf8mb4;"
+      --innodb-flush-log-at-trx-commit=2
+      --innodb-buffer-pool-size=128M
+      --innodb-log-file-size=32M
+      --innodb-flush-method=O_DIRECT
+      --innodb-read-io-threads=4
+      --innodb-write-io-threads=4
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      timeout: 5s
+      retries: 3
+      interval: 5s
+      start_period: 10s
+    networks:
+      - sudosos-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../data:/app/data:ro
+    depends_on:
+      - backend
+    networks:
+      - sudosos-network
+
+# volumes:
+  # mariadb_data:
+
+networks:
+  sudosos-network:
+    driver: bridge
