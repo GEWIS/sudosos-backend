@@ -37,7 +37,7 @@ const inactiveAdministrativeCostNotificationDutch = new MailContentBuilder<Inact
   Er zal dan 10 euro van je account worden afgehaald ter betaling voor administratie kosten. </p>
   `,
   getSubject: () => 'Notificatie administratie kosten SudoSOS',
-  getTitle: 'Administratienotificatie',
+  getTitle: 'Administratie notificatie',
   getText: () => `
   Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.
   Er zal dan 10 euro van je account worden afgehaald ter betaling voor administratie kosten. 
@@ -50,7 +50,7 @@ const inactiveAdministrativeCostNotificationEnglish = new MailContentBuilder<Ina
   This means that 10 euros will be deducted from your account. </p>
   `,
   getSubject: () => 'Notification administration costs SudoSOS',
-  getTitle: 'Administrationnotification',
+  getTitle: 'Administration notification',
   getText: () => `
   You haven't made any transfers on SudoSOS for the last 2 years. This means that next year you will pay an administration fee.
   This means that 10 euros will be deducted from your account. 

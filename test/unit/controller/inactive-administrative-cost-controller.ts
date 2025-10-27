@@ -190,10 +190,10 @@ describe('InactiveAdministrativeCostController', async () => {
     sandbox.restore();
   });
 
-  describe('GET /inactiveAdministrativeCosts', ()=> {
+  describe('GET /inactive-administrative-costs', ()=> {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts')
+        .get('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
@@ -206,7 +206,7 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return an HTTP 200 and all existing inactive administrative costs if admin', async () => {
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts')
+        .get('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
@@ -223,17 +223,40 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return an HTTP 403 if not an admin', async () => {
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts')
+        .get('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.equal(403);
       expect(res.body).to.be.empty;
     });
+    it('should return all inactive administrative costs for a user', async () => {
+      const userId = ctx.users[0].id;
+
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs')
+        .query({ fromId: userId })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+
+      const inactiveAdministrativeCosts = res.body.records as BaseInactiveAdministrativeCostResponse[];
+      for (const inactiveAdministrativeCost of inactiveAdministrativeCosts) {
+        expect(inactiveAdministrativeCost.from.id).to.equal(userId);
+      }
+    });
+    it('should return 400 error with wrong validation', async () => {
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs')
+        .query({ test: "42 'Vo" })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(400);
+    });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts')
+        .get('/inactive-administrative-costs')
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
@@ -247,10 +270,10 @@ describe('InactiveAdministrativeCostController', async () => {
       expect(inactiveAdministrativeCosts.length).to.be.at.most(take);
     });
   });
-  describe('POST /inactiveAdministrativeCost', () => {
+  describe('POST /inactive-administrative-costs', () => {
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts')
+        .post('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validInactiveAdministrativeCostRequest);
 
@@ -259,7 +282,7 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should create an InactiveAdministrativeCost and return an HTTP 200 if admin.', async () => {
       const count = await InactiveAdministrativeCost.count();
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts')
+        .post('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validInactiveAdministrativeCostRequest);
 
@@ -270,7 +293,7 @@ describe('InactiveAdministrativeCostController', async () => {
       const req: CreateInactiveAdministrativeCostRequest = { forId: -1 };
 
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts')
+        .post('/inactive-administrative-costs')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(req);
 
@@ -278,11 +301,11 @@ describe('InactiveAdministrativeCostController', async () => {
       expect(res.body).to.equal(INVALID_USER_ID().value);
     });
   });
-  describe('GET /inactiveAdministrativeCost/{id}', () => {
+  describe('GET /inactive-administrative-costs/{id}', () => {
     it('should return the correct model', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
       const res = await request(ctx.app)
-        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .get(`/inactive-administrative-costs/${inactiveAdministrativeCost.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
@@ -296,7 +319,7 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should return an HTTP 200 and the requested inactive administrative cost if exists and admin', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
       const res = await request(ctx.app)
-        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .get(`/inactive-administrative-costs/${inactiveAdministrativeCost.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
@@ -305,7 +328,7 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should return an HTTP 403 if not admin', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
       const res = await request(ctx.app)
-        .get(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .get(`/inactive-administrative-costs/${inactiveAdministrativeCost.id}`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.be.equal(403);
@@ -316,7 +339,7 @@ describe('InactiveAdministrativeCostController', async () => {
       expect(inactiveAdministrativeCost).to.be.null;
 
       const res = await request(ctx.app)
-        .get(`/inactiveAdministrativeCosts/${count + 1}`)
+        .get(`/inactive-administrative-costs/${count + 1}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(404);
@@ -327,7 +350,7 @@ describe('InactiveAdministrativeCostController', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
 
       const res = await request(ctx.app)
-        .delete(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .delete(`/inactive-administrative-costs/${inactiveAdministrativeCost.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(204);
@@ -336,7 +359,7 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should return an HTTP 403 if not admin', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
       const res = await request(ctx.app)
-        .delete(`/inactiveAdministrativeCosts/${inactiveAdministrativeCost.id}`)
+        .delete(`/inactive-administrative-costs/${inactiveAdministrativeCost.id}`)
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.be.equal(403);
@@ -347,16 +370,16 @@ describe('InactiveAdministrativeCostController', async () => {
       expect(inactiveAdministrativeCost).to.be.null;
 
       const res = await request(ctx.app)
-        .delete(`/inactiveAdministrativeCosts/${count + 2}`)
+        .delete(`/inactive-administrative-costs/${count + 2}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.be.equal(404);
     });
   });
-  describe('GET /checkInactiveUsers',  () => {
+  describe('GET /inactive-administrative-costs/eligible-users',  () => {
     it('should return inactive users', async () => {
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts/checkInactiveUsers')
+        .get('/inactive-administrative-costs/eliigible-users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send('true');
 
@@ -364,16 +387,16 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
-        .get('/inactiveAdministrativeCosts/checkInactiveUsers')
+        .get('/inactive-administrative-costs/eligible-users')
         .set('Authorization', `Bearer ${ctx.token}`);
 
       expect(res.status).to.be.equal(403);
     });
   });
-  describe('POST /notify', () => {
+  describe('POST /inactive-administrative-costs/notify', () => {
     it('should notify users with given ID', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/notify')
+        .post('/inactive-administrative-costs/notify')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(204);
@@ -382,31 +405,31 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return 403 if user is not an admin', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/notify')
+        .post('/inactive-administrative-costs/notify')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(403);
     });
     it('should return 400 if userIds is not an array', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/notify')
+        .post('/inactive-administrative-costs/notify')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: '42Vo' });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if array of userIds is invalid', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/notify')
+        .post('/inactive-administrative-costs/notify')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: ['WieDitLeestTrektBak'] });
       expect(res.status).to.equal(400);
     });
   });
-  describe('POST /handout', () => {
+  describe('POST /inactive-administrative-costs/handout', () => {
     it('should handout inactive administrative costs to users with given ID', async () => {
       const count = await InactiveAdministrativeCost.count();
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/handout')
+        .post('/inactive-administrative-costs/handout')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(200);
@@ -416,21 +439,21 @@ describe('InactiveAdministrativeCostController', async () => {
     });
     it('should return 403 if user is not an admin', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/handout')
+        .post('/inactive-administrative-costs/handout')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(403);
     });
     it('should return 400 if userIds is not an array', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/handout')
+        .post('/inactive-administrative-costs/handout')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: '42Vo' });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if array of userIds is invalid', async () => {
       const res = await request(ctx.app)
-        .post('/inactiveAdministrativeCosts/handout')
+        .post('/inactive-administrative-costs/handout')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send({ userIds: ['WieDitLeestTrektBak'] });
       expect(res.status).to.equal(400);

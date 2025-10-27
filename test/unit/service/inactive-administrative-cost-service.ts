@@ -182,6 +182,13 @@ describe('InactiveAdministrativeCostService', () => {
 
       expect(res[0].fromId).to.be.eq(user.id);
     });
+    it('should return administrative cost for a certain id', async () => {
+      const inactiveAdministrativeCostId = ctx.inactiveAdministrativeCosts[0].id;
+
+      const res = await new InactiveAdministrativeCostService().getInactiveAdministrativeCosts({ inactiveAdministrativeCostId });
+
+      expect(res[0].id).to.be.eq(inactiveAdministrativeCostId);
+    });
   });
   
   describe('createInactiveAdministrativeCost', async (): Promise<void> => {
@@ -217,6 +224,12 @@ describe('InactiveAdministrativeCostService', () => {
 
       expect(undoTransfer).not.be.null;
       expect(deletedInactiveAdministrativeCost.creditTransferId).to.be.eq(undoTransfer.id);
+    });
+    it('should return undefined when entity does not exist', async () => {
+      const lastId = ctx.inactiveAdministrativeCosts.length;
+      const res = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(lastId + 1);
+
+      expect(res).not.be.undefined;
     });
   });
   

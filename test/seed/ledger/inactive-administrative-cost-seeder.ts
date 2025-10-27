@@ -21,8 +21,8 @@
 import WithManager from '../../../src/database/with-manager';
 import User from '../../../src/entity/user/user';
 import InactiveAdministrativeCost from '../../../src/entity/transactions/inactive-administrative-cost';
-import Transfer from '../../../src/entity/transactions/transfer';
 import { getRandomDate } from '../helpers';
+import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 
 export default class InactiveAdministrativeCostSeeder extends WithManager {

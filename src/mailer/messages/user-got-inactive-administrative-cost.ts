@@ -43,7 +43,7 @@ const userGotInactiveAdministrativeCostDutch = new MailContentBuilder<UserGotIna
   
   `,
   getSubject: () => 'Administratie kosten SudoSOS',
-  getTitle: 'Administratiekosten',
+  getTitle: 'Administratie kosten',
   getText: (context) => `
   Je hebt al 3 jaar geen overdrachten binnen SudoSOS gedaan. Dit betekent dat je administratie kosten gaat betalen.
   Er wordt ${formatBalance(context.amount)} van je account worden afgehaald ter betaling voor administratie kosten.

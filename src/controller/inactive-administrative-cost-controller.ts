@@ -77,7 +77,7 @@ export default class InactiveAdministrativeCostController extends BaseController
           handler: this.deleteInactiveAdministrativeCost.bind(this),
         },
       },
-      '/checkInactiveUsers': {
+      '/eligible-users': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'InactiveAdministrativeCost', ['*']),
           handler: this.checkInactiveUsers.bind(this),
@@ -101,7 +101,7 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * GET /inactiveAdministrativeCosts
+   * GET /inactive-administrative-costs
    * @summary Returns all inactive administrative costs in the system.
    * @operationId getAllInactiveAdministrativeCosts
    * @tags inactiveAdministrativeCosts - Operations of the invoices controller
@@ -109,6 +109,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @param {integer} fromId.query - Filter on the id of the user
    * @param {integer} inactiveAdministrativeCostId.query - Filter on the id of entity
    * @return {PaginatedInvoiceResponse} 200 - All existing inactive administrative costs
+   * @return {string} 400 - Validation Error
    * @return {string} 500 - Internal server error
    */
   public async getAllInactiveAdministrativeCosts(req: RequestWithToken, res: Response): Promise<void> {
@@ -142,9 +143,9 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * GET /inactiveAdministrativeCost/{id}
+   * GET /inactive-administrative-costs/{id}
    * @summary Returns a single inactive administrative cost entity
-   * @operationId getSingleInactiveAdministrativeCost
+   * @operationId getInactiveAdministrativeCosts
    * @param {integer} id.path.required - The id of the requested inactive administrative cost
    * @tags inactiveAdministrativeCosts - Operations of the invoices controller
    * @security JWT
@@ -178,9 +179,9 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * POST /inactiveAdministrativeCost
+   * POST /inactive-administrative-costs
    * @summary Adds and inactive administrative cost to the system.
-   * @operationId createInactiveAdministrativeCost
+   * @operationId createInactiveAdministrativeCosts
    * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
    * @security JWT
    * @param {CreateInactiveAdministrativeCostRequest} request.body.required -
@@ -214,7 +215,7 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * DELETE /inactiveAdministrativeCost/{id}
+   * DELETE /inactive-administrative-costs/{id}
    * @summary Deletes an inactive administrative cost.
    * @operationId deleteInactiveAdministrativeCost
    * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
@@ -242,14 +243,13 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * GET /checkInactiveUsers
+   * GET /inactive-administrative-costs/eligible-users
    * @summary Find all users who are eligible for notification or creation of inactive administrative cost
-   * @operationId checkInactiveUsers
+   * @operationId getInactiveAdministrativeCostsEligibleUsers
    * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
    * @security JWT
    * @param {boolean} notification.query - Whether to check for notification or for fine.
    * @return {Array<UserToInactiveAdministrativeCostResponse>} 200 - List of eligible users
-   * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async checkInactiveUsers(req: RequestWithToken, res: Response): Promise<void> {
@@ -269,9 +269,9 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * POST /notify
+   * POST /inactive-administrative-costs/notify
    * @summary Notify all users which will pay administrative costs within a year
-   * @operationId notifyInactiveUsers
+   * @operationId notifyInactiveAdministrativeCostsUsers
    * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
    * @security JWT
    * @param {HandoutInactiveAdministrativeCostsRequest} request.body.required -
@@ -304,9 +304,9 @@ export default class InactiveAdministrativeCostController extends BaseController
   }
 
   /**
-   * POST /handout
+   * POST /inactive-administrative-costs/handout
    * @summary Handout inactive administrative costs to all users who are eligible.
-   * @operationId handoutAdministrativeCostInactiveUsers
+   * @operationId handoutInactiveAdministrativeCostsUsers
    * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
    * @security JWT
    * @param {HandoutInactiveAdministrativeCostsRequest} request.body.required -
