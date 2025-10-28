@@ -78,14 +78,22 @@ export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
 }
 
 /**
+ * @typedef {object} UserWithIndex
+ * @property {number} index.required - Stable position index for sorting
+ */
+export interface UserWithIndex extends BaseUserResponse {
+  index: number;
+}
+
+/**
  * @typedef {object} PointOfSaleAssociateUsersResponse
  * @property {BaseUserResponse} owner.required - Owner of the POS
- * @property {Array.<BaseUserResponse>} ownerMembers.required - Members that belong to the owner
+ * @property {Array.<UserWithIndex>} ownerMembers.required - Members that belong to the owner with stable indices
  * @property {Array.<BaseUserResponse>} cashiers.required - Users that belong to at least one
  * cashier role of this point of sale
  */
 export interface PointOfSaleAssociateUsersResponse {
   owner: BaseUserResponse,
-  ownerMembers: BaseUserResponse[],
+  ownerMembers: UserWithIndex[],
   cashiers: BaseUserResponse[],
 }

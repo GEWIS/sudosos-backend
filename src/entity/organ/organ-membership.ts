@@ -23,7 +23,7 @@
  */
 
 import {
-  Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn,
+  Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryColumn,
 } from 'typeorm';
 import User from '../user/user';
 import BaseEntityWithoutId from '../base-entity-without-id';
@@ -58,4 +58,7 @@ export default class OrganMembership extends BaseEntityWithoutId {
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'organId' })
   public organ: User;
+
+  @Column({ nullable: false })
+  public index: number;
 }

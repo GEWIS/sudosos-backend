@@ -334,22 +334,66 @@ export default class AuthenticationService extends WithManager {
    * @param organ - The organ account that the users become members of.
    */
   public async setMemberAuthenticator(users: User[], organ: User) {
-    // First drop all rows containing organ
-    // We check if there is anything to drop or else type orm will complain.
-    const toRemove: OrganMembership[] = await this.manager
+    // Get existing memberships BEFORE deleting anything
+    const existingMemberships = await this.manager
       .find(OrganMembership, { where: { organ: { id: organ.id } } });
+    
+    // Build a map of userId -> index for existing members
+    const existingIndices = new Map<number, number>();
+    existingMemberships.forEach(m => existingIndices.set(m.userId, m.index));
+    
+    // Track which indices are used (by users staying in the organ)
+    const usedIndices = new Set<number>();
+    
+    // Determine which users are staying (in both old and new lists)
+    const newUserIds = new Set(users.map(u => u.id));
+    const stayingUserIds = existingMemberships
+      .filter(m => newUserIds.has(m.userId))
+      .map(m => m.userId);
+    
+    // Reserve indices for staying users
+    stayingUserIds.forEach(userId => {
+      const index = existingIndices.get(userId)!;
+      usedIndices.add(index);
+    });
+    
+    // Helper to find lowest available index
+    const findLowestAvailable = (): number => {
+      let index = 0;
+      while (usedIndices.has(index)) index++;
+      return index;
+    };
 
-    if (toRemove.length !== 0) {
+    // Now delete all existing memberships
+    if (existingMemberships.length !== 0) {
       await this.manager.delete(OrganMembership, { organ });
     }
 
     const promises: Promise<OrganMembership>[] = [];
 
-    // Create OrganMembership object for each user in users.
-    users.forEach((user) => {
+    // First, recreate memberships for staying users with their preserved indices
+    // This ensures their indices are definitely in usedIndices before processing new users
+    users.filter(user => existingIndices.has(user.id)).forEach((user) => {
+      const index = existingIndices.get(user.id)!;
+      
       const authenticator = Object.assign(new OrganMembership(), {
         userId: user.id,
         organId: organ.id,
+        index,
+      });
+      promises.push(this.manager.save(OrganMembership, authenticator));
+    });
+
+    // Then, create memberships for new users with lowest available indices
+    // This makes it impossible for new users to get an index that belongs to a staying user
+    users.filter(user => !existingIndices.has(user.id)).forEach((user) => {
+      const index = findLowestAvailable();
+      usedIndices.add(index);
+      
+      const authenticator = Object.assign(new OrganMembership(), {
+        userId: user.id,
+        organId: organ.id,
+        index,
       });
       promises.push(this.manager.save(OrganMembership, authenticator));
     });
