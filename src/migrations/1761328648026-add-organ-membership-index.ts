@@ -31,7 +31,7 @@ export class AddOrganMembershipIndex1761328648026 implements MigrationInterface 
     // Assign sequential indices to existing rows, grouped by organId
     // This ensures each organ's members get indices 0, 1, 2, etc.
     const existingMemberships = await queryRunner.query(
-      'SELECT userId, organId FROM organ_membership ORDER BY organId, userId'
+      'SELECT userId, organId FROM organ_membership ORDER BY organId, userId',
     );
 
     if (existingMemberships.length > 0) {
@@ -50,7 +50,7 @@ export class AddOrganMembershipIndex1761328648026 implements MigrationInterface 
         
         await queryRunner.query(
           'UPDATE organ_membership SET `index` = ? WHERE userId = ? AND organId = ?',
-          [index, membership.userId, organId]
+          [index, membership.userId, organId],
         );
       }
     }

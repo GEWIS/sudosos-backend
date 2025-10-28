@@ -412,7 +412,6 @@ describe('AuthenticationService', (): void => {
         });
 
         expect(memberships).to.have.length(2);
-        const usedIndices = new Set(memberships.map(m => m.index));
 
         // Now add user[4] and user[5] - they should fill gaps starting from 0
         await ctx.connection.transaction(async (manager) => {
