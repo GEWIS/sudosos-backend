@@ -41,7 +41,7 @@ import LocalUser from '../entity/user/local-user';
 import GewisUser from '../gewis/entity/gewis-user';
 import UserVoucherGroup from '../entity/user/user-voucher-group';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
-import MemberAuthenticator from '../entity/authenticator/member-authenticator';
+import OrganMembership from '../entity/organ/organ-membership';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import Banner from '../entity/banner';
@@ -90,6 +90,7 @@ import { InitialSQLMigration1743601882766 } from '../migrations/1743601882766-in
 import WriteOffPdf from '../entity/file/write-off-pdf';
 import QRAuthenticator from '../entity/authenticator/qr-authenticator';
 import { QrAuthenticator1743601882766 } from '../migrations/1743601882766-qr-authenticator';
+import { MemberAuthenticator1761324427011 } from '../migrations/1761324427011-member-authenticator';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -115,6 +116,7 @@ const options: DataSourceOptions = {
   migrations: [
     InitialSQLMigration1743601882766,
     QrAuthenticator1743601882766,
+    MemberAuthenticator1761324427011,
   ],
   extra: {
     authPlugins: {
@@ -153,7 +155,7 @@ const options: DataSourceOptions = {
     GewisUser,
     UserVoucherGroup,
     EanAuthenticator,
-    MemberAuthenticator,
+    OrganMembership,
     NfcAuthenticator,
     KeyAuthenticator,
     PinAuthenticator,

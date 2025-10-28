@@ -37,8 +37,7 @@ import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
 import ContainerService from '../service/container-service';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
-import MemberAuthenticator from '../entity/authenticator/member-authenticator';
-import AuthenticationService, { AuthenticationContext } from '../service/authentication-service';
+import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import RBACService from '../service/rbac-service';
 import { isFail } from '../helpers/specification-validation';
@@ -217,18 +216,6 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
           ),
           handler: this.getOrganMembers.bind(this),
-        },
-      },
-      '/:id(\\d+)/authenticate': {
-        POST: {
-          policy: async () => true,
-          handler: this.authenticateAsUser.bind(this),
-        },
-        GET: {
-          policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'Authenticator', ['*'],
-          ),
-          handler: this.getUserAuthenticatable.bind(this),
         },
       },
       '/:id(\\d+)/products': {
@@ -1401,91 +1388,6 @@ export default class UserController extends BaseController {
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return user transfers', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * POST /users/{id}/authenticate
-   * @summary Authenticate as another user
-   * @operationId authenticateAs
-   * @tags users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user that should be authenticated as
-   * @security JWT
-   * @return {AuthenticationResponse} 200 - The created json web token.
-   * @return {string} 400 - Validation error.
-   * @return {string} 404 - User not found error.
-   * @return {string} 403 - Authentication error.
-   */
-  public async authenticateAsUser(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
-    this.logger.trace('Authenticate as user', parameters, 'by user', req.token.user);
-
-    try {
-      const id = parseInt(parameters.id, 10);
-      // Get the user object if it exists
-      const authenticateAs = await User.findOne({ where: { id, deleted: false } });
-      // If it does not exist, return a 404 error
-      if (authenticateAs == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-
-      // Check if user can authenticate as requested user.
-      const authenticator = await MemberAuthenticator
-        .findOne({
-          where:
-            { user: { id: req.token.user.id }, authenticateAs: { id: authenticateAs.id } },
-        });
-
-      if (authenticator == null) {
-        res.status(403).json('Authentication error');
-        return;
-      }
-
-      const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      };
-
-      const token = await new AuthenticationService().getSaltedToken(authenticateAs, context, false);
-      res.status(200).json(token);
-    } catch (error) {
-      this.logger.error('Could not authenticate as user:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * GET /users/{id}/authenticate
-   * @summary Get all users that the user can authenticate as
-   * @operationId getUserAuthenticatable
-   * @tags users - Operations of user controller
-   * @param {integer} id.path.required - The id of the user to get authentications of
-   * @security JWT
-   * @return {string} 404 - User not found error.
-   * @return {Array.<UserResponse>} 200 - A list of all users the given ID can authenticate
-   */
-  public async getUserAuthenticatable(req: RequestWithToken, res: Response): Promise<void> {
-    const parameters = req.params;
-    this.logger.trace('Get authenticatable users of user', parameters, 'by user', req.token.user);
-
-    try {
-      const id = parseInt(parameters.id, 10);
-      // Get the user object if it exists
-      const user = await User.findOne({ where: { id, deleted: false } });
-      // If it does not exist, return a 404 error
-      if (user == null) {
-        res.status(404).json('Unknown user ID.');
-        return;
-      }
-
-      // Extract from member authenticator table.
-      const authenticators = await MemberAuthenticator.find({ where: { user: { id: user.id } }, relations: ['authenticateAs'] });
-      const users = authenticators.map((auth) => parseUserToResponse(auth.authenticateAs));
-      res.status(200).json(users);
-    } catch (error) {
-      this.logger.error('Could not get authenticatable of user:', error);
       res.status(500).json('Internal server error.');
     }
   }
