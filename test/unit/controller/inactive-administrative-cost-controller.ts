@@ -50,7 +50,6 @@ import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
-
 describe('InactiveAdministrativeCostController', async () => {
   let ctx: {
     connection: DataSource,
@@ -144,7 +143,7 @@ describe('InactiveAdministrativeCostController', async () => {
     const controller = new InactiveAdministrativeCostController({ specification, roleManager });
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
-    app.use('/inactiveAdministrativeCosts', controller.getRouter());
+    app.use('/inactive-administrative-costs', controller.getRouter());
 
     await ServerSettingsStore.getInstance().initialize();
 
@@ -244,10 +243,10 @@ describe('InactiveAdministrativeCostController', async () => {
         expect(inactiveAdministrativeCost.from.id).to.equal(userId);
       }
     });
-    it('should return 400 error with wrong validation', async () => {
+    it('should return 400 for invalid number query', async () => {
       const res = await request(ctx.app)
         .get('/inactive-administrative-costs')
-        .query({ test: "42 'Vo" })
+        .query({ fromId: 'notANumber' })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(400);
@@ -300,6 +299,17 @@ describe('InactiveAdministrativeCostController', async () => {
       expect(res.status).to.eq(400);
       expect(res.body).to.equal(INVALID_USER_ID().value);
     });
+    it('should return 400 when verifyValidUserId returns a fail object', async () => {
+      // Stub the validator to simulate a fail
+      const lastUserId = ctx.users[ctx.users.length - 1].id;
+
+      const res = await request(ctx.app)
+        .post('/inactive-administrative-costs')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ forId: lastUserId + 1 });
+
+      expect(res.status).to.equal(400);
+    });
   });
   describe('GET /inactive-administrative-costs/{id}', () => {
     it('should return the correct model', async () => {
@@ -310,7 +320,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'InactiveAdministrativeCostResponse',
+        'BaseInactiveAdministrativeCostResponse',
         res.body,
         false,
         true,
@@ -377,13 +387,19 @@ describe('InactiveAdministrativeCostController', async () => {
     });
   });
   describe('GET /inactive-administrative-costs/eligible-users',  () => {
-    it('should return inactive users', async () => {
+    it('should return correct model', async () => {
       const res = await request(ctx.app)
-        .get('/inactive-administrative-costs/eliigible-users')
+        .get('/inactive-administrative-costs/eligible-users')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send('true');
 
       expect(res.status).to.be.equal(200);
+      expect(ctx.specification.validateModel(
+        'UserToInactiveAdministrativeCostResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
     });
     it('should return an HTTP 403 if not admin', async () => {
       const res = await request(ctx.app)
@@ -424,6 +440,25 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: ['WieDitLeestTrektBak'] });
       expect(res.status).to.equal(400);
     });
+    it('should return 400 if userIds is not an array', async () => {
+      const res = await request(ctx.app)
+        .post('/inactive-administrative-costs/notify')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ userIds: '42Vo' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if userIds array contains non-existing users', async () => {
+      const validId = ctx.users[0].id;
+      const invalidId = 999999;
+
+      const res = await request(ctx.app)
+        .post('/inactive-administrative-costs/notify')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: [validId, invalidId] });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('userIds is not a valid array of user IDs');
+    });
   });
   describe('POST /inactive-administrative-costs/handout', () => {
     it('should handout inactive administrative costs to users with given ID', async () => {
@@ -447,16 +482,35 @@ describe('InactiveAdministrativeCostController', async () => {
     it('should return 400 if userIds is not an array', async () => {
       const res = await request(ctx.app)
         .post('/inactive-administrative-costs/handout')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: '42Vo' });
       expect(res.status).to.equal(400);
     });
     it('should return 400 if array of userIds is invalid', async () => {
       const res = await request(ctx.app)
         .post('/inactive-administrative-costs/handout')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send({ userIds: ['WieDitLeestTrektBak'] });
       expect(res.status).to.equal(400);
+    });
+    it('should return 400 if array of userIds is not an array', async () => {
+      const res = await request(ctx.app)
+        .post('/inactive-administrative-costs/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: '42Vo' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 400 if userIds array contains non-existing users', async () => {
+      const validId = ctx.users[0].id;
+      const invalidId = 999999;
+
+      const res = await request(ctx.app)
+        .post('/inactive-administrative-costs/handout')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userIds: [validId, invalidId] });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('userIds is not a valid array of user IDs');
     });
   });
 });

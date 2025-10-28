@@ -18,6 +18,11 @@
  *  @license
  */
 
+/**
+ * This is the module page of the inactive-administrative-cost-controller
+ * @module internal/controllers
+ */
+
 import BaseController, { BaseControllerOptions } from './base-controller';
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
@@ -40,7 +45,10 @@ import { asBoolean } from '../helpers/validators';
 
 
 export default class InactiveAdministrativeCostController extends BaseController {
-  private logger: Logger = log4js.getLogger('InactiveAdministrativeCostLogger');
+  /**
+   * Reference to the logger instance.
+   */
+  private logger: Logger = log4js.getLogger('InactiveAdministrativeCostController');
 
   /**
    * Creates a new InactiveAdministrativeCost controller instance
@@ -73,7 +81,7 @@ export default class InactiveAdministrativeCostController extends BaseController
           handler: this.getSingleInactiveAdministrativeCost.bind(this),
         },
         DELETE: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'InactiveAdministrativeCost', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'InactiveAdministrativeCost', ['*']),
           handler: this.deleteInactiveAdministrativeCost.bind(this),
         },
       },
@@ -108,7 +116,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @security JWT
    * @param {integer} fromId.query - Filter on the id of the user
    * @param {integer} inactiveAdministrativeCostId.query - Filter on the id of entity
-   * @return {PaginatedInvoiceResponse} 200 - All existing inactive administrative costs
+   * @return {PaginatedInactiveAdministrativeCostResponse} 200 - All existing inactive administrative costs
    * @return {string} 400 - Validation Error
    * @return {string} 500 - Internal server error
    */
@@ -317,7 +325,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    */
   public async handoutInactiveAdministrativeCost(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as HandoutInactiveAdministrativeCostsRequest;
-    this.logger.trace('Notify Inactive Users', body, 'by user', req.token.user);
+    this.logger.trace('Handout InactiveAdministrativeCosts', body, 'by user', req.token.user);
 
     try {
       if (!Array.isArray(body.userIds)) throw new Error('userIds is not an Array.');

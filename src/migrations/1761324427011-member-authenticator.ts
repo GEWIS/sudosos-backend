@@ -17,22 +17,16 @@
  *
  *  @license
  */
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/**
- * This is the module page of the server-settings defaults.
- *
- * @module internal/server-settings
- */
-
-import { ISettings } from '../entity/server-setting';
-
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  administrativeCostValue: 1000,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
-
-export default SettingsDefaults;
+export class MemberAuthenticator1761324427011 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.renameTable('member_authenticator', 'organ_membership');
+    await queryRunner.renameColumn('organ_membership', 'authenticateAsId', 'organId');
+  }
+    
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.renameColumn('organ_membership', 'organId', 'authenticateAsId');
+    await queryRunner.renameTable('organ_membership', 'member_authenticator');
+  }
+}

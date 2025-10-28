@@ -27,7 +27,7 @@ import { PaginationResult } from '../../helpers/pagination';
 /**
  * @typedef {allOf|BaseResponse} BaseInactiveAdministrativeCostResponse
  * @property {BaseUserResponse} from.required - The person from whom inactive administrative costs where transferred.
- * @property {number} amount.required - The amount which was deducted from the users account.
+ * @property {DineroObjectResponse} amount.required - The amount which was deducted from the users account.
  * @property {TransferResponse} transfer - The linked transfer.
  */
 export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
@@ -38,16 +38,16 @@ export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
 
 /**
  * @typedef {object} UserToInactiveAdministrativeCostResponse
- * @property {integer} id.required - User ID
+ * @property {number} userId - User ID
  */
 export interface UserToInactiveAdministrativeCostResponse {
   userId: number;
 }
 
 /**
- * @typedef {object} PaginatedInactiveAdministrativeCost
- * @property {PaginationResult} _pagination.required - Pagination metadata
- * @property {Array<BaseInactiveAdministrativeCostResponse>} - Returned InactiveAdministrativeCost
+ * @typedef {object} PaginatedInactiveAdministrativeCostResponse
+ * @property {PaginationResult} _pagination  - Pagination metadata
+ * @property {Array<BaseInactiveAdministrativeCostResponse>} records - Returned InactiveAdministrativeCost
  */
 export interface PaginatedInactiveAdministrativeCostResponse {
   _pagination: PaginationResult,

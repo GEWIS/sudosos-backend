@@ -33,7 +33,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import MemberAuthenticator from '../../../src/entity/authenticator/member-authenticator';
+import OrganMembership from '../../../src/entity/organ/organ-membership';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
@@ -55,7 +55,7 @@ describe('AuthenticationSecureController', () => {
     specification: SwaggerSpecification,
     controller: AuthenticationSecureController,
     users: User[],
-    memberAuthenticators: MemberAuthenticator[],
+    memberAuthenticators: OrganMembership[],
     adminUser: User,
     adminToken: string,
     memberUser: User,

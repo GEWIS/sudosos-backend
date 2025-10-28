@@ -102,7 +102,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     return Transaction.getRepository()
       .createQueryBuilder('transaction')
       .select('MAX(createdAt) as createdAt')
-      .where(`transaction.from.id = ${userId}`)
+      .where(`transaction.fromId = ${userId}`)
       .getOne();
   }
 
@@ -135,7 +135,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const differenceDate = notification ? 2 : 3;
 
     const users = await User.find({
-      where: { type: In(EligibleInactiveUsers) },
+      where: { type: In(EligibleInactiveUsers), deleted: false },
     });
     const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
 
@@ -212,7 +212,9 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const administrativeCostValue = InactiveAdministrativeCostService.getAdministrativeCostValue();
 
     // Ensure the deduction does not exceed the user's balance and is never negative
-    const monetaryAmount = Math.min(userBalance.amount.amount, administrativeCostValue);
+    const monetaryAmount = userBalance.amount.amount > 0
+      ? Math.min(userBalance.amount.amount, administrativeCostValue)
+      : 0;
 
     const amount: DineroObjectRequest = {
       amount: monetaryAmount,
@@ -279,10 +281,16 @@ export default class InactiveAdministrativeCostService extends WithManager {
     await Promise.all(users.userIds.map(async (u) => {
       const user = await User.findOne({ where: { id: u } });
 
+      const value = ServerSettingsStore.getInstance().getSetting('administrativeCostValue');
+      if (typeof value !== 'number') {
+        throw new Error('administrativeCostValue must be a number');
+      }
+      const formattedValue = dinero({ amount: value }).toFormat();
+
       user.inactiveNotificationSend = true;
       await user.save();
 
-      return Mailer.getInstance().send(user, new InactiveAdministrativeCostNotification({}));
+      return Mailer.getInstance().send(user, new InactiveAdministrativeCostNotification({ administrativeCostValue: formattedValue }));
     }),
     );
   }
