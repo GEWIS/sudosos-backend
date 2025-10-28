@@ -82,9 +82,6 @@ import ProductCategoryService from './product-category-service';
 import WithManager from '../database/with-manager';
 import ProductService from './product-service';
 import { convertToPositional } from '../helpers/params';
-import Invoice from '../entity/invoices/invoice';
-import InvoiceService from './invoice-service';
-import { BaseInvoiceResponse } from '../controller/response/invoice-response';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
