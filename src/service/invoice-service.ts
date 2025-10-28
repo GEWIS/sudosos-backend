@@ -579,4 +579,43 @@ export default class InvoiceService extends WithManager {
     return { ...options, relations };
   }
 
+  /**
+   * Get all invoices that contain any subtransaction rows from the given transaction
+   * @param transactionId - The transaction ID
+   * @returns Array of invoice responses
+   */
+  public async getTransactionInvoices(transactionId: number): Promise<BaseInvoiceResponse[]> {
+    // Load transaction with all relations needed
+    const transaction = await this.manager.findOne(Transaction, {
+      where: { id: transactionId },
+      relations: {
+        subTransactions: {
+          subTransactionRows: {
+            invoice: {
+              to: true,
+              invoiceStatus: { changedBy: true },
+              transfer: { to: true, from: true },
+              pdf: true,
+            },
+          },
+        },
+      },
+    });
+
+    if (!transaction) return [];
+
+    // Collect all unique invoices from subtransaction rows
+    const invoiceMap = new Map<number, Invoice>();
+    transaction.subTransactions.forEach((subTransaction) => {
+      subTransaction.subTransactionRows.forEach((row) => {
+        if (row.invoice && !invoiceMap.has(row.invoice.id)) {
+          invoiceMap.set(row.invoice.id, row.invoice);
+        }
+      });
+    });
+
+    // Convert to responses
+    return Array.from(invoiceMap.values())
+      .map((invoice) => InvoiceService.asBaseInvoiceResponse(invoice));
+  }
 }

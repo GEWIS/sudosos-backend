@@ -40,6 +40,7 @@ import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
+import InvoiceService from '../service/invoice-service';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -306,7 +307,7 @@ export default class TransactionController extends BaseController {
         return;
       }
 
-      const invoices = await new TransactionService().getTransactionInvoices(transactionId);
+      const invoices = await new InvoiceService().getTransactionInvoices(transactionId);
       res.status(200).json(invoices);
     } catch (error) {
       this.logger.error('Could not return transaction invoices:', error);
