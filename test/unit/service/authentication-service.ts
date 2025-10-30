@@ -224,6 +224,83 @@ describe('AuthenticationService', (): void => {
     it('should set and verify a user local password', async () => {
       await verifyLogin(LocalAuthenticator, 'Im so right', 'Im so wrong');
     });
+
+    describe('with posId parameter', () => {
+      it('should include posId in token when provided for PIN authentication', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
+          const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
+          
+          const mockContext = {
+            roleManager: {
+              getRoles: () => Promise.resolve([]),
+              getUserOrgans: () => Promise.resolve([]),
+              can: () => Promise.resolve(false),
+            },
+            tokenHandler: {
+              signToken: (contents: any) => Promise.resolve('mock-token'),
+            },
+          };
+
+          const result = await new AuthenticationService().HashAuthentication(
+            '2000', auth, mockContext, true, 123
+          );
+
+          expect(result).to.not.be.undefined;
+          expect(result?.token).to.equal('mock-token');
+        });
+      });
+
+      it('should include posId in token when provided for local authentication', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          await new AuthenticationService().setUserAuthenticationHash(user, 'password123', LocalAuthenticator);
+          const auth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } } });
+          
+          const mockContext = {
+            roleManager: {
+              getRoles: () => Promise.resolve([]),
+              getUserOrgans: () => Promise.resolve([]),
+              can: () => Promise.resolve(false),
+            },
+            tokenHandler: {
+              signToken: (contents: any) => Promise.resolve('mock-token'),
+            },
+          };
+
+          const result = await new AuthenticationService().HashAuthentication(
+            'password123', auth, mockContext, true, 456
+          );
+
+          expect(result).to.not.be.undefined;
+          expect(result?.token).to.equal('mock-token');
+        });
+      });
+
+      it('should work without posId when not provided', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
+          const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
+          
+          const mockContext = {
+            roleManager: {
+              getRoles: () => Promise.resolve([]),
+              getUserOrgans: () => Promise.resolve([]),
+              can: () => Promise.resolve(false),
+            },
+            tokenHandler: {
+              signToken: (contents: any) => Promise.resolve('mock-token'),
+            },
+          };
+
+          const result = await new AuthenticationService().HashAuthentication(
+            '2000', auth, mockContext, true
+          );
+
+          expect(result).to.not.be.undefined;
+          expect(result?.token).to.equal('mock-token');
+        });
+      });
+    });
   });
   describe('resetLocalUsingToken function', () => {
     it('should reset password if resetToken is correct and user has no password', async () => {

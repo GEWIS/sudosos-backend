@@ -41,16 +41,22 @@ import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
 import InvoiceService from '../service/invoice-service';
+import TokenHandler from '../authentication/token-handler';
+import POSTokenVerifier, { PosAuthenticationError } from '../helpers/pos-token-verifier';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
 
+  private tokenHandler: TokenHandler;
+
   /**
    * Creates a new transaction controller instance.
    * @param options - The options passed to the base controller.
+   * @param tokenHandler - The token handler for POS token verification.
    */
-  public constructor(options: BaseControllerOptions) {
+  public constructor(options: BaseControllerOptions, tokenHandler: TokenHandler) {
     super(options);
+    this.tokenHandler = tokenHandler;
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -157,7 +163,7 @@ export default class TransactionController extends BaseController {
    * @security JWT
    * @return {TransactionResponse} 200 - The created transaction entity
    * @return {string} 400 - Validation error
-   * @return {string} 403 - Insufficient balance error
+   * @return {string} 403 - Insufficient balance error or invalid POS token
    * @return {string} 500 - Internal server error
    */
   public async createTransaction(req: RequestWithToken, res: Response): Promise<void> {
@@ -166,6 +172,11 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
+      // Verify POS token for lesser tokens
+      if (req.token.lesser) {
+        await POSTokenVerifier.verify(req, body.pointOfSale.id);
+      }
+
       if (!await new TransactionService().verifyTransaction(body)) {
         res.status(400).json('Invalid transaction.');
         return;
@@ -180,6 +191,10 @@ export default class TransactionController extends BaseController {
         res.json(await new TransactionService().createTransaction(body));
       }
     } catch (error) {
+      if (error instanceof PosAuthenticationError) {
+        res.status(403).json('Invalid POS token.');
+        return;
+      }
       this.logger.error('Could not create transaction:', error);
       res.status(500).json('Internal server error.');
     }
@@ -228,6 +243,7 @@ export default class TransactionController extends BaseController {
    * @security JWT
    * @return {TransactionResponse} 200 - The requested transaction entity
    * @return {string} 400 - Validation error
+   * @return {string} 403 - Invalid POS token
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */
@@ -238,6 +254,11 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
+      // Verify POS token for lesser tokens
+      if (req.token.lesser) {
+        await POSTokenVerifier.verify(req, body.pointOfSale.id);
+      }
+
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
         if (await new TransactionService().verifyTransaction(body, true)) {
           res.status(200).json(await new TransactionService().updateTransaction(
@@ -250,6 +271,10 @@ export default class TransactionController extends BaseController {
         res.status(404).json('Transaction not found.');
       }
     } catch (error) {
+      if (error.message.includes('posId') || error.message.includes('POS')) {
+        res.status(403).json('Invalid POS token.');
+        return;
+      }
       this.logger.error('Could not update transaction:', error);
       res.status(500).json('Internal server error.');
     }
@@ -325,6 +350,7 @@ export default class TransactionController extends BaseController {
    * @return {boolean} 200 - Transaction validated
    * @security JWT
    * @return {string} 400 - Validation error
+   * @return {string} 403 - Invalid POS token
    * @return {string} 500 - Internal server error
    */
   public async validateTransaction(req: RequestWithToken, res: Response): Promise<void> {
@@ -332,6 +358,11 @@ export default class TransactionController extends BaseController {
     this.logger.trace('Validate transaction', body, 'by user', req.token.user);
 
     try {
+      // Verify POS token for lesser tokens
+      if (req.token.lesser) {
+        await POSTokenVerifier.verify(req, body.pointOfSale.id);
+      }
+
       if (await new TransactionService().verifyTransaction(body)) {
         res.status(200).json(true);
       } else  {
@@ -339,6 +370,11 @@ export default class TransactionController extends BaseController {
         return;
       }
     } catch (error) {
+      // Check for PosAuthenticationError using instanceof
+      if (error instanceof PosAuthenticationError) {
+        res.status(403).json('Invalid POS token.');
+        return;
+      }
       this.logger.error('Could not validate transaction:', error);
       res.status(500).json('Internal server error');
     }

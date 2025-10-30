@@ -212,4 +212,43 @@ describe('ServerSettingsStore', () => {
       expect(ServerSettingsStore.getInstance().initialized).to.be.true;
     });
   });
+
+  describe('strictPosToken setting', () => {
+    it('should initialize with default value false', async () => {
+      const store = ServerSettingsStore.getInstance();
+      await store.initialize();
+      
+      const strictPosToken = store.getSetting('strictPosToken');
+      expect(strictPosToken).to.equal(false);
+    });
+
+    it('should be able to set and get strictPosToken setting', async () => {
+      const store = ServerSettingsStore.getInstance();
+      await store.initialize();
+      
+      // Set to true
+      await store.setSetting('strictPosToken', true);
+      expect(store.getSetting('strictPosToken')).to.equal(true);
+      
+      // Set to false
+      await store.setSetting('strictPosToken', false);
+      expect(store.getSetting('strictPosToken')).to.equal(false);
+    });
+
+    it('should persist strictPosToken setting across store instances', async () => {
+      const store1 = ServerSettingsStore.getInstance();
+      await store1.initialize();
+      
+      // Set value
+      await store1.setSetting('strictPosToken', true);
+      expect(store1.getSetting('strictPosToken')).to.equal(true);
+      
+      // Create new instance and verify value persists
+      ServerSettingsStore.deleteInstance();
+      const store2 = ServerSettingsStore.getInstance();
+      await store2.initialize();
+      
+      expect(store2.getSetting('strictPosToken')).to.equal(true);
+    });
+  });
 });

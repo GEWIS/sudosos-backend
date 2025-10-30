@@ -34,6 +34,7 @@ export interface ISettings {
   jwtExpiryPointOfSale: number;
   maintenanceMode: boolean;
   allowGewisSyncDelete: boolean;
+  strictPosToken: boolean;
 }
 
 /**

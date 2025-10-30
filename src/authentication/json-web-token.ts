@@ -74,6 +74,11 @@ export default class JsonWebToken {
   public organs?: User[];
 
   /**
+   * The POS identifier for lesser tokens (PIN/NFC authentication)
+   */
+  public posId?: number;
+
+  /**
    * The JWT expiry field. Set automatically by signing the token.
    */
   public readonly iat?: number;
