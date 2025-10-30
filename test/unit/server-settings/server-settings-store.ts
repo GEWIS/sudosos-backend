@@ -214,6 +214,12 @@ describe('ServerSettingsStore', () => {
   });
 
   describe('strictPosToken setting', () => {
+    beforeEach(async () => {
+      // Ensure clean state before each test
+      ServerSettingsStore.deleteInstance();
+      await ServerSetting.clear();
+    });
+
     it('should initialize with default value false', async () => {
       const store = ServerSettingsStore.getInstance();
       await store.initialize();

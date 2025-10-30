@@ -19,7 +19,10 @@
  */
 
 import { expect } from 'chai';
-import { describe, it, beforeEach, afterEach } from 'mocha';
+import { describe, it, before, after, beforeEach, afterEach } from 'mocha';
+import { DataSource } from 'typeorm';
+import database from '../../../src/database/database';
+import { finishTestDB } from '../../helpers/test-helpers';
 import POSTokenVerifier, { PosAuthenticationError } from '../../../src/helpers/pos-token-verifier';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
@@ -29,6 +32,17 @@ import User from '../../../src/entity/user/user';
 describe('POSTokenVerifier', (): void => {
   let mockRequest: RequestWithToken;
   let settingsStore: ServerSettingsStore;
+  let connection: DataSource;
+
+  before(async (): Promise<void> => {
+    connection = await database.initialize();
+    ServerSettingsStore.deleteInstance();
+    settingsStore = await ServerSettingsStore.getInstance().initialize();
+  });
+
+  after(async (): Promise<void> => {
+    await finishTestDB(connection);
+  });
 
   beforeEach(async (): Promise<void> => {
     // Create a mock user
@@ -49,9 +63,6 @@ describe('POSTokenVerifier', (): void => {
     mockRequest = {
       token,
     } as RequestWithToken;
-
-    // Get settings store instance
-    settingsStore = ServerSettingsStore.getInstance();
   });
 
   afterEach(async (): Promise<void> => {

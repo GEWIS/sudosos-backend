@@ -71,7 +71,7 @@ describe('TransactionSummaryController', () => {
     const userToken = await d.tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce user');
 
     const controller = new TransactionSummaryController({ specification: d.specification, roleManager: d.roleManager });
-    const transactionController = new TransactionController({ specification: d.specification, roleManager: d.roleManager }, d.tokenHandler);
+    const transactionController = new TransactionController({ specification: d.specification, roleManager: d.roleManager });
     d.app.use(json());
     d.app.use(new TokenMiddleware({ tokenHandler: d.tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     d.app.use('/transactions/summary', controller.getRouter());

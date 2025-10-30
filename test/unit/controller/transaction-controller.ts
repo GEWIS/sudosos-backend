@@ -201,7 +201,7 @@ describe('TransactionController', (): void => {
     ctx.controller = new TransactionController({
       specification: ctx.specification,
       roleManager,
-    }, ctx.tokenHandler);
+    });
 
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({
@@ -855,13 +855,20 @@ describe('TransactionController', (): void => {
           // posId is undefined
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
           .post('/transactions')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq);
+          .send(testReq);
         
         expect(res.status).to.equal(403);
-        expect(res.body).to.equal('Invalid POS token.');
+        expect(res.text).to.equal('Invalid POS token.');
       });
 
       it('should return HTTP 403 when lesser token posId does not match transaction posId', async () => {
@@ -873,31 +880,49 @@ describe('TransactionController', (): void => {
           posId: 999,
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
           .post('/transactions')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq); // This has posId 1
+          .send(testReq); // This has posId 1
         
         expect(res.status).to.equal(403);
-        expect(res.body).to.equal('Invalid POS token.');
+        expect(res.text).to.equal('Invalid POS token.');
       });
 
       it('should allow lesser token with matching posId when strictPosToken is true', async () => {
         // Set strict mode
         await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
         
+        // Ensure user can go into debt
+        ctx.users[0].canGoIntoDebt = true;
+        await ctx.users[0].save();
+        
         // Create a lesser token with matching posId
         const lesserToken = await ctx.tokenHandler.signToken({
           user: ctx.users[0],
           roles: ['Buyer'],
           lesser: true,
-          posId: 1, // Matches the transaction posId
+          posId: ctx.validTransReq.pointOfSale.id, // Matches the transaction posId
         }, '39');
+
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
 
         const res = await request(ctx.app)
           .post('/transactions')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq);
+          .send(testReq);
         
         expect(res.status).to.equal(200);
       });
@@ -905,6 +930,10 @@ describe('TransactionController', (): void => {
       it('should allow lesser token without posId when strictPosToken is false', async () => {
         // Set non-strict mode
         await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
+        
+        // Ensure user can go into debt
+        ctx.users[0].canGoIntoDebt = true;
+        await ctx.users[0].save();
         
         // Create a lesser token without posId
         const lesserToken = await ctx.tokenHandler.signToken({
@@ -914,10 +943,17 @@ describe('TransactionController', (): void => {
           // posId is undefined
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
           .post('/transactions')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq);
+          .send(testReq);
         
         expect(res.status).to.equal(200);
       });
@@ -1010,6 +1046,17 @@ describe('TransactionController', (): void => {
 
     describe('POS token verification for lesser tokens', () => {
       it('should return HTTP 403 when lesser token posId does not match transaction posId', async () => {
+        // Create a transaction first that belongs to the user so they can update it
+        const createRes = await request(ctx.app)
+          .post('/transactions')
+          .set('Authorization', `Bearer ${ctx.userToken}`)
+          .send({
+            ...ctx.validTransReq,
+            from: ctx.users[0].id,
+            createdBy: ctx.users[0].id,
+          });
+        const transactionId = createRes.body.id;
+
         // Create a lesser token with posId 999
         const lesserToken = await ctx.tokenHandler.signToken({
           user: ctx.users[0],
@@ -1018,28 +1065,57 @@ describe('TransactionController', (): void => {
           posId: 999,
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
-          .patch('/transactions/1')
+          .patch(`/transactions/${transactionId}`)
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq); // This has posId 1
+          .send(testReq); // This has posId from ctx.validTransReq.pointOfSale.id
         
         expect(res.status).to.equal(403);
-        expect(res.body).to.equal('Invalid POS token.');
+        expect(res.text).to.equal('Invalid POS token.');
       });
 
       it('should allow lesser token with matching posId', async () => {
+        // Ensure user can go into debt
+        ctx.users[0].canGoIntoDebt = true;
+        await ctx.users[0].save();
+        
+        // Create a transaction first that belongs to the user so they can update it
+        const createRes = await request(ctx.app)
+          .post('/transactions')
+          .set('Authorization', `Bearer ${ctx.userToken}`)
+          .send({
+            ...ctx.validTransReq,
+            from: ctx.users[0].id,
+            createdBy: ctx.users[0].id,
+          });
+        const transactionId = createRes.body.id;
+        
         // Create a lesser token with matching posId
         const lesserToken = await ctx.tokenHandler.signToken({
           user: ctx.users[0],
           roles: ['Buyer'],
           lesser: true,
-          posId: 1, // Matches the transaction posId
+          posId: ctx.validTransReq.pointOfSale.id, // Matches the transaction posId
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
-          .patch('/transactions/1')
+          .patch(`/transactions/${transactionId}`)
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq);
+          .send(testReq);
         
         expect(res.status).to.equal(200);
       });
@@ -1108,13 +1184,20 @@ describe('TransactionController', (): void => {
           posId: 999,
         }, '39');
 
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
+
         const res = await request(ctx.app)
           .post('/transactions/validate')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq); // This has posId 1
+          .send(testReq); // This has posId from ctx.validTransReq.pointOfSale.id
         
         expect(res.status).to.equal(403);
-        expect(res.body).to.equal('Invalid POS token.');
+        expect(res.text).to.equal('Invalid POS token.');
       });
 
       it('should allow lesser token with matching posId', async () => {

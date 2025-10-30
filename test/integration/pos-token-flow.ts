@@ -25,7 +25,6 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import TransactionController from '../../src/controller/transaction-controller';
 import Database from '../../src/database/database';
-import seedDatabase from '../seed';
 import Swagger from '../../src/start/swagger';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
@@ -89,8 +88,8 @@ describe('POS Token Flow Integration Tests', (): void => {
       productRevision: {} as ProductRevision,
     };
 
-    // Seed database
-    await seedDatabase();
+    // Truncate all tables first (don't use seedDatabase() as we seed manually)
+    await truncateAllTables(ctx.connection);
 
     // Initialize ServerSettingsStore
     await ServerSettingsStore.getInstance().initialize();
@@ -98,6 +97,18 @@ describe('POS Token Flow Integration Tests', (): void => {
     // Create users
     const userFactory = await UserFactory();
     ctx.users = await userFactory.clone(7);
+
+    // Create a LOCAL_ADMIN user for owning products/POS
+    const adminOwner = Object.assign(new User(), {
+      firstName: 'Admin Owner',
+      lastName: 'User',
+      type: UserType.LOCAL_ADMIN,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      canGoIntoDebt: true,
+    } as User);
+    await adminOwner.save();
+
     ctx.users[0].type = UserType.LOCAL_USER;
     ctx.users[0].acceptedToS = TermsOfServiceStatus.ACCEPTED;
     await ctx.users[0].save();
@@ -138,11 +149,11 @@ describe('POS Token Flow Integration Tests', (): void => {
     ctx.userToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], roles), '39');
     ctx.organMemberToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
 
-    // Create test data using seeders
+    
     const categories = await new ProductCategorySeeder().seed();
     const vatGroups = await new VatGroupSeeder().seed();
     const { products, productRevisions } = await new ProductSeeder().seed(
-      [ctx.users[0]],
+      [adminOwner],
       categories,
       vatGroups,
     );
@@ -150,14 +161,14 @@ describe('POS Token Flow Integration Tests', (): void => {
     ctx.productRevision = productRevisions[0];
 
     const { containers, containerRevisions } = await new ContainerSeeder().seed(
-      [ctx.users[0]],
+      [adminOwner],
       productRevisions,
     );
     ctx.container = containers[0];
     ctx.containerRevision = containerRevisions[0];
 
     const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(
-      [ctx.users[0]],
+      [adminOwner],
       containerRevisions,
     );
     ctx.pointOfSale = pointsOfSale[0];
@@ -174,7 +185,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       pointOfSale: { id: ctx.pointOfSale.id, revision: ctx.pointOfSaleRevision.revision },
       subTransactions: [{
         container: { id: ctx.container.id, revision: ctx.containerRevision.revision },
-        to: ctx.users[0].id,
+        to: adminOwner.id,
         subTransactionRows: [{
           product: { id: ctx.product.id, revision: ctx.productRevision.revision },
           amount: 1,
@@ -190,24 +201,20 @@ describe('POS Token Flow Integration Tests', (): void => {
     const transactionController = new TransactionController({
       specification: ctx.specification,
       roleManager: ctx.roleManager,
-    }, ctx.tokenHandler);
+    });
     const authController = new AuthenticationController({
       specification: ctx.specification,
       roleManager: ctx.roleManager,
     }, ctx.tokenHandler);
 
     ctx.app.use(json());
+    ctx.app.use('/authentication', authController.getRouter());
     ctx.app.use(new TokenMiddleware({ tokenHandler: ctx.tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/transactions', transactionController.getRouter());
-    ctx.app.use('/authentication', authController.getRouter());
   });
 
   after(async (): Promise<void> => {
     await finishTestDB(ctx.connection);
-  });
-
-  afterEach(async (): Promise<void> => {
-    await truncateAllTables(ctx.connection);
   });
 
   describe('Complete POS Token Flow', () => {
@@ -301,7 +308,7 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send(ctx.validTransReq);
 
       expect(transRes.status).to.equal(403);
-      expect(transRes.body).to.equal('Invalid POS token.');
+      expect(transRes.text).to.equal('Invalid POS token.');
     });
 
     it('should work in non-strict mode without posId', async () => {
@@ -364,7 +371,7 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send(ctx.validTransReq);
 
       expect(transRes.status).to.equal(403);
-      expect(transRes.body).to.equal('Invalid POS token.');
+      expect(transRes.text).to.equal('Invalid POS token.');
     });
 
     it('should reject transaction when NFC posId does not match', async () => {
@@ -395,7 +402,7 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send(ctx.validTransReq);
 
       expect(transRes.status).to.equal(403);
-      expect(transRes.body).to.equal('Invalid POS token.');
+      expect(transRes.text).to.equal('Invalid POS token.');
     });
 
     it('should allow transaction in non-strict mode with matching posId', async () => {
@@ -458,7 +465,7 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send(ctx.validTransReq);
 
       expect(transRes.status).to.equal(403);
-      expect(transRes.body).to.equal('Invalid POS token.');
+      expect(transRes.text).to.equal('Invalid POS token.');
     });
 
     it('should bypass POS verification for non-lesser tokens', async () => {

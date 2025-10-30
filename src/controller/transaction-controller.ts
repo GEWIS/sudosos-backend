@@ -47,16 +47,13 @@ import POSTokenVerifier, { PosAuthenticationError } from '../helpers/pos-token-v
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
 
-  private tokenHandler: TokenHandler;
 
   /**
    * Creates a new transaction controller instance.
    * @param options - The options passed to the base controller.
-   * @param tokenHandler - The token handler for POS token verification.
    */
-  public constructor(options: BaseControllerOptions, tokenHandler: TokenHandler) {
+  public constructor(options: BaseControllerOptions) {
     super(options);
-    this.tokenHandler = tokenHandler;
     this.logger.level = process.env.LOG_LEVEL;
   }
 
@@ -192,7 +189,7 @@ export default class TransactionController extends BaseController {
       }
     } catch (error) {
       if (error instanceof PosAuthenticationError) {
-        res.status(403).json('Invalid POS token.');
+        res.status(403).end('Invalid POS token.');
         return;
       }
       this.logger.error('Could not create transaction:', error);
@@ -271,8 +268,8 @@ export default class TransactionController extends BaseController {
         res.status(404).json('Transaction not found.');
       }
     } catch (error) {
-      if (error.message.includes('posId') || error.message.includes('POS')) {
-        res.status(403).json('Invalid POS token.');
+      if (error instanceof PosAuthenticationError) {
+        res.status(403).end('Invalid POS token.');
         return;
       }
       this.logger.error('Could not update transaction:', error);
@@ -372,7 +369,7 @@ export default class TransactionController extends BaseController {
     } catch (error) {
       // Check for PosAuthenticationError using instanceof
       if (error instanceof PosAuthenticationError) {
-        res.status(403).json('Invalid POS token.');
+        res.status(403).end('Invalid POS token.');
         return;
       }
       this.logger.error('Could not validate transaction:', error);

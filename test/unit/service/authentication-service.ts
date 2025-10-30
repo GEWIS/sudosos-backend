@@ -248,7 +248,7 @@ describe('AuthenticationService', (): void => {
         await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
           await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
           const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
-          
+
           const context = {
             roleManager: ctx.roleManager,
             tokenHandler: ctx.tokenHandler,
@@ -272,7 +272,7 @@ describe('AuthenticationService', (): void => {
         await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
           await new AuthenticationService().setUserAuthenticationHash(user, 'password123', LocalAuthenticator);
           const auth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } } });
-          
+
           const context = {
             roleManager: ctx.roleManager,
             tokenHandler: ctx.tokenHandler,
@@ -296,7 +296,7 @@ describe('AuthenticationService', (): void => {
         await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
           await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
           const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
-          
+
           const context = {
             roleManager: ctx.roleManager,
             tokenHandler: ctx.tokenHandler,
