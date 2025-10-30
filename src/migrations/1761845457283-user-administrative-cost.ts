@@ -25,7 +25,7 @@
 
 import { MigrationInterface, TableColumn, QueryRunner, Table, TableForeignKey } from 'typeorm';
 
-export class UserAdministrativeCost1760553313387 implements MigrationInterface {
+export class UserAdministrativeCost1761845457283 implements MigrationInterface {
   private INACTIVE_ADMINISTRATIVE_COST_TABLE = 'inactive_administrative_cost';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
