@@ -1,0 +1,69 @@
+/**
+ *  SudoSOS back-end API service.
+ *  Copyright (C) 2024  Study association GEWIS
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ *  @license
+ */
+
+import MailContentBuilder from './mail-content-builder';
+import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+
+/**
+ * This is the module page of the inactive-administrative-cost-notification.
+ *
+ * @module internal/mailer
+ */
+
+interface InactiveAdministrativeCostNotificationOptions {
+  administrativeCostValue: string;
+}
+
+const inactiveAdministrativeCostNotificationDutch = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
+  getHTML: (context) => `
+  <p> Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.<br>
+  Er zal dan ${context.administrativeCostValue} euro van je account worden afgehaald ter betaling voor administratie kosten. </p>
+  `,
+  getSubject: () => 'Notificatie administratie kosten SudoSOS',
+  getTitle: 'Administratie notificatie',
+  getText: (context) => `
+  Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.
+  Er zal dan ${context.administrativeCostValue} euro van je account worden afgehaald ter betaling voor administratie kosten. 
+  `,
+});
+
+const inactiveAdministrativeCostNotificationEnglish = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
+  getHTML: (context) => `
+  <p> You haven't made any transfers on SudoSOS for the last 2 years. This means that next year you will pay an administration fee.<br>
+  This means that ${context.administrativeCostValue} euros will be deducted from your account. </p>
+  `,
+  getSubject: () => 'Notification administration costs SudoSOS',
+  getTitle: 'Administration notification',
+  getText: (context) => `
+  You haven't made any transfers on SudoSOS for the last 2 years. This means that next year you will pay an administration fee.
+  This means that ${context.administrativeCostValue} euros will be deducted from your account. 
+  `,
+});
+
+const mailContents: MailLanguageMap<InactiveAdministrativeCostNotificationOptions> = {
+  [Language.DUTCH]: inactiveAdministrativeCostNotificationDutch,
+  [Language.ENGLISH]: inactiveAdministrativeCostNotificationEnglish,
+};
+
+export default class InactiveAdministrativeCostNotification extends MailMessage<InactiveAdministrativeCostNotificationOptions> {
+  public constructor(options: InactiveAdministrativeCostNotificationOptions) {
+    super(options, mailContents);
+  }
+}

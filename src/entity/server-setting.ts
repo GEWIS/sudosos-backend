@@ -29,6 +29,7 @@ import BaseEntity from './base-entity';
 
 export interface ISettings {
   highVatGroupId: number;
+  administrativeCostValue: number;
   jwtExpiryDefault: number;
   jwtExpiryPointOfSale: number;
   maintenanceMode: boolean;

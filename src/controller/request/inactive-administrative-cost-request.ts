@@ -19,20 +19,17 @@
  */
 
 /**
- * This is the module page of the server-settings defaults.
- *
- * @module internal/server-settings
+ * @typedef {object} CreateInactiveAdministrativeCostRequest
+ * @property {integer} forId.required - The user of the inactive administrative cost
  */
+export interface CreateInactiveAdministrativeCostRequest {
+  forId: number,
+}
 
-import { ISettings } from '../entity/server-setting';
-
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  administrativeCostValue: 1000,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
-
-export default SettingsDefaults;
+/**
+ * @typedef {object} HandoutInactiveAdministrativeCostsRequest
+ * @property {Array<integer>} userIds.required - The users that should be handed an inactive administrative cost request.
+ */
+export interface HandoutInactiveAdministrativeCostsRequest {
+  userIds: number[];
+}

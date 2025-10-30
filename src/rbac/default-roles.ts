@@ -227,6 +227,7 @@ export default class DefaultRoles {
         VatGroup: admin,
         VoucherGroup: admin,
         WriteOff: admin,
+        InactiveAdministrativeCost: admin,
       },
     }, {
       name: SELLER_ROLE,

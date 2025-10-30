@@ -90,7 +90,11 @@ import { InitialSQLMigration1743601882766 } from '../migrations/1743601882766-in
 import WriteOffPdf from '../entity/file/write-off-pdf';
 import QRAuthenticator from '../entity/authenticator/qr-authenticator';
 import { QrAuthenticator1743601882766 } from '../migrations/1743601882766-qr-authenticator';
+import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import { MemberAuthenticator1761324427011 } from '../migrations/1761324427011-member-authenticator';
+import {
+  UserAdministrativeCost1761845457283,
+} from '../migrations/1761845457283-user-administrative-cost';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -117,6 +121,7 @@ const options: DataSourceOptions = {
     InitialSQLMigration1743601882766,
     QrAuthenticator1743601882766,
     MemberAuthenticator1761324427011,
+    UserAdministrativeCost1761845457283,
   ],
   extra: {
     authPlugins: {
@@ -135,6 +140,7 @@ const options: DataSourceOptions = {
     PointOfSale,
     PointOfSaleRevision,
     Transfer,
+    InactiveAdministrativeCost,
     StripeDeposit,
     StripePaymentIntent,
     StripePaymentIntentStatus,

@@ -19,20 +19,23 @@
  */
 
 /**
- * This is the module page of the server-settings defaults.
+ * This is the module page of the inactive-administrative-cost-spec.
  *
- * @module internal/server-settings
+ * @module internal/spec/inactive-administrative-cost-spec
  */
 
-import { ISettings } from '../entity/server-setting';
+import { CreateInactiveAdministrativeCostRequest } from '../inactive-administrative-cost-request';
+import { INVALID_USER_ID } from './validation-errors';
+import { toFail, toPass } from '../../../helpers/specification-validation';
+import User from '../../../entity/user/user';
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  administrativeCostValue: 1000,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-};
+/**
+ * Check whether the given user is a valid user
+ */
+export default async function verifyValidUserId<T extends CreateInactiveAdministrativeCostRequest>(p: T) {
+  if (p.forId == null) return toFail(INVALID_USER_ID());
 
-export default SettingsDefaults;
+  const user = await User.findOne({ where: { id: p.forId } });
+
+  return user != undefined ? toPass(p) : toFail(INVALID_USER_ID());
+}

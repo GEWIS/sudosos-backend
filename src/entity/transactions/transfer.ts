@@ -39,6 +39,7 @@ import Fine from '../fine/fine';
 import UserFineGroup from '../fine/userFineGroup';
 import VatGroup from '../vat-group';
 import WriteOff from './write-off';
+import InactiveAdministrativeCost from './inactive-administrative-cost';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -103,4 +104,7 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => UserFineGroup, (g) => g.waivedTransfer, { nullable: true })
   public waivedFines: UserFineGroup | null;
+
+  @OneToOne(() => InactiveAdministrativeCost, (a) => a.transfer, { nullable: true })
+  public inactiveAdministrativeCost: InactiveAdministrativeCost | null;
 }

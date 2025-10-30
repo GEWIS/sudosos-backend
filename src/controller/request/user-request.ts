@@ -60,11 +60,13 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} deleted
  * @property {boolean} active
  * @property {boolean} extensiveDataProcessing
+ * @property {boolean} inactiveNotificationSend
  */
 export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
   deleted?: boolean;
   extensiveDataProcessing?: boolean
+  inactiveNotificationSend?: boolean
 }
 
 
