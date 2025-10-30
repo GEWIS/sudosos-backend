@@ -182,7 +182,7 @@ export default class AuthenticationController extends BaseController {
 
     try {
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
-        this.tokenHandler, body.pin, body.userId))(req, res);
+        this.tokenHandler, body.pin, body.userId, body.posId))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');
@@ -196,10 +196,11 @@ export default class AuthenticationController extends BaseController {
    * @param tokenHandler
    * @param pin - Provided PIN code
    * @param userId - Provided User
+   * @param posId - Optional POS identifier
    * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-    pin: string, userId: number) {
+    pin: string, userId: number, posId?: number) {
     return async (req: Request, res: Response) => {
       const user = await User.findOne({
         where: { id: userId, deleted: false },
@@ -225,7 +226,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(pin,
-        pinAuthenticator, context, true);
+        pinAuthenticator, context, true, posId);
 
       if (!result) {
         res.status(403).json({
@@ -437,7 +438,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const { nfcCode } = body;
+      const { nfcCode, posId } = body;
       const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
@@ -453,7 +454,7 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true, undefined, undefined, posId);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);

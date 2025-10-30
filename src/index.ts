@@ -255,7 +255,7 @@ export default async function createApp(): Promise<Application> {
   // Controller with more specific endpoints should go before generic controllers, otherwise
   // the specific endpoints all return 405 (somehow).
   application.app.use('/v1/transactions/summary', new TransactionSummaryController(options).getRouter());
-  application.app.use('/v1/transactions', new TransactionController(options).getRouter());
+  application.app.use('/v1/transactions', new TransactionController(options, tokenHandler).getRouter());
   application.app.use('/v1/vouchergroups', new VoucherGroupController(options).getRouter());
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/inactive-administrative-costs', new InactiveAdministrativeCostController(options).getRouter());
