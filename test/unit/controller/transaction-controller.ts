@@ -147,6 +147,9 @@ describe('TransactionController', (): void => {
           update: all,
           delete: all,
         },
+        Invoice: {
+          get: all,
+        },
         Balance: {
           update: all,
         },
@@ -159,6 +162,9 @@ describe('TransactionController', (): void => {
           get: own,
           create: own,
         },
+        Invoice: {
+          get: own,
+        },
         Balance: {
           update: own,
         },
@@ -168,6 +174,9 @@ describe('TransactionController', (): void => {
       name: 'Seller',
       permissions: {
         Transaction: {
+          get: organRole,
+        },
+        Invoice: {
           get: organRole,
         },
         Balance: {
@@ -942,6 +951,45 @@ describe('TransactionController', (): void => {
         .send(badReq);
       expect(res.body).to.equal('Transaction is invalid');
       expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('GET /transactions/:id/invoices', () => {
+    it('should return empty array for transaction without invoices if admin', async () => {
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      
+      const res = await request(ctx.app)
+        .get(`/transactions/${transRes.body.id}/invoices`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      
+      expect(res.status).to.equal(200);
+      expect(res.body).to.be.an('array');
+      expect(res.body.length).to.equal(0);
+    });
+
+    it('should return 404 if transaction does not exist', async () => {
+      const res = await request(ctx.app)
+        .get('/transactions/999999/invoices')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Transaction not found.');
+    });
+
+    it('should return 403 if user does not have all Invoice permissions', async () => {
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      
+      const res = await request(ctx.app)
+        .get(`/transactions/${transRes.body.id}/invoices`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      
+      expect(res.status).to.equal(403);
     });
   });
 });

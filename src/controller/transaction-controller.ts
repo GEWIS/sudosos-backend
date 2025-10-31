@@ -40,6 +40,7 @@ import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
+import InvoiceService from '../service/invoice-service';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -82,6 +83,12 @@ export default class TransactionController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransactionController.getRelation(req), 'Transaction', ['*']),
           handler: this.deleteTransaction.bind(this),
+        },
+      },
+      '/:id(\\d+)/invoices': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoice', ['*']),
+          handler: this.getTransactionInvoices.bind(this),
         },
       },
       '/:validate': {
@@ -273,6 +280,37 @@ export default class TransactionController extends BaseController {
       }
     } catch (error) {
       this.logger.error('Could not delete transaction:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /transactions/{id}/invoices
+   * @summary Get all invoices containing subtransaction rows from this transaction
+   * @operationId getTransactionInvoices
+   * @tags transactions - Operations of the transaction controller
+   * @param {integer} id.path.required - The transaction ID
+   * @security JWT
+   * @return {Array<BaseInvoiceResponse>} 200 - List of invoices
+   * @return {string} 404 - Transaction not found
+   * @return {string} 500 - Internal server error
+   */
+  public async getTransactionInvoices(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const transactionId = parseInt(id, 10);
+    this.logger.trace('Get transaction invoices', id, 'by user', req.token.user);
+
+    try {
+      const transaction = await Transaction.findOne({ where: { id: transactionId } });
+      if (!transaction) {
+        res.status(404).json('Transaction not found.');
+        return;
+      }
+
+      const invoices = await new InvoiceService().getTransactionInvoices(transactionId);
+      res.status(200).json(invoices);
+    } catch (error) {
+      this.logger.error('Could not return transaction invoices:', error);
       res.status(500).json('Internal server error.');
     }
   }
