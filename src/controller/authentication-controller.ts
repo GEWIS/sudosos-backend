@@ -157,7 +157,7 @@ export default class AuthenticationController extends BaseController {
     const body = req.body as AuthenticationMockRequest;
 
     // Only allow in development setups
-    if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return false;
+    if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'js-test') return false;
 
     // Check the existence of the user
     const user = await User.findOne({ where: { id: body.userId } });

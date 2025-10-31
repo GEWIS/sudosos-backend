@@ -38,7 +38,8 @@ export default class BannerSeeder extends WithManager {
     const downloadName = `banner-${banner.id}.png`;
 
     let location;
-    if (process.env.NODE_ENV !== 'test') {
+
+    if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'js-test' ) {
       const source = path.join(__dirname, './static/banner.png');
       location = path.join(__dirname, '../', BANNER_IMAGE_LOCATION, downloadName);
       fs.copyFileSync(source, location);

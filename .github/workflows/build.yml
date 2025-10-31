@@ -177,7 +177,7 @@ jobs:
           path-to-lcov: ./reports/coverage/lcov.info
 
   test-js:
-    name: "Test on built Javascript"
+    name: "coverage-js-mariadb"
     needs: [ build ]
     runs-on: ubuntu-latest
     container:
@@ -192,7 +192,7 @@ jobs:
           MARIADB_PASSWORD: sudosos-ci
     env:
       NAME: sudosos-test
-      NODE_ENV: testing
+      NODE_ENV: js-test
       API_HOST: localhost:3000
       API_BASEPATH: /v1
       CURRENCY_CODE: EUR
@@ -235,6 +235,11 @@ jobs:
 
       - name: "Copy Mail files"
         run: npm run copy-static
+
+      - name: "Validate swagger"
+        env:
+          NODE_ENV: development
+        run: npm run swagger:validate
 
       - name: "Run tests on compiled JS"
         run: npm run coverage-ci-js

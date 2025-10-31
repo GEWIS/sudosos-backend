@@ -117,7 +117,8 @@ export default class Swagger {
    * @param app - The express application which will serve the specification.
    */
   public static async initialize(app: express.Application): Promise<SwaggerSpecification> {
-    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'testing') {
+    const isProdOrTest = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'js-test';
+    if (isProdOrTest) {
       // Serve pre-generated Swagger specification in production environments.
       const specification = await Swagger.importSpecification();
       specification.info = {
