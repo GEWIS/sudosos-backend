@@ -136,6 +136,17 @@ export default class Swagger {
       return specification;
     }
 
+    const ext = process.env.NODE_ENV === 'ci' ? 'js' : 'ts';
+
+    return Swagger.generateSpecification(app, [
+      `../controller/*.${ext}`,
+      `../helpers/pagination.${ext}`,
+      `../controller/request/*.${ext}`,
+      `../controller/response/*.${ext}`,
+      `../controller/response/**/*.${ext}`,
+      `../gewis/controller/**/*.${ext}`,
+    ]);
+
     return Swagger.generateSpecification(app, [
       '../controller/*.ts',
       '../helpers/pagination.ts',
