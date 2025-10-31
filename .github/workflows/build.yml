@@ -192,7 +192,7 @@ jobs:
           MARIADB_PASSWORD: sudosos-ci
     env:
       NAME: sudosos-test
-      NODE_ENV: testing
+      NODE_ENV: ci
       API_HOST: localhost:3000
       API_BASEPATH: /v1
       CURRENCY_CODE: EUR
@@ -235,6 +235,9 @@ jobs:
 
       - name: "Copy Mail files"
         run: npm run copy-static
+
+      - name: "Generate Swagger"
+        run: npm run swagger:validate
 
       - name: "Run tests on compiled JS"
         run: npm run coverage-ci-js

@@ -98,6 +98,17 @@ export default abstract class BaseController {
     this.specification = options.specification;
     this.roleManager = options.roleManager;
 
+    this.specification =
+        options.specification ??
+        (global as any).specification ??
+        null;
+
+    if (!this.specification) {
+      throw new Error(
+        'Swagger specification not provided to BaseController',
+      );
+    }
+
     const spec = options.specification;
 
     // Generate routes based on the policy

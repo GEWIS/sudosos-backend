@@ -117,7 +117,7 @@ export default class Swagger {
    * @param app - The express application which will serve the specification.
    */
   public static async initialize(app: express.Application): Promise<SwaggerSpecification> {
-    if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'testing') {
+    if (process.env.NODE_ENV === 'production') {
       // Serve pre-generated Swagger specification in production environments.
       const specification = await Swagger.importSpecification();
       specification.info = {
@@ -135,6 +135,17 @@ export default class Swagger {
       app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specification));
       return specification;
     }
+
+    const ext = process.env.NODE_ENV === 'ci' ? 'js' : 'ts';
+
+    return Swagger.generateSpecification(app, [
+      `../controller/*.${ext}`,
+      `../helpers/pagination.${ext}`,
+      `../controller/request/*.${ext}`,
+      `../controller/response/*.${ext}`,
+      `../controller/response/**/*.${ext}`,
+      `../gewis/controller/**/*.${ext}`,
+    ]);
 
     return Swagger.generateSpecification(app, [
       '../controller/*.ts',

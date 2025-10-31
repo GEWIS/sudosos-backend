@@ -34,6 +34,10 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 import '../src/database/database';
+import path from 'path';
+import { SwaggerSpecification } from 'swagger-model-validator';
+import fs from 'fs';
+import Validator from 'swagger-model-validator';
 
 // Root hooks
 export { mochaHooks, closeDBHook } from './root-hooks';
@@ -47,6 +51,18 @@ use(deepEqualInAnyOrder);
 
 config();
 process.env.NODE_ENV = 'test';
+
+try {
+  const swaggerPath = path.resolve(process.cwd(), 'out/swagger.json');
+  const swaggerSpec: SwaggerSpecification = JSON.parse(fs.readFileSync(swaggerPath, 'utf8'));
+  new Validator(swaggerSpec);
+  (global as any).swaggerSpecification = swaggerSpec;
+  console.log(`Loaded Swagger spec from: ${swaggerPath}`);
+} catch (err) {
+  console.error('⚠️ Failed to load Swagger spec for tests:', err);
+  throw err;
+}
+
 if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
