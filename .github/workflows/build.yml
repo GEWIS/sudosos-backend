@@ -175,3 +175,66 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./reports/coverage/lcov.info
+
+  test-js:
+    name: "Test on built Javascript"
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    container:
+      image: node:20
+    services:
+      mariadb:
+        image: mariadb:lts
+        env:
+          MARIADB_RANDOM_ROOT_PASSWORD: true
+          MARIADB_DATABASE: sudosos-ci
+          MARIADB_USER: sudosos-ci
+          MARIADB_PASSWORD: sudosos-ci
+    env:
+      NAME: sudosos-test
+      NODE_ENV: testing
+      API_HOST: localhost:3000
+      API_BASEPATH: /v1
+      CURRENCY_CODE: EUR
+      CURRENCY_PRECISION: 2
+      GEWISWEB_JWT_SECRET: ChangeMe
+      JWT_KEY_PATH: ./config/jwt.key
+      HTTP_PORT: 3000
+      TYPEORM_CONNECTION: mariadb
+      TYPEORM_HOST: mariadb
+      TYPEORM_PORT: 3306
+      TYPEORM_USERNAME: sudosos-ci
+      TYPEORM_PASSWORD: sudosos-ci
+      TYPEORM_DATABASE: sudosos-ci
+      TYPEORM_SYNCHRONIZE: 'false'
+      TYPEORM_LOGGING: 0
+      LOG_LEVEL: INFO
+      FILE_STORAGE_METHOD: disk
+      SKIP_SQLITE_DEFAULTS: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache and restore node_modules
+        id: cache-node
+        uses: actions/cache@v4
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+      - run: npm install
+        if: steps.cache-node.outputs.cache-hit != 'true'
+
+      - name: "Download built artifact"
+        uses: actions/download-artifact@v5
+        with:
+          name: build
+          path: .
+
+      - name: "Extract out/ folder"
+        run: tar -zxvf out.tar.gz
+
+      - name: "Copy Mail files"
+        run: npm run copy-static
+
+      - name: "Run tests on compiled JS"
+        run: npm run coverage-ci-js
