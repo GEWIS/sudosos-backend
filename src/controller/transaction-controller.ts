@@ -44,7 +44,6 @@ import POSTokenVerifier, { PosAuthenticationError } from '../helpers/pos-token-v
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
-  
 
   /**
    * Creates a new transaction controller instance.
