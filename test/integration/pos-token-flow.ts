@@ -23,9 +23,7 @@ import express, { Application } from 'express';
 import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import log4js, { Logger } from 'log4js';
 import TransactionController from '../../src/controller/transaction-controller';
-import Transaction from '../../src/entity/transactions/transaction';
 import Database from '../../src/database/database';
 import seedDatabase from '../seed';
 import Swagger from '../../src/start/swagger';
@@ -34,21 +32,22 @@ import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user
 import TokenMiddleware from '../../src/middleware/token-middleware';
 import RoleManager from '../../src/rbac/role-manager';
 import { TransactionRequest } from '../../src/controller/request/transaction-request';
-import { inUserContext, UserFactory } from '../helpers/user-factory';
-import OrganMembership from '../../src/entity/organ/organ-membership';
+import { UserFactory } from '../helpers/user-factory';
 import ServerSettingsStore from '../../src/server-settings/server-settings-store';
 import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
-import dinero from 'dinero.js';
 import { RbacSeeder } from '../seed';
-import { SeededRole } from '../seed/rbac-seeder';
 import AuthenticationController from '../../src/controller/authentication-controller';
+import AuthenticationService from '../../src/service/authentication-service';
 import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
 import NfcAuthenticator from '../../src/entity/authenticator/nfc-authenticator';
 import PointOfSale from '../../src/entity/point-of-sale/point-of-sale';
+import PointOfSaleRevision from '../../src/entity/point-of-sale/point-of-sale-revision';
 import Container from '../../src/entity/container/container';
+import ContainerRevision from '../../src/entity/container/container-revision';
 import Product from '../../src/entity/product/product';
-import VatGroup from '../../src/entity/vat-group/vat-group';
+import ProductRevision from '../../src/entity/product/product-revision';
+import { ProductSeeder, ContainerSeeder, PointOfSaleSeeder, VatGroupSeeder, ProductCategorySeeder } from '../seed';
 
 describe('POS Token Flow Integration Tests', (): void => {
   let ctx: {
@@ -63,8 +62,11 @@ describe('POS Token Flow Integration Tests', (): void => {
     organMemberToken: string,
     validTransReq: TransactionRequest,
     pointOfSale: PointOfSale,
+    pointOfSaleRevision: PointOfSaleRevision,
     container: Container,
+    containerRevision: ContainerRevision,
     product: Product,
+    productRevision: ProductRevision,
   };
 
   before(async (): Promise<void> => {
@@ -80,77 +82,107 @@ describe('POS Token Flow Integration Tests', (): void => {
       organMemberToken: '',
       validTransReq: {} as TransactionRequest,
       pointOfSale: {} as PointOfSale,
+      pointOfSaleRevision: {} as PointOfSaleRevision,
       container: {} as Container,
+      containerRevision: {} as ContainerRevision,
       product: {} as Product,
+      productRevision: {} as ProductRevision,
     };
 
     // Seed database
-    await seedDatabase(ctx.connection);
+    await seedDatabase();
+
+    // Initialize ServerSettingsStore
+    await ServerSettingsStore.getInstance().initialize();
 
     // Create users
-    ctx.users = await UserFactory().clone(7);
+    const userFactory = await UserFactory();
+    ctx.users = await userFactory.clone(7);
     ctx.users[0].type = UserType.LOCAL_USER;
     ctx.users[0].acceptedToS = TermsOfServiceStatus.ACCEPTED;
     await ctx.users[0].save();
 
     // Create roles
-    const roles: SeededRole[] = [
-      { name: 'Admin', permissions: [{ entity: 'Transaction', action: 'create', relation: 'all' }] },
-      { name: 'Buyer', permissions: [{ entity: 'Transaction', action: 'create', relation: 'own' }] },
-    ];
+    const all = { all: new Set<string>(['*']) };
+    const own = { own: new Set<string>(['*']) };
     const rbacSeeder = new RbacSeeder();
-    await rbacSeeder.seed(ctx.connection, roles);
+    const roles = await rbacSeeder.seed([{
+      name: 'Admin',
+      permissions: {
+        Transaction: {
+          create: all,
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN || user.id === ctx.users[0].id,
+    }, {
+      name: 'Buyer',
+      permissions: {
+        Transaction: {
+          create: own,
+        },
+      },
+      assignmentCheck: async (user: User) => [UserType.LOCAL_USER, UserType.MEMBER].includes(user.type),
+    }], ctx.users);
 
     // Create token handler
-    ctx.tokenHandler = new TokenHandler('test-secret', 3600);
-    ctx.roleManager = new RoleManager(ctx.connection);
+    ctx.tokenHandler = new TokenHandler({
+      algorithm: 'HS256',
+      publicKey: 'test',
+      privateKey: 'test',
+      expiry: 3600,
+    });
+    ctx.roleManager = await new RoleManager().initialize();
 
     // Create tokens
-    ctx.adminToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[0], ['Admin']), '39');
-    ctx.userToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], ['Buyer']), '39');
-    ctx.organMemberToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], ['Buyer'], [ctx.users[0]]), '1');
+    ctx.adminToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[0], roles), '39');
+    ctx.userToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], roles), '39');
+    ctx.organMemberToken = await ctx.tokenHandler.signToken(await rbacSeeder.getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
 
-    // Create test data
-    const vatGroup = await VatGroup.save({
-      name: 'Test VAT',
-      percentage: 21,
-    });
+    // Create test data using seeders
+    const categories = await new ProductCategorySeeder().seed();
+    const vatGroups = await new VatGroupSeeder().seed();
+    const { products, productRevisions } = await new ProductSeeder().seed(
+      [ctx.users[0]],
+      categories,
+      vatGroups,
+    );
+    ctx.product = products[0];
+    ctx.productRevision = productRevisions[0];
 
-    ctx.pointOfSale = await PointOfSale.save({
-      name: 'Test POS',
-      owner: ctx.users[0],
-      revision: 1,
-    });
+    const { containers, containerRevisions } = await new ContainerSeeder().seed(
+      [ctx.users[0]],
+      productRevisions,
+    );
+    ctx.container = containers[0];
+    ctx.containerRevision = containerRevisions[0];
 
-    ctx.container = await Container.save({
-      name: 'Test Container',
-      owner: ctx.users[0],
-      pointOfSale: ctx.pointOfSale,
-      revision: 1,
-    });
+    const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(
+      [ctx.users[0]],
+      containerRevisions,
+    );
+    ctx.pointOfSale = pointsOfSale[0];
+    ctx.pointOfSaleRevision = pointOfSaleRevisions[0];
 
-    ctx.product = await Product.save({
-      name: 'Test Product',
-      price: dinero({ amount: 100, currency: 'EUR' }),
-      vatGroup,
-      owner: ctx.users[0],
-      revision: 1,
-    });
+    // Calculate total price
+    const rowPrice = ctx.productRevision.priceInclVat.multiply(1);
+    const subTransPrice = rowPrice;
+    const totalPrice = subTransPrice;
 
     ctx.validTransReq = {
       from: ctx.users[1].id,
-      to: ctx.users[0].id,
       createdBy: ctx.users[1].id,
-      pointOfSale: { id: ctx.pointOfSale.id, revision: ctx.pointOfSale.revision },
+      pointOfSale: { id: ctx.pointOfSale.id, revision: ctx.pointOfSaleRevision.revision },
       subTransactions: [{
-        container: { id: ctx.container.id, revision: ctx.container.revision },
+        container: { id: ctx.container.id, revision: ctx.containerRevision.revision },
         to: ctx.users[0].id,
         subTransactionRows: [{
-          product: { id: ctx.product.id, revision: ctx.product.revision },
+          product: { id: ctx.product.id, revision: ctx.productRevision.revision },
           amount: 1,
-          price: dinero({ amount: 100, currency: 'EUR' }),
+          totalPriceInclVat: rowPrice.toObject(),
         }],
+        totalPriceInclVat: subTransPrice.toObject(),
       }],
+      totalPriceInclVat: totalPrice.toObject(),
     };
 
     // Setup app
@@ -183,7 +215,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationController({} as any, {} as any).hashPassword('1234');
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
       await pinAuth.save();
 
       // Set strict mode
@@ -244,7 +276,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationController({} as any, {} as any).hashPassword('1234');
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
       await pinAuth.save();
 
       // Set strict mode
@@ -276,7 +308,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationController({} as any, {} as any).hashPassword('1234');
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
       await pinAuth.save();
 
       // Set non-strict mode
@@ -303,11 +335,11 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should reject authentication in strict mode without posId', async () => {
+    it('should reject transaction in strict mode without posId', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationController({} as any, {} as any).hashPassword('1234');
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
       await pinAuth.save();
 
       // Set strict mode
@@ -333,6 +365,188 @@ describe('POS Token Flow Integration Tests', (): void => {
 
       expect(transRes.status).to.equal(403);
       expect(transRes.body).to.equal('Invalid POS token.');
+    });
+
+    it('should reject transaction when NFC posId does not match', async () => {
+      // Set up NFC authenticator
+      const nfcAuth = new NfcAuthenticator();
+      nfcAuth.user = ctx.users[1];
+      nfcAuth.nfcCode = 'test-nfc-wrong-pos';
+      await nfcAuth.save();
+
+      // Set strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
+
+      // Authenticate with NFC and wrong posId
+      const authRes = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send({
+          nfcCode: 'test-nfc-wrong-pos',
+          posId: 999, // Wrong POS ID
+        });
+
+      expect(authRes.status).to.equal(200);
+      expect(authRes.body.token).to.be.a('string');
+
+      // Try to create a transaction - should fail
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${authRes.body.token}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(403);
+      expect(transRes.body).to.equal('Invalid POS token.');
+    });
+
+    it('should allow transaction in non-strict mode with matching posId', async () => {
+      // Set up PIN authenticator
+      const pinAuth = new PinAuthenticator();
+      pinAuth.user = ctx.users[1];
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
+      await pinAuth.save();
+
+      // Set non-strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
+
+      // Authenticate with PIN and matching posId
+      const authRes = await request(ctx.app)
+        .post('/authentication/pin')
+        .send({
+          userId: ctx.users[1].id,
+          pin: '1234',
+          posId: ctx.pointOfSale.id,
+        });
+
+      expect(authRes.status).to.equal(200);
+      expect(authRes.body.token).to.be.a('string');
+
+      // Use the token to create a transaction - should work
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${authRes.body.token}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(200);
+    });
+
+    it('should reject transaction in non-strict mode when posId does not match', async () => {
+      // Set up PIN authenticator
+      const pinAuth = new PinAuthenticator();
+      pinAuth.user = ctx.users[1];
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
+      await pinAuth.save();
+
+      // Set non-strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
+
+      // Authenticate with PIN and wrong posId
+      const authRes = await request(ctx.app)
+        .post('/authentication/pin')
+        .send({
+          userId: ctx.users[1].id,
+          pin: '1234',
+          posId: 999, // Wrong POS ID
+        });
+
+      expect(authRes.status).to.equal(200);
+      expect(authRes.body.token).to.be.a('string');
+
+      // Try to create a transaction - should fail even in non-strict mode if posId doesn't match
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${authRes.body.token}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(403);
+      expect(transRes.body).to.equal('Invalid POS token.');
+    });
+
+    it('should bypass POS verification for non-lesser tokens', async () => {
+      // Set strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
+
+      // Use a regular (non-lesser) token - should bypass POS verification
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(200);
+    });
+
+    it('should allow transaction in default mode (strictPosToken not set)', async () => {
+      // Don't set strictPosToken (should default to false)
+      // First ensure it's set to false explicitly or removed
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
+
+      // Set up PIN authenticator
+      const pinAuth = new PinAuthenticator();
+      pinAuth.user = ctx.users[1];
+      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
+      await pinAuth.save();
+
+      // Authenticate with PIN without posId
+      const authRes = await request(ctx.app)
+        .post('/authentication/pin')
+        .send({
+          userId: ctx.users[1].id,
+          pin: '1234',
+          // No posId provided
+        });
+
+      expect(authRes.status).to.equal(200);
+      expect(authRes.body.token).to.be.a('string');
+
+      // Should work in default (non-strict) mode
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${authRes.body.token}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(200);
+    });
+
+    it('should allow transaction with organ member token (non-lesser token)', async () => {
+      // Set strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
+
+      // Use organ member token - should bypass POS verification since it's not a lesser token
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(200);
+    });
+
+    it('should allow NFC authentication in non-strict mode without posId', async () => {
+      // Set up NFC authenticator
+      const nfcAuth = new NfcAuthenticator();
+      nfcAuth.user = ctx.users[1];
+      nfcAuth.nfcCode = 'test-nfc-non-strict';
+      await nfcAuth.save();
+
+      // Set non-strict mode
+      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
+
+      // Authenticate with NFC without posId
+      const authRes = await request(ctx.app)
+        .post('/authentication/nfc')
+        .send({
+          nfcCode: 'test-nfc-non-strict',
+          // No posId provided
+        });
+
+      expect(authRes.status).to.equal(200);
+      expect(authRes.body.token).to.be.a('string');
+
+      // Use the token to create a transaction - should work
+      const transRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${authRes.body.token}`)
+        .send(ctx.validTransReq);
+
+      expect(transRes.status).to.equal(200);
     });
   });
 });

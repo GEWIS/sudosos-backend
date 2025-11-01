@@ -38,6 +38,10 @@ import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/has
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import { truncateAllTables } from '../../setup';
+import RoleManager from '../../../src/rbac/role-manager';
+import TokenHandler from '../../../src/authentication/token-handler';
+import DefaultRoles from '../../../src/rbac/default-roles';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -55,6 +59,8 @@ describe('AuthenticationService', (): void => {
     users: User[],
     spec: SwaggerSpecification,
     validADUser: any,
+    roleManager: RoleManager,
+    tokenHandler: TokenHandler,
   };
 
   const stubs: sinon.SinonStub[] = [];
@@ -77,6 +83,16 @@ describe('AuthenticationService', (): void => {
     await truncateAllTables(connection);
     const app = express();
     await seedDatabase();
+
+    await ServerSettingsStore.getInstance().initialize();
+    await DefaultRoles.synchronize();
+    const roleManager = await new RoleManager().initialize();
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256',
+      publicKey: 'test',
+      privateKey: 'test',
+      expiry: 3600,
+    });
 
     const users = await User.find(
       {
@@ -102,6 +118,8 @@ describe('AuthenticationService', (): void => {
       users,
       validADUser,
       spec: await Swagger.importSpecification(),
+      roleManager,
+      tokenHandler,
     };
   });
 
@@ -230,23 +248,22 @@ describe('AuthenticationService', (): void => {
           await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
           const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
           
-          const mockContext = {
-            roleManager: {
-              getRoles: () => Promise.resolve([]),
-              getUserOrgans: () => Promise.resolve([]),
-              can: () => Promise.resolve(false),
-            },
-            tokenHandler: {
-              signToken: (contents: any) => Promise.resolve('mock-token'),
-            },
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            '2000', auth, mockContext, true, 123
+            '2000', auth, context, true, 123,
           );
 
           expect(result).to.not.be.undefined;
-          expect(result?.token).to.equal('mock-token');
+          expect(result?.token).to.be.a('string');
+
+          // Verify posId is in the token
+          const decoded = await ctx.tokenHandler.verifyToken(result!.token);
+          expect(decoded.posId).to.equal(123);
+          expect(decoded.lesser).to.be.true;
         });
       });
 
@@ -255,23 +272,22 @@ describe('AuthenticationService', (): void => {
           await new AuthenticationService().setUserAuthenticationHash(user, 'password123', LocalAuthenticator);
           const auth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } } });
           
-          const mockContext = {
-            roleManager: {
-              getRoles: () => Promise.resolve([]),
-              getUserOrgans: () => Promise.resolve([]),
-              can: () => Promise.resolve(false),
-            },
-            tokenHandler: {
-              signToken: (contents: any) => Promise.resolve('mock-token'),
-            },
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            'password123', auth, mockContext, true, 456
+            'password123', auth, context, true, 456,
           );
 
           expect(result).to.not.be.undefined;
-          expect(result?.token).to.equal('mock-token');
+          expect(result?.token).to.be.a('string');
+
+          // Verify posId is in the token
+          const decoded = await ctx.tokenHandler.verifyToken(result!.token);
+          expect(decoded.posId).to.equal(456);
+          expect(decoded.lesser).to.be.true;
         });
       });
 
@@ -280,23 +296,22 @@ describe('AuthenticationService', (): void => {
           await new AuthenticationService().setUserAuthenticationHash(user, '2000', PinAuthenticator);
           const auth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
           
-          const mockContext = {
-            roleManager: {
-              getRoles: () => Promise.resolve([]),
-              getUserOrgans: () => Promise.resolve([]),
-              can: () => Promise.resolve(false),
-            },
-            tokenHandler: {
-              signToken: (contents: any) => Promise.resolve('mock-token'),
-            },
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            '2000', auth, mockContext, true
+            '2000', auth, context, true,
           );
 
           expect(result).to.not.be.undefined;
-          expect(result?.token).to.equal('mock-token');
+          expect(result?.token).to.be.a('string');
+
+          // Verify posId is not in the token
+          const decoded = await ctx.tokenHandler.verifyToken(result!.token);
+          expect(decoded.posId).to.be.undefined;
+          expect(decoded.lesser).to.be.true;
         });
       });
     });

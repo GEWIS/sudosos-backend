@@ -32,10 +32,11 @@ describe('POSTokenVerifier', (): void => {
 
   beforeEach(async (): Promise<void> => {
     // Create a mock user
-    const user = new User();
-    user.id = 1;
-    user.firstName = 'Test';
-    user.lastName = 'User';
+    const user = Object.assign(new User(), {
+      id: 1,
+      firstName: 'Test',
+      lastName: 'User',
+    } as User);
 
     // Create a mock token
     const token = new JsonWebToken();
