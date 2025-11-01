@@ -40,7 +40,6 @@ import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
-import TokenHandler from '../authentication/token-handler';
 import POSTokenVerifier, { PosAuthenticationError } from '../helpers/pos-token-verifier';
 
 export default class TransactionController extends BaseController {
