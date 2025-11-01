@@ -99,7 +99,7 @@ export default class TransactionController extends BaseController {
       },
       '/:validate': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.postRelation(req), 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.getRelation(req), 'Transaction', ['*']),
           handler: this.validateTransaction.bind(this),
         },
       },
