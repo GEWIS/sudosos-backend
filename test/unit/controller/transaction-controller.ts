@@ -1044,80 +1044,30 @@ describe('TransactionController', (): void => {
       expect(res.status).to.equal(403);
     });
 
-    describe('POS token verification for lesser tokens', () => {
-      it('should return HTTP 403 when lesser token posId does not match transaction posId', async () => {
-        // Create a transaction first that belongs to the user so they can update it
+    describe('Lesser token restriction', () => {
+      it('should return HTTP 403 when trying to update with lesser token', async () => {
+        // Create a transaction first as admin
         const createRes = await request(ctx.app)
           .post('/transactions')
-          .set('Authorization', `Bearer ${ctx.userToken}`)
-          .send({
-            ...ctx.validTransReq,
-            from: ctx.users[0].id,
-            createdBy: ctx.users[0].id,
-          });
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(ctx.validTransReq);
         const transactionId = createRes.body.id;
 
-        // Create a lesser token with posId 999
-        const lesserToken = await ctx.tokenHandler.signToken({
-          user: ctx.users[0],
-          roles: ['Buyer'],
+        // Create a lesser admin token
+        const lesserAdminToken = await ctx.tokenHandler.signToken({
+          user: ctx.users[6],
+          roles: ['Admin'],
           lesser: true,
-          posId: 999,
+          posId: ctx.validTransReq.pointOfSale.id,
         }, '39');
-
-        // Update request to use the token user so policy passes
-        const testReq = {
-          ...ctx.validTransReq,
-          from: ctx.users[0].id,
-          createdBy: ctx.users[0].id,
-        };
 
         const res = await request(ctx.app)
           .patch(`/transactions/${transactionId}`)
-          .set('Authorization', `Bearer ${lesserToken}`)
-          .send(testReq); // This has posId from ctx.validTransReq.pointOfSale.id
+          .set('Authorization', `Bearer ${lesserAdminToken}`)
+          .send(ctx.validTransReq);
         
         expect(res.status).to.equal(403);
-        expect(res.text).to.equal('Invalid POS token.');
-      });
-
-      it('should allow lesser token with matching posId', async () => {
-        // Ensure user can go into debt
-        ctx.users[0].canGoIntoDebt = true;
-        await ctx.users[0].save();
-        
-        // Create a transaction first that belongs to the user so they can update it
-        const createRes = await request(ctx.app)
-          .post('/transactions')
-          .set('Authorization', `Bearer ${ctx.userToken}`)
-          .send({
-            ...ctx.validTransReq,
-            from: ctx.users[0].id,
-            createdBy: ctx.users[0].id,
-          });
-        const transactionId = createRes.body.id;
-        
-        // Create a lesser token with matching posId
-        const lesserToken = await ctx.tokenHandler.signToken({
-          user: ctx.users[0],
-          roles: ['Buyer'],
-          lesser: true,
-          posId: ctx.validTransReq.pointOfSale.id, // Matches the transaction posId
-        }, '39');
-
-        // Update request to use the token user so policy passes
-        const testReq = {
-          ...ctx.validTransReq,
-          from: ctx.users[0].id,
-          createdBy: ctx.users[0].id,
-        };
-
-        const res = await request(ctx.app)
-          .patch(`/transactions/${transactionId}`)
-          .set('Authorization', `Bearer ${lesserToken}`)
-          .send(testReq);
-        
-        expect(res.status).to.equal(200);
+        expect(res.text).to.equal('You have a lesser token, but this endpoint only accepts full-rights tokens.');
       });
     });
   });
@@ -1206,13 +1156,20 @@ describe('TransactionController', (): void => {
           user: ctx.users[0],
           roles: ['Buyer'],
           lesser: true,
-          posId: 1, // Matches the transaction posId
+          posId: ctx.validTransReq.pointOfSale.id, // Matches the transaction posId
         }, '39');
+
+        // Update request to use the token user so policy passes
+        const testReq = {
+          ...ctx.validTransReq,
+          from: ctx.users[0].id,
+          createdBy: ctx.users[0].id,
+        };
 
         const res = await request(ctx.app)
           .post('/transactions/validate')
           .set('Authorization', `Bearer ${lesserToken}`)
-          .send(ctx.validTransReq);
+          .send(testReq);
         
         expect(res.status).to.equal(200);
         expect(res.body).to.equal(true);

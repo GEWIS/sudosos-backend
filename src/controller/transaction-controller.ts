@@ -82,6 +82,9 @@ export default class TransactionController extends BaseController {
           body: { modelName: 'TransactionRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.updateTransaction.bind(this),
+          restrictions: {
+            lesser: false,
+          },
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransactionController.getRelation(req), 'Transaction', ['*']),
@@ -96,7 +99,7 @@ export default class TransactionController extends BaseController {
       },
       '/:validate': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.getRelation(req), 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.validateTransaction.bind(this),
         },
       },
@@ -240,7 +243,7 @@ export default class TransactionController extends BaseController {
    * @security JWT
    * @return {TransactionResponse} 200 - The requested transaction entity
    * @return {string} 400 - Validation error
-   * @return {string} 403 - Invalid POS token
+   * @return {string} 403 - Lesser tokens cannot update transactions
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */
@@ -251,11 +254,6 @@ export default class TransactionController extends BaseController {
 
     // handle request
     try {
-      // Verify POS token for lesser tokens
-      if (req.token.lesser) {
-        await POSTokenVerifier.verify(req, body.pointOfSale.id);
-      }
-
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
         if (await new TransactionService().verifyTransaction(body, true)) {
           res.status(200).json(await new TransactionService().updateTransaction(
@@ -268,10 +266,6 @@ export default class TransactionController extends BaseController {
         res.status(404).json('Transaction not found.');
       }
     } catch (error) {
-      if (error instanceof PosAuthenticationError) {
-        res.status(403).end('Invalid POS token.');
-        return;
-      }
       this.logger.error('Could not update transaction:', error);
       res.status(500).json('Internal server error.');
     }
