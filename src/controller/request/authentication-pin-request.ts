@@ -28,8 +28,10 @@
  * @typedef {object} AuthenticationPinRequest
  * @property {number} userId.required
  * @property {string} pin.required
+ * @property {number} posId - Optional POS identifier for lesser tokens
  */
 export default interface AuthenticationPinRequest {
   userId: number,
   pin: string,
+  posId?: number,
 }
