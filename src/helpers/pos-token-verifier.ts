@@ -28,16 +28,6 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 
 /**
- * Custom error for POS authentication errors.
- */
-export class PosAuthenticationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'PosAuthenticationError';
-  }
-}
-
-/**
  * Utility class for verifying POS tokens in lesser authentication scenarios.
  * This class handles the verification logic for ensuring that lesser tokens
  * (PIN/NFC authentication) are properly associated with the correct POS.
@@ -48,27 +38,26 @@ export default class POSTokenVerifier {
    * 
    * @param req - The request containing the token to verify
    * @param posId - The POS identifier to verify against
-   * @throws PosAuthenticationError if token verification fails
+   * @returns true if verification passes, false otherwise
    */
-  public static async verify(req: RequestWithToken, posId: number): Promise<void> {
+  public static async verify(req: RequestWithToken, posId: number): Promise<boolean> {
     const settingsStore = ServerSettingsStore.getInstance();
     const strictPosToken = settingsStore.getSetting('strictPosToken');
 
     if (strictPosToken) {
       // Strict mode: require the token to have a posId
       if (!req.token.posId) {
-        throw new PosAuthenticationError('Token must contain posId in strict mode');
+        return false;
       }
       
       // Verify the posId matches
-      if (req.token.posId !== posId) {
-        throw new PosAuthenticationError('Token posId does not match provided posId');
-      }
+      return req.token.posId === posId;
     } else {
       // Non-strict mode: if token has posId, it must match
       if (req.token.posId && req.token.posId !== posId) {
-        throw new PosAuthenticationError('Token posId does not match provided posId');
+        return false;
       }
+      return true;
     }
   }
 }

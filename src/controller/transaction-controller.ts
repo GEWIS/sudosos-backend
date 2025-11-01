@@ -99,7 +99,7 @@ export default class TransactionController extends BaseController {
       },
       '/:validate': {
         POST: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.getRelation(req), 'Transaction', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.validateTransaction.bind(this),
         },
       },
@@ -174,7 +174,10 @@ export default class TransactionController extends BaseController {
     try {
       // Verify POS token for lesser tokens
       if (req.token.lesser) {
-        await POSTokenVerifier.verify(req, body.pointOfSale.id);
+        if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
+          res.status(403).end('Invalid POS token.');
+          return;
+        }
       }
 
       if (!await new TransactionService().verifyTransaction(body)) {
@@ -191,10 +194,6 @@ export default class TransactionController extends BaseController {
         res.json(await new TransactionService().createTransaction(body));
       }
     } catch (error) {
-      if (error instanceof PosAuthenticationError) {
-        res.status(403).end('Invalid POS token.');
-        return;
-      }
       this.logger.error('Could not create transaction:', error);
       res.status(500).json('Internal server error.');
     }
@@ -333,7 +332,7 @@ export default class TransactionController extends BaseController {
 
   /**
    * POST /transactions/validate
-   * @summary Function to validate the transaction immediatly after it is created
+   * @summary Function to validate the transaction before creating it
    * @operationId validateTransaction
    * @tags transactions - Operations of the transaction controller
    * @param {TransactionRequest} request.body.required -
@@ -351,7 +350,10 @@ export default class TransactionController extends BaseController {
     try {
       // Verify POS token for lesser tokens
       if (req.token.lesser) {
-        await POSTokenVerifier.verify(req, body.pointOfSale.id);
+        if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
+          res.status(403).end('Invalid POS token.');
+          return;
+        }
       }
 
       if (await new TransactionService().verifyTransaction(body)) {
@@ -361,11 +363,6 @@ export default class TransactionController extends BaseController {
         return;
       }
     } catch (error) {
-      // Check for PosAuthenticationError using instanceof
-      if (error instanceof PosAuthenticationError) {
-        res.status(403).end('Invalid POS token.');
-        return;
-      }
       this.logger.error('Could not validate transaction:', error);
       res.status(500).json('Internal server error');
     }

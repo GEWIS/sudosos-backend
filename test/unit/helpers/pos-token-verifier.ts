@@ -23,7 +23,7 @@ import { describe, it, before, after, beforeEach, afterEach } from 'mocha';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
-import POSTokenVerifier, { PosAuthenticationError } from '../../../src/helpers/pos-token-verifier';
+import POSTokenVerifier from '../../../src/helpers/pos-token-verifier';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import JsonWebToken from '../../../src/authentication/json-web-token';
@@ -71,67 +71,52 @@ describe('POSTokenVerifier', (): void => {
   });
 
   describe('verify', (): void => {
-    it('should pass verification when strictPosToken is false and token has no posId', async (): Promise<void> => {
+    it('should return true when strictPosToken is false and token has no posId', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', false);
       mockRequest.token.posId = undefined;
 
-      // Should not throw
-      await POSTokenVerifier.verify(mockRequest, 123);
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.true;
     });
 
-    it('should pass verification when strictPosToken is false and token posId matches', async (): Promise<void> => {
+    it('should return true when strictPosToken is false and token posId matches', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', false);
       mockRequest.token.posId = 123;
 
-      // Should not throw
-      await POSTokenVerifier.verify(mockRequest, 123);
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.true;
     });
 
-    it('should throw PosAuthenticationError when strictPosToken is false and token posId does not match', async (): Promise<void> => {
+    it('should return false when strictPosToken is false and token posId does not match', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', false);
       mockRequest.token.posId = 456;
 
-      try {
-        await POSTokenVerifier.verify(mockRequest, 123);
-        expect.fail('Expected PosAuthenticationError to be thrown');
-      } catch (error) {
-        expect(error).to.be.instanceOf(PosAuthenticationError);
-        expect(error.message).to.equal('Token posId does not match provided posId');
-      }
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.false;
     });
 
-    it('should pass verification when strictPosToken is true and token posId matches', async (): Promise<void> => {
+    it('should return true when strictPosToken is true and token posId matches', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', true);
       mockRequest.token.posId = 123;
 
-      // Should not throw
-      await POSTokenVerifier.verify(mockRequest, 123);
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.true;
     });
 
-    it('should throw PosAuthenticationError when strictPosToken is true and token has no posId', async (): Promise<void> => {
+    it('should return false when strictPosToken is true and token has no posId', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', true);
       mockRequest.token.posId = undefined;
 
-      try {
-        await POSTokenVerifier.verify(mockRequest, 123);
-        expect.fail('Expected PosAuthenticationError to be thrown');
-      } catch (error) {
-        expect(error).to.be.instanceOf(PosAuthenticationError);
-        expect(error.message).to.equal('Token must contain posId in strict mode');
-      }
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.false;
     });
 
-    it('should throw PosAuthenticationError when strictPosToken is true and token posId does not match', async (): Promise<void> => {
+    it('should return false when strictPosToken is true and token posId does not match', async (): Promise<void> => {
       await settingsStore.setSetting('strictPosToken', true);
       mockRequest.token.posId = 456;
 
-      try {
-        await POSTokenVerifier.verify(mockRequest, 123);
-        expect.fail('Expected PosAuthenticationError to be thrown');
-      } catch (error) {
-        expect(error).to.be.instanceOf(PosAuthenticationError);
-        expect(error.message).to.equal('Token posId does not match provided posId');
-      }
+      const result = await POSTokenVerifier.verify(mockRequest, 123);
+      expect(result).to.be.false;
     });
   });
 });
