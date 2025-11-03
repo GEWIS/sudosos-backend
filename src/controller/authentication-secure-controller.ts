@@ -113,7 +113,7 @@ export default class AuthenticationSecureController extends BaseController {
       const token = await new AuthenticationService().getSaltedToken(user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
-      }, req.token.lesser);
+      }, undefined, undefined, req.token.posId);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
@@ -147,7 +147,7 @@ export default class AuthenticationSecureController extends BaseController {
       const token = await new AuthenticationService().getSaltedToken(pointOfSale.user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
-      }, false, undefined, expiry);
+      }, undefined, expiry);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
@@ -193,7 +193,7 @@ export default class AuthenticationSecureController extends BaseController {
       const token = await new AuthenticationService().getSaltedToken(user, {
         roleManager: this.roleManager,
         tokenHandler: this.tokenHandler,
-      }, req.token.lesser);
+      }, undefined, undefined, req.token.posId);
 
       // Let the service handle all business logic validation
       await (new QRService()).confirm(qrAuthenticator, user);

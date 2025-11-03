@@ -255,7 +255,7 @@ describe('AuthenticationService', (): void => {
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            '2000', auth, context, true, 123,
+            '2000', auth, context, 123,
           );
 
           expect(result).to.not.be.undefined;
@@ -264,7 +264,6 @@ describe('AuthenticationService', (): void => {
           // Verify posId is in the token
           const decoded = await ctx.tokenHandler.verifyToken(result!.token);
           expect(decoded.posId).to.equal(123);
-          expect(decoded.lesser).to.be.true;
         });
       });
 
@@ -279,7 +278,7 @@ describe('AuthenticationService', (): void => {
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            'password123', auth, context, true, 456,
+            'password123', auth, context, 456,
           );
 
           expect(result).to.not.be.undefined;
@@ -288,7 +287,7 @@ describe('AuthenticationService', (): void => {
           // Verify posId is in the token
           const decoded = await ctx.tokenHandler.verifyToken(result!.token);
           expect(decoded.posId).to.equal(456);
-          expect(decoded.lesser).to.be.true;
+          // Token with posId is a lesser token
         });
       });
 
@@ -303,7 +302,7 @@ describe('AuthenticationService', (): void => {
           };
 
           const result = await new AuthenticationService().HashAuthentication(
-            '2000', auth, context, true,
+            '2000', auth, context,
           );
 
           expect(result).to.not.be.undefined;
@@ -312,7 +311,6 @@ describe('AuthenticationService', (): void => {
           // Verify posId is not in the token
           const decoded = await ctx.tokenHandler.verifyToken(result!.token);
           expect(decoded.posId).to.be.undefined;
-          expect(decoded.lesser).to.be.true;
         });
       });
     });

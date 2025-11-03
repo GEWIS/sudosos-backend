@@ -327,7 +327,6 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send({
           userId: ctx.users[1].id,
           pin: '1234',
-          // No posId provided
         });
 
       expect(authRes.status).to.equal(200);
@@ -352,26 +351,16 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
 
-      // Authenticate with PIN without posId - should work (authentication doesn't check posId)
+      // Authenticate with PIN without posId - should fail when strict mode is enabled
       const authRes = await request(ctx.app)
         .post('/authentication/pin')
         .send({
           userId: ctx.users[1].id,
           pin: '1234',
-          // No posId provided
         });
 
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-
-      // But creating a transaction should fail
-      const transRes = await request(ctx.app)
-        .post('/transactions')
-        .set('Authorization', `Bearer ${authRes.body.token}`)
-        .send(ctx.validTransReq);
-
-      expect(transRes.status).to.equal(403);
-      expect(transRes.text).to.equal('Invalid POS token.');
+      expect(authRes.status).to.equal(400);
+      expect(authRes.body).to.equal('posId is required when strictPosToken is enabled.');
     });
 
     it('should reject transaction when NFC posId does not match', async () => {
@@ -498,7 +487,6 @@ describe('POS Token Flow Integration Tests', (): void => {
         .send({
           userId: ctx.users[1].id,
           pin: '1234',
-          // No posId provided
         });
 
       expect(authRes.status).to.equal(200);
@@ -541,7 +529,6 @@ describe('POS Token Flow Integration Tests', (): void => {
         .post('/authentication/nfc')
         .send({
           nfcCode: 'test-nfc-non-strict',
-          // No posId provided
         });
 
       expect(authRes.status).to.equal(200);

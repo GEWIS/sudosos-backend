@@ -141,8 +141,8 @@ describe('BaseController', (): void => {
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use(ctx.controller.getRouter());
 
-    ctx.userToken = await tokenHandler.signToken({ user: userAccepted, roles: [], lesser: false }, '39');
-    ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], lesser: true }, '39');
+    ctx.userToken = await tokenHandler.signToken({ user: userAccepted, roles: [] }, '39');
+    ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], posId: 123 }, '39');
   });
 
   after(async () => {

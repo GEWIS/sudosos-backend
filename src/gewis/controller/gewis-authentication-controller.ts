@@ -175,7 +175,6 @@ export default class GewisAuthenticationController extends BaseController {
       const response = await new AuthenticationService().getSaltedToken(
         gewisUser.user,
         { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
-        false,
         body.nonce,
       );
       res.json(response);

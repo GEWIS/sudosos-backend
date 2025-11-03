@@ -95,7 +95,7 @@ export default class RbacSeeder extends WithManager {
     return assignments.filter((a) => a !== undefined);
   }
 
-  public async getToken(user: User, roles: SeededRole[] = [], organs?: User[], lesser = false): Promise<JsonWebToken> {
+  public async getToken(user: User, roles: SeededRole[] = [], organs?: User[], posId?: number): Promise<JsonWebToken> {
     const assignments = await this.assignRoles(user, roles);
     const systemDefaultRoles = await this.manager.find(Role, { where: { systemDefault: true } });
     const assignedSystemRoles = systemDefaultRoles.filter((r) => r.roleUserTypes.some((u) => u.userType === user.type));
@@ -104,7 +104,7 @@ export default class RbacSeeder extends WithManager {
       roles: assignments.map((a) => a.role.name)
         .concat(assignedSystemRoles.map((a) => a.name)),
       organs,
-      lesser,
+      posId,
     };
   }
 }

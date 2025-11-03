@@ -90,20 +90,18 @@ export default class AuthenticationService extends WithManager {
    * @param user - The user for which to generate the token-content
    * @param roles - The roles this user has
    * @param organs - The organs this user belongs to
-   * @param lesser - If the token should give full access rights.
    * @param overrideMaintenance - If the token should be able to access all endpoints
    * in maintenance mode
-   * @param posId - Optional POS identifier for lesser tokens
+   * @param posId - Optional POS identifier. If provided, creates a lesser token (restricted access).
    */
   public async makeJsonWebToken(
-    user: User, roles: Role[], organs: User[], lesser: boolean, overrideMaintenance: boolean, posId?: number,
+    user: User, roles: Role[], organs: User[], overrideMaintenance: boolean, posId?: number,
   ): Promise<JsonWebToken> {
 
     return {
       user,
       roles: roles.map((r) => r.name),
       organs,
-      lesser,
       overrideMaintenance,
       posId,
     };
@@ -235,17 +233,16 @@ export default class AuthenticationService extends WithManager {
    * @param pass - The provided password
    * @param authenticator - The stored authentication
    * @param context - AuthenticationContext to use
-   * @param lesser
-   * @param posId - Optional POS identifier for lesser tokens
+   * @param posId - Optional POS identifier. If provided, creates a lesser token (restricted access).
    * @constructor
    */
   public async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
-    authenticator: T, context: AuthenticationContext, lesser = true, posId?: number)
+    authenticator: T, context: AuthenticationContext, posId?: number)
     : Promise<AuthenticationResponse | undefined> {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
 
-    return this.getSaltedToken(authenticator.user, context, lesser, undefined, undefined, posId);
+    return this.getSaltedToken(authenticator.user, context, undefined, undefined, posId);
   }
 
   /**
@@ -441,14 +438,13 @@ export default class AuthenticationService extends WithManager {
    * Created a salted JWT token for the given userId.
    * @param user
    * @param context
-   * @param lesser
    * @param salt
    * @param expiry Custom expiry time (in seconds). If not set,
    * the default tokenHandler expiry will be used
-   * @param posId Optional POS identifier for lesser tokens
+   * @param posId Optional POS identifier. If provided, creates a lesser token (restricted access).
    */
   public async getSaltedToken(
-    user: User, context: AuthenticationContext, lesser = true, salt?: string, expiry?: number, posId?: number,
+    user: User, context: AuthenticationContext, salt?: string, expiry?: number, posId?: number,
   ): Promise<AuthenticationResponse> {
     const [froles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
@@ -457,7 +453,7 @@ export default class AuthenticationService extends WithManager {
     const roles = froles.filter((role) => role);
     const roleNames = roles.map((r) => r.name);
     const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
-    const contents = await this.makeJsonWebToken(user, roles, organs, lesser, overrideMaintenance, posId);
+    const contents = await this.makeJsonWebToken(user, roles, organs, overrideMaintenance, posId);
     if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, salt, expiry);
 

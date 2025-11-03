@@ -56,7 +56,6 @@ describe('POSTokenVerifier', (): void => {
     const token = new JsonWebToken();
     token.user = user;
     token.roles = ['admin'];
-    token.lesser = true;
     token.posId = 123;
 
     // Create mock request

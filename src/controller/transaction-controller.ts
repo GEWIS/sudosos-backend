@@ -82,9 +82,7 @@ export default class TransactionController extends BaseController {
           body: { modelName: 'TransactionRequest' },
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', await TransactionController.postRelation(req), 'Transaction', ['*']),
           handler: this.updateTransaction.bind(this),
-          restrictions: {
-            lesser: false,
-          },
+          restrictions: { lesser: false },
         },
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransactionController.getRelation(req), 'Transaction', ['*']),
@@ -173,7 +171,7 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       // Verify POS token for lesser tokens
-      if (req.token.lesser) {
+      if (req.token.posId) {
         if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
           res.status(403).end('Invalid POS token.');
           return;
@@ -349,7 +347,7 @@ export default class TransactionController extends BaseController {
 
     try {
       // Verify POS token for lesser tokens
-      if (req.token.lesser) {
+      if (req.token.posId) {
         if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
           res.status(403).end('Invalid POS token.');
           return;

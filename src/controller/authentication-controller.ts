@@ -50,6 +50,7 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
+import ServerSettingsStore from '../server-settings/server-settings-store';
 
 /**
  * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
@@ -181,6 +182,13 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('PIN authentication for user', body.userId);
 
     try {
+      // TODO: Remove this assertion when strictPosToken setting is removed
+      const strictPosToken = ServerSettingsStore.getInstance().getSetting('strictPosToken');
+      if (strictPosToken && !body.posId) {
+        res.status(400).json('posId is required when strictPosToken is enabled.');
+        return;
+      }
+
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
         this.tokenHandler, body.pin, body.userId, body.posId))(req, res);
     } catch (error) {
@@ -226,7 +234,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(pin,
-        pinAuthenticator, context, true, posId);
+        pinAuthenticator, context, posId);
 
       if (!result) {
         res.status(403).json({
@@ -291,7 +299,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       // AD login gives full access.
-      const token = await service.getSaltedToken(user, context, false);
+      const token = await service.getSaltedToken(user, context);
       res.json(token);
     };
   }
@@ -336,7 +344,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(body.password,
-        localAuthenticator, context, false);
+        localAuthenticator, context);
 
       if (!result) {
         res.status(403).json({
@@ -438,6 +446,13 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
+      // TODO: Remove this assertion when strictPosToken setting is removed
+      const strictPosToken = ServerSettingsStore.getInstance().getSetting('strictPosToken') as boolean;
+      if (strictPosToken && !body.posId) {
+        res.status(400).json('posId is required when strictPosToken is enabled.');
+        return;
+      }
+
       const { nfcCode, posId } = body;
       const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
       if (authenticator == null || authenticator.user == null) {
@@ -454,7 +469,7 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true, undefined, undefined, posId);
+      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, undefined, undefined, posId);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
@@ -490,7 +505,7 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context);
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
@@ -539,7 +554,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(body.key,
-        keyAuthenticator, context, false);
+        keyAuthenticator, context);
 
       if (!result) {
         res.status(403).json({
@@ -572,7 +587,6 @@ export default class AuthenticationController extends BaseController {
       const response = await new AuthenticationService().getSaltedToken(
         user,
         { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
-        false,
         body.nonce,
       );
       res.json(response);

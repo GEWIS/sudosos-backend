@@ -1533,8 +1533,8 @@ describe('UserController', (): void => {
       } as User)).get();
       ctx.users.push(userNotAccepted, userNotRequired);
 
-      userNotAcceptedToken = await ctx.tokenHandler.signToken({ user: userNotAccepted, roles: ['User'], lesser: false }, '1');
-      userNotRequiredToken = await ctx.tokenHandler.signToken({ user: userNotRequired, roles: ['User'], lesser: false }, '1');
+      userNotAcceptedToken = await ctx.tokenHandler.signToken({ user: userNotAccepted, roles: ['User'] }, '1');
+      userNotRequiredToken = await ctx.tokenHandler.signToken({ user: userNotRequired, roles: ['User'] }, '1');
     });
 
     it('should correctly accept ToS if not accepted', async () => {
@@ -1589,7 +1589,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
           pin: '1000',
@@ -1603,7 +1603,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
           pin: '1000',
@@ -1617,7 +1617,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if pin is not 4 numbers', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updatePinRequest: UpdatePinRequest = {
           pin: 'wrong',
@@ -1644,7 +1644,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'correctNfcCode',
@@ -1658,7 +1658,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if duplicate nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'dupplicateNfcCode',
@@ -1677,7 +1677,7 @@ describe('UserController', (): void => {
     });
     it('should return an 200 if updating to a valid nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest1: UpdateNfcRequest = {
           nfcCode: 'correctNfcCode1',
@@ -1700,7 +1700,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if empty nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: '',
@@ -1715,7 +1715,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'wrongNfcCode',
@@ -1741,7 +1741,7 @@ describe('UserController', (): void => {
   describe('DELETE /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1765,7 +1765,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1777,7 +1777,7 @@ describe('UserController', (): void => {
   describe('DELETE /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1801,7 +1801,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1813,7 +1813,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1837,7 +1837,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1849,7 +1849,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const updateLocalRequest: UpdateLocalRequest = {
           password: 'P4ssword1!@',
@@ -1895,7 +1895,7 @@ describe('UserController', (): void => {
   describe('POST /users/{id}/authenticator/key', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .post(`/users/${user.id}/authenticator/key`)
@@ -1912,7 +1912,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .post(`/users/${ctx.users[0].id}/authenticator/key`)
@@ -1933,7 +1933,7 @@ describe('UserController', (): void => {
   describe('DELETE /users/{id}/authenticator/key', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/key`)
@@ -1944,7 +1944,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .delete(`/users/${ctx.users[0].id}/authenticator/key`)
@@ -1996,7 +1996,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 404 if user does not exist', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'] }, '1');
 
         const res = await request(ctx.app)
           .get('/users/0/roles')
@@ -2006,7 +2006,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'], lesser: false }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
 
         const res = await request(ctx.app)
           .get(`/users/${ctx.users[0].id}/roles`)

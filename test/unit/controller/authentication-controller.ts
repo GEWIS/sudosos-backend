@@ -55,6 +55,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import { RbacSeeder, UserSeeder } from '../../seed';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -75,6 +76,10 @@ describe('AuthenticationController', async (): Promise<void> => {
   before(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
+
+    // Initialize ServerSettingsStore for tests
+    ServerSettingsStore.deleteInstance();
+    await ServerSettingsStore.getInstance().initialize();
 
     const [role, maintenanceOverrideRole] = await new RbacSeeder().seed([{
       name: 'Role',

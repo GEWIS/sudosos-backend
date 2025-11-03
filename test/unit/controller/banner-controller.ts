@@ -156,8 +156,8 @@ describe('BannerController', async (): Promise<void> => {
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }]);
     const roleManager = await new RoleManager().initialize();
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'], lesser: false }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [], lesser: false }, 'nonce');
+    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
+    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
 
     const controller = new BannerController({ specification, roleManager });
     app.use(json());
