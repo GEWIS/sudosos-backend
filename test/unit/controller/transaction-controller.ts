@@ -770,10 +770,12 @@ describe('TransactionController', (): void => {
           await (Object.assign(new OrganMembership(), {
             user,
             organ: ctx.users[0],
+            index: 0,
           })).save();
           await (Object.assign(new OrganMembership(), {
             user: otherUser,
             organ: ctx.users[0],
+            index: 1,
           })).save();
 
           const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'], lesser: false }, '39');

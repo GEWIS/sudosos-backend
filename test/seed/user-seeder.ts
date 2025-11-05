@@ -148,17 +148,22 @@ export default class UserSeeder extends WithManager {
    */
   public async seedMemberAuthenticators(users: User[], organs: User[]): Promise<OrganMembership[]> {
     const memberAuthenticators: OrganMembership[] = [];
+    
     await Promise.all(organs.map(async (organ, i) => {
+      let index = 0;
       return Promise.all(users.map(async (user, j) => {
         if ((i + j) % 7 > 1) return;
+        
         const authenticator = Object.assign(new OrganMembership(), {
           userId: user.id,
           organId: organ.id,
+          index: index++,
         } as OrganMembership);
         await authenticator.save();
         memberAuthenticators.push(authenticator);
       }));
     }));
+    
     return memberAuthenticators;
   }
 }

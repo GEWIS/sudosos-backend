@@ -516,6 +516,14 @@ describe('PointOfSaleController', async () => {
       expect(pos.ownerMembers.length).to.be.at.least(1);
       expect(pos.ownerMembers).to.be.lengthOf(members.length);
       expect(pos.ownerMembers.map((r) => r.id)).to.deep.equalInAnyOrder(members.map((m) => m.userId));
+      // Verify that owner members have index field
+      pos.ownerMembers.forEach((member) => {
+        expect(member.index).to.be.a('number');
+      });
+
+      // Verify that owner member indices are unique
+      const indices = pos.ownerMembers.map((m) => m.index);
+      expect(new Set(indices).size).to.equal(indices.length);
 
       expect(pos.cashiers).to.be.lengthOf(2);
       expect(pos.cashiers.map((r) => r.id)).to.deep.equalInAnyOrder([ctx.feut1.id, ctx.feut2.id]);

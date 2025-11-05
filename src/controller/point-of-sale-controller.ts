@@ -48,6 +48,8 @@ import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
 import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
 import UserService from '../service/user-service';
+import OrganMembership from '../entity/organ/organ-membership';
+import { parseUserToResponse } from '../helpers/revision-to-response';
 
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
@@ -455,12 +457,27 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const { owner } = pos;
-      const ownerMembers = await UserService.getUsers({ organId: pos.owner.id });
-      const cashiers = await UserService.getUsers({ assignedRoleIds: pos.cashierRoles.map((r) => r.id) });
+      
+      // Get organ memberships with indices
+      const organMemberships = await OrganMembership.find({
+        where: { organId: pos.owner.id },
+        relations: ['user'],
+      });
+      
+      // Get cashiers (no indices needed)
+      const cashiers = await UserService.getUsers({ 
+        assignedRoleIds: pos.cashierRoles.map((r) => r.id), 
+      });
+
+      // Map organ members to response format with indices
+      const ownerMembers = organMemberships.map(om => ({
+        ...parseUserToResponse(om.user),
+        index: om.index,
+      }));
 
       const response = {
         owner,
-        ownerMembers: ownerMembers.records,
+        ownerMembers,
         cashiers: cashiers.records,
       };
       res.json(response);
