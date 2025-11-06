@@ -41,8 +41,7 @@ import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
 import InvoiceService from '../service/invoice-service';
-import TokenHandler from '../authentication/token-handler';
-import POSTokenVerifier, { PosAuthenticationError } from '../helpers/pos-token-verifier';
+import POSTokenVerifier from '../helpers/pos-token-verifier';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
