@@ -34,6 +34,7 @@ import log4js from 'log4js';
 export interface TokenRestrictions {
   /**
    * Whether the token has "less" rights compared to a full access token. True by default.
+   * A token is considered "lesser" if it has a posId property set.
    */
   lesser: boolean;
 
@@ -85,7 +86,7 @@ export default class RestrictionMiddleware {
       return;
     }
 
-    if ((lesser !== undefined && !lesser) && req.token.lesser) {
+    if ((lesser !== undefined && !lesser) && req.token.posId) {
       res.status(403).end('You have a lesser token, but this endpoint only accepts full-rights tokens.');
       return;
     }

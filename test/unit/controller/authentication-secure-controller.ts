@@ -46,6 +46,10 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import { UserResponse } from '../../../src/controller/response/user-response';
 import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import sinon from 'sinon';
+import AuthenticationSecurePinRequest from '../../../src/controller/request/authentication-secure-pin-request';
+import AuthenticationSecureNfcRequest from '../../../src/controller/request/authentication-secure-nfc-request';
+import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
+import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -588,10 +592,10 @@ describe('AuthenticationSecureController', () => {
 
       // Verify authentication service was called with correct parameters
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
-      const [user, context] = authenticationServiceStub.getSaltedToken.getCall(0).args;
-      expect(user.id).to.equal(ctx.memberUser.id);
-      expect(context.roleManager).to.be.an('object');
-      expect(context.tokenHandler).to.equal(ctx.tokenHandler);
+      const params = authenticationServiceStub.getSaltedToken.getCall(0).args[0];
+      expect(params.user.id).to.equal(ctx.memberUser.id);
+      expect(params.context.roleManager).to.be.an('object');
+      expect(params.context.tokenHandler).to.equal(ctx.tokenHandler);
     });
 
     it('should test WebSocketService.emitQRConfirmed method directly', async () => {
@@ -627,6 +631,249 @@ describe('AuthenticationSecureController', () => {
         sessionId: pendingQr.sessionId,
         token: mockToken,
       })).to.be.true;
+    });
+  });
+
+  describe('POST /authentication/pin-secure', () => {
+    let posUserToken: string;
+    let memberUserWithPin: User;
+
+    before(async () => {
+      // Set up PIN authenticator for a member user
+      memberUserWithPin = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
+      await new AuthenticationService().setUserAuthenticationHash(memberUserWithPin, '1234', PinAuthenticator);
+
+      // Create token for POS user
+      const posUser = ctx.pointOfSaleUsers[0];
+      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+    });
+
+    const validSecurePinRequest: AuthenticationSecurePinRequest = {
+      userId: 0, // Will be set in tests
+      pin: '1234',
+      posId: 0, // Will be set to actual POS ID in tests
+    };
+
+    it('should return HTTP 200 and token when valid POS user authenticates with correct PIN', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: memberUserWithPin.id,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      const auth = res.body as AuthenticationResponse;
+      expect(auth.user.id).to.equal(memberUserWithPin.id);
+      expect(auth.token).to.be.a('string');
+
+      // Verify the token contains posId
+      const decoded = await ctx.tokenHandler.verifyToken(auth.token);
+      expect(decoded.posId).to.equal(pos.id);
+    });
+
+    it('should return HTTP 403 when caller is not a POS user', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: memberUserWithPin.id,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('Only POS users can use secure PIN authentication.');
+    });
+
+    it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: memberUserWithPin.id,
+        posId: pos.id + 999, // Wrong POS ID
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('POS user ID does not match the requested posId.');
+    });
+
+    it('should return HTTP 403 when user does not exist', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: 99999, // Non-existent user ID
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+
+    it('should return HTTP 403 when PIN is incorrect', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: memberUserWithPin.id,
+        pin: '9999', // Wrong PIN
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+
+    it('should return HTTP 403 when user does not have a PIN authenticator', async () => {
+      // Find a user without PIN
+      const userWithoutPin = ctx.users.find((u) => {
+        return u.type === UserType.MEMBER && u.id !== memberUserWithPin.id;
+      });
+      expect(userWithoutPin).to.not.be.undefined;
+
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecurePinRequest,
+        userId: userWithoutPin.id,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/pin-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+
+  describe('POST /authentication/nfc-secure', () => {
+    let posUserToken: string;
+    let memberUserWithNfc: User;
+
+    before(async () => {
+      // Set up NFC authenticator for a member user
+      memberUserWithNfc = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
+      const nfcAuth = new NfcAuthenticator();
+      nfcAuth.user = memberUserWithNfc;
+      nfcAuth.nfcCode = 'secure-nfc-code-1234';
+      await nfcAuth.save();
+
+      // Create token for POS user
+      const posUser = ctx.pointOfSaleUsers[0];
+      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+    });
+
+    const validSecureNfcRequest: AuthenticationSecureNfcRequest = {
+      nfcCode: 'secure-nfc-code-1234',
+      posId: 0, // Will be set to actual POS ID in tests
+    };
+
+    it('should return HTTP 200 and token when valid POS user authenticates with correct NFC', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecureNfcRequest,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/nfc-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      const auth = res.body as AuthenticationResponse;
+      expect(auth.user.id).to.equal(memberUserWithNfc.id);
+      expect(auth.token).to.be.a('string');
+
+      // Verify the token contains posId
+      const decoded = await ctx.tokenHandler.verifyToken(auth.token);
+      expect(decoded.posId).to.equal(pos.id);
+    });
+
+    it('should return HTTP 403 when caller is not a POS user', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const requestBody = {
+        ...validSecureNfcRequest,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/nfc-secure')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('Only POS users can use secure NFC authentication.');
+    });
+
+    it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecureNfcRequest,
+        posId: pos.id + 999, // Wrong POS ID
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/nfc-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('POS user ID does not match the requested posId.');
+    });
+
+    it('should return HTTP 403 when NFC code does not exist', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        nfcCode: 'non-existent-nfc-code',
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/nfc-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
     });
   });
 });

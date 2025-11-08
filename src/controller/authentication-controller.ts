@@ -196,10 +196,11 @@ export default class AuthenticationController extends BaseController {
    * @param tokenHandler
    * @param pin - Provided PIN code
    * @param userId - Provided User
+   * @param posId - Optional POS identifier (only used by secure endpoints)
    * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
-    pin: string, userId: number) {
+    pin: string, userId: number, posId?: number) {
     return async (req: Request, res: Response) => {
       const user = await User.findOne({
         where: { id: userId, deleted: false },
@@ -225,7 +226,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(pin,
-        pinAuthenticator, context, true);
+        pinAuthenticator, context, posId);
 
       if (!result) {
         res.status(403).json({
@@ -290,7 +291,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       // AD login gives full access.
-      const token = await service.getSaltedToken(user, context, false);
+      const token = await service.getSaltedToken({ user, context });
       res.json(token);
     };
   }
@@ -335,7 +336,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(body.password,
-        localAuthenticator, context, false);
+        localAuthenticator, context);
 
       if (!result) {
         res.status(403).json({
@@ -437,8 +438,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const { nfcCode } = body;
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -453,7 +453,10 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
@@ -489,7 +492,10 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, true);
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
@@ -538,7 +544,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(body.key,
-        keyAuthenticator, context, false);
+        keyAuthenticator, context);
 
       if (!result) {
         res.status(403).json({
@@ -568,12 +574,11 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: body.userId } });
-      const response = await new AuthenticationService().getSaltedToken(
+      const response = await new AuthenticationService().getSaltedToken({
         user,
-        { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
-        false,
-        body.nonce,
-      );
+        context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
+        salt: body.nonce,
+      });
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

@@ -83,8 +83,8 @@ export async function defaultAfter(ctx: DefaultContext): Promise<void> {
 export async function defaultTokens(tokenHandler: TokenHandler) {
   const admin: User = await (await UserFactory(await ADMIN_USER())).get();
   const user: User = await (await UserFactory()).get();
-  const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.LOCAL_ADMIN]], lesser: false }, 'nonce admin');
-  const token = await tokenHandler.signToken({ user, roles: [UserType[UserType.MEMBER]], lesser: false }, 'nonce');
+  const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.LOCAL_ADMIN]] }, 'nonce admin');
+  const token = await tokenHandler.signToken({ user, roles: [UserType[UserType.MEMBER]] }, 'nonce');
   return {
     admin,
     adminToken,

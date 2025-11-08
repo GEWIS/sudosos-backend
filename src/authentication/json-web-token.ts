@@ -58,11 +58,6 @@ export default class JsonWebToken {
   public roles: string[];
 
   /**
-   * If the JWT token provides restricted acces.
-   */
-  public lesser: boolean;
-
-  /**
    * Whether this token should still be able to access
    * all endpoints in maintenance mode
    */
@@ -72,6 +67,13 @@ export default class JsonWebToken {
    * All the organs that the user is a part of.
    */
   public organs?: User[];
+
+  /**
+   * The POS identifier. If present, this token is a "lesser" token
+   * (restricted access token created via PIN/NFC authentication).
+   * The presence of posId indicates a lesser token.
+   */
+  public posId?: number;
 
   /**
    * The JWT expiry field. Set automatically by signing the token.

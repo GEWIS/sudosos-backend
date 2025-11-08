@@ -19,21 +19,18 @@
  */
 
 /**
- * This is the module page of the server-settings defaults.
+ * This is the module page of the authentication-secure-nfc-request.
  *
- * @module internal/server-settings
+ * @module authentication
  */
 
-import { ISettings } from '../entity/server-setting';
+/**
+ * @typedef {object} AuthenticationSecureNfcRequest
+ * @property {string} nfcCode.required
+ * @property {number} posId.required - POS identifier
+ */
+export default interface AuthenticationSecureNfcRequest {
+  nfcCode: string;
+  posId: number;
+}
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  administrativeCostValue: 1000,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-  strictPosToken: false,
-};
-
-export default SettingsDefaults;

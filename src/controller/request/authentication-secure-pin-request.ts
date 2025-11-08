@@ -19,21 +19,20 @@
  */
 
 /**
- * This is the module page of the server-settings defaults.
+ * This is the module page of the authentication-secure-pin-request.
  *
- * @module internal/server-settings
+ * @module authentication
  */
 
-import { ISettings } from '../entity/server-setting';
+/**
+ * @typedef {object} AuthenticationSecurePinRequest
+ * @property {number} userId.required
+ * @property {string} pin.required
+ * @property {number} posId.required - POS identifier (required for secure authentication)
+ */
+export default interface AuthenticationSecurePinRequest {
+  userId: number,
+  pin: string,
+  posId: number,
+}
 
-const SettingsDefaults: ISettings = {
-  highVatGroupId: -1,
-  administrativeCostValue: 1000,
-  jwtExpiryDefault: 3600,
-  jwtExpiryPointOfSale: 60 * 60 * 24 * 14,
-  maintenanceMode: false,
-  allowGewisSyncDelete: false,
-  strictPosToken: false,
-};
-
-export default SettingsDefaults;

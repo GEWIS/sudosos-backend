@@ -61,7 +61,6 @@ describe('TokenHandler', (): void => {
         user: ctx.user,
         roles: [],
         organs: [],
-        lesser: false,
       }, '1');
 
       // Verify that the token is signed properly
@@ -76,7 +75,6 @@ describe('TokenHandler', (): void => {
         user: ctx.user,
         roles: [],
         organs: [],
-        lesser: false,
       }, '1', expiry);
 
       // Verify that the token has longer expiry
@@ -91,7 +89,6 @@ describe('TokenHandler', (): void => {
         user: undefined,
         roles: [],
         organs: [],
-        lesser: false,
       }, '1');
       await expect(promise).to.eventually.be.rejectedWith('Payload has no user.');
     });
@@ -104,7 +101,6 @@ describe('TokenHandler', (): void => {
         } as User,
         roles: [],
         organs: [],
-        lesser: false,
       }, '1');
       await expect(promise).to.eventually.be.rejectedWith('Payload user has invalid id.');
     });
@@ -115,7 +111,6 @@ describe('TokenHandler', (): void => {
       const token = await ctx.handler.signToken({
         user: ctx.user,
         roles: [],
-        lesser: false,
         organs: [],
       }, '1');
       const promise = ctx.handler.verifyToken(token);
@@ -132,7 +127,6 @@ describe('TokenHandler', (): void => {
       const token = await otherHandler.signToken({
         user: ctx.user,
         roles: [],
-        lesser: false,
         organs: [],
       }, '1');
       const promise = ctx.handler.verifyToken(token);
@@ -165,7 +159,6 @@ describe('TokenHandler', (): void => {
       const token1 = await ctx.handler.signToken({
         user: ctx.user,
         roles: [],
-        lesser: false,
         organs: [],
       }, '1');
       const promise1 = ctx.handler.refreshToken(token1, '2');
@@ -185,7 +178,6 @@ describe('TokenHandler', (): void => {
       const token1 = await ctx.handler.signToken({
         user: ctx.user,
         roles: [],
-        lesser: false,
         organs: [],
       }, '1', expiry);
 
@@ -207,7 +199,6 @@ describe('TokenHandler', (): void => {
       const token = await otherHandler.signToken({
         user: ctx.user,
         roles: [],
-        lesser: false,
         organs: [],
       }, '1');
       const promise = ctx.handler.refreshToken(token, '2');
