@@ -611,6 +611,52 @@ describe('DebtorService', (): void => {
     });
   });
 
+  describe('getFineHandoutEvents', () => {
+    it('should return all fine handout events in descending order', async () => {
+      const result = await new DebtorService().getFineHandoutEvents();
+
+      expect(result.records.length).to.be.greaterThan(0);
+
+      for (let i = 0; i < result.records.length - 1; i++) {
+        expect(new Date(result.records[i].createdAt).getTime()).to.be.at.least(new Date(result.records[i + 1].createdAt).getTime());
+      }
+
+      result.records.forEach(record => {
+        expect(record).to.have.property('id');
+        expect(record).to.have.property('createdAt');
+        expect(record).to.have.property('updatedAt');
+        expect(record).to.have.property('referenceDate');
+        expect(record).to.have.property('createdBy');
+        expect(record).to.have.property('count');
+      });
+    });
+
+    it('should respect pagination take', async () => {
+      const take = 2;
+      const result = await new DebtorService().getFineHandoutEvents({ take });
+
+      expect(result.records.length).to.be.at.most(take);
+      expect(result._pagination.take).to.equal(take);
+    });
+
+    it('should respect pagination skip', async () => {
+      const take = 1;
+      const skip = 1;
+      const all = await new DebtorService().getFineHandoutEvents();
+      const result = await new DebtorService().getFineHandoutEvents({ take, skip });
+
+      expect(result.records.length).to.equal(Math.max(0, all.records.length - skip));
+      expect(result._pagination.skip).to.equal(skip);
+    });
+
+    it('should return correct count', async () => {
+      const result = await new DebtorService().getFineHandoutEvents();
+      const totalCount = await FineHandoutEvent.count();
+
+      expect(result._pagination.count).to.equal(totalCount);
+    });
+  });
+
   async function clearFines() {
     const fines = await Fine.find({ relations: ['transfer'] });
     const fineTransfers = fines.map((f) => f.transfer);

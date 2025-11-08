@@ -124,9 +124,10 @@ export default class DebtorService extends WithManager {
   public async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
     const { take, skip } = pagination;
 
-    const events = await this.manager.find(FineHandoutEvent, { take, skip, order: {
-      createdAt: 'DESC',
-    } });
+    const events = await this.manager.find(FineHandoutEvent, { take, skip,
+      relations: { fines: true },
+      order: { createdAt: 'DESC' },
+    });
     const count = await this.manager.count(FineHandoutEvent);
 
     const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));
