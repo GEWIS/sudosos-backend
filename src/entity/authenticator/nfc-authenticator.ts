@@ -45,7 +45,8 @@ import AuthenticationMethod from './authentication-method';
  *
  * ## Security Considerations
  * - NFC codes are stored in plain text (not hashed) for fast lookup
- * - NFC authentication returns a "lesser" JWT token to limit access scope
+ * - NFC authentication can return a "lesser" JWT token (when posId is provided) to limit access scope.
+ *   A token is considered "lesser" if it has a posId property set.
  * - Physical possession of the NFC card is required for authentication
  *
  * @typedef {AuthenticationMethod} NfcAuthenticator

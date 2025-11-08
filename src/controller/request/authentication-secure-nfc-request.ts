@@ -19,17 +19,18 @@
  */
 
 /**
- * This is the module page of the authentication-pin-request.
+ * This is the module page of the authentication-secure-nfc-request.
  *
  * @module authentication
  */
 
 /**
- * @typedef {object} AuthenticationPinRequest
- * @property {number} userId.required
- * @property {string} pin.required
+ * @typedef {object} AuthenticationSecureNfcRequest
+ * @property {string} nfcCode.required
+ * @property {number} posId.required - POS identifier
  */
-export default interface AuthenticationPinRequest {
-  userId: number,
-  pin: string,
+export default interface AuthenticationSecureNfcRequest {
+  nfcCode: string;
+  posId: number;
 }
+

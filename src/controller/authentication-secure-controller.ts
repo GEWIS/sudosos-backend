@@ -27,7 +27,6 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import User from '../entity/user/user';
 import PointOfSaleController from './point-of-sale-controller';
@@ -37,13 +36,20 @@ import { ISettings } from '../entity/server-setting';
 import { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
 import WebSocketService from '../service/websocket-service';
 import QRService from '../service/qr-service';
+import AuthenticationSecurePinRequest from './request/authentication-secure-pin-request';
+import AuthenticationSecureNfcRequest from './request/authentication-secure-nfc-request';
+import { UserType } from '../entity/user/user';
+import AuthenticationController from './authentication-controller';
+import AuthenticationService from '../service/authentication-service';
+import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import { AuthenticationContext } from '../service/authentication-service';
 
 /**
  * Handles authenticated-only authentication endpoints for token management and specialized flows.
  * All endpoints require valid JWT tokens and build upon existing authentication.
  *
  * ## Internal Implementation Notes
- * - Token refresh maintains the same access level (lesser/full) as the original token
+ * - Token refresh maintains the same access level by preserving the posId property (if present)
  * - POS authentication uses custom expiry settings from server settings
  * - QR confirmation integrates with WebSocket service for real-time notifications
  * - All methods use the role manager for permission validation
@@ -59,7 +65,7 @@ export default class AuthenticationSecureController extends BaseController {
   protected tokenHandler: TokenHandler;
 
   /**
-   * Creates a new banner controller instance.
+   * Creates a new authentication secure controller instance.
    * @param options - The options passed to the base controller.
    * @param tokenHandler - The token handler for creating signed tokens.
    */
@@ -94,12 +100,26 @@ export default class AuthenticationSecureController extends BaseController {
           restrictions: { lesser: false },
         },
       },
+      '/pin-secure': {
+        POST: {
+          policy: async () => Promise.resolve(true),
+          handler: this.securePINLogin.bind(this),
+          restrictions: { lesser: false },
+        },
+      },
+      '/nfc-secure': {
+        POST: {
+          policy: async () => Promise.resolve(true),
+          handler: this.secureNfcLogin.bind(this),
+          restrictions: { lesser: false },
+        },
+      },
     };
   }
 
   /**
    * GET /authentication/refreshToken
-   * @summary Get a new JWT token, lesser if the existing token is also lesser
+   * @summary Get a new JWT token, maintaining the same access level (posId) as the original token
    * @operationId refreshToken
    * @tags authenticate - Operations of the authentication controller
    * @security JWT
@@ -215,6 +235,101 @@ export default class AuthenticationSecureController extends BaseController {
       res.status(200).json({ message: 'QR code confirmed successfully.' });
     } catch (error) {
       this.logger.error('Could not confirm QR code:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /authentication/pin-secure
+   * @summary Secure PIN authentication that requires POS user authentication
+   * @operationId securePINAuthentication
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
+   * @return {AuthenticationResponse} 200 - The created json web token
+   * @return {string} 403 - Authentication error (invalid POS user or credentials)
+   * @return {string} 500 - Internal server error
+   */
+  private async securePINLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationSecurePinRequest;
+    this.logger.trace('Secure PIN authentication for user', body.userId, 'by POS user', req.token.user.id);
+
+    try {
+      // Verify the caller is a POS user
+      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
+        res.status(403).json('Only POS users can use secure PIN authentication.');
+        return;
+      }
+
+      // Verify the POS user's ID matches the posId in the request
+      const pointOfSale = await PointOfSale.findOne({ where: { user: { id: tokenUser.id } } });
+      if (!pointOfSale || pointOfSale.id !== body.posId) {
+        res.status(403).json('POS user ID does not match the requested posId.');
+        return;
+      }
+
+      // Reuse the PIN login constructor logic
+      await (AuthenticationController.PINLoginConstructor(this.roleManager,
+        this.tokenHandler, body.pin, body.userId, body.posId))(req, res);
+    } catch (error) {
+      this.logger.error('Could not authenticate using secure PIN:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /authentication/nfc-secure
+   * @summary Secure NFC authentication that requires POS user authentication
+   * @operationId secureNfcAuthentication
+   * @tags authenticate - Operations of authentication controller
+   * @param {AuthenticationSecureNfcRequest} request.body.required - The NFC login request with posId
+   * @return {AuthenticationResponse} 200 - The created json web token
+   * @return {string} 403 - Authentication error (invalid POS user or credentials)
+   * @return {string} 500 - Internal server error
+   */
+  private async secureNfcLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationSecureNfcRequest;
+    this.logger.trace('Secure NFC authentication for nfcCode', body.nfcCode, 'by POS user', req.token.user.id);
+
+    try {
+      // Verify the caller is a POS user
+      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
+        res.status(403).json('Only POS users can use secure NFC authentication.');
+        return;
+      }
+
+      // Verify the POS user's ID matches the posId in the request
+      const pointOfSale = await PointOfSale.findOne({ where: { user: { id: tokenUser.id } } });
+      if (!pointOfSale || pointOfSale.id !== body.posId) {
+        res.status(403).json('POS user ID does not match the requested posId.');
+        return;
+      }
+
+      // Look up the NFC authenticator
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
+      if (authenticator == null || authenticator.user == null) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      this.logger.trace('Successful secure NFC authentication for user', authenticator.user);
+
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+        posId: body.posId,
+      });
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using secure NFC:', error);
       res.status(500).json('Internal server error.');
     }
   }

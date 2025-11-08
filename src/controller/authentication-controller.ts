@@ -50,7 +50,6 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
-import ServerSettingsStore from '../server-settings/server-settings-store';
 
 /**
  * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
@@ -182,15 +181,8 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('PIN authentication for user', body.userId);
 
     try {
-      // TODO: Remove this assertion when strictPosToken setting is removed
-      const strictPosToken = ServerSettingsStore.getInstance().getSetting('strictPosToken');
-      if (strictPosToken && !body.posId) {
-        res.status(400).json('posId is required when strictPosToken is enabled.');
-        return;
-      }
-
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
-        this.tokenHandler, body.pin, body.userId, body.posId))(req, res);
+        this.tokenHandler, body.pin, body.userId))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');
@@ -204,7 +196,7 @@ export default class AuthenticationController extends BaseController {
    * @param tokenHandler
    * @param pin - Provided PIN code
    * @param userId - Provided User
-   * @param posId - Optional POS identifier
+   * @param posId - Optional POS identifier (only used by secure endpoints)
    * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
@@ -446,15 +438,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      // TODO: Remove this assertion when strictPosToken setting is removed
-      const strictPosToken = ServerSettingsStore.getInstance().getSetting('strictPosToken') as boolean;
-      if (strictPosToken && !body.posId) {
-        res.status(400).json('posId is required when strictPosToken is enabled.');
-        return;
-      }
-
-      const { nfcCode, posId } = body;
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: nfcCode } });
+      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -472,7 +456,6 @@ export default class AuthenticationController extends BaseController {
       const token = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
         context,
-        posId,
       });
       res.json(token);
     } catch (error) {

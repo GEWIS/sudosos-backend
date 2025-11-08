@@ -27,9 +27,7 @@
 /**
  * @typedef {object} AuthenticationNfcRequest
  * @property {string} nfcCode.required
- * @property {number} posId - Optional POS identifier
  */
 export default interface AuthenticationNfcRequest {
   nfcCode: string;
-  posId?: number;
 }

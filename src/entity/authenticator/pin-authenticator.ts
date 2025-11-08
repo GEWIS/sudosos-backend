@@ -28,8 +28,9 @@ import {
 import HashBasedAuthenticationMethod from './hash-based-authentication-method';
 
 /**
- * PIN Authentication returns a lesser JWT token and should only be used for authenticating at a point of sale.
+ * PIN Authentication can return a lesser JWT token (when posId is provided) and should only be used for authenticating at a point of sale.
  * The reason for returning a lesser JWT token is to prevent brute-force attacks, since PINs are 4-digit numbers and could easily be guessed.
+ * A token is considered "lesser" if it has a posId property set.
  *
  * PIN Authentication is a _hash-based authentication method_. This means that the PIN code is hashed and stored in the database, and later compared against the input of the user.
  *
