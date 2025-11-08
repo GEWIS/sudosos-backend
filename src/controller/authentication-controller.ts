@@ -299,7 +299,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       // AD login gives full access.
-      const token = await service.getSaltedToken(user, context);
+      const token = await service.getSaltedToken({ user, context });
       res.json(token);
     };
   }
@@ -469,7 +469,11 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context, undefined, undefined, posId);
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+        posId,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
@@ -505,7 +509,10 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await new AuthenticationService().getSaltedToken(authenticator.user, context);
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
@@ -584,11 +591,11 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: body.userId } });
-      const response = await new AuthenticationService().getSaltedToken(
+      const response = await new AuthenticationService().getSaltedToken({
         user,
-        { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
-        body.nonce,
-      );
+        context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
+        salt: body.nonce,
+      });
       res.json(response);
     } catch (error) {
       this.logger.error('Could not create token:', error);

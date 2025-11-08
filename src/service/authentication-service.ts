@@ -242,7 +242,7 @@ export default class AuthenticationService extends WithManager {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
 
-    return this.getSaltedToken(authenticator.user, context, undefined, undefined, posId);
+    return this.getSaltedToken({ user: authenticator.user, context, posId });
   }
 
   /**
@@ -436,16 +436,20 @@ export default class AuthenticationService extends WithManager {
 
   /**
    * Created a salted JWT token for the given userId.
-   * @param user
-   * @param context
-   * @param salt
-   * @param expiry Custom expiry time (in seconds). If not set,
-   * the default tokenHandler expiry will be used
-   * @param posId Optional POS identifier. If provided, creates a lesser token (restricted access).
+   * @param params.user - The user for which to generate the token
+   * @param params.context - Authentication context with role manager and token handler
+   * @param params.salt - Optional salt for token generation. If not provided, a new salt will be generated.
+   * @param params.expiry - Custom expiry time (in seconds). If not set, the default tokenHandler expiry will be used
+   * @param params.posId - Optional POS identifier. If provided, creates a lesser token (restricted access).
    */
-  public async getSaltedToken(
-    user: User, context: AuthenticationContext, salt?: string, expiry?: number, posId?: number,
-  ): Promise<AuthenticationResponse> {
+  public async getSaltedToken(params: {
+    user: User;
+    context: AuthenticationContext;
+    salt?: string;
+    expiry?: number;
+    posId?: number;
+  }): Promise<AuthenticationResponse> {
+    const { user, context, salt, expiry, posId } = params;
     const [froles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
       context.roleManager.getUserOrgans(user),
@@ -454,8 +458,8 @@ export default class AuthenticationService extends WithManager {
     const roleNames = roles.map((r) => r.name);
     const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
     const contents = await this.makeJsonWebToken(user, roles, organs, overrideMaintenance, posId);
-    if (!salt) salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
-    const token = await context.tokenHandler.signToken(contents, salt, expiry);
+    const finalSalt = salt || await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
+    const token = await context.tokenHandler.signToken(contents, finalSalt, expiry);
 
     return AuthenticationService.asAuthenticationResponse(contents.user, roles, contents.organs, token);
   }

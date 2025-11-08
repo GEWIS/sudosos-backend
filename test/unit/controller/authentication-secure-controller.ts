@@ -588,10 +588,10 @@ describe('AuthenticationSecureController', () => {
 
       // Verify authentication service was called with correct parameters
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
-      const [user, context] = authenticationServiceStub.getSaltedToken.getCall(0).args;
-      expect(user.id).to.equal(ctx.memberUser.id);
-      expect(context.roleManager).to.be.an('object');
-      expect(context.tokenHandler).to.equal(ctx.tokenHandler);
+      const params = authenticationServiceStub.getSaltedToken.getCall(0).args[0];
+      expect(params.user.id).to.equal(ctx.memberUser.id);
+      expect(params.context.roleManager).to.be.an('object');
+      expect(params.context.tokenHandler).to.equal(ctx.tokenHandler);
     });
 
     it('should test WebSocketService.emitQRConfirmed method directly', async () => {

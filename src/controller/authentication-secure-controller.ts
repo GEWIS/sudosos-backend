@@ -110,10 +110,14 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: req.token.user.id } });
-      const token = await new AuthenticationService().getSaltedToken(user, {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      }, undefined, undefined, req.token.posId);
+      const token = await new AuthenticationService().getSaltedToken({
+        user,
+        context: {
+          roleManager: this.roleManager,
+          tokenHandler: this.tokenHandler,
+        },
+        posId: req.token.posId,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
@@ -144,10 +148,14 @@ export default class AuthenticationSecureController extends BaseController {
       }
 
       const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
-      const token = await new AuthenticationService().getSaltedToken(pointOfSale.user, {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      }, undefined, expiry);
+      const token = await new AuthenticationService().getSaltedToken({
+        user: pointOfSale.user,
+        context: {
+          roleManager: this.roleManager,
+          tokenHandler: this.tokenHandler,
+        },
+        expiry,
+      });
       res.json(token);
     } catch (error) {
       this.logger.error('Could not create token:', error);
@@ -190,10 +198,14 @@ export default class AuthenticationSecureController extends BaseController {
       }
 
       const user = await User.findOne({ where: { id: req.token.user.id } });
-      const token = await new AuthenticationService().getSaltedToken(user, {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      }, undefined, undefined, req.token.posId);
+      const token = await new AuthenticationService().getSaltedToken({
+        user,
+        context: {
+          roleManager: this.roleManager,
+          tokenHandler: this.tokenHandler,
+        },
+        posId: req.token.posId,
+      });
 
       // Let the service handle all business logic validation
       await (new QRService()).confirm(qrAuthenticator, user);
