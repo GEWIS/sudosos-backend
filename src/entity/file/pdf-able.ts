@@ -27,7 +27,7 @@
 import Pdf from './pdf-file';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import { PdfService, RouteParams, UnstoredPdfService } from '../../service/pdf/pdf-service';
+import { IPdfServiceBase } from '../../service/pdf/pdf-service';
 import { hashJSON } from '../../helpers/hash';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
@@ -40,6 +40,8 @@ export interface IPdfAble<S extends Pdf = Pdf> extends BaseEntity {
   createPdf(): Promise<S>
 
   getOwner(): Promise<User>
+
+  pdfService: IPdfServiceBase<this>
 }
 
 /**
@@ -61,8 +63,9 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
 
     /**
      * The service that creates the Pdf file.
+     * Can be either a LaTeX-based service (PdfService) or HTML-based service (HtmlPdfService).
      */
-    abstract pdfService: PdfService<Pdf, this, RouteParams>;
+    abstract pdfService: IPdfServiceBase<this>;
 
     /**
      * Get the owner of the Pdf file.
@@ -74,7 +77,11 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
      * Create the Pdf file.
      */
     async createPdf(): Promise<Pdf> {
-      return this.pdfService.createPdf(this as any);
+      const result = await this.pdfService.createPdf(this as any);
+      if (result instanceof Pdf) {
+        return result;
+      }
+      throw new Error('Expected PdfService.createPdf() to return a Pdf entity, but got Buffer instead');
     }
 
     /**
@@ -114,25 +121,34 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
 
 export interface IUnstoredPdfAble {
   createPdf(): Promise<Buffer>;
+  pdfService: IPdfServiceBase<this>;
 }
 
 export function UnstoredPdfAble<TBase extends Constructor>(Base: TBase) {
   abstract class UnstoredPdfAbleClass extends Base implements IUnstoredPdfAble {
     /**
      * The service that creates the Pdf buffer.
+     * Can be either a LaTeX-based service (UnstoredPdfService) or HTML-based service (HtmlUnstoredPdfService).
      */
-    abstract pdfService: UnstoredPdfService<UnstoredPdfAbleClass, RouteParams>;
+    abstract pdfService: IPdfServiceBase<UnstoredPdfAbleClass>;
 
     /**
      * Create the Pdf buffer.
      * This method generates the PDF and returns it as a Buffer.
      */
     async createPdf(): Promise<Buffer> {
-      return this.pdfService.createPdf(this as UnstoredPdfAbleClass);
+      return this.pdfService.createPdf(this as UnstoredPdfAbleClass) as Promise<Buffer>;
     }
 
+    async createRaw(): Promise<Buffer> {
+      return this.pdfService.createRaw(this as UnstoredPdfAbleClass);
+    }
+
+    /**
+     * @deprecated Use createRaw() instead
+     */
     async createTex(): Promise<Buffer> {
-      return this.pdfService.createTex(this as UnstoredPdfAbleClass);
+      return this.createRaw();
     }
 
     async getPdfParamHash(): Promise<string> {
