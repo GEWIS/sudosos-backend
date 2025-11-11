@@ -38,7 +38,8 @@ import { PdfError } from '../../errors';
 import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
 import WithManager from '../../database/with-manager';
 import PdfTemplateGenerator from './pdf-template-generator';
-import { client, postCompileHtml } from '@gewis/pdf-compiler-ts';
+import { postCompileHtml } from '@gewis/pdf-compiler-ts';
+import { createClient, type Client as PdfCompilerClient } from '@gewis/pdf-compiler-ts/dist/client/client';
 
 /**
  * Base interface for all PDF services (both LaTeX and HTML-based).
@@ -141,6 +142,8 @@ export abstract class BasePdfService<T, R extends RouteParams> extends WithManag
 export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = PdfTemplateParameters> extends WithManager implements IPdfServiceBase<T> {
   protected htmlPdfGenUrl: string;
 
+  protected client: PdfCompilerClient;
+
   /**
    * The template file name (e.g., 'invoice.html') located in static/pdf/
    * The template should use {{ key }} placeholders that will be replaced with data from getParameters().
@@ -150,8 +153,8 @@ export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = Pd
   constructor(manager?: EntityManager) {
     super(manager);
     this.htmlPdfGenUrl = process.env.HTML_PDF_GEN_URL ?? 'http://localhost:3001';
-    // Configure the PDF compiler client with the base URL
-    client.setConfig({ baseUrl: this.htmlPdfGenUrl });
+    // Create a client instance per service instance to avoid race conditions
+    this.client = createClient({ baseUrl: this.htmlPdfGenUrl });
   }
 
   /**
@@ -178,7 +181,7 @@ export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = Pd
   protected async compileHtml(html: string): Promise<Buffer> {
     try {
       const data = await postCompileHtml<true>({
-        client,
+        client: this.client,
         body: { html },
         parseAs: 'stream',
       });
