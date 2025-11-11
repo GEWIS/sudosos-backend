@@ -50,6 +50,15 @@ export enum UserType {
 }
 
 /**
+ * All choices a user can make for their receipts
+ */
+export enum TransactionReceiptsOption {
+  NEVER = 'NEVER',
+  CHARGEDBYOTHERS = 'CHARGEDBYOTHERS',
+  ALWAYS = 'ALWAYS',
+}
+
+/**
  * All user types that should be allowed to have a local password.
  */
 export const LocalUserTypes = [
@@ -88,6 +97,7 @@ export const EligibleInactiveUsers: UserType[] = [
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
  * @property {string} type.required - The type of user.
+ * @property {string} transactionReceipt.required - Which transaction receipts a user would like to receive
  */
 @Entity()
 export default class User extends BaseEntity {
@@ -156,6 +166,12 @@ export default class User extends BaseEntity {
     default: false,
   })
   public inactiveNotificationSend: boolean;
+
+  @Column({
+    nullable: false,
+    default: TransactionReceiptsOption.NEVER,
+  })
+  public transactionReceipts: TransactionReceiptsOption;
 
   @OneToOne(() => UserFineGroup, {
     nullable: true,
