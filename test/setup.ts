@@ -46,7 +46,14 @@ use(chaiSorted);
 use(deepEqualInAnyOrder);
 
 config();
-process.env.NODE_ENV = 'test';
+
+if (process.env.NODE_ENV === 'js-test') {
+  process.env.NODE_ENV = 'js-test';
+} else {
+  process.env.NODE_ENV = 'test';
+}
+
+
 if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
@@ -91,7 +98,8 @@ export function sourceFile(file: string) {
 // We should only ever truncate in test.
 // For non-persistent databases (sqlite) we can just drop them.
 function shouldTruncate(): boolean {
-  if (process.env.NODE_ENV !== 'test') return false;
+  const isTestEnv = process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'js-test';
+  if (!isTestEnv) return false;
   return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
 }
 
