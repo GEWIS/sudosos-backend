@@ -154,7 +154,11 @@ describe('WriteOffPdfService', () => {
         data: new Blob(),
         status: 200,
       });
-      uploadWriteOffStub.resolves({});
+      const newPdf = Object.assign(new WriteOffPdf(), {
+        ...ctx.pdfParams,
+        hash: await writeOff.getPdfParamHash(),
+      });
+      uploadWriteOffStub.resolves(newPdf);
       writeOff.pdfService = pdfService;
 
       await writeOff.getOrCreatePdf();
@@ -180,7 +184,11 @@ describe('WriteOffPdfService', () => {
         data: new Blob(),
         status: 200,
       });
-      uploadWriteOffStub.resolves({});
+      const newPdf = Object.assign(new WriteOffPdf(), {
+        ...ctx.pdfParams,
+        hash: await writeOff.getPdfParamHash(),
+      });
+      uploadWriteOffStub.resolves(newPdf);
       writeOff.pdfService = pdfService;
 
       await writeOff.getOrCreatePdf(true);
@@ -198,9 +206,14 @@ describe('WriteOffPdfService', () => {
       });
 
       const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
-      uploadWriteOffStub.resolves({
+      const newPdf = Object.assign(new WriteOffPdf(), {
         hash: await writeOff.getPdfParamHash(),
+        downloadName: 'test',
+        location: 'test',
+        createdBy: writeOff.to,
+        id: 42,
       });
+      uploadWriteOffStub.resolves(newPdf);
       createFileStub.resolves({
         downloadName: 'test',
         location: 'test',

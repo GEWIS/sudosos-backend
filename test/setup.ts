@@ -47,6 +47,9 @@ use(deepEqualInAnyOrder);
 
 config();
 process.env.NODE_ENV = 'test';
+if (!process.env.LOG_LEVEL) {
+  process.env.LOG_LEVEL = 'OFF';
+}
 if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
