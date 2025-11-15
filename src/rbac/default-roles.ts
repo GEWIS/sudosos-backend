@@ -191,6 +191,9 @@ export default class DefaultRoles {
         ProductCategory: {
           get: { all: star },
         },
+        Transaction: {
+          get: { own: star },
+        },
       },
     }, {
       name: 'Super admin',
