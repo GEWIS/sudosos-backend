@@ -546,7 +546,7 @@ export default class PointOfSaleController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const pointOfSaleId = asNumber(req.params.id);
-    const pos: PointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: ['owner'] });
+    const pos: PointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: ['owner', 'user'] });
 
     if (!pos) return 'all';
     if (userTokenInOrgan(req, pos.owner.id)) return 'organ';
