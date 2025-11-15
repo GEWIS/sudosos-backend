@@ -237,7 +237,7 @@ export default class PointOfSaleService {
   public static async canViewPointOfSale(userId: number, pointOfSale: PointOfSale)
     : Promise<boolean> {
     if (!pointOfSale) return false;
-    return pointOfSale.owner.id === userId;
+    return pointOfSale.owner.id === userId || pointOfSale.user.id === userId;
   }
 
   public static async getOptions(params: PointOfSaleParameters, user?: User): Promise<FindManyOptions<PointOfSaleRevision>> {
