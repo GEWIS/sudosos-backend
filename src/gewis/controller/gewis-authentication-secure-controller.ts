@@ -80,6 +80,7 @@ export default class GewisAuthenticationSecureController extends BaseController 
    * @summary Secure GEWIS PIN authentication that requires POS user authentication
    * @operationId secureGewisPINAuthentication
    * @tags authenticate - Operations of authentication controller
+   * @security JWT
    * @param {GEWISAuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)

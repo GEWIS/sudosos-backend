@@ -244,6 +244,7 @@ export default class AuthenticationSecureController extends BaseController {
    * @summary Secure PIN authentication that requires POS user authentication
    * @operationId securePINAuthentication
    * @tags authenticate - Operations of authentication controller
+   * @security JWT
    * @param {AuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
