@@ -123,6 +123,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
     canGoIntoDebt: user.canGoIntoDebt,
+    transactionReceipts: user.transactionReceipts,
   };
 }
 
@@ -142,6 +143,7 @@ export interface RawUser {
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: number,
   canGoIntoDebt: number,
+  transactionReceipts: string,
 }
 
 /**
@@ -165,6 +167,7 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,
+    transactionReceipts: user.transactionReceipts,
   };
 }
 
