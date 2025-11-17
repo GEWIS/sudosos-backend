@@ -84,6 +84,12 @@ export default class AuthenticationController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
+      '/public': {
+        GET: {
+          policy: async () => true,
+          handler: this.getJWTPublicKey.bind(this),
+        },
+      },
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
@@ -164,6 +170,25 @@ export default class AuthenticationController extends BaseController {
     if (!user) return false;
 
     return true;
+  }
+
+  /**
+   * GET /authentication/public
+   * @summary Get the JWT public key used by SudoSOS
+   * @operationId getJWTPublicKey
+   * @tags authenticate - Operations of authentication controller
+   * @returns {string} 200 - Public key
+   */
+  public async getJWTPublicKey(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get JWT public key by IP', req.ip);
+
+    try {
+      const publicKey = this.tokenHandler.getOptions().publicKey;
+      res.json(publicKey);
+    } catch (error) {
+      this.logger.error('Could not get JWT public key:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
