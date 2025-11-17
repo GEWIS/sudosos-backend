@@ -37,7 +37,17 @@ import { toMySQLString } from '../helpers/timestamps';
 export interface BannerFilterParameters {
   bannerId?: number,
   active?: boolean,
+  /**
+   * Filter banners by whether their endDate has passed.
+   * true: returns banners where endDate <= now
+   * false: returns banners where endDate > now
+   */
   expired?: boolean,
+  /**
+   * Sort order for banners by startDate.
+   * 'ASC': ascending order (oldest first)
+   * 'DESC': descending order (newest first, default)
+   */
   order?: 'ASC' | 'DESC',
 }
 

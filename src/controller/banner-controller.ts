@@ -133,21 +133,11 @@ export default class BannerController extends BaseController {
     const filters: BannerFilterParameters = {};
 
     if (req.query.active !== undefined) {
-      try {
-        filters.active = asBoolean(req.query.active);
-      } catch (e) {
-        res.status(400).send('Invalid active parameter.');
-        return;
-      }
+      filters.active = asBoolean(req.query.active);
     }
 
     if (req.query.expired !== undefined) {
-      try {
-        filters.expired = asBoolean(req.query.expired);
-      } catch (e) {
-        res.status(400).send('Invalid expired parameter.');
-        return;
-      }
+      filters.expired = asBoolean(req.query.expired);
     }
 
     if (req.query.order !== undefined) {
