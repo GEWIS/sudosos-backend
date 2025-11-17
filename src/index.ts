@@ -84,6 +84,7 @@ import SyncController from './controller/sync-controller';
 import getAppLogger from './helpers/logging';
 import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
+import './notifications';
 
 export class Application {
   app: express.Express;
