@@ -175,6 +175,15 @@ describe('AuthenticationController', async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 
+  describe('GET /authentication/public', () => {
+    it('should return HTTP 200 and JWT public key', async () => {
+      const res = await request(ctx.app)
+        .get('/authentication/public');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.equal(ctx.tokenHandler.getOptions().publicKey);
+    });
+  });
+
   describe('POST /authentication/mock', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
