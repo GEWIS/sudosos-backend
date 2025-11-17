@@ -33,7 +33,7 @@ import PointOfSale from '../../entity/point-of-sale/point-of-sale';
 import { UserType } from '../../entity/user/user';
 import AuthenticationController from '../../controller/authentication-controller';
 import GEWISAuthenticationSecurePinRequest from './request/gewis-authentication-secure-pin-request';
-import GewisUser from '../entity/gewis-user';
+import MemberUser from '../../entity/user/member-user';
 
 /**
  * Handles authenticated-only GEWIS authentication endpoints for secure PIN authentication.
@@ -105,13 +105,13 @@ export default class GewisAuthenticationSecureController extends BaseController 
         return;
       }
 
-      // Look up the GEWIS user by gewisId
-      const gewisUser = await GewisUser.findOne({
-        where: { gewisId: body.gewisId },
+      // Look up the GEWIS user by memberId
+      const memberUser = await MemberUser.findOne({
+        where: { memberId: body.gewisId },
         relations: ['user'],
       });
 
-      if (!gewisUser) {
+      if (!memberUser) {
         res.status(403).json({
           message: `User ${body.gewisId} not registered`,
         });
@@ -120,7 +120,7 @@ export default class GewisAuthenticationSecureController extends BaseController 
 
       // Reuse the PIN login constructor logic
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
-        this.tokenHandler, body.pin, gewisUser.user.id, body.posId))(req, res);
+        this.tokenHandler, body.pin, memberUser.user.id, body.posId))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using secure GEWIS PIN:', error);
       res.status(500).json('Internal server error.');

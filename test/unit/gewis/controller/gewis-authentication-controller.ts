@@ -35,7 +35,7 @@ import RoleManager from '../../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../../src/controller/response/authentication-response';
 import GewisAuthenticationController from '../../../../src/gewis/controller/gewis-authentication-controller';
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
-import GewisUser from '../../../../src/gewis/entity/gewis-user';
+import MemberUser from '../../../../src/entity/user/member-user';
 import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';
@@ -55,8 +55,8 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     controller: GewisAuthenticationController,
     user: User,
     user2: User,
-    gewisUser1: GewisUser,
-    gewisUser2: GewisUser,
+    memberUser1: MemberUser,
+    memberUser2: MemberUser,
     secret: string,
   };
 
@@ -84,18 +84,18 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
         type: UserType.LOCAL_ADMIN,
         active: true,
       } as User),
-      gewisUser1: await GewisUser.save({
+      memberUser1: await MemberUser.save({
         user: {
           id: 1,
         } as User,
-        gewisId: 11,
-      } as GewisUser),
-      gewisUser2: await GewisUser.save({
+        memberId: 11,
+      } as MemberUser),
+      memberUser2: await MemberUser.save({
         user: {
           id: 2,
         } as User,
-        gewisId: 12,
-      } as GewisUser),
+        memberId: 12,
+      } as MemberUser),
       secret: '42',
     };
 
@@ -148,7 +148,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
   describe('POST /authentication/gewisweb', () => {
     it('should be able to create token', async () => {
       const req = {
-        token: jwt.sign({ lidnr: ctx.gewisUser1.gewisId } as GewiswebToken, ctx.secret, {
+        token: jwt.sign({ lidnr: ctx.memberUser1.memberId } as GewiswebToken, ctx.secret, {
           algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
@@ -173,7 +173,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     });
     it('should contain the correct roles', async () => {
       let req = {
-        token: jwt.sign({ lidnr: ctx.gewisUser1.gewisId } as GewiswebToken, ctx.secret, {
+        token: jwt.sign({ lidnr: ctx.memberUser1.memberId } as GewiswebToken, ctx.secret, {
           algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
@@ -188,7 +188,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
       expect(token.roles).to.be.empty;
 
       req = {
-        token: jwt.sign({ lidnr: ctx.gewisUser2.gewisId } as GewiswebToken, ctx.secret, {
+        token: jwt.sign({ lidnr: ctx.memberUser2.memberId } as GewiswebToken, ctx.secret, {
           algorithm: 'HS512',
         }),
         nonce: 'HelloWorld',
@@ -204,7 +204,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     });
     it('should give an HTTP 403 when user does not exist', async () => {
       const req = {
-        token: jwt.sign({ lidnr: ctx.gewisUser2.gewisId + 1 } as GewiswebToken, ctx.secret, {
+        token: jwt.sign({ lidnr: ctx.memberUser2.memberId + 1 } as GewiswebToken, ctx.secret, {
           algorithm: 'HS256',
         }),
         nonce: 'HelloWorld',
@@ -216,7 +216,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     });
     it('should give an HTTP 403 with invalid JWT signature', async () => {
       const req = {
-        token: jwt.sign({ lidnr: ctx.gewisUser2.gewisId } as GewiswebToken, 'Imposter', {
+        token: jwt.sign({ lidnr: ctx.memberUser2.memberId } as GewiswebToken, 'Imposter', {
           algorithm: 'HS256',
         }),
         nonce: 'HelloWorld',

@@ -33,7 +33,6 @@ import dinero, { Currency } from 'dinero.js';
 import { DataSource } from 'typeorm';
 import BalanceService from './service/balance-service';
 import RoleManager from './rbac/role-manager';
-import Gewis from './gewis/gewis';
 import DefaultRoles from './rbac/default-roles';
 import LdapSyncService from './service/sync/user/ldap-sync-service';
 import { UserSyncService } from './service/sync/user/user-sync-service';
@@ -96,10 +95,6 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   application.logger.info('Updating balances...');
   await new BalanceService().updateBalances({});
   application.logger.info('Balances updated');
-
-  // INJECT GEWIS BINDINGS
-  Gewis.overwriteBindings();
-  application.logger.info('GEWIS bindings injected');
 
   // Setup user synchronization services based on environment variables
   const syncServices: UserSyncService[] = [];

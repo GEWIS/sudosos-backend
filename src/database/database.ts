@@ -38,7 +38,7 @@ import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import Container from '../entity/container/container';
 import VoucherGroup from '../entity/user/voucher-group';
 import LocalUser from '../entity/user/local-user';
-import GewisUser from '../gewis/entity/gewis-user';
+import MemberUser from '../entity/user/member-user';
 import UserVoucherGroup from '../entity/user/user-voucher-group';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import OrganMembership from '../entity/organ/organ-membership';
@@ -96,6 +96,7 @@ import InactiveAdministrativeCost from '../entity/transactions/inactive-administ
 import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
+import { RenameGewisToExternal1763399087409 } from '../migrations/1763399087409-rename-gewis-to-external';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -124,6 +125,7 @@ const options: DataSourceOptions = {
     MemberAuthenticator1761324427011,
     AddOrganMembershipIndex1761328648026,
     UserAdministrativeCost1761845457283,
+    RenameGewisToExternal1763399087409,
   ],
   extra: {
     authPlugins: {
@@ -160,7 +162,7 @@ const options: DataSourceOptions = {
     VoucherGroup,
     User,
     LocalUser,
-    GewisUser,
+    MemberUser,
     UserVoucherGroup,
     EanAuthenticator,
     OrganMembership,

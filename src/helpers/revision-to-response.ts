@@ -142,6 +142,7 @@ export interface RawUser {
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: number,
   canGoIntoDebt: number,
+  externalId?: number, // This is the memberId from member_user table, kept as externalId for API compatibility
 }
 
 /**
@@ -165,6 +166,8 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,
+    externalId: user.externalId,
+    gewisId: user.externalId, // Deprecated: kept for backward compatibility
   };
 }
 
@@ -187,3 +190,4 @@ export function parseInvoiceUserToResponse(invoiceUser: InvoiceUser): InvoiceUse
     user: parseUserToBaseResponse(invoiceUser.user, false),
   };
 }
+

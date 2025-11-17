@@ -41,13 +41,15 @@ import TransferService, { TransferFilterParameters } from './transfer-service';
 import Mailer from '../mailer';
 import WelcomeToSudosos from '../mailer/messages/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
-import Bindings from '../helpers/bindings';
+import { parseRawUserToResponse } from '../helpers/revision-to-response';
 import AuthenticationService from './authentication-service';
 import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
-import { Brackets, In } from 'typeorm';
+import { Brackets, In, SelectQueryBuilder } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
+import MemberUser from '../entity/user/member-user';
+import { AppDataSource } from '../database/database';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -96,6 +98,35 @@ export function parseGetFinancialMutationsFilters(req: RequestWithToken): Financ
   };
 }
 
+/**
+ * Creates a query builder for users that always includes member_user join
+ * @returns SelectQueryBuilder with user and member_user joined
+ */
+function getUserBuilder(): SelectQueryBuilder<User> {
+  return AppDataSource.createQueryBuilder()
+    .select([
+      'user.id as id',
+      'user.firstName as firstName',
+      'user.lastName as lastName',
+      'user.nickname as nickname',
+      'user.active as active',
+      'user.deleted as deleted',
+      'user.type as type',
+      'user.email as email',
+      'user.acceptedToS as acceptedToS',
+      'user.extensiveDataProcessing as extensiveDataProcessing',
+      'user.ofAge as ofAge',
+      'user.canGoIntoDebt as canGoIntoDebt',
+      'user.createdAt as createdAt',
+      'user.updatedAt as updatedAt',
+      'user.version as version',
+      'member_user.memberId as externalId',
+    ])
+    .from(User, 'user')
+    .leftJoin(MemberUser, 'member_user', 'member_user.userId = user.id')
+    .orderBy({ 'user.id': 'ASC' });
+}
+
 export default class UserService {
   /**
    * Function for getting al Users
@@ -139,7 +170,7 @@ export default class UserService {
       }
     }
 
-    const builder = Bindings.Users.getBuilder();
+    const builder = getUserBuilder();
     builder.where(`user.type NOT IN ("${UserType.POINT_OF_SALE}")`);
 
     QueryFilter.applyFilter(builder, filterMapping, f);
@@ -170,7 +201,7 @@ export default class UserService {
     const users = await builder.limit(take).offset(skip).getRawMany();
     const count = await builder.getCount();
 
-    const records = users.map((u) => Bindings.Users.parseToResponse(u, true));
+    const records = users.map((u) => parseRawUserToResponse(u, true));
 
     return {
       _pagination: {

@@ -32,6 +32,8 @@ import { Application } from '../index';
 import seedDatabase from '../../test/seed';
 import initializeDiskStorage from '../files/initialize';
 import { truncateAllTables } from '../../test/setup';
+import MemberUser from '../entity/user/member-user';
+import User from '../entity/user/user';
 
 export default async function createApp() {
   const application = new Application();
@@ -59,6 +61,27 @@ export default async function createApp() {
   } catch (e) {
     application.logger.error('Seeding failed', e);
   }
+}
+
+/**
+ * Seeds a default dataset of Member Users, and stores them in the database.
+ * @param users - Array of users to create member user entries for
+ * @returns Array of created member users
+ */
+export async function seedMemberUsers(users: User[]): Promise<MemberUser[]> {
+  const memberUsers: MemberUser[] = [];
+
+  const promises: Promise<any>[] = [];
+  for (let i = 0; i < users.length; i += 1) {
+    const memberUser = Object.assign(new MemberUser(), {
+      user: users[i],
+      memberId: 1000 + i,
+    });
+    promises.push(MemberUser.save(memberUser).then((u) => memberUsers.push(u)));
+  }
+
+  await Promise.all(promises);
+  return memberUsers;
 }
 
 if (require.main === module) {
