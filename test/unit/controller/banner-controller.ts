@@ -254,6 +254,187 @@ describe('BannerController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${ctx.token}`);
       expect(res.status).to.equal(403);
     });
+    it('should filter by active=true', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ active: true })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      const activeBanners = ctx.banners.filter((b) => b.active);
+
+      expect(banners.length).to.equal(activeBanners.length);
+      banners.forEach((bannerResponse) => {
+        const banner = ctx.banners.find((b) => b.id === bannerResponse.id);
+        expect(banner.active).to.be.true;
+        expect(bannerEq(banner, bannerResponse)).to.be.true;
+      });
+    });
+    it('should filter by active=false', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ active: false })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      const inactiveBanners = ctx.banners.filter((b) => !b.active);
+
+      expect(banners.length).to.equal(inactiveBanners.length);
+      banners.forEach((bannerResponse) => {
+        const banner = ctx.banners.find((b) => b.id === bannerResponse.id);
+        expect(banner.active).to.be.false;
+        expect(bannerEq(banner, bannerResponse)).to.be.true;
+      });
+    });
+    it('should filter by expired=true', async () => {
+      // Create a banner with past endDate
+      const expiredBanner = Object.assign(new Banner(), {
+        name: 'Expired Banner',
+        duration: 10,
+        active: true,
+        startDate: new Date('2000-01-01'),
+        endDate: new Date('2000-01-02'),
+      });
+      await Banner.save(expiredBanner);
+
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ expired: true })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (const bannerResponse of banners) {
+        const banner = await Banner.findOne({ where: { id: bannerResponse.id } });
+        expect(banner.endDate.getTime()).to.be.at.most(new Date().getTime());
+      }
+
+      // Cleanup
+      await Banner.delete(expiredBanner.id);
+    });
+    it('should filter by expired=false', async () => {
+      // Create a banner with future endDate
+      const futureBanner = Object.assign(new Banner(), {
+        name: 'Future Banner',
+        duration: 10,
+        active: true,
+        startDate: new Date('3000-01-01'),
+        endDate: new Date('3000-01-02'),
+      });
+      await Banner.save(futureBanner);
+
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ expired: false })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (const bannerResponse of banners) {
+        const banner = await Banner.findOne({ where: { id: bannerResponse.id } });
+        expect(banner.endDate.getTime()).to.be.greaterThan(new Date().getTime());
+      }
+
+      // Cleanup
+      await Banner.delete(futureBanner.id);
+    });
+    it('should order by startDate ASC', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ order: 'ASC' })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = new Date(banners[i - 1].startDate).getTime();
+        const currDate = new Date(banners[i].startDate).getTime();
+        expect(currDate).to.be.at.least(prevDate);
+      }
+    });
+    it('should order by startDate DESC', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ order: 'DESC' })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = new Date(banners[i - 1].startDate).getTime();
+        const currDate = new Date(banners[i].startDate).getTime();
+        expect(currDate).to.be.at.most(prevDate);
+      }
+    });
+    it('should default to DESC order when order is not specified', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = new Date(banners[i - 1].startDate).getTime();
+        const currDate = new Date(banners[i].startDate).getTime();
+        expect(currDate).to.be.at.most(prevDate);
+      }
+    });
+    it('should return HTTP 400 for invalid order parameter', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ order: 'INVALID' })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Invalid order parameter. Must be ASC or DESC.');
+    });
+    it('should combine active and expired filters', async () => {
+      // Create an active, non-expired banner
+      const activeFutureBanner = Object.assign(new Banner(), {
+        name: 'Active Future Banner',
+        duration: 10,
+        active: true,
+        startDate: new Date('3000-01-01'),
+        endDate: new Date('3000-01-02'),
+      });
+      await Banner.save(activeFutureBanner);
+
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ active: true, expired: false })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      for (const bannerResponse of banners) {
+        const banner = await Banner.findOne({ where: { id: bannerResponse.id } });
+        expect(banner.active).to.be.true;
+        expect(banner.endDate.getTime()).to.be.greaterThan(new Date().getTime());
+      }
+
+      // Cleanup
+      await Banner.delete(activeFutureBanner.id);
+    });
+    it('should combine filters with order', async () => {
+      const res = await request(ctx.app)
+        .get('/banners')
+        .query({ active: true, order: 'ASC' })
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+
+      const banners = res.body.records as BannerResponse[];
+      banners.forEach((bannerResponse) => {
+        const banner = ctx.banners.find((b) => b.id === bannerResponse.id);
+        expect(banner.active).to.be.true;
+      });
+
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = new Date(banners[i - 1].startDate).getTime();
+        const currDate = new Date(banners[i].startDate).getTime();
+        expect(currDate).to.be.at.least(prevDate);
+      }
+    });
   });
 
   describe('GET /banners/active', () => {
@@ -322,12 +503,13 @@ describe('BannerController', async (): Promise<void> => {
         .post('/banners')
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validBannerReq);
+      expect(res.status).to.equal(200);
 
       // check if number of banners in the database increased
       expect(count + 1).to.equal(await Banner.count());
 
       // check if posted banner is indeed in the database
-      const databaseBanner = await Banner.findOne({ where: { id: count + 1 } });
+      const databaseBanner = await Banner.findOne({ where: { id: res.body.id } });
       expect(bannerEq(databaseBanner, res.body as BannerResponse)).to.be.true;
 
       // success code
