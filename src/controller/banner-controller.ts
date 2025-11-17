@@ -29,11 +29,12 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
-import BannerService from '../service/banner-service';
+import BannerService, { BannerFilterParameters } from '../service/banner-service';
 import Banner from '../entity/banner';
 import FileService from '../service/file-service';
 import { BANNER_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination } from '../helpers/pagination';
+import { asBoolean } from '../helpers/validators';
 
 /**
  * Controller for managing all routes related to the `banner` entity.
@@ -107,6 +108,9 @@ export default class BannerController extends BaseController {
    * @security JWT
    * @param {integer} take.query - How many banners the endpoint should return
    * @param {integer} skip.query - How many banners should be skipped (for pagination)
+   * @param {boolean} active.query - Filter by active status
+   * @param {boolean} expired.query - Filter by expired status (endDate <= now)
+   * @param {string} order.query - Sort order by startDate (ASC or DESC, default: DESC)
    * @return {PaginatedBannerResponse} 200 - All existing banners
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -125,9 +129,40 @@ export default class BannerController extends BaseController {
       return;
     }
 
+    // Parse filter parameters
+    const filters: BannerFilterParameters = {};
+
+    if (req.query.active !== undefined) {
+      try {
+        filters.active = asBoolean(req.query.active);
+      } catch (e) {
+        res.status(400).send('Invalid active parameter.');
+        return;
+      }
+    }
+
+    if (req.query.expired !== undefined) {
+      try {
+        filters.expired = asBoolean(req.query.expired);
+      } catch (e) {
+        res.status(400).send('Invalid expired parameter.');
+        return;
+      }
+    }
+
+    if (req.query.order !== undefined) {
+      const order = String(req.query.order).toUpperCase();
+      if (order === 'ASC' || order === 'DESC') {
+        filters.order = order;
+      } else {
+        res.status(400).send('Invalid order parameter. Must be ASC or DESC.');
+        return;
+      }
+    }
+
     // handle request
     try {
-      res.json(await BannerService.getBanners({}, { take, skip }));
+      res.json(await BannerService.getBanners(filters, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
