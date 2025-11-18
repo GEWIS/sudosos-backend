@@ -51,6 +51,7 @@ export interface BaseUserResponse extends BaseResponse {
  * user can be used (non-anonymously) for more data science!
  * @property {boolean} ofAge - Whether someone is old enough to drink beer
  * @property {boolean} canGoIntoDebt.required - Whether this user can get a negative balance
+ * @property {string} transactionReceipts - What transactions notifications the user wants to receive
  */
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
@@ -61,6 +62,7 @@ export interface UserResponse extends BaseUserResponse {
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;
+  transactionReceipts?: string;
 }
 
 

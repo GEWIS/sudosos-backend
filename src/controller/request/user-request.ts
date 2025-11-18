@@ -24,7 +24,7 @@
  * @module users
  */
 
-import { UserType } from '../../entity/user/user';
+import { TransactionReceiptsOption, UserType } from '../../entity/user/user';
 
 export default interface BaseUserRequest {
   firstName: string;
@@ -61,12 +61,14 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} active
  * @property {boolean} extensiveDataProcessing
  * @property {boolean} inactiveNotificationSend
+ * @property {string} transactionReceipts
  */
 export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
   deleted?: boolean;
   extensiveDataProcessing?: boolean
   inactiveNotificationSend?: boolean
+  transactionReceipts?: TransactionReceiptsOption;
 }
 
 

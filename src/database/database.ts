@@ -96,6 +96,7 @@ import InactiveAdministrativeCost from '../entity/transactions/inactive-administ
 import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
+import { TransactionNotification1762861469829 } from '../migrations/1762861469829-transaction-notification-migrations';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -124,6 +125,7 @@ const options: DataSourceOptions = {
     MemberAuthenticator1761324427011,
     AddOrganMembershipIndex1761328648026,
     UserAdministrativeCost1761845457283,
+    TransactionNotification1762861469829,
   ],
   extra: {
     authPlugins: {

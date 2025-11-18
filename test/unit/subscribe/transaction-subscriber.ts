@@ -18,8 +18,13 @@
  *  @license
  */
 
-import { DataSource } from 'typeorm';
-import User, { NotifyDebtUserTypes, TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import { DataSource, Not } from 'typeorm';
+import User, {
+  TransactionReceiptsOption,
+  NotifyDebtUserTypes,
+  TermsOfServiceStatus,
+  UserType,
+} from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -49,6 +54,7 @@ import { SubTransactionRequest } from '../../../src/controller/request/transacti
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UserDebtNotification from '../../../src/mailer/messages/user-debt-notification';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import UserService from '../../../src/service/user-service';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -81,6 +87,7 @@ describe('TransactionSubscriber', () => {
       type: UserType.LOCAL_ADMIN,
       active: true,
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      transactionReceipts: TransactionReceiptsOption.ALWAYS,
     } as User;
 
     const users = await new UserSeeder().seed();
@@ -356,6 +363,149 @@ describe('TransactionSubscriber', () => {
         expect(newBalance.amount.amount).to.be.below(0);
         expect(sendMailFake).to.be.called;
       });
+    });
+    it('should always send a notification email if the user wants', async () => {
+      const user = ctx.usersNotInDebt[3];
+
+      await UserService.updateUser(user.id, { transactionReceipts: TransactionReceiptsOption.ALWAYS });
+      const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+
+      expect(currentBalance.getAmount()).to.be.at.least(0);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+
+      await (new TransactionService()).createTransaction({
+        from: user.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: user.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      });
+
+      expect(sendMailFake).to.be.calledOnce;
+    });
+    it('should send a notification email when charged by others', async () => {
+      const user = ctx.usersNotInDebt[4];
+
+      await UserService.updateUser(user.id, { transactionReceipts: TransactionReceiptsOption.CHARGEDBYOTHERS });
+
+      const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+      expect(currentBalance.getAmount()).to.be.at.least(0);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+      const creator = await User.findOne({ where: { id: Not(user.id) } });
+
+      await (new TransactionService()).createTransaction({
+        from: user.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: creator.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      });
+
+      expect(sendMailFake).to.be.calledOnce;
+    });
+    it('should not send a notification email', async () => {
+      const user = ctx.usersNotInDebt[5];
+      expect(user.transactionReceipts).to.be.equal(TransactionReceiptsOption.NEVER);
+
+      const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+      expect(currentBalance.getAmount()).to.be.at.least(0);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+      await (new TransactionService()).createTransaction({
+        from: user.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: user.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      });
+
+      expect(sendMailFake).to.not.be.called;
     });
   });
 });
