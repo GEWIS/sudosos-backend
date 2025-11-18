@@ -31,7 +31,7 @@ import * as util from 'util';
 import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
 import Policy from '../../controller/policy';
 import TokenHandler from '../../authentication/token-handler';
-import GewisUser from '../entity/gewis-user';
+import MemberUser from '../../entity/user/member-user';
 import GewiswebToken from '../gewisweb-token';
 import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
 import AuthenticationService from '../../service/authentication-service';
@@ -159,21 +159,21 @@ export default class GewisAuthenticationController extends BaseController {
       }
       this.logger.trace('Gewisweb authentication for user with membership id', gewisweb.lidnr);
 
-      let gewisUser = await GewisUser.findOne({
-        where: { gewisId: gewisweb.lidnr },
+      let memberUser = await MemberUser.findOne({
+        where: { memberId: gewisweb.lidnr },
         relations: ['user'],
       });
-      if (!gewisUser) {
+      if (!memberUser) {
         this.logger.log('User not found in database, creating user');
-        gewisUser = await new Gewis().createUserFromWeb(gewisweb);
+        memberUser = await new Gewis().createUserFromWeb(gewisweb);
       } else {
         //
         const update = webResponseToUpdate(gewisweb);
-        await UserService.updateUser(gewisUser.user.id, { ...update, active: true });
+        await UserService.updateUser(memberUser.user.id, { ...update, active: true });
       }
 
       const response = await new AuthenticationService().getSaltedToken({
-        user: gewisUser.user,
+        user: memberUser.user,
         context: { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
         salt: body.nonce,
       });
@@ -223,19 +223,19 @@ export default class GewisAuthenticationController extends BaseController {
     this.logger.trace('GEWIS PIN authentication for user', gewisId);
 
     try {
-      const gewisUser = await GewisUser.findOne({
-        where: { gewisId },
+      const memberUser = await MemberUser.findOne({
+        where: { memberId: gewisId },
         relations: ['user'],
       });
 
-      if (!gewisUser) {
+      if (!memberUser) {
         res.status(403).json({
           message: `User ${gewisId} not registered`,
         });
         return;
       }
       await (AuthenticationController.PINLoginConstructor(this.roleManager, this.tokenHandler,
-        pin, gewisUser.user.id))(req, res);
+        pin, memberUser.user.id))(req, res);
     } catch (error) {
       this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');

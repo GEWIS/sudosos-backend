@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { expect, request } from 'chai';
+import { expect } from 'chai';
 import sinon from 'sinon';
 import { Client } from 'ldapts';
 import { DataSource } from 'typeorm';
@@ -32,16 +32,13 @@ import seedDatabase from '../../seed';
 import Swagger from '../../../src/start/swagger';
 import userIsAsExpected from '../service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import GewisUser from '../../../src/gewis/entity/gewis-user';
+import MemberUser from '../../../src/entity/user/member-user';
 import Gewis from '../../../src/gewis/gewis';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
-import Bindings from '../../../src/helpers/bindings';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import UserController from '../../../src/controller/user-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import { PaginatedUserResponse } from '../../../src/controller/response/user-response';
-import { GewisUserResponse } from '../../../src/gewis/controller/response/gewis-user-response';
 import { truncateAllTables } from '../../setup';
 import { RbacSeeder } from '../../seed';
 import { LDAPUser } from '../../../src/helpers/ad';
@@ -178,12 +175,12 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         };
         const userCount = await User.count();
 
-        const newGewisUser = Object.assign(new GewisUser(), {
+        const newMemberUser = Object.assign(new MemberUser(), {
           user,
-          gewisId: user.id,
+          memberId: user.id,
         });
-        await newGewisUser.save();
-        const gewisUserCount = await GewisUser.count();
+        await newMemberUser.save();
+        const memberUserCount = await MemberUser.count();
 
         const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
         const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ADuser] });
@@ -199,7 +196,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
         expect(authUser.id).to.be.equal(user.id);
         expect(await User.count()).to.be.equal(userCount);
-        expect(await GewisUser.count()).to.be.equal(gewisUserCount);
+        expect(await MemberUser.count()).to.be.equal(memberUserCount);
         expect(user).to.not.be.undefined;
         expect(clientBindStub).to.have.been.calledWith(
           process.env.LDAP_BIND_USER, process.env.LDAP_BIND_PW,
@@ -218,7 +215,7 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
         );
         expect(DBUser).to.be.null;
         const userCount = await User.count();
-        const gewisUserCount = await GewisUser.count();
+        const memberUserCount = await MemberUser.count();
 
         const clientBindStub = sinon.stub(Client.prototype, 'bind').resolves(null);
         const clientSearchStub = sinon.stub(Client.prototype, 'search').resolves({ searchReferences: [], searchEntries: [ADuser] });
@@ -239,39 +236,15 @@ describe('GEWIS Helper functions', async (): Promise<void> => {
 
         userIsAsExpected(authUser, ADuser);
 
-        const gewisUser = await GewisUser.findOne({ where: { user: { id: authUser.id } } });
-        expect(gewisUser.gewisId).to.be.equal(user.id);
+        const memberUser = await MemberUser.findOne({ where: { user: { id: authUser.id } } });
+        expect(memberUser.memberId).to.be.equal(user.id);
 
         expect(await User.count()).to.be.equal(userCount + 1);
-        expect(await GewisUser.count()).to.be.equal(gewisUserCount + 1);
+        expect(await MemberUser.count()).to.be.equal(memberUserCount + 1);
         expect(user).to.not.be.undefined;
         expect(clientBindStub).to.have.been.calledWith(
           process.env.LDAP_BIND_USER, process.env.LDAP_BIND_PW,
         );
-      });
-    });
-  });
-
-  describe('GEWIS GET /users', () => {
-    let oldBindings: any;
-    before(() => {
-      oldBindings = { ...Bindings.Users };
-      Bindings.Users = {
-        parseToResponse: Gewis.parseRawUserToGewisResponse,
-        getBuilder: Gewis.getUserBuilder,
-      };
-    });
-    after(() => {
-      Bindings.Users = { ...oldBindings };
-    });
-    it('should return the GEWIS id', async () => {
-      const res = await request(ctx.app)
-        .get('/users')
-        .set('Authorization', `Bearer ${ctx.adminToken}`);
-      expect(res.status).to.equal(200);
-      (res.body as PaginatedUserResponse).records.forEach((userResponse: GewisUserResponse) => {
-        const validation = ctx.spec.validateModel('GewisUserResponse', userResponse, true, true);
-        expect(validation.valid).to.be.true;
       });
     });
   });

@@ -26,50 +26,50 @@ import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
 import GewisDBSyncService from '../../../src/gewis/service/gewisdb-sync-service';
 import { expect } from 'chai';
 import { rootStubs } from '../../root-hooks';
-import GewisUser from '../../../src/gewis/entity/gewis-user';
+import MemberUser from '../../../src/entity/user/member-user';
 import User from '../../../src/entity/user/user';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 
-async function createGewisUser(user: User, gewisId: number): Promise<GewisUser> {
-  expect(await GewisUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
-  expect(await GewisUser.findOne({ where: { gewisId } })).to.be.null;
-  const gewisUser = Object.assign(new GewisUser(), {
+async function createMemberUser(user: User, memberId: number): Promise<MemberUser> {
+  expect(await MemberUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
+  expect(await MemberUser.findOne({ where: { memberId } })).to.be.null;
+  const memberUser = Object.assign(new MemberUser(), {
     user,
-    gewisId,
+    memberId,
   });
-  await gewisUser.save();
-  return gewisUser;
+  await memberUser.save();
+  return memberUser;
 }
 
-function toWebResponse(gewisUser: GewisUser): MemberAllAttributes {
+function toWebResponse(memberUser: MemberUser): MemberAllAttributes {
   // Expiration is one year in the future.
-  const d = new Date(gewisUser.user.updatedAt);
+  const d = new Date(memberUser.user.updatedAt);
   const year = d.getFullYear();
   const month = d.getMonth();
   const day = d.getDate();
   const expiration = new Date(year + 1, month, day);
 
   return {
-    deleted: gewisUser.user.deleted,
-    email:  gewisUser.user.email,
+    deleted: memberUser.user.deleted,
+    email:  memberUser.user.email,
     expiration: expiration.toISOString(),
-    given_name: gewisUser.user.firstName,
-    family_name: gewisUser.user.lastName,
-    is_18_plus: gewisUser.user.ofAge,
-    lidnr: gewisUser.gewisId,
+    given_name: memberUser.user.firstName,
+    family_name: memberUser.user.lastName,
+    is_18_plus: memberUser.user.ofAge,
+    lidnr: memberUser.memberId,
   };
 }
 
 async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number) {
-  const dbUser = await GewisUser.findOne({ where: { userId }, relations: ['user'] });
+  const dbUser = await MemberUser.findOne({ where: { userId }, relations: ['user'] });
   expect(dbUser).to.not.be.undefined;
   expect(dbUser.user.deleted).to.eq(update.deleted);
   expect(dbUser.user.email).to.eq(update.email);
   expect(dbUser.user.firstName).to.eq(update.given_name);
   expect(dbUser.user.lastName).to.eq(update.family_name);
   expect(dbUser.user.ofAge).to.eq(update.is_18_plus);
-  expect(dbUser.gewisId).to.eq(update.lidnr);
+  expect(dbUser.memberId).to.eq(update.lidnr);
 }
 
 describe('GewisDBSyncService', () => {
@@ -129,8 +129,8 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            const result = await syncService.guard(gewisUser.user);
+            const memberUser = await createMemberUser(user, user.id);
+            const result = await syncService.guard(memberUser.user);
             expect(result).to.be.true;
           },
         );
@@ -165,7 +165,7 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          await expect(syncService.sync(user)).to.be.rejectedWith('GEWIS User not found.');
+          await expect(syncService.sync(user)).to.be.rejectedWith('Member User not found.');
         },
       );
     });
@@ -174,8 +174,8 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          const gewisUser = await createGewisUser(user, user.id);
-          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          const memberUser = await createMemberUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(memberUser);
           updatedResponse.given_name = 'UpdatedName';
           updatedResponse.family_name = 'UpdatedFamily';
           updatedResponse.email = 'updated@example.com';
@@ -183,9 +183,9 @@ describe('GewisDBSyncService', () => {
 
           membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
 
-          const result = await syncService.sync(gewisUser.user);
+          const result = await syncService.sync(memberUser.user);
           expect(result).to.be.true;
-          await checkUpdateAgainstDB(updatedResponse, gewisUser.user.id);
+          await checkUpdateAgainstDB(updatedResponse, memberUser.user.id);
         },
       );
     });
@@ -194,13 +194,13 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          const gewisUser = await createGewisUser(user, user.id);
-          const originalFirstName = gewisUser.user.firstName;
-          const originalLastName = gewisUser.user.lastName;
-          const originalEmail = gewisUser.user.email;
-          const originalOfAge = gewisUser.user.ofAge;
+          const memberUser = await createMemberUser(user, user.id);
+          const originalFirstName = memberUser.user.firstName;
+          const originalLastName = memberUser.user.lastName;
+          const originalEmail = memberUser.user.email;
+          const originalOfAge = memberUser.user.ofAge;
 
-          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          const updatedResponse: MemberAllAttributes = toWebResponse(memberUser);
           updatedResponse.given_name = 'UpdatedName';
           updatedResponse.family_name = 'UpdatedFamily';
           updatedResponse.email = 'updated@example.com';
@@ -208,11 +208,11 @@ describe('GewisDBSyncService', () => {
 
           membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
 
-          const result = await syncService.sync(gewisUser.user, true);
+          const result = await syncService.sync(memberUser.user, true);
           expect(result).to.be.true;
 
           // Check that the user was not actually updated in the database
-          const dbUser = await GewisUser.findOne({ where: { userId: gewisUser.user.id }, relations: ['user'] });
+          const dbUser = await MemberUser.findOne({ where: { userId: memberUser.user.id }, relations: ['user'] });
           expect(dbUser.user.firstName).to.eq(originalFirstName);
           expect(dbUser.user.lastName).to.eq(originalLastName);
           expect(dbUser.user.email).to.eq(originalEmail);
@@ -225,10 +225,10 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          const gewisUser = await createGewisUser(user, user.id);
+          const memberUser = await createMemberUser(user, user.id);
           membersApiStub.membersLidnrGet.resolves({ data: { data: null } } as any);
 
-          const result = await syncService.sync(gewisUser.user);
+          const result = await syncService.sync(memberUser.user);
           expect(result).to.be.false;
         },
       );
@@ -238,12 +238,12 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          const gewisUser = await createGewisUser(user, user.id);
-          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          const memberUser = await createMemberUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(memberUser);
           updatedResponse.expiration = new Date(Date.now() - 100000).toISOString();
           membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
 
-          const result = await syncService.sync(gewisUser.user);
+          const result = await syncService.sync(memberUser.user);
           expect(result).to.be.false;
         },
       );
@@ -253,10 +253,10 @@ describe('GewisDBSyncService', () => {
       await inUserContext(
         await (await UserFactory()).clone(1),
         async (user: User) => {
-          const gewisUser = await createGewisUser(user, user.id);
-          const updatedResponse: MemberAllAttributes = toWebResponse(gewisUser);
+          const memberUser = await createMemberUser(user, user.id);
+          const updatedResponse: MemberAllAttributes = toWebResponse(memberUser);
           membersApiStub.membersLidnrGet.resolves({ data: { data: updatedResponse } } as any);
-          const result = await syncService.sync(gewisUser.user);
+          const result = await syncService.sync(memberUser.user);
           expect(result).to.be.true;
         });
     }); 
@@ -267,9 +267,9 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await syncService.down(gewisUser.user);
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const memberUser = await createMemberUser(user, user.id);
+            await syncService.down(memberUser.user);
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.true;
             expect(dbUser.canGoIntoDebt).to.be.false;
@@ -281,9 +281,9 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await syncService.down(gewisUser.user);
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const memberUser = await createMemberUser(user, user.id);
+            await syncService.down(memberUser.user);
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.be.true;
             expect(dbUser.deleted).to.be.false;
             expect(dbUser.canGoIntoDebt).to.be.true;
@@ -296,10 +296,10 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await generateBalance(100, gewisUser.user.id);
-            await syncService.down(gewisUser.user);
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const memberUser = await createMemberUser(user, user.id);
+            await generateBalance(100, memberUser.user.id);
+            await syncService.down(memberUser.user);
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.false;
             expect(dbUser.canGoIntoDebt).to.be.false;
@@ -312,11 +312,11 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await generateBalance(100, gewisUser.user.id);
-            await syncService.down(gewisUser.user);
+            const memberUser = await createMemberUser(user, user.id);
+            await generateBalance(100, memberUser.user.id);
+            await syncService.down(memberUser.user);
 
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             await syncService.down(dbUser);
             expect(sendMailFake).to.be.callCount(1);
           },
@@ -327,9 +327,9 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await syncService.down(gewisUser.user);
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const memberUser = await createMemberUser(user, user.id);
+            await syncService.down(memberUser.user);
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.true;
             expect(dbUser.canGoIntoDebt).to.be.false;
@@ -342,14 +342,14 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
+            const memberUser = await createMemberUser(user, user.id);
             const originalActive = user.active;
             const originalDeleted = user.deleted;
             const originalCanGoIntoDebt = user.canGoIntoDebt;
 
-            await syncService.down(gewisUser.user, true);
+            await syncService.down(memberUser.user, true);
             
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.eq(originalActive);
             expect(dbUser.deleted).to.eq(originalDeleted);
             expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
@@ -363,16 +363,16 @@ describe('GewisDBSyncService', () => {
         await inUserContext(
           await (await UserFactory()).clone(1),
           async (user: User) => {
-            const gewisUser = await createGewisUser(user, user.id);
-            await generateBalance(100, gewisUser.user.id);
+            const memberUser = await createMemberUser(user, user.id);
+            await generateBalance(100, memberUser.user.id);
             
             const originalActive = user.active;
             const originalDeleted = user.deleted;
             const originalCanGoIntoDebt = user.canGoIntoDebt;
 
-            await syncService.down(gewisUser.user, true);
+            await syncService.down(memberUser.user, true);
             
-            const dbUser = await User.findOne({ where: { id: gewisUser.user.id } });
+            const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             expect(dbUser.active).to.eq(originalActive);
             expect(dbUser.deleted).to.eq(originalDeleted);
             expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);

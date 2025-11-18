@@ -31,7 +31,7 @@ import Swagger from '../../../../src/start/swagger';
 import RoleManager from '../../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../../src/controller/response/authentication-response';
 import GewisAuthenticationSecureController from '../../../../src/gewis/controller/gewis-authentication-secure-controller';
-import GewisUser from '../../../../src/gewis/entity/gewis-user';
+import MemberUser from '../../../../src/entity/user/member-user';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import GEWISAuthenticationSecurePinRequest from '../../../../src/gewis/controller/request/gewis-authentication-secure-pin-request';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
@@ -54,7 +54,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
     controller: GewisAuthenticationSecureController,
     memberUser: User,
     posUser: User,
-    gewisUser: GewisUser,
+    memberUserEntity: MemberUser,
     pointOfSale: PointOfSale,
     posUserToken: string,
     memberUserToken: string,
@@ -76,11 +76,11 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User);
 
-    // Create GEWIS user linked to member user
-    const gewisUser = await GewisUser.save({
+    // Create Member user linked to member user
+    const memberUserEntity = await MemberUser.save({
       user: memberUser,
-      gewisId: 12345,
-    } as GewisUser);
+      memberId: 12345,
+    } as MemberUser);
 
     // Set up PIN authenticator for the member user
     await new AuthenticationService().setUserAuthenticationHash(memberUser, '1234', PinAuthenticator);
@@ -132,7 +132,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       controller,
       memberUser,
       posUser,
-      gewisUser,
+      memberUserEntity,
       pointOfSale,
       posUserToken,
       memberUserToken,
@@ -249,13 +249,13 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
         active: true,
       } as User);
 
-      const gewisUserWithoutPin = await GewisUser.save({
+      const memberUserWithoutPin = await MemberUser.save({
         user: userWithoutPin,
-        gewisId: 54321,
-      } as GewisUser);
+        memberId: 54321,
+      } as MemberUser);
 
       const requestBody = {
-        gewisId: gewisUserWithoutPin.gewisId,
+        gewisId: memberUserWithoutPin.memberId,
         pin: '1234',
         posId: ctx.pointOfSale.id,
       };

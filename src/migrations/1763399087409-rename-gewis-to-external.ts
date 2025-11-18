@@ -17,31 +17,17 @@
  *
  *  @license
  */
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/**
- * This is the module page of the seed.
- *
- * @module GEWIS/seed
- */
-
-import GewisUser from '../entity/gewis-user';
-import User from '../../entity/user/user';
-
-/**
- * Seeds a default dataset of GEWIS Users, and stores them in the database.
- */
-export default async function seedGEWISUsers(users: User[]): Promise<GewisUser[]> {
-  const gewisUsers: GewisUser[] = [];
-
-  const promises: Promise<any>[] = [];
-  for (let i = 0; i < users.length; i += 1) {
-    const gewisUser = Object.assign(new GewisUser(), {
-      user: users[i],
-      gewisId: 1000 + i,
-    });
-    promises.push(GewisUser.save(gewisUser).then((u) => gewisUsers.push(u)));
+export class RenameGewisToExternal1763399087409 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.renameTable('gewis_user', 'member_user');
+    await queryRunner.renameColumn('member_user', 'gewisId', 'memberId');
   }
 
-  await Promise.all(promises);
-  return gewisUsers;
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.renameColumn('member_user', 'memberId', 'gewisId');
+    await queryRunner.renameTable('member_user', 'gewis_user');
+  }
 }
+
