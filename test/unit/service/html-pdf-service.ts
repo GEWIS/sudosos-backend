@@ -239,7 +239,7 @@ describe('BaseHtmlPdfService', () => {
       applyTemplateStub.returns(expectedHtml);
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
 
-      const result = await service.createPdf(entity);
+      const result = await service.createPdfBuffer(entity);
 
       expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
@@ -303,7 +303,7 @@ describe('HtmlPdfService', () => {
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
       uploadPdfStub.resolves(expectedPdf);
 
-      const result = await service.createPdf(entity);
+      const result = await service.createPdfWithEntity(entity);
 
       expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
@@ -345,7 +345,7 @@ describe('HtmlUnstoredPdfService', () => {
       applyTemplateStub.returns(expectedHtml);
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
 
-      const result = await service.createPdf(entity);
+      const result = await service.createPdfBuffer(entity);
 
       expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
