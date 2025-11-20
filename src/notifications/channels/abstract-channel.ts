@@ -19,21 +19,38 @@
  */
 
 
-import { ParameterObject, TemplateObject } from '../notification-types';
+import { NotificationTypes, TemplateObject, TemplateOptions } from '../notification-types';
 import User from '../../entity/user/user';
+import NotificationLog from '../../entity/notifications/notification-log';
+import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 
 /**
- * This is the module page of the abstract channel.
+ * This is the module page of the abstract-notification-channel.
  *
- * @module internal/notifications/channels
+ * @module notifications
  */
 
+/**
+ * A channel capable of delivering a notification (email, signal, SMS, etc.)
+ * using a specific template type, parameter type, and rendered output type.
+ *
+ * @typeParam TTemplate - The template object type that this channel supports.
+ *                        Must implement `TemplateObject<TParams, TRendered>`.
+ *
+ * @typeParam TParams - The parameter type accepted by the template.
+ *                      This represents the data object used to fill in template variables.
+ *
+ * @typeParam TRendered - The type of the *rendered* output after applying a template.
+ *                        Example: a MailMessage for email, or a string for SMS.
+ */
 export abstract class NotificationChannel<
     TTemplate extends TemplateObject<TParams, TRendered>,
-    TParams extends ParameterObject,
+    TParams extends TemplateOptions,
     TRendered,
 > {
   abstract readonly templates: Record<string, TTemplate>;
+
+  abstract readonly name: NotificationChannels;
 
   abstract apply(template: TTemplate, params: TParams): Promise<TRendered>;
   abstract send(user: User, content: TRendered): Promise<void>;
@@ -44,5 +61,13 @@ export abstract class NotificationChannel<
 
   getTemplate(type: string): TTemplate | undefined {
     return this.templates[type];
+  }
+
+  async log(user: User, code: NotificationTypes): Promise<void> {
+    await NotificationLog.create({
+      user: user,
+      handler: this.name,
+      type: code,
+    }).save();
   }
 }

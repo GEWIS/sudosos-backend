@@ -19,22 +19,30 @@
  */
 
 import { NotificationChannel } from './channels/abstract-channel';
-import { NotificationType, NotificationTypeRegistry, ParameterObject, TemplateObject } from './notification-types';
+import {
+  NotificationTypes,
+  NotificationType,
+  NotificationTypeRegistry,
+  TemplateObject,
+  TemplateOptions,
+} from './notification-types';
 import log4js, { Logger } from 'log4js';
-import UserService from '../service/user-service';
 import { EmailChannel } from './channels/mail-channel';
 import User from '../entity/user/user';
+import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
+import NotificationLog from '../entity/notifications/notification-log';
 
 /**
  * This is the module page of the notifier.
  *
- * @module internal/notifications
+ * @module notification
  */
 
 interface NotificationPayload<P> {
-  type: string;
+  type: NotificationTypes;
   userId: number;
   params: P;
+  overrideChannel?: NotificationChannels;
 }
 
 export default class Notifier {
@@ -59,18 +67,32 @@ export default class Notifier {
     return this.instance;
   }
 
-  async notify<P extends ParameterObject>(payload: NotificationPayload<P>): Promise<void> {
+  async notify<P extends TemplateOptions>(payload: NotificationPayload<P>): Promise<void> {
     const notifyType = NotificationTypeRegistry.get<P>(payload.type);
-    this.logger.info(NotificationTypeRegistry.list());
+
     if (!notifyType) {
       this.logger.error(`Could not get notify type: ${payload.type}`);
     }
 
     const user = await User.findOne({ where: { id: payload.userId } });
 
+    const channelPrefs: string[] = [];
+
+    if (payload.overrideChannel) {
+      channelPrefs.push(payload.overrideChannel);
+    } else {
+      const userPrefs = await this.getPreferences(user, notifyType.type);
+      channelPrefs.push(...userPrefs);
+    }
+
     const channelsToUse = [
-      this.channels.find(ch => ch.constructor.name === 'EmailChannel')!,
+      this.channels.find(ch => channelPrefs.includes(ch.name)),
     ];
+    
+    if (!channelsToUse.length) {
+      await this.noChannelLog(user, payload.type);
+      return;
+    }
 
     await Promise.allSettled(
       channelsToUse.map(ch =>
@@ -79,8 +101,17 @@ export default class Notifier {
     );
   }
 
+  private async getPreferences(user: User, notifyType: NotificationTypes): Promise<string[]> {
+    const preferences = await UserNotificationPreference.find({
+      where: { userId: user.id, type: notifyType },
+      select: ['channel'],
+    });
+
+    return preferences.map(p => p.channel);
+  }
+
   private async sendViaChannel<
-    P extends ParameterObject,
+    P extends TemplateOptions,
     TTemplate extends TemplateObject<P, R>,
     R,
   >(
@@ -89,13 +120,23 @@ export default class Notifier {
     notifyType: NotificationType<P>,
     params: P,
   ) {
-    const template = channel.getTemplate(notifyType.code);
+    const template = channel.getTemplate(notifyType.type);
     if (!template) {
-      this.logger.error(`Channel ${channel.constructor.name} has not implemented ${notifyType.code}.`);
+      this.logger.error(`Channel ${channel.constructor.name} has not implemented ${notifyType.type}.`);
     }
 
     const rendered = await channel.apply(template, params);
 
     await channel.send(user, rendered);
+
+    await channel.log(user, notifyType.type);
+  }
+
+  private async noChannelLog(user: User, code: NotificationTypes): Promise<void> {
+    await NotificationLog.create({
+      user: user,
+      handler: null,
+      type: code,
+    }).save();
   }
 }

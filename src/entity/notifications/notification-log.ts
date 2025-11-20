@@ -18,11 +18,27 @@
  *  @license
  */
 
-import { NotificationTypes, NotificationTypeRegistry } from './notification-types';
-import { UserWillGetFinedOptions } from '../mailer';
+/**
+ * This is the module page of the notification-log.
+ *
+ * @module notifications
+ */
 
-NotificationTypeRegistry.register<UserWillGetFinedOptions>({
-  type: NotificationTypes.UserGotFined,
-  paramClass: UserWillGetFinedOptions,
-  isMandatory: true,
-});
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import User from '../user/user';
+import { NotificationChannels } from './user-notification-preference';
+import BaseEntity from '../base-entity';
+import { NotificationTypes } from '../../notifications/notification-types';
+
+@Entity()
+export default class NotificationLog extends BaseEntity {
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
+
+  @Column({ nullable: true })
+  public handler: NotificationChannels;
+
+  @Column({ nullable: false })
+  public type: NotificationTypes;
+}

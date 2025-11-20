@@ -26,3 +26,4 @@ export { default as SellerPayoutSeeder } from './seller-payout-seeder';
 export { default as TransactionSeeder } from './transaction-seeder';
 export { default as TransferSeeder } from './transfer-seeder';
 export { default as WriteOffSeeder } from './write-off-seeder';
+export { default as UseNotificationSeeder } from './user-notification-seeder';

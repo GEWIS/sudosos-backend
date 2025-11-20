@@ -20,23 +20,23 @@
 
 
 /**
- * This is the module page of the abstract channel.
+ * This is the module page of the notification-types.
  *
- * @module internal/notifications
+ * @module notification
  *
  */
 
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined, { UserWillGetFinedOptions } from '../mailer/messages/user-will-get-fined';
 
-export class ParameterObject {
+export class TemplateOptions {
 }
 
-export interface TemplateObject<P extends ParameterObject, R> {
+export interface TemplateObject<P extends TemplateOptions, R> {
   build(params: P): R;
 }
 
-export class EmailTemplate<P extends ParameterObject> implements TemplateObject<P, MailMessage<P>> {
+export class EmailTemplate<P extends TemplateOptions> implements TemplateObject<P, MailMessage<P>> {
   constructor(
     private readonly templateFactory: (params: P) => MailMessage<P>,
   ) {}
@@ -50,8 +50,12 @@ export const UserWillGetFinedTemplate = new EmailTemplate(
   (params: UserWillGetFinedOptions) => new UserWillGetFined(params),
 );
 
-export interface NotificationType<P extends ParameterObject = any> {
-  code: string;
+export enum NotificationTypes {
+  UserGotFined = 'UserGotFined',
+}
+
+export interface NotificationType<P extends TemplateOptions = any> {
+  type: NotificationTypes;
   paramClass: new (...args: any[]) => P;
   isMandatory: boolean;
 }
@@ -59,11 +63,11 @@ export interface NotificationType<P extends ParameterObject = any> {
 export class NotificationTypeRegistry {
   private static types = new Map<string, NotificationType<any>>();
 
-  static register<P extends ParameterObject>(type: NotificationType<P>): void {
-    this.types.set(type.code, type);
+  static register<P extends TemplateOptions>(type: NotificationType<P>): void {
+    this.types.set(type.type, type);
   }
 
-  static get<P extends ParameterObject = any>(code: string): NotificationType<P | undefined> {
+  static get<P extends TemplateOptions = any>(code: string): NotificationType<P | undefined> {
     return this.types.get(code);
   }
 

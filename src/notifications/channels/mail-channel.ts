@@ -20,26 +20,29 @@
 
 import { NotificationChannel } from './abstract-channel';
 import User from '../../entity/user/user';
-import { EmailTemplate, ParameterObject, UserWillGetFinedTemplate } from '../notification-types';
+import { EmailTemplate, TemplateOptions, UserWillGetFinedTemplate } from '../notification-types';
 import Mailer from '../../mailer';
 import MailMessage from '../../mailer/mail-message';
+import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 
 /**
- * This is the module page of the abstract channel.
+ * This is the module page of the mail-channel.
  *
- * @module internal/notifications/channels
+ * @module notifications
  */
 
 export class EmailChannel extends NotificationChannel<
 EmailTemplate<any>,
-ParameterObject,
+TemplateOptions,
 MailMessage<EmailTemplate<any>>
 > {
   readonly templates = {
     userGotFined: UserWillGetFinedTemplate,
   };
 
-  async apply(template: EmailTemplate<any>, params: ParameterObject): Promise<MailMessage<EmailTemplate<any>>> {
+  readonly name = NotificationChannels.EMAIL;
+
+  async apply(template: EmailTemplate<any>, params: TemplateOptions): Promise<MailMessage<EmailTemplate<any>>> {
     return template.build(params);
   }
 

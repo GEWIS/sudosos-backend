@@ -50,7 +50,7 @@ import {
   ProductCategorySeeder,
   ProductSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
-  VatGroupSeeder, WriteOffSeeder,
+  VatGroupSeeder, WriteOffSeeder, UseNotificationSeeder,
 } from './index';
 import seedGEWISUsers from '../../src/gewis/database/seed';
 import BannerSeeder from './banner-seeder';
@@ -58,6 +58,7 @@ import QRAuthenticatorSeeder from './qr-authenticator-seeder';
 import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
 import InactiveAdministrativeCost from '../../src/entity/transactions/inactive-administrative-cost';
 import InactiveAdministrativeCostSeeder from './ledger/inactive-administrative-cost-seeder';
+import UserNotificationPreference from '../../src/entity/notifications/user-notification-preference';
 
 export interface DatabaseContent {
   users: User[],
@@ -88,6 +89,7 @@ export interface DatabaseContent {
   localUsers: LocalAuthenticator[],
   writeOffs: WriteOff[],
   qrAuthenticators: QRAuthenticator[],
+  userNotificationPreferences: UserNotificationPreference[],
 }
 
 export default async function seedDatabase(beginDate?: Date, endDate?: Date): Promise<DatabaseContent> {
@@ -121,6 +123,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const writeOffs = await new WriteOffSeeder().seed();
   const { banners } = await new BannerSeeder().seed(users);
   const qrAuthenticators = await new QRAuthenticatorSeeder().seed(users);
+  const userNotificationPreferences = await new UseNotificationSeeder().seed(users);
 
   return {
     users,
@@ -151,5 +154,6 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     eventShiftAnswers,
     writeOffs,
     qrAuthenticators,
+    userNotificationPreferences,
   };
 }

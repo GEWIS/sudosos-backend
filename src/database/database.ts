@@ -96,6 +96,8 @@ import InactiveAdministrativeCost from '../entity/transactions/inactive-administ
 import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
+import NotificationLog from '../entity/notifications/notification-log';
+import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -190,6 +192,8 @@ const options: DataSourceOptions = {
     WriteOff,
     WriteOffPdf,
     QRAuthenticator,
+    NotificationLog,
+    UserNotificationPreference,
   ],
   subscribers: [
     TransactionSubscriber,

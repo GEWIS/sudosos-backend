@@ -27,13 +27,13 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-import { ParameterObject } from '../../notifications/notification-types';
+import { TemplateOptions } from '../../notifications/notification-types';
 
-export class UserWillGetFinedOptions extends ParameterObject {
+export class UserWillGetFinedOptions extends TemplateOptions {
   constructor(
-      public referenceDate: Date,
-      public fine: Dinero,
-      public balance: Dinero,
+    public referenceDate: Date,
+    public fine: Dinero,
+    public balance: Dinero,
   ) {
     super();
   }
