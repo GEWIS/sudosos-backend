@@ -27,6 +27,7 @@
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { TermsOfServiceStatus } from '../../entity/user/user';
+import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
 
 /**
  * @typedef {allOf|BaseResponse} BaseUserResponse
@@ -53,6 +54,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {boolean} canGoIntoDebt.required - Whether this user can get a negative balance
  * @property {integer} externalId - The external id of the user (e.g., GEWIS member ID)
  * @property {integer} gewisId - The m-Number of the user (deprecated, use externalId instead)
+ * @property {BasePointOfSaleInfoResponse} pos - The related Point of Sale, in case user is a POS type
  */
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
@@ -67,6 +69,7 @@ export interface UserResponse extends BaseUserResponse {
 
   /** @deprecated Use externalId instead */
   gewisId?: number;
+  pos?: BasePointOfSaleInfoResponse;
 }
 
 

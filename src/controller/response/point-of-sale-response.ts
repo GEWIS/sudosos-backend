@@ -31,6 +31,14 @@ import { PaginationResult } from '../../helpers/pagination';
 import RoleResponse from './rbac/role-response';
 
 /**
+ * @typedef {allOf|BaseResponse} BasePointOfSaleInfoResponse
+ * @property {number} revision.required - Revision of the POS
+ */
+export interface BasePointOfSaleInfoResponse extends BaseResponse {
+  revision: number,
+}
+
+/**
  * @typedef {allOf|BaseResponse} BasePointOfSaleResponse
  * @property {string} name.required - The name of the point-of-sale.
  * @property {number} revision.required - Revision of the POS
