@@ -27,25 +27,38 @@
 import Pdf from './pdf-file';
 import BaseEntity from '../base-entity';
 import User from '../user/user';
-import { PdfService, RouteParams, UnstoredPdfService } from '../../service/pdf/pdf-service';
+import {
+  IPdfServiceBase,
+  IStoredPdfService,
+} from '../../service/pdf/pdf-service';
 import { hashJSON } from '../../helpers/hash';
 
 type Constructor<T = {}> = new (...args: any[]) => T;
 
+/**
+ * Entities that persist a Pdf file should implement IPdfAble.
+ */
 export interface IPdfAble<S extends Pdf = Pdf> extends BaseEntity {
-  pdf?: S,
+  pdf?: S;
 
-  getPdfParamHash(): Promise<string>,
+  getPdfParamHash(): Promise<string>;
 
-  createPdf(): Promise<S>
+  /**
+   * Create and persist the Pdf file and return the Pdf entity.
+   * Implementations expect the configured pdfService to implement
+   * createPdfWithEntity. If the configured service does not, calling
+   * this will throw.
+   */
+  createPdf(): Promise<S>;
 
-  getOwner(): Promise<User>
+  getOwner(): Promise<User>;
+
+  pdfService: IStoredPdfService<this, S>;
 }
 
 /**
  * PdfAble is a Mixin that allows entities to be converted to Pdf.
- * @param Base
- * @constructor
+ * The mixin expects the instance to have a pdfService as typed above.
  */
 export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
   abstract class PdfAbleClass extends Base {
@@ -61,20 +74,21 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
 
     /**
      * The service that creates the Pdf file.
+     * Can be either a byte-producing service plus optionally a stored-entity service.
      */
-    abstract pdfService: PdfService<Pdf, this, RouteParams>;
+    abstract pdfService: IPdfServiceBase<this> & Partial<IStoredPdfService<this, Pdf>>;
 
     /**
      * Get the owner of the Pdf file.
-     * Needed for the File.createdBy field.
      */
     abstract getOwner(): Promise<User>;
 
     /**
-     * Create the Pdf file.
+     * Create and persist the Pdf file, returning the Pdf entity.
+     * The configured pdfService must implement createPdfWithEntity, otherwise this throws.
      */
     async createPdf(): Promise<Pdf> {
-      return this.pdfService.createPdf(this as any);
+      return this.pdfService.createPdfWithEntity(this as any);
     }
 
     /**
@@ -85,8 +99,7 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
     }
 
     /**
-     * Get the Pdf file.
-     * If the Pdf file is not current, create it.
+     * Get the Pdf file. If the Pdf file is not current, create it.
      * @param force If true, always create the Pdf file.
      */
     public async getOrCreatePdf(force: boolean = false): Promise<Pdf> {
@@ -112,27 +125,39 @@ export function PdfAble<TBase extends Constructor<BaseEntity>>(Base: TBase) {
   return PdfAbleClass;
 }
 
+/**
+ * UnstoredPdfAble is for entities that only want the PDF bytes.
+ */
 export interface IUnstoredPdfAble {
   createPdf(): Promise<Buffer>;
+  pdfService: IPdfServiceBase<this>;
 }
 
 export function UnstoredPdfAble<TBase extends Constructor>(Base: TBase) {
   abstract class UnstoredPdfAbleClass extends Base implements IUnstoredPdfAble {
     /**
      * The service that creates the Pdf buffer.
+     * Can be either a LaTeX-based service (UnstoredPdfService) or HTML-based service (HtmlUnstoredPdfService).
      */
-    abstract pdfService: UnstoredPdfService<UnstoredPdfAbleClass, RouteParams>;
+    abstract pdfService: IPdfServiceBase<UnstoredPdfAbleClass>;
 
     /**
      * Create the Pdf buffer.
      * This method generates the PDF and returns it as a Buffer.
      */
     async createPdf(): Promise<Buffer> {
-      return this.pdfService.createPdf(this as UnstoredPdfAbleClass);
+      return this.pdfService.createPdfBuffer(this as UnstoredPdfAbleClass);
     }
 
+    async createRaw(): Promise<Buffer> {
+      return this.pdfService.createRaw(this as UnstoredPdfAbleClass);
+    }
+
+    /**
+     * @deprecated Use createRaw() instead
+     */
     async createTex(): Promise<Buffer> {
-      return this.pdfService.createTex(this as UnstoredPdfAbleClass);
+      return this.createRaw();
     }
 
     async getPdfParamHash(): Promise<string> {
