@@ -27,12 +27,18 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import { ParameterObject } from '../../notifications/notification-types';
 
-interface UserWillGetFinedOptions {
-  referenceDate: Date;
-  fine: Dinero;
-  balance: Dinero;
+export class UserWillGetFinedOptions extends ParameterObject {
+  constructor(
+      public referenceDate: Date,
+      public fine: Dinero,
+      public balance: Dinero,
+  ) {
+    super();
+  }
 }
+
 
 const formatBalance = (b: Dinero) => {
   if (b.isPositive()) {
