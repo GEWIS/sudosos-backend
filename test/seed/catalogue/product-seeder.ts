@@ -44,7 +44,8 @@ export default class ProductSeeder extends WithManager {
     const downloadName = `product-${product.id}.png`;
 
     let location;
-    if (process.env.NODE_ENV !== 'test') {
+
+    if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'js-test' ) {
       const source = path.join(__dirname, './static/product.png');
       location = path.join(__dirname, '../', PRODUCT_IMAGE_LOCATION, downloadName);
       fs.copyFileSync(source, location);
