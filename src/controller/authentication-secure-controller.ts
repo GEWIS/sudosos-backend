@@ -129,7 +129,7 @@ export default class AuthenticationSecureController extends BaseController {
     this.logger.trace('Refresh token for user', req.token.user.id);
 
     try {
-      const user = await User.findOne({ where: { id: req.token.user.id } });
+      const user = await User.findOne({ where: { id: req.token.user.id }, relations: ['pointOfSale'] });
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
