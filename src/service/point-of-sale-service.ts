@@ -26,6 +26,7 @@
 
 import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Raw } from 'typeorm';
 import {
+  BasePointOfSaleInfoResponse,
   BasePointOfSaleResponse,
   PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
@@ -77,6 +78,13 @@ export interface PointOfSaleParameters {
 }
 
 export default class PointOfSaleService {
+
+  public static toBaseInfoResponse(pos: PointOfSale): BasePointOfSaleInfoResponse {
+    return {
+      id: pos.id,
+      revision: pos.currentRevision,
+    };
+  }
 
   public static revisionToBaseResponse(revision: PointOfSaleRevision): BasePointOfSaleResponse {
     return {

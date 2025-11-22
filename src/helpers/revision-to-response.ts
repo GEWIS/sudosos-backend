@@ -37,6 +37,7 @@ import { BaseVatGroupResponse } from '../controller/response/vat-group-response'
 import BaseFile from '../entity/file/base-file';
 import { SimpleFileResponse } from '../controller/response/simple-file-response';
 import InvoiceUser from '../entity/user/invoice-user';
+import PointOfSaleService from '../service/point-of-sale-service';
 
 export function parseProductToBaseResponse(
   product: ProductRevision, timestamps: boolean,
@@ -95,6 +96,7 @@ export function parseUserToBaseResponse(user: User, timestamps: boolean): BaseUs
     nickname: user.nickname,
     createdAt: timestamps ? user.createdAt.toISOString() : undefined,
     updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
+    pos: user.pointOfSale ? PointOfSaleService.toBaseInfoResponse(user.pointOfSale) : undefined,
   } as BaseUserResponse;
 }
 
