@@ -281,7 +281,7 @@ describe('UserController', (): void => {
 
   describe('GET /users', () => {
     async function queryUserBackend(searchQuery: string) {
-      const filteredUsers = (await User.find({ where: { deleted: false } })).filter((user) => {
+      return User.find({ where: { deleted: false } }).then((users) => users.filter((user) => {
         const fullName = `${user.firstName} ${user.lastName}`;
         return (
           user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -290,8 +290,7 @@ describe('UserController', (): void => {
           fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           user.email.toLowerCase().includes(searchQuery.toLowerCase())
         );
-      });
-      return filteredUsers;
+      }));
     }
 
     it('should return correct model', async () => {

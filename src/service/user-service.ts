@@ -183,7 +183,7 @@ export default class UserService {
     // Build where clause, but handle id separately to support arrays properly
     const { id, ...otherParams } = params;
     const baseWhere = QueryFilter.createFilterWhereClause(filterMapping, otherParams);
-    
+
     // Handle id array properly with In() operator
     let idFilter: any;
     if (id !== undefined) {
@@ -193,7 +193,7 @@ export default class UserService {
         idFilter = id;
       }
     }
-    
+
     const where: FindOptionsWhere<User> = {
       ...baseWhere,
       ...(idFilter !== undefined ? { id: idFilter } : {}),
@@ -269,12 +269,12 @@ export default class UserService {
       const searchBuilder = User.createQueryBuilder('user')
         .select('user.id', 'id')
         .where('user.type != :posType', { posType: UserType.POINT_OF_SALE });
-      
+
       // Only filter by deleted if allowDeleted is not true
       if (!processedFilters.allowDeleted) {
         searchBuilder.andWhere('user.deleted = :deleted', { deleted: false });
       }
-      
+
       searchBuilder.andWhere(new Brackets(qb => {
         qb.where('CONCAT(user.firstName, \' \', COALESCE(user.nickname, \'\'), \' \', user.lastName) LIKE :name')
           .orWhere('CONCAT(user.firstName, \' \', user.lastName) LIKE :name');
