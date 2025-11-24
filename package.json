@@ -35,6 +35,7 @@
   "author": "",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@gewis/pdf-compiler-ts": "^1.2.3",
     "@socket.io/cluster-adapter": "^0.3.0",
     "@socket.io/pm2": "^5.3.0",
     "@socket.io/sticky": "^1.0.4",

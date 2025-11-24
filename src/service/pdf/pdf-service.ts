@@ -26,7 +26,8 @@
 
 import Pdf from '../../entity/file/pdf-file';
 import {
-  Client, FileResponse,
+  Client,
+  FileResponse,
   FileSettings,
   IPayoutRouteParams,
   Language,
@@ -37,6 +38,35 @@ import FileService from '../file-service';
 import { PdfError } from '../../errors';
 import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
 import WithManager from '../../database/with-manager';
+import PdfTemplateGenerator from './pdf-template-generator';
+import { postCompileHtml } from '@gewis/pdf-compiler-ts';
+import { createClient, type Client as PdfCompilerClient } from '@gewis/pdf-compiler-ts/dist/client/client';
+
+/**
+ * Base interface for all PDF services.
+ * - createPdfBuffer always produces the PDF bytes
+ * - createRaw produces raw output (tex or html) as bytes
+ * - getParameters must be implemented by concrete services
+ */
+export interface IPdfServiceBase<T> {
+  createPdfBuffer(entity: T): Promise<Buffer>;
+  createRaw(entity: T): Promise<Buffer>;
+  getParameters(entity: T): Promise<any>;
+}
+
+/**
+ * Optional interface for services that also persist and return a Pdf entity.
+ * Services that do not persist can simply not implement this interface.
+ */
+export interface IStoredPdfService<T, S extends Pdf> {
+  createPdfWithEntity(entity: T): Promise<S>;
+}
+
+/**
+ * Type alias for template parameters used in HTML PDF services.
+ * Parameters must be a record (object) with string keys.
+ */
+export type PdfTemplateParameters = Record<string, any>;
 
 interface IRouteParams {
   params: any;
@@ -52,8 +82,13 @@ export declare class RouteParams implements IRouteParams {
   toJSON(data?: any): any;
 }
 
-
-export abstract class BasePdfService<T, R extends RouteParams> extends WithManager {
+/**
+ * Base PDF service that always provides bytes.
+ * Concrete services that store a Pdf entity should implement IStoredPdfService.
+ */
+export abstract class BasePdfService<T, R extends RouteParams>
+  extends WithManager
+  implements IPdfServiceBase<T> {
   public client: Client;
 
   abstract routeConstructor: new (data: IRouteParams) => R;
@@ -90,7 +125,25 @@ export abstract class BasePdfService<T, R extends RouteParams> extends WithManag
     return new this.routeConstructor({ params, settings });
   }
 
-  public async createTex(entity: T): Promise<Buffer> {
+  /**
+   * Core method that generates and returns the PDF bytes.
+   */
+  public async createPdfBuffer(entity: T): Promise<Buffer> {
+    const routeParams = await this.getRouteParams(entity, ReturnFileType.PDF);
+
+    try {
+      const res = await this.generator(routeParams);
+      const blob = res.data;
+      return Buffer.from(await blob.arrayBuffer());
+    } catch (res: any) {
+      throw new PdfError(`Pdf generation failed: ${res?.message ?? String(res)}`);
+    }
+  }
+
+  /**
+   * Create raw output such as TEX or HTML bytes for preview or debugging.
+   */
+  public async createRaw(entity: T): Promise<Buffer> {
     const routeParams = await this.getRouteParams(entity, ReturnFileType.TEX);
 
     try {
@@ -98,13 +151,111 @@ export abstract class BasePdfService<T, R extends RouteParams> extends WithManag
       const blob = res.data;
       return Buffer.from(await blob.arrayBuffer());
     } catch (res: any) {
-      throw new PdfError(`Pdf generation failed: ${res.message}`);
+      throw new PdfError(`Pdf generation failed: ${res?.message ?? String(res)}`);
     }
+  }
+
+  /**
+   * @deprecated Use createRaw() instead
+   */
+  public async createTex(entity: T): Promise<Buffer> {
+    return this.createRaw(entity);
   }
 }
 
-export abstract class PdfService<S extends Pdf, T extends IPdfAble<S>, R extends RouteParams> extends BasePdfService<T, R> {
+/**
+ * Base class for HTML-to-PDF services.
+ * Produces bytes via createPdfBuffer. Concrete stored services should
+ * implement createPdfWithEntity to persist and return the Pdf entity.
+ *
+ * Templates are stored in static/pdf/ and use {{ key }} placeholders.
+ *
+ * @template T - The entity type
+ * @template P - The template parameters type
+ */
+export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = PdfTemplateParameters>
+  extends WithManager
+  implements IPdfServiceBase<T> {
+  protected htmlPdfGenUrl: string;
 
+  protected client: PdfCompilerClient;
+
+  /**
+   * The template file name (e.g., 'invoice.html') located in static/pdf/
+   * The template should use {{ key }} placeholders that will be replaced with data from getParameters().
+   */
+  abstract templateFileName: string;
+
+  constructor(manager?: EntityManager) {
+    super(manager);
+    this.htmlPdfGenUrl = process.env.HTML_PDF_GEN_URL ?? 'http://localhost:3001';
+    // Create a client instance per service instance to avoid race conditions
+    this.client = createClient({ baseUrl: this.htmlPdfGenUrl });
+  }
+
+  /**
+   * Get the data object to use with the HTML template.
+   */
+  public abstract getParameters(entity: T): Promise<P>;
+
+  /**
+   * Apply parameters to the template and return the complete HTML.
+   */
+  protected async getHtml(entity: T): Promise<string> {
+    const data = await this.getParameters(entity);
+    return PdfTemplateGenerator.applyTemplate(this.templateFileName, data);
+  }
+
+  /**
+   * Compile HTML to PDF using the external service.
+   */
+  protected async compileHtml(html: string): Promise<Buffer> {
+    try {
+      const data = await postCompileHtml<true>({
+        client: this.client,
+        body: { html },
+        parseAs: 'stream',
+      });
+
+      if (data.response.status !== 200) {
+        const errorText = await data.response.text().catch(() => 'Unknown error');
+        throw new PdfError(`HTML PDF generation failed: ${data.response.status} ${errorText}`);
+      }
+
+      const arrayBuffer = await data.response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error: any) {
+      if (error instanceof PdfError) {
+        throw error;
+      }
+      throw new PdfError(`HTML PDF generation failed: ${error?.message ?? String(error)}`);
+    }
+  }
+
+  /**
+   * Create a PDF and return bytes.
+   */
+  public async createPdfBuffer(entity: T): Promise<Buffer> {
+    const html = await this.getHtml(entity);
+    return this.compileHtml(html);
+  }
+
+  /**
+   * Create raw HTML output (for debugging or preview).
+   */
+  public async createRaw(entity: T): Promise<Buffer> {
+    const html = await this.getHtml(entity);
+    return Buffer.from(html, 'utf-8');
+  }
+}
+
+/**
+ * Stored PDF service.
+ * Uses BasePdfService to produce bytes then uploads and returns the Pdf entity.
+ */
+export abstract class PdfService<S extends Pdf, T extends IPdfAble<S>, R extends RouteParams>
+  extends BasePdfService<T, R>
+  implements IStoredPdfService<T, S> {
   fileService: FileService;
 
   abstract pdfConstructor: new () => S;
@@ -114,32 +265,58 @@ export abstract class PdfService<S extends Pdf, T extends IPdfAble<S>, R extends
     this.fileService = new FileService(fileLocation);
   }
 
-  public async createPdf(entity: T): Promise<S> {
-    const routeParams = await this.getRouteParams(entity, ReturnFileType.PDF);
+  /**
+   * Persist the generated PDF and return the stored Pdf entity.
+   */
+  public async createPdfWithEntity(entity: T): Promise<S> {
+    const buffer = await this.createPdfBuffer(entity);
     const user = await entity.getOwner();
-
-    try {
-      const res = await this.generator(routeParams);
-      const blob = res.data;
-      const buffer = Buffer.from(await blob.arrayBuffer());
-      return await this.fileService.uploadPdf<T, S>(entity, this.pdfConstructor, buffer, user);
-    } catch (res: any) {
-      throw new PdfError(`Pdf generation failed: ${res.message}`);
-    }
+    return this.fileService.uploadPdf<T, S>(entity, this.pdfConstructor, buffer, user);
   }
 }
 
-export abstract class UnstoredPdfService<T extends IUnstoredPdfAble, R extends RouteParams> extends BasePdfService<T, R> {
+/**
+ * HTML-to-PDF service for entities that store PDFs.
+ * Similar to PdfService but uses HTML templates instead of LaTeX.
+ */
+export abstract class HtmlPdfService<S extends Pdf, T extends IPdfAble<S>, P extends PdfTemplateParameters = PdfTemplateParameters>
+  extends BaseHtmlPdfService<T, P>
+  implements IStoredPdfService<T, S> {
+  fileService: FileService;
 
-  public async createPdf(entity: T): Promise<Buffer> {
-    const routeParams = await this.getRouteParams(entity);
+  abstract pdfConstructor: new () => S;
 
-    try {
-      const res = await this.generator(routeParams);
-      const blob = res.data;
-      return Buffer.from(await blob.arrayBuffer());
-    } catch (res: any) {
-      throw new PdfError(`Pdf generation failed: ${res.message}`);
-    }
+  constructor(fileLocation: string, manager?: EntityManager) {
+    super(manager);
+    this.fileService = new FileService(fileLocation);
   }
+
+  /**
+   * Persist the generated PDF and return the stored Pdf entity.
+   */
+  public async createPdfWithEntity(entity: T): Promise<S> {
+    const buffer = await this.createPdfBuffer(entity);
+    const user = await entity.getOwner();
+    return this.fileService.uploadPdf<T, S>(entity, this.pdfConstructor, buffer, user);
+  }
+}
+
+/**
+ * UnstoredPdfService - produces bytes but does not persist.
+ * It inherits createPdfBuffer and createRaw from BasePdfService.
+ * It does not implement any stored interface.
+ */
+export abstract class UnstoredPdfService<T extends IUnstoredPdfAble, R extends RouteParams>
+  extends BasePdfService<T, R> {
+  // No additional logic required. createPdfBuffer and createRaw come from BasePdfService.
+}
+
+/**
+ * HTML-to-PDF service for entities that don't store PDFs.
+ * It inherits createPdfBuffer and createRaw from BaseHtmlPdfService.
+ * It does not implement any stored interface.
+ */
+export abstract class HtmlUnstoredPdfService<T extends IUnstoredPdfAble, P extends PdfTemplateParameters = PdfTemplateParameters>
+  extends BaseHtmlPdfService<T, P> {
+  // No additional logic required.
 }

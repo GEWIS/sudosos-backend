@@ -170,7 +170,11 @@ describe('PayoutRequestPdfService', async () => {
         data: new Blob(),
         status: 200,
       });
-      uploadPayoutStub.resolves({});
+      const newPdf = Object.assign(new PayoutRequestPdf(), {
+        ...ctx.pdfParams,
+        hash: await payoutRequest.getPdfParamHash(),
+      });
+      uploadPayoutStub.resolves(newPdf);
       payoutRequest.pdfService = pdfService;
 
       await payoutRequest.getOrCreatePdf();
@@ -196,7 +200,11 @@ describe('PayoutRequestPdfService', async () => {
         data: new Blob(),
         status: 200,
       });
-      uploadPayoutStub.resolves({});
+      const newPdf = Object.assign(new PayoutRequestPdf(), {
+        ...ctx.pdfParams,
+        hash: await payoutRequest.getPdfParamHash(),
+      });
+      uploadPayoutStub.resolves(newPdf);
       payoutRequest.pdfService = pdfService;
 
       await payoutRequest.getOrCreatePdf(true);
@@ -214,9 +222,14 @@ describe('PayoutRequestPdfService', async () => {
       });
 
       const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
-      uploadPayoutStub.resolves({
+      const newPdf = Object.assign(new PayoutRequestPdf(), {
         hash: await payoutRequest.getPdfParamHash(),
+        downloadName: 'test',
+        location: 'test',
+        createdBy: payoutRequest.requestedBy,
+        id: 42,
       });
+      uploadPayoutStub.resolves(newPdf);
       createFileStub.resolves({
         downloadName: 'test',
         location: 'test',
