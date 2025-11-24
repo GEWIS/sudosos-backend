@@ -225,7 +225,7 @@ export default class UserService {
   }
 
   /**
-   * Function for getting al Users
+   * Function for getting all Users
    * @param filters - Query filters to apply
    * @param pagination - Pagination to adhere to
    */
