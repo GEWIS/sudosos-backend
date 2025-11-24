@@ -377,7 +377,7 @@ export default class UserService {
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
   public static async closeUser(userId: number, deleted = false): Promise<UserResponse> {
-    const options = this.getOptions({ id: userId });
+    const options = this.getOptions({ id: userId, allowDeleted: true });
     const user = await User.findOne(options);
     if (!user) return undefined;
 
