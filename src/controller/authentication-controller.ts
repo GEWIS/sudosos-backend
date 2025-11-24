@@ -50,6 +50,7 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
+import UserService from '../service/user-service';
 
 /**
  * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
@@ -463,7 +464,10 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
+      const authenticator = await NfcAuthenticator.findOne({
+        where: { nfcCode: body.nfcCode },
+        relations: UserService.getRelations<NfcAuthenticator>(),
+      });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -504,7 +508,10 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const { eanCode } = body;
-      const authenticator = await EanAuthenticator.findOne({ where: { eanCode } });
+      const authenticator = await EanAuthenticator.findOne({
+        where: { eanCode },
+        relations: UserService.getRelations<EanAuthenticator>(),
+      });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -598,7 +605,12 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({ where: { id: body.userId } });
+      const userOptions = UserService.getOptions({ id: body.userId });
+      const user = await User.findOne(userOptions);
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
       const response = await new AuthenticationService().getSaltedToken({
         user,
         context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },

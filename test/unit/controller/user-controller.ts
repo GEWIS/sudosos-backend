@@ -281,7 +281,7 @@ describe('UserController', (): void => {
 
   describe('GET /users', () => {
     async function queryUserBackend(searchQuery: string) {
-      const filteredUsers = (await User.find()).filter((user) => {
+      const filteredUsers = (await User.find({ where: { deleted: false } })).filter((user) => {
         const fullName = `${user.firstName} ${user.lastName}`;
         return (
           user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||

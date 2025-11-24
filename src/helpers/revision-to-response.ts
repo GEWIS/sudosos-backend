@@ -144,7 +144,7 @@ export interface RawUser {
   acceptedToS: TermsOfServiceStatus,
   extensiveDataProcessing: number,
   canGoIntoDebt: number,
-  externalId?: number, // This is the memberId from member_user table, kept as externalId for API compatibility
+  memberId?: number,
 }
 
 /**
@@ -168,8 +168,8 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,
-    externalId: user.externalId,
-    gewisId: user.externalId, // Deprecated: kept for backward compatibility
+    memberId: user.memberId,
+    gewisId: user.memberId, // Deprecated: kept for backward compatibility
   };
 }
 
