@@ -402,7 +402,7 @@ export default class UserService {
    */
   public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
   Promise<UserResponse> {
-    const options = this.getOptions({ id: userId });
+    const options = this.getOptions({ id: userId, allowDeleted: true });
     const user = await User.findOne(options);
     if (!user) return undefined;
     Object.assign(user, updateUserRequest);
