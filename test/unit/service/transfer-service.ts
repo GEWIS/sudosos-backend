@@ -43,6 +43,7 @@ import {
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
+import sinon from 'sinon';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -309,6 +310,163 @@ describe('TransferService', async (): Promise<void> => {
       expect(lastEntry.from.id).to.equal(req.fromId);
       expect(lastEntry.to).to.be.undefined;
       expect(lastEntry.vat.id).to.equal(req.vatId);
+    });
+  });
+  describe('deleteTransfer function', () => {
+    it('should successfully delete a transfer with no relations', async () => {
+      // Find a transfer that has no relations
+      const transfer = ctx.transfers.find((t) => !t.invoice && !t.deposit && !t.payoutRequest && !t.fine && !t.writeOff && !t.waivedFines && !t.inactiveAdministrativeCost);
+      expect(transfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      await new TransferService().deleteTransfer(transfer.id);
+
+      expect(await Transfer.count()).to.equal(transferCount - 1);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.be.null;
+    });
+
+    it('should throw error when trying to delete a transfer with invoice relation', async () => {
+      const transfer = ctx.transfers.find((t) => t.invoice != null);
+      expect(transfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      try {
+        await new TransferService().deleteTransfer(transfer.id);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Cannot delete transfer because it is referenced by another entity');
+      }
+
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should throw error when trying to delete a transfer with payoutRequest relation', async () => {
+      const transfer = ctx.transfers.find((t) => t.payoutRequest != null);
+      expect(transfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      try {
+        await new TransferService().deleteTransfer(transfer.id);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Cannot delete transfer because it is referenced by another entity');
+      }
+
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should throw error when trying to delete a transfer with deposit relation', async () => {
+      const transfer = ctx.transfers.find((t) => t.deposit != null);
+      expect(transfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      try {
+        await new TransferService().deleteTransfer(transfer.id);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Cannot delete transfer because it is referenced by another entity');
+      }
+
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should throw error when trying to delete a transfer with fine relation', async () => {
+      const transfer = ctx.transfers.find((t) => t.fine != null);
+      expect(transfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      try {
+        await new TransferService().deleteTransfer(transfer.id);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Cannot delete transfer because it is referenced by another entity');
+      }
+
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should throw error when trying to delete a non-existent transfer', async () => {
+      const maxId = ctx.transfers.reduce((max, t) => Math.max(max, t.id), 0);
+      const nonExistentId = maxId + 100;
+
+      try {
+        await new TransferService().deleteTransfer(nonExistentId);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Transfer not found');
+      }
+    });
+  });
+
+  describe('invalidateBalanceCaches function', async () => {
+    let clearStub: sinon.SinonStub;
+
+    beforeEach(async () => {
+      const BalanceModule = await import('../../../src/service/balance-service');
+      const BalanceService = BalanceModule.default;
+      // Stub the prototype method directly and make it return a resolved promise
+      clearStub = sinon.stub(BalanceService.prototype, 'clearBalanceCache').resolves();
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should invalidate balance caches for both from and to users', async () => {
+      const transfer = await Transfer.save({
+        from: ctx.users[0],
+        to: ctx.users[1],
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer for deletion',
+        version: 1,
+      } as Transfer);
+
+      await TransferService.invalidateBalanceCaches(transfer as Transfer);
+
+      expect(clearStub).to.have.been.calledOnce;
+      const calledWith = clearStub.getCall(0).args[0];
+      expect(calledWith).to.include(transfer.from.id);
+      expect(calledWith).to.include(transfer.to.id);
+    });
+
+    it('should invalidate balance cache for only to user if from is null', async () => {
+      const user = ctx.users[0];
+      const transfer = new Transfer();
+      transfer.from = null;
+      transfer.to = user;
+
+      await TransferService.invalidateBalanceCaches(transfer);
+
+      expect(clearStub).to.have.been.calledOnce;
+      const calledWith = clearStub.getCall(0).args[0];
+      expect(calledWith).to.include(user.id);
+    });
+
+    it('should invalidate balance cache for only from user if to is null', async () => {
+      const user = ctx.users[1];
+      const transfer = new Transfer();
+      transfer.from = user;
+      transfer.to = null;
+
+      await TransferService.invalidateBalanceCaches(transfer);
+
+      expect(clearStub).to.have.been.calledOnce;
+      const calledWith = clearStub.getCall(0).args[0];
+      expect(calledWith).to.include(user.id);
+    });
+
+    it('should do nothing if both from and to are null', async () => {
+      const transfer = new Transfer();
+      transfer.from = null as any;
+      transfer.to = null as any;
+
+      await TransferService.invalidateBalanceCaches(transfer);
+
+      expect(clearStub).to.not.have.been.called;
     });
   });
 });

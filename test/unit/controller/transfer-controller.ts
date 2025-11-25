@@ -36,10 +36,16 @@ import Swagger from '../../../src/start/swagger';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import WriteOff from '../../../src/entity/transactions/write-off';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: DataSource;
   let app: Application;
+  let ctx: {
+    users: User[],
+    transfers: Transfer[],
+  };
 
   let adminAccountDeposit: Transfer;
   let localAccountDeposit: Transfer;
@@ -173,6 +179,12 @@ describe('TransferController', async (): Promise<void> => {
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/transfers', controller.getRouter());
+
+    // initialize context
+    ctx = {
+      users,
+      transfers: await Transfer.find(),
+    };
   });
 
   after(async () => {
@@ -352,6 +364,75 @@ describe('TransferController', async (): Promise<void> => {
       expect(await Transfer.count()).to.equal(transferCount);
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
+    });
+  });
+  describe('DELETE /transfers/{id}', () => {
+    it('should return HTTP 204 when successfully deleting a transfer', async () => {
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer for deletion',
+        version: 1,
+      });
+
+      const transferCount = await Transfer.count();
+      const res = await request(app)
+        .delete(`/transfers/${transfer.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(204);
+      expect(await Transfer.count()).to.equal(transferCount - 1);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.be.null;
+    });
+
+    it('should return HTTP 400 when trying to delete a transfer with relations', async () => {
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer for deletion',
+        version: 1,
+      });
+
+      await WriteOff.save({
+        to: ctx.users[0],
+        transfer: transfer,
+        amount: DineroTransformer.Instance.from(100),
+        version: 1,
+      });
+
+      const transferCount = await Transfer.count();
+      const res = await request(app)
+        .delete(`/transfers/${transfer.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot delete transfer because it is referenced by another entity.');
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should return HTTP 404 when trying to delete a non-existent transfer', async () => {
+      const maxId = ctx.transfers.reduce((max, t) => Math.max(max, t.id), 0);
+      const nonExistentId = maxId + 100;
+
+      const res = await request(app)
+        .delete(`/transfers/${nonExistentId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Transfer not found.');
+    });
+
+    it('should return HTTP 403 if not authorized to delete', async () => {
+      const transfer = ctx.transfers.find((t) => !t.invoice && !t.deposit && !t.payoutRequest && !t.fine && !t.writeOff && !t.waivedFines && !t.inactiveAdministrativeCost);
+      expect(transfer).to.not.be.undefined;
+
+      const res = await request(app)
+        .delete(`/transfers/${transfer.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).to.equal(403);
+      expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
     });
   });
 });
