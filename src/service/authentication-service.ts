@@ -38,7 +38,8 @@ import OrganMembership from '../entity/organ/organ-membership';
 import {
   bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,
 } from '../helpers/ad';
-import { parseUserToResponse } from '../helpers/revision-to-response';
+import { asUserResponse } from './user-service';
+import UserService from './user-service';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
@@ -147,8 +148,8 @@ export default class AuthenticationService extends WithManager {
     token: string,
   ): AuthenticationResponse {
     return {
-      user: parseUserToResponse(user, true),
-      organs: organs.map((organ) => parseUserToResponse(organ, false)),
+      user: asUserResponse(user, true),
+      organs: organs.map((organ) => asUserResponse(organ, false)),
       roles: roles.map((r) => r.name),
       token,
       acceptedToS: user.acceptedToS,
@@ -306,7 +307,10 @@ export default class AuthenticationService extends WithManager {
     }
 
     // At this point the user is authenticated.
-    const authenticator = await this.manager.findOne(LDAPAuthenticator, { where: { UUID: ADUser.objectGUID }, relations: ['user'] });
+    const authenticator: LDAPAuthenticator = await this.manager.findOne(LDAPAuthenticator, {
+      where: { UUID: ADUser.objectGUID },
+      relations: UserService.getRelations<LDAPAuthenticator>(),
+    });
 
     // If there is no user associated with the GUID we create the user and bind it.
     if (authenticator) return authenticator.user;

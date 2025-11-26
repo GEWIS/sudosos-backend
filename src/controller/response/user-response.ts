@@ -52,8 +52,8 @@ export interface BaseUserResponse extends BaseResponse {
  * user can be used (non-anonymously) for more data science!
  * @property {boolean} ofAge - Whether someone is old enough to drink beer
  * @property {boolean} canGoIntoDebt.required - Whether this user can get a negative balance
- * @property {integer} externalId - The external id of the user (e.g., GEWIS member ID)
- * @property {integer} gewisId - The m-Number of the user (deprecated, use externalId instead)
+ * @property {integer} memberId - The external id of the user (e.g., GEWIS member ID)
+ * @property {integer} gewisId - The m-Number of the user (deprecated, use externalId instead. Will be removed after 01/06/2026)
  * @property {BasePointOfSaleInfoResponse} pos - The related Point of Sale, in case user is a POS type
  */
 export interface UserResponse extends BaseUserResponse {
@@ -65,9 +65,9 @@ export interface UserResponse extends BaseUserResponse {
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;
-  externalId?: number;
+  memberId?: number;
 
-  /** @deprecated Use externalId instead */
+  /** @deprecated Use memberId instead */
   gewisId?: number;
   pos?: BasePointOfSaleInfoResponse;
 }

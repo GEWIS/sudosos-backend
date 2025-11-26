@@ -161,7 +161,7 @@ export default class GewisAuthenticationController extends BaseController {
 
       let memberUser = await MemberUser.findOne({
         where: { memberId: gewisweb.lidnr },
-        relations: ['user'],
+        relations: UserService.getRelations<MemberUser>(),
       });
       if (!memberUser) {
         this.logger.log('User not found in database, creating user');

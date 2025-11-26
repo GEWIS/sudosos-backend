@@ -43,6 +43,7 @@ import AuthenticationController from './authentication-controller';
 import AuthenticationService from '../service/authentication-service';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import { AuthenticationContext } from '../service/authentication-service';
+import UserService from '../service/user-service';
 
 /**
  * Handles authenticated-only authentication endpoints for token management and specialized flows.
@@ -129,7 +130,8 @@ export default class AuthenticationSecureController extends BaseController {
     this.logger.trace('Refresh token for user', req.token.user.id);
 
     try {
-      const user = await User.findOne({ where: { id: req.token.user.id }, relations: ['pointOfSale'] });
+      const userOptions = UserService.getOptions({ id: req.token.user.id });
+      const user = await User.findOne(userOptions);
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
@@ -161,10 +163,8 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       const pointOfSaleId = Number(req.params.id);
-      const user = await User.findOne({ 
-        where: { pointOfSale: { id: pointOfSaleId } },
-        relations: { pointOfSale: true },
-      });
+      const options = UserService.getOptions({ pointOfSaleId });
+      const user = await User.findOne(options);
       if (!user || !user.pointOfSale) {
         res.status(404).json('Point of sale not found.');
         return;
@@ -220,7 +220,8 @@ export default class AuthenticationSecureController extends BaseController {
         return;
       }
 
-      const user = await User.findOne({ where: { id: req.token.user.id } });
+      const userOptions = UserService.getOptions({ id: req.token.user.id });
+      const user = await User.findOne(userOptions);
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
@@ -311,7 +312,10 @@ export default class AuthenticationSecureController extends BaseController {
       }
 
       // Look up the NFC authenticator
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
+      const authenticator = await NfcAuthenticator.findOne({
+        where: { nfcCode: body.nfcCode },
+        relations: UserService.getRelations<NfcAuthenticator>(),
+      });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
