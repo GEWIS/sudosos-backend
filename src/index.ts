@@ -85,6 +85,7 @@ import getAppLogger from './helpers/logging';
 import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
+import UserNotificationController from "./controller/user-notification-preference-controller";
 
 export class Application {
   app: express.Express;
@@ -268,6 +269,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
   application.app.use('/v1/writeoffs', new WriteOffController(options).getRouter());
+  application.app.use('/v1/user-notification-preferences', new UserNotificationController(options).getRouter());
   application.app.use('/v1/seller-payouts', new SellerPayoutController(options).getRouter());
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   application.app.use('/v1/sync', new SyncController(options).getRouter());

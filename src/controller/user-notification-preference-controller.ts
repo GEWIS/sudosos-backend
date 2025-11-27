@@ -30,9 +30,10 @@ import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 import {
-  UpdateUserNotificationPreferenceParams,
-  UpdateUserNotificationPreferenceRequest,
+  UserNotificationPreferenceUpdateParams,
+  UserNotificationPreferenceUpdateRequest,
 } from './request/user-notification-preference-request';
+import { asNumber } from '../helpers/validators';
 
 /**
  * This is the module page of the notification-service.
@@ -63,17 +64,17 @@ export default class UserNotificationController extends BaseController {
     return {
       '/': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'UserNotificationPreference', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await UserNotificationController.filterRelation(req), 'UserNotificationPreference', ['*']),
           handler: this.getAllUserNotificationPreferences.bind(this),
         },
       },
       '/:id(\\d+)': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'UserNotificationPreference', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await UserNotificationController.getRelation(req), 'UserNotificationPreference', ['*']),
           handler: this.getSingleUserNotificationPreference.bind(this),
         },
         PATCH: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'UserNotificationPreference', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', await UserNotificationController.getRelation(req), 'UserNotificationPreference', ['*']),
           handler: this.updateUserNotificationPreference.bind(this),
         },
       },
@@ -166,20 +167,20 @@ export default class UserNotificationController extends BaseController {
      * @tags userNotificationPreferences - Operations of the user notification preference controller
      * @security JWT
      * @param {integer} id.path.required - The id of the user notification preference
-     * @param {UpdateUserNotificationPreferenceRequest} request.body.required -
+     * @param {UserNotificationPreferenceUpdateRequest} request.body.required -
      * The user notification preference update to process
      * @return {BaseUserNotificationPreferenceResponse} 200 - The existing user notification preference
      * @return {string} 404 - User notification preference not found
      * @return {string} 500 - Internal server error
      */
   public async updateUserNotificationPreference(req: RequestWithToken, res: Response): Promise<void> {
-    const body  = req.body as UpdateUserNotificationPreferenceRequest;
+    const body  = req.body as UserNotificationPreferenceUpdateRequest;
     const { id } = req.params;
     const userNotificationPreferenceId = parseInt(id, 10);
     this.logger.trace('Update user notification preferences', userNotificationPreferenceId, 'by user', req.token.user);
 
     try {
-      const params: UpdateUserNotificationPreferenceParams = {
+      const params: UserNotificationPreferenceUpdateParams = {
         ...body,
         userNotificationPreferenceId,
       };
@@ -200,5 +201,52 @@ export default class UserNotificationController extends BaseController {
       this.logger.error('Could not update user notification preferences', e);
       res.status(500).json('Internal server error');
     }
+  }
+
+  /**
+   * Determines the relation between the user and the notification preference.
+   * - Returns own if user is connected to the notification preference
+   * - Returns all otherwise.
+   * @param req - Express request with user token and filters in query params.
+   * @returns 'own' | 'all'
+   */
+  static async filterRelation(
+    req: RequestWithToken,
+  ): Promise<'own' | 'all'> {
+    try {
+      const reqUserId = req.token.user.id;
+      const { userId } = parseUserNotificationPreferenceFilters(req);
+
+      if (reqUserId == userId) {
+        return 'own';
+      }
+
+      return 'all';
+    } catch (e) {
+      return 'all';
+    }
+  }
+
+  /**
+   * Determines which credentials are needed to get user notification preferences
+   *    all if user is not connected to user notification preference
+   *    own if user is connected to the notification preference
+   * @param req - Request with transaction id as param
+   * @return whether transaction is connected to user token
+   */
+  static async getRelation(
+    req: RequestWithToken,
+  ): Promise<'all' | 'own'> {
+
+    const preference = await UserNotificationPreference.findOne({
+      where: { id: asNumber(req.params.id) },
+      relations: ['user'],
+    });
+
+    if (!preference) return 'all';
+
+    if (preference.userId == req.token.user.id) return 'own';
+
+    return 'all';
   }
 }

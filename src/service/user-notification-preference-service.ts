@@ -20,19 +20,22 @@
 
 
 import WithManager from '../database/with-manager';
-import { asNumber } from '../helpers/validators';
-import { RequestWithToken } from '../middleware/token-middleware';
-import { FindManyOptions, FindOptionsRelations } from 'typeorm';
+import {asNumber} from '../helpers/validators';
+import {RequestWithToken} from '../middleware/token-middleware';
+import {FindManyOptions, FindOptionsRelations} from 'typeorm';
 import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 import QueryFilter from '../helpers/query-filter';
 import User from '../entity/user/user';
-import { PaginationParameters } from '../helpers/pagination';
+import {PaginationParameters} from '../helpers/pagination';
 import {
   BaseUserNotificationPreferenceResponse,
   PaginatedUserNotificationPreferenceResponse,
-} from '../controller/response/user-notification-prefernce-response';
-import { parseUserToBaseResponse } from '../helpers/revision-to-response';
-import { UpdateUserNotificationPreferenceParams } from '../controller/request/user-notification-preference-request';
+} from '../controller/response/user-notification-preference-response';
+import {parseUserToBaseResponse} from '../helpers/revision-to-response';
+import {
+  UserNotificationPreferenceUpdateParams,
+  UserNotificationPreferenceRequestParams
+} from '../controller/request/user-notification-preference-request';
 
 /**
  * This is the module page of the notification-service.
@@ -68,15 +71,13 @@ export interface UserNotificationPreferenceFilterParams {
 }
 
 export function parseUserNotificationPreferenceFilters(req: RequestWithToken): UserNotificationPreferenceFilterParams {
-  const filters: UserNotificationPreferenceFilterParams = {
+  return {
     userNotificationPreferenceId: asNumber(req.query.userNotificationPreferenceId),
     userId: asNumber(req.query.userId),
     type: req.query.code as string,
     channel: req.query.channel as string,
-    enabled: Boolean(req.query.enabled),
+    enabled: req.query.enabled === undefined ? undefined : Boolean(req.query.enabled),
   };
-
-  return filters;
 }
 
 export default class UserNotificationPreferenceService extends WithManager {
@@ -102,10 +103,10 @@ export default class UserNotificationPreferenceService extends WithManager {
 
   /**
    * Creates an UserNotificationPreference from an UserNotificationPreferenceRequest
-   * @param params - The UserNotificationPreferenceRequest to create
+   * @param requestParams
    */
-  public async createUserNotificationPreference(params: UserNotificationPreferenceFilterParams): Promise<UserNotificationPreference> {
-    const { userId, type, channel, enabled } = params;
+  public async createUserNotificationPreference(requestParams: UserNotificationPreferenceRequestParams): Promise<UserNotificationPreference> {
+    const { userId, type, channel, enabled } = requestParams;
     const user = await this.manager.findOne(User, { where: { id: userId } });
 
     const newUserNotificationPreference: UserNotificationPreference = Object.assign(new UserNotificationPreference(), {
@@ -162,7 +163,7 @@ export default class UserNotificationPreferenceService extends WithManager {
    *
    * @param update
    */
-  public async updateUserNotificationPreference(update: UpdateUserNotificationPreferenceParams): Promise<UserNotificationPreference> {
+  public async updateUserNotificationPreference(update: UserNotificationPreferenceUpdateParams): Promise<UserNotificationPreference> {
     const { userNotificationPreferenceId, enabled } = update;
     const base: UserNotificationPreference = await this.manager.findOne(
       UserNotificationPreference, UserNotificationPreferenceService.getOptions({ userNotificationPreferenceId },

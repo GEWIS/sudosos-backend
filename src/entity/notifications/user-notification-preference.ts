@@ -35,7 +35,7 @@ import User from '../user/user';
 import { NotificationTypes } from '../../notifications/notification-types';
 
 @Entity()
-@Unique(['userId', 'channel', 'code'])
+@Unique(['user', 'channel', 'type'])
 export default class UserNotificationPreference extends BaseEntity {
   @Column({ nullable: false })
   public userId: number;

@@ -24,19 +24,25 @@
  * @module notifications
  */
 
-export interface UpdateUserNotificationPreferenceParams {
+export interface UserNotificationPreferenceUpdateParams {
   userNotificationPreferenceId: number;
   enabled: boolean;
 }
 
 /**
- * @typedef {object} UpdateUserNotificationPreferenceRequest
+ * @typedef {object} UserNotificationPreferenceUpdateRequest
  * @property {integer} userNotificationPreferenceId.required - The user notification preference id
  * @property {boolean} enabled.required - Whether the preference should be enabled or not
  */
-export interface UpdateUserNotificationPreferenceRequest {
-  userNotificationPreferenceId: number;
+export interface UserNotificationPreferenceUpdateRequest {
   enabled: boolean;
+}
+
+export interface UserNotificationPreferenceRequestParams {
+  userId: number;
+  type: string;
+  channel: string;
+  enabled?: boolean;
 }
 
 /**
@@ -44,11 +50,11 @@ export interface UpdateUserNotificationPreferenceRequest {
  * @property {integer} userId.required - The user
  * @property {string} type.required - The notification type code
  * @property {string} channel.required - The notification channel
- * @property {boolean} enabled.required - Whether the preference is enabled
+ * @property {boolean} enabled - Whether the preference is enabled
  */
 export interface UserNotificationPreferenceRequest {
   userId: number;
   type: string;
   channel: string;
-  enabled: boolean;
+  enabled?: boolean;
 }
