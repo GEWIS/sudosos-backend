@@ -43,13 +43,15 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import Transfer from '../entity/transactions/transfer';
-import Mailer from '../mailer';
+import Mailer, { UserWillGetFinedOptions } from '../mailer';
 import UserGotFined from '../mailer/messages/user-got-fined';
 import MailMessage from '../mailer/mail-message';
 import UserWillGetFined from '../mailer/messages/user-will-get-fined';
 import { FineReport } from '../entity/report/fine-report';
 import WithManager from '../database/with-manager';
 import QueryFilter from '../helpers/query-filter';
+import Notifier from '../notifications';
+import log4js, { Logger } from 'log4js';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -371,11 +373,24 @@ export default class DebtorService extends WithManager {
     referenceDate, userIds,
   }: HandOutFinesParams): Promise<void> {
     const fines = await this.calculateFinesOnDate({ userIds, referenceDates: [referenceDate] });
+    const logger: Logger = log4js.getLogger('Mailer');
+    logger.info('test');
+
+    await Notifier.getInstance().notify({
+      type: 'userGotFined',
+      userId: 1,
+      params: new UserWillGetFinedOptions(
+        referenceDate,
+        dinero({ amount: 10, currency: 'EUR' }),
+        dinero({ amount: -5, currency: 'EUR' }),
+      ),
+    });
 
     await Promise.all(fines.map(async (f) => {
       const user = await this.manager.findOne(User, { where: { id: f.id } });
       const balance = f.balances[0];
       if (balance == null) throw new Error('Missing balance');
+
       return Mailer.getInstance().send(user, new UserWillGetFined({
         referenceDate: referenceDate,
         fine: dinero(f.fineAmount as any),
