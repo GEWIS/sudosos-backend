@@ -307,6 +307,7 @@ export default class RbacController extends BaseController {
    * POST /rbac/roles/{id}/permissions
    * @summary Add new permissions to an existing role
    * @operationId addPermissions
+   * @security JWT
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role which should get the new permissions
    * @param {Array.<CreatePermissionParams>} request.body.required - The permissions that need to be added
@@ -375,6 +376,7 @@ export default class RbacController extends BaseController {
    * DELETE /rbac/roles/{id}/permissions/{entity}/{action}/{relation}
    * @summary Delete a permission from an existing role
    * @operationId deletePermission
+   * @security JWT
    * @tags rbac - Operations of the rbac controller
    * @param {integer} id.path.required - The ID of the role
    * @param {string} entity.path.required - The entity of the permission
