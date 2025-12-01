@@ -33,7 +33,6 @@ import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import { FineHandoutEventResponse } from '../../../src/controller/response/debtor-response';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
-import nodemailer, { Transporter } from 'nodemailer';
 import Mailer from '../../../src/mailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -42,6 +41,7 @@ import TransferService from '../../../src/service/transfer-service';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import { rootStubs } from '../../root-hooks';
+import Notifier from '../../../src/notifications';
 
 describe('DebtorService', (): void => {
   let ctx: {
@@ -58,7 +58,7 @@ describe('DebtorService', (): void => {
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let sendNotifyFake: SinonSpy;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -100,10 +100,10 @@ describe('DebtorService', (): void => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
+    sendNotifyFake = sandbox.spy();
+    sandbox.stub(Notifier, 'getInstance').returns({
+      notify: sendNotifyFake,
+    } as any);
   });
 
   after(async () => {
@@ -217,7 +217,7 @@ describe('DebtorService', (): void => {
 
       await new DebtorService().sendFineWarnings({ referenceDate: new Date(), userIds });
 
-      expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
+      expect(sendNotifyFake.callCount).to.equal(usersWithDebt.length);
     });
     it('should notify all given users based on reference date', async () => {
       const referenceDate = new Date('2021-01-01');
@@ -230,7 +230,7 @@ describe('DebtorService', (): void => {
 
       await new DebtorService().sendFineWarnings({ referenceDate, userIds });
 
-      expect(sendMailFake.callCount).to.equal(usersWithDebt.length);
+      expect(sendNotifyFake.callCount).to.equal(usersWithDebt.length);
     });
   });
 
@@ -859,7 +859,7 @@ describe('DebtorService', (): void => {
         referenceDate: new Date(),
       }, ctx.actor);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(sendNotifyFake).to.be.calledOnce;
 
       // Cleanup
       await deleteFineHandoutEvent(fineHandoutEvent.id);

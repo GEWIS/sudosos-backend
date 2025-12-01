@@ -41,7 +41,7 @@ import { NotificationChannels } from '../../entity/notifications/user-notificati
  *                      This represents the data object used to fill in template variables.
  *
  * @typeParam TRendered - The type of the *rendered* output after applying a template.
- *                        Example: a MailMessage for email, or a string for SMS.
+ *                        Example: a MailMessage for email.
  */
 export abstract class NotificationChannel<
     TTemplate extends TemplateObject<TParams, TRendered>,

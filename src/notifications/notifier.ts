@@ -35,7 +35,7 @@ import NotificationLog from '../entity/notifications/notification-log';
 /**
  * This is the module page of the notifier.
  *
- * @module notification
+ * @module notifications
  */
 
 interface NotificationPayload<P> {

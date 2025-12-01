@@ -38,7 +38,7 @@ import { asNumber } from '../helpers/validators';
 /**
  * This is the module page of the notification-service.
  *
- * @module notification
+ * @module notifications
  *
  */
 
@@ -93,6 +93,7 @@ export default class UserNotificationController extends BaseController {
      * @param {string} channel.query - Filter on the notification channel
      * @param {boolean} enabled.query - Filter on enabled preferences
      * @return {PaginatedUserNotificationPreferenceResponse} 200 - All existing invoices
+     * @return {string} 400 - Validation error
      * @return {string} 500 - Internal server error
      */
   public async getAllUserNotificationPreferences(req: RequestWithToken, res: Response): Promise<void> {

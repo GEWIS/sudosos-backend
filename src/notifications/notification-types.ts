@@ -22,7 +22,7 @@
 /**
  * This is the module page of the notification-types.
  *
- * @module notification
+ * @module notifications
  *
  */
 
