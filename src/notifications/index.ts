@@ -29,3 +29,12 @@ import './notification-types';
 import './notification-registry';
 
 export { default } from './notifier';
+export { UserWillGetFinedOptions } from './notification-options';
+export { ChangedPinOptions } from './notification-options';
+export { ForgotEventPlanningOptions } from './notification-options';
+export { HelloWorldOptions } from './notification-options';
+export { MembershipExpiryNotificationOptions } from './notification-options';
+export { WelcomeWithResetOptions } from './notification-options';
+export { UserDebtNotificationOptions } from './notification-options';
+export { UserGotFinedOptions } from './notification-options';
+export { WelcomeToSudososOptions } from './notification-options';

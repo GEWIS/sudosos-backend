@@ -26,19 +26,19 @@
 
 import { UserSyncService } from '../../service/sync/user/user-sync-service';
 import User, { UserType } from '../../entity/user/user';
-import log4js, { getLogger, Logger } from 'log4js';
+import log4js, { Logger } from 'log4js';
 import GewisUser from '../entity/gewis-user';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import BalanceService from '../../service/balance-service';
 import UserService from '../../service/user-service';
-import MembershipExpiryNotification from '../../mailer/messages/membership-expiry-notification';
 import DineroTransformer from '../../entity/transformer/dinero-transformer';
-import Mailer from '../../mailer';
-import { Language } from '../../mailer/mail-message';
 import { BasicApi, Configuration, MembersApi } from 'gewisdb-ts-client';
 import ServerSettingsStore from '../../server-settings/server-settings-store';
 import { ISettings } from '../../entity/server-setting';
 import { EntityManager } from 'typeorm';
+import Notifier, { MembershipExpiryNotificationOptions } from '../../notifications';
+import { NotificationTypes } from '../../notifications/notification-types';
+import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 
 
 export default class GewisDBSyncService extends UserSyncService {
@@ -145,9 +145,14 @@ export default class GewisDBSyncService extends UserSyncService {
         // Send notification to user
         if (!shouldDelete && isFallingEdge) {
           this.logger.trace(`User ${u.id} closed`);
-          Mailer.getInstance().send(entity, new MembershipExpiryNotification({
-            balance: DineroTransformer.Instance.from(currentBalance.amount.amount),
-          }), Language.ENGLISH, { bcc: process.env.FINANCIAL_RESPONSIBLE }).catch((e) => getLogger('User').error(e));
+          await Notifier.getInstance().notify({
+            type: NotificationTypes.InactiveAdministrativeCostNotification,
+            userId: entity.id,
+            params: new MembershipExpiryNotificationOptions(
+              DineroTransformer.Instance.from(currentBalance.amount.amount),
+            ),
+            overrideChannel: NotificationChannels.EMAIL,
+          });
         }
       }
     } catch (e) {

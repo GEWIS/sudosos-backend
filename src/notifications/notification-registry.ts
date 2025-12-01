@@ -19,10 +19,87 @@
  */
 
 import { NotificationTypes, NotificationTypeRegistry } from './notification-types';
-import { UserWillGetFinedOptions } from '../mailer';
+
+import {
+  ChangedPinOptions,
+  ForgotEventPlanningOptions,
+  HelloWorldOptions,
+  InactiveAdministrativeCostNotificationOptions,
+  MembershipExpiryNotificationOptions,
+  UserDebtNotificationOptions, UserGotFinedOptions, UserGotInactiveAdministrativeCostOptions,
+  UserWillGetFinedOptions, WelcomeToSudososOptions,
+  WelcomeWithResetOptions,
+} from './notification-options';
+
+NotificationTypeRegistry.register<ChangedPinOptions>({
+  type: NotificationTypes.ChangedPin,
+  paramClass: ChangedPinOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<ForgotEventPlanningOptions>({
+  type: NotificationTypes.ForgotEventPlanning,
+  paramClass: ForgotEventPlanningOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<HelloWorldOptions>({
+  type: NotificationTypes.HelloWorld,
+  paramClass: HelloWorldOptions,
+  isMandatory: false,
+});
+
+NotificationTypeRegistry.register<InactiveAdministrativeCostNotificationOptions>({
+  type: NotificationTypes.InactiveAdministrativeCostNotification,
+  paramClass: InactiveAdministrativeCostNotificationOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<MembershipExpiryNotificationOptions>({
+  type: NotificationTypes.MembershipExpiryNotification,
+  paramClass: MembershipExpiryNotificationOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<WelcomeWithResetOptions>({
+  type: NotificationTypes.PasswordReset,
+  paramClass: WelcomeWithResetOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<UserDebtNotificationOptions>({
+  type: NotificationTypes.UserDebtNotification,
+  paramClass: UserDebtNotificationOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<UserGotFinedOptions>({
+  type: NotificationTypes.UserGotFined,
+  paramClass: UserGotFinedOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<UserGotInactiveAdministrativeCostOptions>({
+  type: NotificationTypes.UserGotInactiveAdministrativeCost,
+  paramClass: UserGotInactiveAdministrativeCostOptions,
+  isMandatory: true,
+});
 
 NotificationTypeRegistry.register<UserWillGetFinedOptions>({
-  type: NotificationTypes.UserGotFined,
+  type: NotificationTypes.UserWillGetFined,
   paramClass: UserWillGetFinedOptions,
   isMandatory: true,
 });
+
+NotificationTypeRegistry.register<WelcomeToSudososOptions>({
+  type: NotificationTypes.WelcomeToSudosos,
+  paramClass: WelcomeToSudososOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<WelcomeWithResetOptions>({
+  type: NotificationTypes.WelcomeWithReset,
+  paramClass: WelcomeWithResetOptions,
+  isMandatory: true,
+});
+

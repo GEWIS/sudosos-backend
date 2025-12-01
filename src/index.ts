@@ -85,7 +85,7 @@ import getAppLogger from './helpers/logging';
 import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
-import UserNotificationController from "./controller/user-notification-preference-controller";
+import UserNotificationController from './controller/user-notification-preference-controller';
 
 export class Application {
   app: express.Express;

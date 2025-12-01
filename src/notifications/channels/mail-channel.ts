@@ -20,10 +20,18 @@
 
 import { NotificationChannel } from './abstract-channel';
 import User from '../../entity/user/user';
-import { EmailTemplate, TemplateOptions, UserWillGetFinedTemplate } from '../notification-types';
+import { EmailTemplate, TemplateOptions } from '../notification-types';
 import Mailer from '../../mailer';
 import MailMessage from '../../mailer/mail-message';
 import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
+import {
+  ChangedPinTemplate,
+  ForgotEventPlanningTemplate, HelloWorldTemplate,
+  InactiveAdministrativeCostNotificationTemplate,
+  MembershipExpiryNotificationTemplate,
+  PasswordResetTemplate, UserDebtNotificationTemplate, UserGotFinedTemplate, UserGotInactiveAdministrativeCostTemplate,
+  UserWillGetFinedTemplate, WelcomeToSudososTemplate, WelcomeWithResetTemplate,
+} from '../templates/notification-email-templates';
 
 /**
  * This is the module page of the mail-channel.
@@ -37,7 +45,18 @@ TemplateOptions,
 MailMessage<EmailTemplate<any>>
 > {
   readonly templates = {
-    userGotFined: UserWillGetFinedTemplate,
+    ChangedPin: ChangedPinTemplate,
+    ForgotEventPlanning: ForgotEventPlanningTemplate,
+    HelloWorld: HelloWorldTemplate,
+    InactiveAdministrativeCostNotification: InactiveAdministrativeCostNotificationTemplate,
+    MembershipExpiryNotification: MembershipExpiryNotificationTemplate,
+    PasswordReset: PasswordResetTemplate,
+    UserDebtNotification: UserDebtNotificationTemplate,
+    UserGotFined: UserGotFinedTemplate,
+    UserGotInactiveAdministrativeCost: UserGotInactiveAdministrativeCostTemplate,
+    UserWillGetFined: UserWillGetFinedTemplate,
+    WelcomeToSudosos: WelcomeToSudososTemplate,
+    WelcomeWithReset: WelcomeWithResetTemplate,
   };
 
   readonly name = NotificationChannels.EMAIL;

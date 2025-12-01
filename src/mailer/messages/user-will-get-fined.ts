@@ -27,18 +27,7 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-import { TemplateOptions } from '../../notifications/notification-types';
-
-export class UserWillGetFinedOptions extends TemplateOptions {
-  constructor(
-    public referenceDate: Date,
-    public fine: Dinero,
-    public balance: Dinero,
-  ) {
-    super();
-  }
-}
-
+import { UserWillGetFinedOptions } from '../../notifications';
 
 const formatBalance = (b: Dinero) => {
   if (b.isPositive()) {

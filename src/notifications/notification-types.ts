@@ -27,7 +27,6 @@
  */
 
 import MailMessage from '../mailer/mail-message';
-import UserWillGetFined, { UserWillGetFinedOptions } from '../mailer/messages/user-will-get-fined';
 
 export class TemplateOptions {
 }
@@ -46,12 +45,19 @@ export class EmailTemplate<P extends TemplateOptions> implements TemplateObject<
   }
 }
 
-export const UserWillGetFinedTemplate = new EmailTemplate(
-  (params: UserWillGetFinedOptions) => new UserWillGetFined(params),
-);
-
 export enum NotificationTypes {
+  ChangedPin = 'ChangedPin',
+  ForgotEventPlanning = 'ForgotEventPlanning',
+  HelloWorld = 'HelloWorld',
+  InactiveAdministrativeCostNotification = 'InactiveAdministrativeCostNotification',
+  MembershipExpiryNotification = 'MembershipExpiryNotification',
+  PasswordReset = 'PasswordReset',
+  UserDebtNotification = 'UserDebtNotification',
   UserGotFined = 'UserGotFined',
+  UserGotInactiveAdministrativeCost = 'UserGotInactiveAdministrativeCost',
+  UserWillGetFined = 'UserWillGetFined',
+  WelcomeToSudosos = 'WelcomeToSudosos',
+  WelcomeWithReset = 'WelcomeWithReset',
 }
 
 export interface NotificationType<P extends TemplateOptions = any> {

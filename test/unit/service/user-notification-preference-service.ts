@@ -21,7 +21,7 @@
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import UserNotificationPreference, {
   NotificationChannels,
 } from '../../../src/entity/notifications/user-notification-preference';
@@ -38,6 +38,7 @@ import { NotificationTypes } from '../../../src/notifications/notification-types
 import {
   PaginatedUserNotificationPreferenceResponse,
 } from '../../../src/controller/response/user-notification-preference-response';
+import { UserFactory } from '../../helpers/user-factory';
 
 describe('UserNotificationPreferenceService', async (): Promise<void> => {
   let ctx: {
@@ -169,14 +170,47 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
   });
 
   describe('updateUserNotificationPreference function', async (): Promise<void> => {
-    const user = ctx.users[0];
-    const preference = ctx.userNotificationPreferences.find((p) => p.userId === user.id);
-    
-    const res = await new UserNotificationPreferenceService().updateUserNotificationPreference(
-      { userNotificationPreferenceId: preference.id, enabled: !preference.enabled },
-    );
+    it('should correctly update a user notification preference', async () => {
+      const user = ctx.users[0];
+      const preference = ctx.userNotificationPreferences.find((p) => p.userId === user.id);
 
-    expect(res.userId).to.equal(user.id);
-    expect(res.enabled).to.equal(!preference.enabled);
+      const res = await new UserNotificationPreferenceService().updateUserNotificationPreference(
+        { userNotificationPreferenceId: preference.id, enabled: !preference.enabled },
+      );
+
+      expect(res.userId).to.equal(user.id);
+      expect(res.enabled).to.equal(!preference.enabled);
+    });
+  });
+
+  describe('syncAllUserNotificationPreferences function', async (): Promise<void> => {
+    it('should sync all users who miss notification preferences', async () => {
+      const newUser = await (await UserFactory({
+        firstName: 'TestUser',
+        active: true,
+        type: UserType.LOCAL_ADMIN,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        email: 'test@example.com',
+      } as User)).get();
+
+      const existingPrefs = await UserNotificationPreference.find({ where: { userId: newUser.id } });
+      expect(existingPrefs.length).to.eq(0);
+
+      await new UserNotificationPreferenceService().syncAllUserNotificationPreferences();
+
+      const allPrefs = await UserNotificationPreference.find({ where: { userId: newUser.id } });
+
+      const totalCombinations = Object.values(NotificationTypes).length * Object.values(NotificationChannels).length;
+      expect(allPrefs.length).to.eq(totalCombinations);
+
+      for (const type of Object.values(NotificationTypes)) {
+        for (const channel of Object.values(NotificationChannels)) {
+          const exists = allPrefs.some(p => p.type === type && p.channel === channel);
+          expect(exists).to.eq(true);
+        }
+      }
+    });
+
+
   });
 });

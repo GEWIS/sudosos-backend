@@ -24,16 +24,9 @@
  * @module internal/mailer
  */
 
-import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-
-interface UserGotFinedOptions {
-  referenceDate: Date;
-  fine: Dinero;
-  totalFine: Dinero;
-  balance: Dinero;
-}
+import { UserGotFinedOptions } from '../../notifications';
 
 const userGotFinedDutch = new MailContentBuilder<UserGotFinedOptions>({
   getHTML: (context) => `

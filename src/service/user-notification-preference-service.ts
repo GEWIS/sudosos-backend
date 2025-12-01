@@ -20,22 +20,24 @@
 
 
 import WithManager from '../database/with-manager';
-import {asNumber} from '../helpers/validators';
-import {RequestWithToken} from '../middleware/token-middleware';
-import {FindManyOptions, FindOptionsRelations} from 'typeorm';
-import UserNotificationPreference from '../entity/notifications/user-notification-preference';
+import { asNumber } from '../helpers/validators';
+import { RequestWithToken } from '../middleware/token-middleware';
+import { FindManyOptions, FindOptionsRelations } from 'typeorm';
+import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import QueryFilter from '../helpers/query-filter';
 import User from '../entity/user/user';
-import {PaginationParameters} from '../helpers/pagination';
+import { PaginationParameters } from '../helpers/pagination';
 import {
   BaseUserNotificationPreferenceResponse,
   PaginatedUserNotificationPreferenceResponse,
 } from '../controller/response/user-notification-preference-response';
-import {parseUserToBaseResponse} from '../helpers/revision-to-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import {
   UserNotificationPreferenceUpdateParams,
-  UserNotificationPreferenceRequestParams
+  UserNotificationPreferenceRequestParams,
 } from '../controller/request/user-notification-preference-request';
+import { NotificationTypes } from '../notifications/notification-types';
+import { NotificationChannel } from '../notifications/channels/abstract-channel';
 
 /**
  * This is the module page of the notification-service.
@@ -177,6 +179,40 @@ export default class UserNotificationPreferenceService extends WithManager {
 
     const options = UserNotificationPreferenceService.getOptions({ userNotificationPreferenceId: base.id });
     return this.manager.findOne(UserNotificationPreference, options);
+  }
+
+  /**
+   * Sync all users with all types of notification and channels
+   */
+  public async syncAllUserNotificationPreferences(): Promise<void> {
+    const allCombinations: { type: NotificationTypes; channel: NotificationChannels }[]  = [];
+    for (const type of Object.values(NotificationTypes)) {
+      for (const channel of Object.values(NotificationChannels)) {
+        allCombinations.push({ type, channel });
+      }
+    }
+
+    const users = await this.manager.find(User);
+    for (const user of users) {
+      const userPreferences = await new UserNotificationPreferenceService().getUserNotificationPreferences({ userId: user.id });
+      
+      const missingCombinations = allCombinations.filter(combo =>
+        !userPreferences.some(up => up.type === combo.type && up.channel === combo.channel),
+      );
+
+      if (missingCombinations.length > 0) {
+        await Promise.all(
+          missingCombinations.map(combo =>
+            new UserNotificationPreferenceService().createUserNotificationPreference({
+              userId: user.id,
+              type: combo.type,
+              channel: combo.channel,
+              enabled: false,
+            }),
+          ),
+        );
+      }
+    }
   }
 
   public static getOptions(params: UserNotificationPreferenceFilterParams): FindManyOptions<UserNotificationPreference> {

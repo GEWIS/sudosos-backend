@@ -29,8 +29,9 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import Mailer from '../mailer';
-import HelloWorld from '../mailer/messages/hello-world';
+import Notifier, { HelloWorldOptions } from '../notifications';
+import { NotificationTypes } from '../notifications/notification-types';
+import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 export default class TestController extends BaseController {
   /**
@@ -74,8 +75,12 @@ export default class TestController extends BaseController {
     this.logger.trace('Hello world email by', req.token.user.id);
 
     try {
-      await Mailer.getInstance().send(req.token.user,
-        new HelloWorld({ name: req.token.user.firstName }));
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.HelloWorld,
+        userId: req.token.user.id,
+        params: new HelloWorldOptions(req.token.user.firstName),
+        overrideChannel: NotificationChannels.EMAIL,
+      });
       res.status(204).send();
     } catch (e) {
       res.status(500).json('Internal server error.');

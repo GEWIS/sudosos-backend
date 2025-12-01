@@ -30,8 +30,10 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import dinero, { Dinero, DineroObject } from 'dinero.js';
 import {
   BaseFineHandoutEventResponse,
-  FineHandoutEventResponse, FineResponse,
-  PaginatedFineHandoutEventResponse, UserFineGroupResponse,
+  FineHandoutEventResponse,
+  FineResponse,
+  PaginatedFineHandoutEventResponse,
+  UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
@@ -43,14 +45,12 @@ import UserFineGroup from '../entity/fine/userFineGroup';
 import { PaginationParameters } from '../helpers/pagination';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import Transfer from '../entity/transactions/transfer';
-import Mailer, { UserWillGetFinedOptions } from '../mailer';
-import UserGotFined from '../mailer/messages/user-got-fined';
-import MailMessage from '../mailer/mail-message';
 import { FineReport } from '../entity/report/fine-report';
 import WithManager from '../database/with-manager';
 import QueryFilter from '../helpers/query-filter';
-import Notifier from '../notifications';
+import Notifier, { UserGotFinedOptions, UserWillGetFinedOptions } from '../notifications';
 import { NotificationTypes } from '../notifications/notification-types';
+import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
@@ -208,7 +208,7 @@ export default class DebtorService extends WithManager {
     });
 
     // NOTE: executed in single transaction
-    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, emails: emails1 } = await this.manager.transaction(async (manager) => {
+    const { fines: fines1, fineHandoutEvent: fineHandoutEvent1, notifications: notifications1 } = await this.manager.transaction(async (manager) => {
       // Create a new fine group to "connect" all these fines
       const fineHandoutEvent = Object.assign(new FineHandoutEvent(), {
         referenceDate,
@@ -216,7 +216,7 @@ export default class DebtorService extends WithManager {
       });
       await manager.save(fineHandoutEvent);
 
-      const emails: { user: User, email: MailMessage<any> }[] = [];
+      const notifications: { user: User, notificationOption: UserGotFinedOptions }[] = [];
 
       // Create and save the fine information
       let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
@@ -245,12 +245,12 @@ export default class DebtorService extends WithManager {
           toId: undefined,
         });
 
-        emails.push({ user, email: new UserGotFined({
-          fine: amount,
-          balance: DineroTransformer.Instance.from(b.amount.amount),
+        notifications.push({ user, notificationOption: new UserGotFinedOptions(
           referenceDate,
-          totalFine: userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount :0 })).add(amount),
-        }) });
+          amount,
+          DineroTransformer.Instance.from(b.amount.amount),
+          userFineGroup.fines.reduce((sum, f) => sum.add(f.amount), dinero({ amount :0 })).add(amount),
+        ) });
 
         return Object.assign(new Fine(), {
           fineHandoutEvent,
@@ -260,10 +260,19 @@ export default class DebtorService extends WithManager {
           transfer,
         });
       }));
-      return { fines: await manager.save(fines), fineHandoutEvent, emails };
+      return { fines: await manager.save(fines), fineHandoutEvent, notifications: notifications };
     });
 
-    emails1.forEach(({ user, email }) => Mailer.getInstance().send(user, email));
+    await Promise.all(
+      notifications1.map(({ user, notificationOption }) =>
+        Notifier.getInstance().notify({
+          type: NotificationTypes.UserGotFined,
+          userId: user.id,
+          params: notificationOption,
+          overrideChannel: NotificationChannels.EMAIL,
+        }),
+      ),
+    );
 
     return {
       id: fineHandoutEvent1.id,
@@ -379,7 +388,7 @@ export default class DebtorService extends WithManager {
       if (balance == null) throw new Error('Missing balance');
 
       return Notifier.getInstance().notify({
-        type: NotificationTypes.UserGotFined,
+        type: NotificationTypes.UserWillGetFined,
         userId: user.id,
         params: new UserWillGetFinedOptions(
           referenceDate,
