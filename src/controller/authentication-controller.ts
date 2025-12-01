@@ -51,6 +51,7 @@ import { AppDataSource } from '../database/database';
 import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { WelcomeWithResetOptions } from '../notifications';
 import { NotificationChannels } from '../entity/notifications/user-notification-preference';
+import UserService from '../service/user-service';
 
 /**
  * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
@@ -85,6 +86,12 @@ export default class AuthenticationController extends BaseController {
    */
   public getPolicy(): Policy {
     return {
+      '/public': {
+        GET: {
+          policy: async () => true,
+          handler: this.getJWTPublicKey.bind(this),
+        },
+      },
       '/mock': {
         POST: {
           body: { modelName: 'AuthenticationMockRequest' },
@@ -165,6 +172,25 @@ export default class AuthenticationController extends BaseController {
     if (!user) return false;
 
     return true;
+  }
+
+  /**
+   * GET /authentication/public
+   * @summary Get the JWT public key used by SudoSOS
+   * @operationId getJWTPublicKey
+   * @tags authenticate - Operations of authentication controller
+   * @returns {string} 200 - Public key
+   */
+  public async getJWTPublicKey(req: Request, res: Response): Promise<void> {
+    this.logger.trace('Get JWT public key by IP', req.ip);
+
+    try {
+      const publicKey = this.tokenHandler.getOptions().publicKey;
+      res.json(publicKey);
+    } catch (error) {
+      this.logger.error('Could not get JWT public key:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**
@@ -445,7 +471,10 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
 
     try {
-      const authenticator = await NfcAuthenticator.findOne({ where: { nfcCode: body.nfcCode } });
+      const authenticator = await NfcAuthenticator.findOne({
+        where: { nfcCode: body.nfcCode },
+        relations: UserService.getRelations<NfcAuthenticator>(),
+      });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -486,7 +515,10 @@ export default class AuthenticationController extends BaseController {
 
     try {
       const { eanCode } = body;
-      const authenticator = await EanAuthenticator.findOne({ where: { eanCode } });
+      const authenticator = await EanAuthenticator.findOne({
+        where: { eanCode },
+        relations: UserService.getRelations<EanAuthenticator>(),
+      });
       if (authenticator == null || authenticator.user == null) {
         res.status(403).json({
           message: 'Invalid credentials.',
@@ -580,7 +612,12 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Mock authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({ where: { id: body.userId } });
+      const userOptions = UserService.getOptions({ id: body.userId });
+      const user = await User.findOne(userOptions);
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
       const response = await new AuthenticationService().getSaltedToken({
         user,
         context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },

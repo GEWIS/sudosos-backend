@@ -68,6 +68,11 @@ export default class StripeService extends WithManager {
   public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
     const MIN_TOPUP = asNumber(process.env.MIN_TOPUP) || 1000;
 
+    //check for negative and zero 
+    if (request.amount.amount <= 0) {
+      return false;
+    }
+    
     // Check if top-up is enough
     if (request.amount.amount >= MIN_TOPUP) return true;
     return request.amount.amount === -1 * balance.amount.amount;

@@ -40,7 +40,7 @@ import PayoutRequest from '../../src/entity/transactions/payout/payout-request';
 import StripeDeposit from '../../src/entity/stripe/stripe-deposit';
 import Invoice from '../../src/entity/invoices/invoice';
 import Banner from '../../src/entity/banner';
-import GewisUser from '../../src/gewis/entity/gewis-user';
+import MemberUser from '../../src/entity/user/member-user';
 import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
 import LocalAuthenticator from '../../src/entity/authenticator/local-authenticator';
 import WriteOff from '../../src/entity/transactions/write-off';
@@ -52,7 +52,7 @@ import {
   UserSeeder,
   VatGroupSeeder, WriteOffSeeder, UseNotificationSeeder,
 } from './index';
-import seedGEWISUsers from '../../src/gewis/database/seed';
+import { seedMemberUsers } from '../../src/database/seed';
 import BannerSeeder from './banner-seeder';
 import QRAuthenticatorSeeder from './qr-authenticator-seeder';
 import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
@@ -84,7 +84,7 @@ export interface DatabaseContent {
   stripeDeposits: StripeDeposit[],
   invoices: Invoice[],
   banners: Banner[],
-  gewisUsers: GewisUser[],
+  gewisUsers: MemberUser[],
   pinUsers: PinAuthenticator[],
   localUsers: LocalAuthenticator[],
   writeOffs: WriteOff[],
@@ -100,7 +100,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   );
   const pinUsers = await new UserSeeder().seedHashAuthenticator(users, PinAuthenticator);
   const localUsers = await new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator);
-  const gewisUsers = await seedGEWISUsers(users);
+  const gewisUsers = await seedMemberUsers(users);
   const categories = await new ProductCategorySeeder().seed();
   const vatGroups = await new VatGroupSeeder().seed();
   const {

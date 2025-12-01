@@ -34,7 +34,7 @@ export function reportPDFhelper(res: Response) {
   return async (service: PdfAbleService, filters: { fromDate: Date, tillDate: Date }, description: string, forId: number, reportType: UserReportParametersType, fileType: ReturnFileType) => {
     const report = await service.getReport({ ...filters, forId });
 
-    const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createTex();
+    const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createRaw();
     const from = `${filters.fromDate.getFullYear()}${filters.fromDate.getMonth() + 1}${filters.fromDate.getDate()}`;
     const to = `${filters.tillDate.getFullYear()}${filters.tillDate.getMonth() + 1}${filters.tillDate.getDate()}`;
     const fileName = `${reportType}-${from}-${to}.${fileType}`;

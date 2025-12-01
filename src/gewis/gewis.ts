@@ -26,20 +26,12 @@
  */
 
 import User, { UserType } from '../entity/user/user';
-import GewisUser from './entity/gewis-user';
+import MemberUser from '../entity/user/member-user';
 import AuthenticationService from '../service/authentication-service';
 import { asNumber } from '../helpers/validators';
 import { bindUser, LDAPUser } from '../helpers/ad';
 import GewiswebToken from './gewisweb-token';
-import { parseRawUserToResponse, RawUser } from '../helpers/revision-to-response';
-import Bindings from '../helpers/bindings';
-import { GewisUserResponse } from './controller/response/gewis-user-response';
-import { AppDataSource } from '../database/database';
 import WithManager from '../database/with-manager';
-
-export interface RawGewisUser extends RawUser {
-  gewisId: number
-}
 
 /**
  * The GEWIS-specific module with definitions and helper functions.
@@ -52,32 +44,32 @@ export default class Gewis extends WithManager {
   public async findOrCreateGEWISUserAndBind(ADUser: LDAPUser): Promise<User> {
     // The employeeNumber is the leading truth for m-number.
     if (!ADUser.mNumber) return undefined;
-    let gewisUser;
+    let memberUser;
 
     try {
-      const gewisId = asNumber(ADUser.mNumber);
-      // Check if GEWIS User already exists.
-      gewisUser = await GewisUser.findOne({ where: { gewisId }, relations: ['user'] });
-      if (gewisUser) {
+      const memberId = asNumber(ADUser.mNumber);
+      // Check if Member User already exists.
+      memberUser = await MemberUser.findOne({ where: { memberId }, relations: ['user'] });
+      if (memberUser) {
         // If user exists we only have to bind the AD user
-        await bindUser(this.manager, ADUser, gewisUser.user);
+        await bindUser(this.manager, ADUser, memberUser.user);
       } else {
         // If m-account does not exist we create an account and bind it.
         const u = await new AuthenticationService(this.manager).createUserAndBind(ADUser);
-        gewisUser = await this.createGEWISUser(u, gewisId);
+        memberUser = await this.createMemberUser(u, memberId);
       }
     } catch (error) {
       return undefined;
     }
 
-    return gewisUser.user;
+    return memberUser.user;
   }
 
   /**
    * Function that creates a SudoSOS user based on the payload provided by the GEWIS Web token.
    * @param token
    */
-  public async createUserFromWeb(token: GewiswebToken): Promise<GewisUser> {
+  public async createUserFromWeb(token: GewiswebToken): Promise<MemberUser> {
     const user = Object.assign(new User(), {
       firstName: token.given_name,
       lastName: (token.middle_name.length > 0 ? `${token.middle_name} ` : '') + token.family_name,
@@ -88,64 +80,29 @@ export default class Gewis extends WithManager {
       canGoIntoDebt: true,
     } as User) as User;
     const u = await this.manager.save(user);
-    return this.createGEWISUser(u, token.lidnr);
+    return this.createMemberUser(u, token.lidnr);
   }
 
   /**
-   * Parses a raw User DB object to a UserResponse
-   * @param user - User to parse
-   * @param timestamps - Boolean if createdAt and UpdatedAt should be included
-   */
-  public static parseRawUserToGewisResponse(user: RawGewisUser, timestamps = false)
-    : GewisUserResponse {
-    if (!user) return undefined;
-    return {
-      ...parseRawUserToResponse(user, timestamps),
-      gewisId: user.gewisId,
-    };
-  }
-
-  public static getUserBuilder() {
-    return AppDataSource.createQueryBuilder()
-      .from(User, 'user')
-      .leftJoin(GewisUser, 'gewis_user', 'userId = id')
-      .orderBy('userId', 'ASC');
-  }
-
-  /**
-   * Function that turns a local User into a GEWIS User.
+   * Function that turns a local User into a Member User.
    * @param user - The local user
-   * @param gewisId - GEWIS member ID of the user
+   * @param memberId - Member ID of the user (e.g., GEWIS member ID)
    */
-  public async createGEWISUser(user: User, gewisId: number): Promise<GewisUser> {
-    const gewisUser = Object.assign(new GewisUser(), {
+  public async createMemberUser(user: User, memberId: number): Promise<MemberUser> {
+    const memberUser = Object.assign(new MemberUser(), {
       user,
-      gewisId,
+      memberId,
     });
 
-    await this.manager.save(gewisUser);
+    await this.manager.save(memberUser);
     // 09-08-2022 (Roy): code block below (temporarily) disabled, because the huge amount of queries
     // in this chain makes the request too slow for the test suite
     //
     // // This would be the place to make a PIN Code and mail it to the user.
     // // This is not meant for production code
     // await AuthenticationService
-    //   .setUserAuthenticationHash<PinAuthenticator>(user, gewisId.toString(), PinAuthenticator);
+    //   .setUserAuthenticationHash<PinAuthenticator>(user, memberId.toString(), PinAuthenticator);
 
-    return gewisUser;
-  }
-
-  public static ldapUserCreation: () => (ADUser: LDAPUser) => Promise<User> = () => {
-    const service = new Gewis();
-    return service.findOrCreateGEWISUserAndBind.bind(service);
-  };
-
-  // eslint-disable-next-line class-methods-use-this
-  static overwriteBindings() {
-    Bindings.onNewUserCreate = Gewis.ldapUserCreation;
-    Bindings.Users = {
-      parseToResponse: Gewis.parseRawUserToGewisResponse,
-      getBuilder: Gewis.getUserBuilder,
-    };
+    return memberUser;
   }
 }

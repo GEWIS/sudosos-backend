@@ -44,6 +44,7 @@ import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
 import WithManager from '../database/with-manager';
 import UserService from './user-service';
+import BalanceService from './balance-service';
 
 export interface TransferFilterParameters {
   id?: number;
@@ -204,5 +205,39 @@ export default class TransferService extends WithManager {
         || await this.manager.findOne(User, { where: { id: request.toId } }))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;
+  }
+
+  public async deleteTransfer(id: number): Promise<void> {
+    const transfer = await this.manager.findOne(Transfer, {
+      where: { id },
+      relations: ['from', 'to', 'payoutRequest', 'deposit', 'invoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
+    });
+
+    if (!transfer) {
+      throw new Error('Transfer not found');
+    }
+
+    if (transfer.payoutRequest || transfer.deposit || transfer.invoice || transfer.fine || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
+      throw new Error('Cannot delete transfer because it is referenced by another entity');
+    }
+
+    await this.manager.delete(Transfer, id);
+
+    await TransferService.invalidateBalanceCaches(transfer);
+  }
+
+  public static async invalidateBalanceCaches(transfer: Transfer): Promise<void> {
+    // both the from and to users' balances are affected by a transfer
+    const userIds: number[] = [];
+    if (transfer.from?.id !== undefined) {
+      userIds.push(transfer.from.id);
+    }
+    if (transfer.to?.id !== undefined) {
+      userIds.push(transfer.to.id);
+    }
+
+    if (userIds.length > 0) {
+      await new BalanceService().clearBalanceCache(userIds);
+    }
   }
 }

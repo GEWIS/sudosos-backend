@@ -65,6 +65,10 @@ export default class TransferController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransferController.getRelation(req), 'Transfer', ['*']),
           handler: this.returnTransfer.bind(this),
         },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransferController.getRelation(req), 'Transfer', ['*']),
+          handler: this.deleteTransfer.bind(this),
+        },
       },
     };
   }
@@ -183,6 +187,36 @@ export default class TransferController extends BaseController {
     } catch (error) {
       this.logger.error('Could not create transfer:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+     * DELETE /transfers/{id}
+     * @summary Deletes a transfer.
+     * @operationId deleteTransfer
+     * @tags transfers - Operations of transfer controller
+     * @param {integer} id.path.required - The id of the transfer which should be deleted
+     * @security JWT
+     * @return 204 - Transfer successfully deleted
+     * @return {string} 400 - Cannot delete transfer because it is referenced by another entityreturn
+     * @return {string} 404 - Not found error
+     */
+  public async deleteTransfer(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace('Delete transfer', id, 'by user', req.token.user);
+
+    try {
+      await new TransferService().deleteTransfer(parseInt(id));
+      res.status(204).send();
+    } catch (error) {
+      if (error.message === 'Transfer not found') {
+        res.status(404).json('Transfer not found.');
+      } else if (error.message === 'Cannot delete transfer because it is referenced by another entity') {
+        res.status(400).json('Cannot delete transfer because it is referenced by another entity.');
+      } else {
+        this.logger.error('Could not delete transfer:', error);
+        res.status(500).json('Internal server error.');
+      }
     }
   }
 }

@@ -26,8 +26,8 @@
 
 import { UserSyncService } from '../../service/sync/user/user-sync-service';
 import User, { UserType } from '../../entity/user/user';
-import log4js, { Logger } from 'log4js';
-import GewisUser from '../entity/gewis-user';
+import log4js, { getLogger, Logger } from 'log4js';
+import MemberUser from '../../entity/user/member-user';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import BalanceService from '../../service/balance-service';
 import UserService from '../../service/user-service';
@@ -63,8 +63,8 @@ export default class GewisDBSyncService extends UserSyncService {
   async guard(entity: User): Promise<boolean> {
     if (!await super.guard(entity)) return false;
     
-    const gewisUser = await this.manager.findOne(GewisUser, { where: { user: { id: entity.id } }, relations: ['user'] });
-    return !!gewisUser;
+    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: ['user'] });
+    return !!memberUser;
   }
 
   async pre(): Promise<void> {
@@ -76,31 +76,31 @@ export default class GewisDBSyncService extends UserSyncService {
   }
 
   async sync(entity: User, isDryRun: boolean = false): Promise<boolean> {
-    const gewisUser = await this.manager.findOne(GewisUser, { where: { user: { id: entity.id } }, relations: ['user'] });
-    if (!gewisUser) {
-      throw new Error('GEWIS User not found.');
+    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: ['user'] });
+    if (!memberUser) {
+      throw new Error('Member User not found.');
     }
 
-    const dbMember = await this.api.membersLidnrGet(gewisUser.gewisId).then(member => member.data.data);
+    const dbMember = await this.api.membersLidnrGet(memberUser.memberId).then(member => member.data.data);
     if (!dbMember) return false;
 
     const expirationDate = new Date(dbMember.expiration);
     const expired = new Date() > expirationDate;
 
     if (expired) {
-      this.logger.log(`User ${gewisUser.gewisId} has expired.`);
+      this.logger.log(`User ${memberUser.memberId} has expired.`);
       return false;
     }
 
     if (dbMember.deleted) {
-      this.logger.log(`User ${gewisUser.gewisId} is deleted.`);
+      this.logger.log(`User ${memberUser.memberId} is deleted.`);
       return false;
     }
 
     const update = webResponseToUpdate(dbMember);
-    if (GewisDBSyncService.isUpdateNeeded(gewisUser, update)) {
-      this.logger.log(`Updating user m${gewisUser.gewisId} (id ${gewisUser.userId}) with `, update);
-      const user = gewisUser.user;
+    if (GewisDBSyncService.isUpdateNeeded(memberUser, update)) {
+      this.logger.log(`Updating user m${memberUser.memberId} (id ${memberUser.userId}) with `, update);
+      const user = memberUser.user;
       user.firstName = update.firstName;
       user.lastName = update.lastName;
       user.email = update.email;
@@ -120,11 +120,11 @@ export default class GewisDBSyncService extends UserSyncService {
   }
 
   async down(entity: User, isDryRun: boolean = false): Promise<void> {
-    const gewisUser = await this.manager.findOne(GewisUser, { where: { user: { id: entity.id } } });
-    if (!gewisUser) return;
+    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } } });
+    if (!memberUser) return;
     
-    // We do not delete the GewisUser, for if we ever want to undo deletions and keep the link to the m-number.
-    // await this.manager.delete(GewisUser, gewisUser);
+    // We do not delete the MemberUser, for if we ever want to undo deletions and keep the link to the m-number.
+    // await this.manager.delete(MemberUser, memberUser);
 
     // Sync deleting a user is quite impactful, so we only do it if the setting is explicitly set.
     if (!await GewisDBSyncService.getAllowDelete()) return;
@@ -165,11 +165,11 @@ export default class GewisDBSyncService extends UserSyncService {
     return Promise.resolve(undefined);
   }
 
-  static isUpdateNeeded(gewisUser: GewisUser, update: any): boolean {
-    return gewisUser.user.firstName !== update.firstName ||
-        gewisUser.user.lastName !== update.lastName ||
-        gewisUser.user.ofAge !== update.ofAge ||
-        gewisUser.user.email !== update.email ||
-        !gewisUser.user.active;
+  static isUpdateNeeded(memberUser: MemberUser, update: any): boolean {
+    return memberUser.user.firstName !== update.firstName ||
+        memberUser.user.lastName !== update.lastName ||
+        memberUser.user.ofAge !== update.ofAge ||
+        memberUser.user.email !== update.email ||
+        !memberUser.user.active;
   }
 }

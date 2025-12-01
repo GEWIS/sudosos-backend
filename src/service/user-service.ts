@@ -39,15 +39,16 @@ import {
 } from '../controller/response/financial-mutation-response';
 import TransferService, { TransferFilterParameters } from './transfer-service';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
-import Bindings from '../helpers/bindings';
 import AuthenticationService from './authentication-service';
-import { Brackets, In } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import { NotificationTypes } from '../notifications/notification-types';
 import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../notifications';
+import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
+import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
+import PointOfSaleService from './point-of-sale-service';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -58,9 +59,11 @@ export interface UserFilterParameters {
   ofAge?: boolean,
   id?: number | number[],
   deleted?: boolean,
+  allowDeleted?: boolean,
   type?: UserType,
   organId?: number,
   assignedRoleIds?: number | number[],
+  pointOfSaleId?: number,
 }
 
 export type FinancialMutationsFilterParams = TransactionFilterParameters & TransferFilterParameters;
@@ -96,17 +99,78 @@ export function parseGetFinancialMutationsFilters(req: RequestWithToken): Financ
   };
 }
 
-export default class UserService {
-  /**
-   * Function for getting al Users
-   * @param filters - Query filters to apply
-   * @param pagination - Pagination to adhere to
-   */
-  public static async getUsers(
-    filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedUserResponse> {
-    const { take, skip } = pagination;
+/**
+ * Parses a User entity to a UserResponse
+ * @param user - User entity with loaded relations (especially memberUser)
+ * @param timestamps - Whether to include createdAt and updatedAt
+ */
+export function asUserResponse(user: User, timestamps = false): UserResponse {
+  if (!user) return undefined;
 
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    nickname: user.nickname,
+    createdAt: timestamps ? user.createdAt.toISOString() : undefined,
+    updatedAt: timestamps ? user.updatedAt.toISOString() : undefined,
+    active: user.active,
+    deleted: user.deleted,
+    type: UserType[user.type],
+    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
+    acceptedToS: user.acceptedToS,
+    extensiveDataProcessing: user.extensiveDataProcessing,
+    ofAge: user.ofAge,
+    canGoIntoDebt: user.canGoIntoDebt,
+    memberId: user.memberUser?.memberId,
+    gewisId: user.memberUser?.memberId, // Deprecated: kept for backward compatibility
+    pos: user.pointOfSale ? PointOfSaleService.toBaseInfoResponse(user.pointOfSale) : undefined,
+  };
+}
+
+export default class UserService {
+
+  private static getUserRelations(options: { pos?: boolean } = {}): FindOptionsRelations<User> {
+    const { pos = false } = options;
+    const relations: FindOptionsRelations<User> = {
+      memberUser: true,
+    };
+    if (pos) {
+      relations.pointOfSale = true;
+    }
+    return relations;
+  }
+
+  /**
+   * Returns FindOptionsRelations for loading user with nested relations
+   * When base is empty string, returns direct User relations
+   * When base is provided (default: 'user'), wraps user relations in that relation name
+   * @param options - Options object
+   * @param options.base - Base relation name (default: 'user', empty string for direct User relations)
+   * @param options.pos - Whether to include pointOfSale relation (default: false)
+   * @returns FindOptionsRelations for the specified entity type
+   */
+  public static getRelations<T = any>(options: { base?: string; pos?: boolean } = {}): FindOptionsRelations<T> {
+    const { base = 'user', pos = false } = options;
+    const userRelations = this.getUserRelations({ pos });
+
+    // If base is empty, return direct User relations
+    if (base === '') {
+      return userRelations as FindOptionsRelations<T>;
+    }
+
+    // Otherwise, wrap in the base relation
+    return {
+      [base]: userRelations,
+    } as FindOptionsRelations<T>;
+  }
+
+  /**
+   * Returns FindManyOptions based on the given filter parameters
+   * Note: search parameter is handled separately in getUsers() via query builder
+   * @param params - The filter params to apply
+   */
+  public static getOptions(params: UserFilterParameters = {}): FindManyOptions<User> {
     const filterMapping: FilterMapping = {
       active: 'active',
       ofAge: 'ofAge',
@@ -115,42 +179,105 @@ export default class UserService {
       type: 'type',
     };
 
-    const f = filters;
+    const relations: FindOptionsRelations<User> = UserService.getUserRelations({ pos: true });
+
+    // Build where clause, but handle id separately to support arrays properly
+    const { id, ...otherParams } = params;
+    const baseWhere = QueryFilter.createFilterWhereClause(filterMapping, otherParams);
+
+    // Handle id array properly with In() operator
+    let idFilter: any;
+    if (id !== undefined) {
+      if (Array.isArray(id)) {
+        idFilter = In(id);
+      } else {
+        idFilter = id;
+      }
+    }
+
+    const where: FindOptionsWhere<User> = {
+      ...baseWhere,
+      ...(idFilter !== undefined ? { id: idFilter } : {}),
+    };
+
+    // Handle deleted filter
+    if (params.allowDeleted) {
+      // Allow both deleted and non-deleted users
+      delete where.deleted;
+    } else if (params.deleted === undefined) {
+      where.deleted = false;
+    }
+
+    // Handle pointOfSaleId filter
+    if (params.pointOfSaleId !== undefined) {
+      where.pointOfSale = { id: params.pointOfSaleId };
+      // When filtering by pointOfSaleId, we need to allow POINT_OF_SALE type users
+    } else if (!params.type) {
+      // Exclude POINT_OF_SALE type unless type filter is explicitly set
+      where.type = Not(UserType.POINT_OF_SALE);
+    }
+
+    const options: FindManyOptions<User> = {
+      where,
+      order: { id: 'DESC' },
+    };
+
+    return { ...options, relations };
+  }
+
+  /**
+   * Function for getting all Users
+   * @param filters - Query filters to apply
+   * @param pagination - Pagination to adhere to
+   */
+  public static async getUsers(
+    filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
+  ): Promise<PaginatedUserResponse> {
+    const { take, skip } = pagination;
+
+    // Pre-process organId and assignedRoleIds to get user IDs
+    const processedFilters = { ...filters };
     if (filters.organId) {
       // This allows us to search for organ members
       const userIds = await OrganMembership
         .find({ where: { organ: { id: filters.organId } }, relations: ['user'] });
-      f.id = userIds.map((auth) => auth.user.id);
+      processedFilters.id = userIds.map((auth) => auth.user.id);
     }
     if (filters.assignedRoleIds) {
       // Get all user IDs of the user belonging to any of the given roles
       const assignedRoles = await AssignedRole
         .find({ where: { roleId: In(filters.assignedRoleIds as number[]) } });
       const userIds = assignedRoles.map((r) => r.userId);
-      if (f.id && Array.isArray(f.id)) {
+      if (processedFilters.id && Array.isArray(processedFilters.id)) {
         // If we already have a list of IDs to filter on, we need to filter on the intersection
-        f.id = f.id.filter((id) => userIds.includes(id));
-      } else if (f.id) {
+        processedFilters.id = processedFilters.id.filter((id) => userIds.includes(id));
+      } else if (processedFilters.id) {
         // If we only have a single ID to filter on, only keep it if it exists in one of the roles
-        f.id = userIds.includes(f.id as number) ? f.id : [];
+        processedFilters.id = userIds.includes(processedFilters.id as number) ? processedFilters.id : [-1];
       } else {
         // No existing filter on user ID, so we set the filter to the list of users in these groups
-        f.id = userIds;
+        processedFilters.id = userIds;
       }
     }
 
-    const builder = Bindings.Users.getBuilder();
-    builder.where(`user.type NOT IN ("${UserType.POINT_OF_SALE}")`);
-
-    QueryFilter.applyFilter(builder, filterMapping, f);
-    // Note this is only for MySQL
-    if (filters.search) {
+    // Handle search by getting matching user IDs first
+    let searchUserIds: number[] | undefined;
+    if (processedFilters.search) {
       const escapeLikeWildcard = (value: string) => value.replace(/[%_]/g, '\\$&');
-      const searchTerms = filters.search.split(' ').slice(0, 2).map(term => `%${escapeLikeWildcard(term)}%`);
-      const fullNameSearch = `%${escapeLikeWildcard(filters.search)}%`;
+      const searchTerms = processedFilters.search.split(' ').slice(0, 2).map(term => `%${escapeLikeWildcard(term)}%`);
+      const fullNameSearch = `%${escapeLikeWildcard(processedFilters.search)}%`;
 
-      builder.andWhere(new Brackets(qb => {
-        qb.where('CONCAT(user.firstName, \' \', user.nickname, \' \', user.lastName) LIKE :name')
+      const searchBuilder = User.createQueryBuilder('user')
+        .select('user.id', 'id')
+        .where('user.type != :posType', { posType: UserType.POINT_OF_SALE });
+
+      // Only filter by deleted if allowDeleted is not true
+      if (!processedFilters.allowDeleted) {
+        searchBuilder.andWhere('user.deleted = :deleted', { deleted: false });
+      }
+
+      searchBuilder.andWhere(new Brackets(qb => {
+        qb.where('CONCAT(user.firstName, \' \', COALESCE(user.nickname, \'\'), \' \', user.lastName) LIKE :name')
           .orWhere('CONCAT(user.firstName, \' \', user.lastName) LIKE :name');
 
         searchTerms.forEach((term, index) => {
@@ -163,14 +290,32 @@ export default class UserService {
         name: fullNameSearch,
         ...Object.fromEntries(searchTerms.map((term, index) => [`term${index}`, term])),
       });
+
+      const searchResults = await searchBuilder.getRawMany();
+      searchUserIds = searchResults.map((r) => r.id);
+
+      // Combine with existing id filter
+      if (processedFilters.id) {
+        const existingIds = Array.isArray(processedFilters.id) ? processedFilters.id : [processedFilters.id];
+        processedFilters.id = existingIds.filter((id) => searchUserIds.includes(id));
+        // If intersection is empty, no users will match
+        if (processedFilters.id.length === 0) {
+          processedFilters.id = [-1]; // Use invalid ID to ensure no results
+        }
+      } else {
+        processedFilters.id = searchUserIds.length > 0 ? searchUserIds : [-1]; // Use invalid ID if no search results
+      }
+
+      // Remove search from filters as it's now handled via id filter
+      delete processedFilters.search;
     }
 
-    builder.orderBy('user.id', 'DESC');
+    // Get options and execute query
+    const options = this.getOptions(processedFilters);
+    const users = await User.find({ ...options, take, skip });
+    const count = await User.count(options);
 
-    const users = await builder.limit(take).offset(skip).getRawMany();
-    const count = await builder.getCount();
-
-    const records = users.map((u) => Bindings.Users.parseToResponse(u, true));
+    const records = users.map((u) => asUserResponse(u, true));
 
     return {
       _pagination: {
@@ -187,11 +332,12 @@ export default class UserService {
    * @returns undefined if user does not exits
    */
   public static async getSingleUser(id: number) {
-    const user = await this.getUsers({ id, deleted: false });
-    if (!user.records[0]) {
+    const options = this.getOptions({ id });
+    const user = await User.findOne(options);
+    if (!user) {
       return undefined;
     }
-    return user.records[0];
+    return asUserResponse(user, true);
   }
 
   /**
@@ -241,7 +387,8 @@ export default class UserService {
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
   public static async closeUser(userId: number, deleted = false): Promise<UserResponse> {
-    const user = await User.findOne({ where: { id: userId, deleted: false } });
+    const options = this.getOptions({ id: userId, allowDeleted: true });
+    const user = await User.findOne(options);
     if (!user) return undefined;
 
     const balance = await new BalanceService().getBalance(userId);
@@ -255,8 +402,7 @@ export default class UserService {
     user.canGoIntoDebt = false;
 
     await user.save();
-    // Correctly parsed to expected response
-    return this.getUsers({ id: userId }).then((u) => u.records[0]);
+    return asUserResponse(user, true);
   }
 
   /**
@@ -266,11 +412,12 @@ export default class UserService {
    */
   public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
   Promise<UserResponse> {
-    const user = await User.findOne({ where: { id: userId } });
+    const options = this.getOptions({ id: userId, allowDeleted: true });
+    const user = await User.findOne(options);
     if (!user) return undefined;
     Object.assign(user, updateUserRequest);
     await user.save();
-    return this.getSingleUser(userId);
+    return asUserResponse(user, true);
   }
 
   /**

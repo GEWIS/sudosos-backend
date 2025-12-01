@@ -19,17 +19,33 @@
  */
 
 /**
- * This is the module page of the gewis-user-response.
+ * This is the module page of the member-user.
  *
- * @module GEWIS
+ * @module entity/user
  */
 
-import { UserResponse } from '../../../controller/response/user-response';
+import {
+  BaseEntity, Column, Entity, JoinColumn, OneToOne, PrimaryColumn,
+} from 'typeorm';
+import User from './user';
 
 /**
- * @typedef {allOf|UserResponse} GewisUserResponse
- * @property {integer} gewisId - The m-Number of the user
+ * @typedef {BaseEntity} MemberUser
+ * @property {User.model} user.required - The user.
+ * @property {integer} memberId.required - The member id of the user (e.g., GEWIS member ID).
  */
-export interface GewisUserResponse extends UserResponse {
-  gewisId?: number
+@Entity('member_user')
+export default class MemberUser extends BaseEntity {
+  @PrimaryColumn()
+  public userId: number;
+
+  @OneToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
+
+  @Column({
+    type: 'integer',
+  })
+  public memberId: number;
 }
+

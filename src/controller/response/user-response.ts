@@ -27,6 +27,7 @@
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { TermsOfServiceStatus } from '../../entity/user/user';
+import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
 
 /**
  * @typedef {allOf|BaseResponse} BaseUserResponse
@@ -51,6 +52,9 @@ export interface BaseUserResponse extends BaseResponse {
  * user can be used (non-anonymously) for more data science!
  * @property {boolean} ofAge - Whether someone is old enough to drink beer
  * @property {boolean} canGoIntoDebt.required - Whether this user can get a negative balance
+ * @property {integer} memberId - The external id of the user (e.g., GEWIS member ID)
+ * @property {integer} gewisId - The m-Number of the user (deprecated, use externalId instead. Will be removed after 01/06/2026)
+ * @property {BasePointOfSaleInfoResponse} pos - The related Point of Sale, in case user is a POS type
  */
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
@@ -61,6 +65,11 @@ export interface UserResponse extends BaseUserResponse {
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;
+  memberId?: number;
+
+  /** @deprecated Use memberId instead */
+  gewisId?: number;
+  pos?: BasePointOfSaleInfoResponse;
 }
 
 

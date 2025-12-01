@@ -22,13 +22,14 @@
  * @module banners
  */
 
-import { FindManyOptions } from 'typeorm';
+import { FindManyOptions, LessThanOrEqual, Raw } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
 import { BannerResponse, PaginatedBannerResponse } from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
 import { PaginationParameters } from '../helpers/pagination';
+import { toMySQLString } from '../helpers/timestamps';
 
 /**
  * Filter parameters for the `banner` entity.
@@ -36,6 +37,18 @@ import { PaginationParameters } from '../helpers/pagination';
 export interface BannerFilterParameters {
   bannerId?: number,
   active?: boolean,
+  /**
+   * Filter banners by whether their endDate has passed.
+   * true: returns banners where endDate <= now
+   * false: returns banners where endDate > now
+   */
+  expired?: boolean,
+  /**
+   * Sort order for banners by startDate.
+   * 'ASC': ascending order (oldest first)
+   * 'DESC': descending order (newest first, default)
+   */
+  order?: 'ASC' | 'DESC',
 }
 
 /**
@@ -131,10 +144,29 @@ export default class BannerService {
       active: 'active',
     };
 
+    let whereClause = QueryFilter.createFilterWhereClause(mapping, filters);
+
+    // Handle expired filter
+    if (filters.expired !== undefined) {
+      const now = new Date();
+      if (filters.expired) {
+        whereClause = {
+          ...whereClause,
+          endDate: LessThanOrEqual(now),
+        };
+      } else {
+        whereClause = {
+          ...whereClause,
+          endDate: Raw((alias) => `${alias} > :now`, { now: toMySQLString(now) }),
+        };
+      }
+    }
+
+    const orderDirection = filters.order || 'DESC';
     const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(mapping, filters),
+      where: whereClause,
       relations: ['image'],
-      order: { id: 'DESC' },
+      order: { startDate: orderDirection },
     };
 
     const banners = await Banner.find({

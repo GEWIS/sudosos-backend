@@ -177,7 +177,11 @@ describe('InvoicePdfService', async (): Promise<void> => {
         data: new Blob(),
         status: 200,
       });
-      uploadInvoiceStub.resolves({});
+      const newPdf = Object.assign(new InvoicePdf(), {
+        ...ctx.pdfParams,
+        hash: await invoice.getPdfParamHash(),
+      });
+      uploadInvoiceStub.resolves(newPdf);
       invoice.pdfService = pdfService;
 
       await invoice.getOrCreatePdf();
@@ -203,7 +207,11 @@ describe('InvoicePdfService', async (): Promise<void> => {
         data: new Blob(),
         status: 200,
       });
-      uploadInvoiceStub.resolves({});
+      const newPdf = Object.assign(new InvoicePdf(), {
+        ...ctx.pdfParams,
+        hash: await invoice.getPdfParamHash(),
+      });
+      uploadInvoiceStub.resolves(newPdf);
 
       await invoice.getOrCreatePdf(true);
 

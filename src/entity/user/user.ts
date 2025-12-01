@@ -31,6 +31,8 @@ import {
 import BaseEntity from '../base-entity';
 import UserFineGroup from '../fine/userFineGroup';
 import AssignedRole from '../rbac/assigned-role';
+import PointOfSale from '../point-of-sale/point-of-sale';
+import MemberUser from './member-user';
 
 export enum TermsOfServiceStatus {
   ACCEPTED = 'ACCEPTED',
@@ -166,6 +168,12 @@ export default class User extends BaseEntity {
 
   @OneToMany(() => AssignedRole, (role) => role.user)
   public directAssignedRoles: AssignedRole[];
+
+  @OneToOne(() => PointOfSale, (pos) => pos.user)
+  public pointOfSale?: PointOfSale;
+
+  @OneToOne(() => MemberUser, (memberUser) => memberUser.user)
+  public memberUser?: MemberUser;
 
   public fullName(): string {
     return User.fullName(this);

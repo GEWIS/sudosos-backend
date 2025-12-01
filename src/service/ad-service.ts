@@ -32,7 +32,7 @@ import { bindUser, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP }
 import AuthenticationService from './authentication-service';
 import RoleManager from '../rbac/role-manager';
 import WithManager from '../database/with-manager';
-import Bindings from '../helpers/bindings';
+import Gewis from '../gewis/gewis';
 
 export default class ADService extends WithManager {
 
@@ -77,7 +77,15 @@ export default class ADService extends WithManager {
   public async createAccountIfNew(ldapUsers: LDAPUser[]) {
     const filtered = (await this.filterUnboundGUID(ldapUsers)) as LDAPUser[];
     for (const u of filtered) {
-      await Bindings.onNewUserCreate()(u);
+      if (u.mNumber) {
+        // If mNumber exists, use GEWIS flow (creates MemberUser)
+        const gewis = new Gewis(this.manager);
+        await gewis.findOrCreateGEWISUserAndBind(u);
+      } else {
+        // Otherwise, use default authentication service flow
+        const authService = new AuthenticationService(this.manager);
+        await authService.createUserAndBind(u);
+      }
     }
   }
 

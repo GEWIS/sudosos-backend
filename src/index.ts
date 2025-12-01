@@ -44,7 +44,6 @@ import TokenHandler from './authentication/token-handler';
 import TokenMiddleware from './middleware/token-middleware';
 import AuthenticationController from './controller/authentication-controller';
 import RoleManager from './rbac/role-manager';
-import Gewis from './gewis/gewis';
 import BannerController from './controller/banner-controller';
 import { BaseControllerOptions } from './controller/base-controller';
 import UserController from './controller/user-controller';
@@ -168,9 +167,6 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     tokenHandler,
   );
   application.app.use('/v1/authentication/qr', qrController.getRouter());
-
-  // INJECT GEWIS BINDINGS
-  Gewis.overwriteBindings();
 
   // Define middleware to be used by any other route.
   const tokenMiddleware = new TokenMiddleware({ refreshFactor: 0.5, tokenHandler });

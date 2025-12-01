@@ -31,7 +31,6 @@ import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import BalanceService from './service/balance-service';
 import RoleManager from './rbac/role-manager';
-import Gewis from './gewis/gewis';
 import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
 import UserSyncServiceFactory from './service/sync/user/user-sync-service-factory';
@@ -112,9 +111,6 @@ async function createCronTasks(): Promise<void> {
   });
 
   application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
-
-  // INJECT GEWIS BINDINGS
-  Gewis.overwriteBindings();
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();

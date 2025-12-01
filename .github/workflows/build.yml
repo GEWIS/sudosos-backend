@@ -106,7 +106,6 @@ jobs:
       TYPEORM_DATABASE: ${{ matrix.typeorm-database }}
       TYPEORM_SYNCHRONIZE: ${{ matrix.typeorm-synchronize }}
       TYPEORM_LOGGING: 0
-      LOG_LEVEL: INFO
       RESET_TOKEN_EXPIRES: 3600
       FILE_STORAGE_METHOD: disk
       ENABLE_LDAP: true
