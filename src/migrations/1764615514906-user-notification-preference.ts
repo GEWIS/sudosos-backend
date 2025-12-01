@@ -113,7 +113,7 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
       'user_notification_preference',
       new TableUnique({
         name: 'UQ_user_channel_type',
-        columnNames: ['userId', 'channel', 'type'],
+        columnNames: ['user', 'channel', 'type'],
       }),
     );
 

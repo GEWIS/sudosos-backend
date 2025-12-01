@@ -29,7 +29,7 @@ import { PaginationResult } from '../../helpers/pagination';
 import BaseResponse from './base-response';
 
 /**
- * @typedef {allOf|object} BaseUserNotificationPreferenceResponse
+ * @typedef {allOf|BaseResponse} BaseUserNotificationPreferenceResponse
  * @property {BaseUserResponse} user - The user this preference belongs to
  * @property {string} type - The notification type
  * @property {string} channel - The notification channel

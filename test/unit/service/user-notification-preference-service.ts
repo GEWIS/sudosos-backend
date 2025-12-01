@@ -173,12 +173,12 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
     it('should correctly update a user notification preference', async () => {
       const user = ctx.users[0];
       const preference = ctx.userNotificationPreferences.find((p) => p.userId === user.id);
-
+      console.error(preference);
       const res = await new UserNotificationPreferenceService().updateUserNotificationPreference(
         { userNotificationPreferenceId: preference.id, enabled: !preference.enabled },
       );
 
-      expect(res.userId).to.equal(user.id);
+      expect(res.user.id).to.equal(user.id);
       expect(res.enabled).to.equal(!preference.enabled);
     });
   });

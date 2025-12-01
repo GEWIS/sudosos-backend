@@ -30,11 +30,12 @@ export default class UserNotificationSeeder extends WithManager {
 
     const channels = Object.values(NotificationChannels);
     const types = Object.values(NotificationTypes);
-
+    let preferenceId = 1;
     for (let i = 0; i < users.length; i += 1) {
       for (let c = 0; c < channels.length; c += 1) {
         for (let t = 0; t < types.length; t += 1) {
           const newPreference = Object.assign(new UserNotificationPreference(), {
+            id: preferenceId++,
             userId: users[i].id,
             user: users[i],
             channel: channels[c],
