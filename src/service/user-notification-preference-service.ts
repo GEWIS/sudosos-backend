@@ -37,7 +37,6 @@ import {
   UserNotificationPreferenceRequestParams,
 } from '../controller/request/user-notification-preference-request';
 import { NotificationTypes } from '../notifications/notification-types';
-import { NotificationChannel } from '../notifications/channels/abstract-channel';
 
 /**
  * This is the module page of the notification-service.

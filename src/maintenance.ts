@@ -39,7 +39,7 @@ import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import ServerSettingsStore from './server-settings/server-settings-store';
-import UserNotificationPreferenceService from "./service/user-notification-preference-service";
+import UserNotificationPreferenceService from './service/user-notification-preference-service';
 
 class MaintenanceApplication {
   logger: Logger;
@@ -101,10 +101,6 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   application.logger.info('Syncing user notification preferences...');
   await new UserNotificationPreferenceService().syncAllUserNotificationPreferences();
   application.logger.info('User notification preferences synced');
-
-  // INJECT GEWIS BINDINGS
-  Gewis.overwriteBindings();
-  application.logger.info('GEWIS bindings injected');
 
   // Setup user synchronization services based on environment variables
   const syncServices: UserSyncService[] = [];

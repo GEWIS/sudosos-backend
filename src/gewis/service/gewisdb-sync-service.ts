@@ -26,7 +26,7 @@
 
 import { UserSyncService } from '../../service/sync/user/user-sync-service';
 import User, { UserType } from '../../entity/user/user';
-import log4js, { getLogger, Logger } from 'log4js';
+import log4js, { Logger } from 'log4js';
 import MemberUser from '../../entity/user/member-user';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import BalanceService from '../../service/balance-service';
