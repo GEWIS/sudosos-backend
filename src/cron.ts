@@ -38,6 +38,7 @@ import UserSyncServiceFactory from './service/sync/user/user-sync-service-factor
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import UserNotificationPreferenceService from './service/user-notification-preference-service';
 
 class CronApplication {
   logger: Logger;
@@ -101,8 +102,16 @@ async function createCronTasks(): Promise<void> {
       .then(() => logger.debug('Sent event planning reminder emails.'))
       .catch((error) => logger.error('Could not send event planning reminder emails.', error));
   });
+  const syncUserNotificationPreferences = cron.schedule('0 1 * * *', () => {
+    logger.debug('Syncing user notification preferences.');
+    new UserNotificationPreferenceService().syncAllUserNotificationPreferences().then(() => {
+      logger.debug('User notification preferences.');
+    }).catch((error) => {
+      logger.error('Could not sync user notification preferences.', error);
+    });
+  });
 
-  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
+  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
 
   // INJECT GEWIS BINDINGS
   Gewis.overwriteBindings();
