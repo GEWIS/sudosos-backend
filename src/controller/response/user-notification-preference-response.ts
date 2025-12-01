@@ -29,7 +29,8 @@ import { PaginationResult } from '../../helpers/pagination';
 import BaseResponse from './base-response';
 
 /**
- * @typedef {object} BaseUserNotificationPreferenceResponse
+ * @typedef {allOf|object} BaseUserNotificationPreferenceResponse
+ * @property {BaseUserResponse} user - The user this preference belongs to
  * @property {string} type - The notification type
  * @property {string} channel - The notification channel
  * @property {boolean} enabled - Whether the preference is enabled
@@ -43,8 +44,8 @@ export interface BaseUserNotificationPreferenceResponse extends BaseResponse {
 
 /**
  * @typedef {object} PaginatedUserNotificationPreferenceResponse
- * @property {PaginationResult} _pagination - Pagination metadata
- * @property {Array<BaseUserNotificationPreferenceResponse>} records - Returned UserNotificationPreference
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BaseUserNotificationPreferenceResponse>} records.required - Returned UserNotificationPreference
  */
 export interface PaginatedUserNotificationPreferenceResponse {
   _pagination: PaginationResult;
