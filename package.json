@@ -40,7 +40,7 @@
     "@socket.io/pm2": "^5.3.0",
     "@socket.io/sticky": "^1.0.4",
     "bcrypt": "^5.1.1",
-    "body-parser": "^1.20.3",
+    "body-parser": "^1.20.4",
     "commander": "^12.1.0",
     "dinero.js": "^1.9.1",
     "dotenv": "^16.6.1",
@@ -72,7 +72,7 @@
   "devDependencies": {
     "@apidevtools/swagger-cli": "^4.0.4",
     "@types/bcrypt": "^5.0.2",
-    "@types/body-parser": "^1.19.5",
+    "@types/body-parser": "^1.19.6",
     "@types/chai": "^4.3.4",
     "@types/chai-as-promised": "^7.1.4",
     "@types/chai-sorted": "^0.2.0",
