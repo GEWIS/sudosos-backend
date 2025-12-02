@@ -84,7 +84,7 @@ export function parseUserNotificationPreferenceFilters(req: RequestWithToken): U
 export default class UserNotificationPreferenceService extends WithManager {
   /**
    * Parses an UserNotificationPreference Object to a BaseUserNotificationPreferenceResponse
-   * @param userNotificationPreference - The UserNotificationPreference to aprse
+   * @param userNotificationPreference - The UserNotificationPreference to parse
    */
   public static asResponse(userNotificationPreference: UserNotificationPreference): BaseUserNotificationPreferenceResponse {
     return {
