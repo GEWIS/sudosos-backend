@@ -562,7 +562,10 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      const keyAuthenticator = await KeyAuthenticator.findOne({ where: { user: { id: body.userId } }, relations: ['user'] });
+      const keyAuthenticator = await KeyAuthenticator.findOne({
+        where: { user: { id: body.userId } },
+        relations: UserService.getRelations<KeyAuthenticator>({ pos: true }),
+      });
       if (!keyAuthenticator) {
         res.status(403).json({
           message: 'Invalid credentials.',
