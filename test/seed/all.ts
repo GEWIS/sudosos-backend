@@ -50,7 +50,7 @@ import {
   ProductCategorySeeder,
   ProductSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
-  VatGroupSeeder, WriteOffSeeder, UserNotificationSeeder,
+  VatGroupSeeder, WriteOffSeeder, UseNotificationSeeder,
 } from './index';
 import { seedMemberUsers } from '../../src/database/seed';
 import BannerSeeder from './banner-seeder';
@@ -123,7 +123,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const writeOffs = await new WriteOffSeeder().seed();
   const { banners } = await new BannerSeeder().seed(users);
   const qrAuthenticators = await new QRAuthenticatorSeeder().seed(users);
-  const userNotificationPreferences = await new UserNotificationSeeder().seed(users);
+  const userNotificationPreferences = await new UseNotificationSeeder().seed(users);
 
   return {
     users,

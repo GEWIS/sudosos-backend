@@ -146,7 +146,7 @@ export default class GewisDBSyncService extends UserSyncService {
         if (!shouldDelete && isFallingEdge) {
           this.logger.trace(`User ${u.id} closed`);
           await Notifier.getInstance().notify({
-            type: NotificationTypes.MembershipExpiryNotification,
+            type: NotificationTypes.InactiveAdministrativeCostNotification,
             userId: entity.id,
             params: new MembershipExpiryNotificationOptions(
               DineroTransformer.Instance.from(currentBalance.amount.amount),

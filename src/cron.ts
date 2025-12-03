@@ -104,7 +104,7 @@ async function createCronTasks(): Promise<void> {
   const syncUserNotificationPreferences = cron.schedule('0 1 * * *', () => {
     logger.debug('Syncing user notification preferences.');
     new UserNotificationPreferenceService().syncAllUserNotificationPreferences().then(() => {
-      logger.debug('User notification preferences synced.');
+      logger.debug('User notification preferences.');
     }).catch((error) => {
       logger.error('Could not sync user notification preferences.', error);
     });
