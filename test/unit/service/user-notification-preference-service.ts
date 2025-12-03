@@ -172,8 +172,10 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
   describe('updateUserNotificationPreference function', async (): Promise<void> => {
     it('should correctly update a user notification preference', async () => {
       const user = ctx.users[0];
-      const preference = ctx.userNotificationPreferences.find((p) => p.userId === user.id);
-      console.error(preference);
+      const preference = ctx.userNotificationPreferences
+        .filter(p => p.id !== undefined)
+        .find(p => p.userId === user.id);
+
       const res = await new UserNotificationPreferenceService().updateUserNotificationPreference(
         { userNotificationPreferenceId: preference.id, enabled: !preference.enabled },
       );
