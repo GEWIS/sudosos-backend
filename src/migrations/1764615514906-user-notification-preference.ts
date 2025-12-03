@@ -22,6 +22,10 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableUnique } 
 export class UserNotificationPreference1764615514906 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    console.log('Starting migration...');
+    console.log('Database type:', queryRunner.connection.options.type);
+
+    console.log('Creating notification_log table...');
     await queryRunner.createTable(
       new Table({
         name: 'notification_log',
@@ -50,13 +54,13 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
           },
           {
             name: 'createdAt',
-            type: 'datetime',
+            type: 'datetime(6)',
             default: 'current_timestamp',
             isNullable: false,
           },
           {
             name: 'updatedAt',
-            type: 'datetime',
+            type: 'datetime(6)',
             default: 'current_timestamp',
             onUpdate: 'current_timestamp',
             isNullable: false,
@@ -68,6 +72,7 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
     await queryRunner.createForeignKey(
       'notification_log',
       new TableForeignKey({
+        name: 'FK_notification_log_userId',
         columnNames: ['userId'],
         referencedColumnNames: ['id'],
         referencedTableName: 'user',
@@ -109,13 +114,13 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
           },
           {
             name: 'createdAt',
-            type: 'datetime',
+            type: 'datetime(6)',
             default: 'current_timestamp',
             isNullable: false,
           },
           {
             name: 'updatedAt',
-            type: 'datetime',
+            type: 'datetime(6)',
             default: 'current_timestamp',
             onUpdate: 'current_timestamp',
             isNullable: false,
@@ -135,13 +140,13 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
     await queryRunner.createForeignKey(
       'user_notification_preference',
       new TableForeignKey({
+        name: 'FK_user_notification_preference_userId',
         columnNames: ['userId'],
         referencedColumnNames: ['id'],
         referencedTableName: 'user',
         onDelete: 'CASCADE',
       }),
     );
-
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
