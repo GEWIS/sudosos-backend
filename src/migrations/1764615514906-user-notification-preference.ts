@@ -17,15 +17,11 @@
  *
  *  @license
  */
-import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableUnique } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
 
 export class UserNotificationPreference1764615514906 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    console.log('Starting migration...');
-    console.log('Database type:', queryRunner.connection.options.type);
-
-    console.log('Creating notification_log table...');
     await queryRunner.createTable(
       new Table({
         name: 'notification_log',
@@ -36,6 +32,11 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
             isPrimary: true,
             isGenerated: true,
             generationStrategy: 'increment',
+          },
+          {
+            name: 'version',
+            type: 'int',
+            isNullable: false,
           },
           {
             name: 'userId',
@@ -76,7 +77,8 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
         columnNames: ['userId'],
         referencedColumnNames: ['id'],
         referencedTableName: 'user',
-        onDelete: 'CASCADE',
+        onDelete: 'NO ACTION',
+        onUpdate: 'NO ACTION',
       }),
     );
 
@@ -90,6 +92,11 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
             isPrimary: true,
             isGenerated: true,
             generationStrategy: 'increment',
+          },
+          {
+            name: 'version',
+            type: 'int',
+            isNullable: false,
           },
           {
             name: 'userId',
@@ -129,11 +136,12 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
       }),
     );
     
-    await queryRunner.createUniqueConstraint(
+    await queryRunner.createIndex(
       'user_notification_preference',
-      new TableUnique({
+      new TableIndex({
         name: 'UQ_user_channel_type',
         columnNames: ['userId', 'channel', 'type'],
+        isUnique: true,
       }),
     );
 
@@ -144,7 +152,8 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
         columnNames: ['userId'],
         referencedColumnNames: ['id'],
         referencedTableName: 'user',
-        onDelete: 'CASCADE',
+        onDelete: 'NO ACTION',
+        onUpdate: 'NO ACTION',
       }),
     );
   }
@@ -157,7 +166,7 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
       'FK_user_notification_preference_userId',
     );
 
-    await queryRunner.dropUniqueConstraint(
+    await queryRunner.dropIndex(
       'user_notification_preference',
       'UQ_user_channel_type',
     );
