@@ -30,6 +30,12 @@ import { NotificationChannels } from './user-notification-preference';
 import BaseEntity from '../base-entity';
 import { NotificationTypes } from '../../notifications/notification-types';
 
+/**
+ * @typedef {BaseEntity} NotificationLog
+ * @property {User.model} user - The user for which the log was made.
+ * @property {NotificationChannels} handler - The channel of the notification.
+ * @property {NotificationTypes} type - The type of notification.
+ */
 @Entity()
 export default class NotificationLog extends BaseEntity {
   @ManyToOne(() => User, { nullable: false })

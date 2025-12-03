@@ -51,13 +51,15 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
           {
             name: 'createdAt',
             type: 'datetime',
-            default: 'CURRENT_TIMESTAMP',
+            default: 'current_timestamp',
+            isNullable: false,
           },
           {
             name: 'updatedAt',
             type: 'datetime',
-            default: 'CURRENT_TIMESTAMP',
-            onUpdate: 'CURRENT_TIMESTAMP',
+            default: 'current_timestamp',
+            onUpdate: 'current_timestamp',
+            isNullable: false,
           },
         ],
       }),
@@ -105,6 +107,19 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
             isNullable: false,
             default: false,
           },
+          {
+            name: 'createdAt',
+            type: 'datetime',
+            default: 'current_timestamp',
+            isNullable: false,
+          },
+          {
+            name: 'updatedAt',
+            type: 'datetime',
+            default: 'current_timestamp',
+            onUpdate: 'current_timestamp',
+            isNullable: false,
+          },
         ],
       }),
     );
@@ -130,45 +145,30 @@ export class UserNotificationPreference1764615514906 implements MigrationInterfa
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    const notificationLogTable = await queryRunner.getTable('notification_log');
+    // --- user_notification_preference reversals ---
 
-    const notificationLogFk = notificationLogTable!.foreignKeys.find(fk =>
-      fk.columnNames.includes('userId'),
-    );
-
-    if (notificationLogFk) {
-      await queryRunner.dropForeignKey('notification_log', notificationLogFk);
-    }
-
-    await queryRunner.dropTable('notification_log');
-
-    const preferenceTable = await queryRunner.getTable(
+    await queryRunner.dropForeignKey(
       'user_notification_preference',
+      'FK_user_notification_preference_userId',
     );
 
-    const uniqueConstraint = preferenceTable!.uniques.find(
-      u => u.name === 'UQ_user_channel_type',
+    await queryRunner.dropUniqueConstraint(
+      'user_notification_preference',
+      'UQ_user_channel_type',
     );
-
-    if (uniqueConstraint) {
-      await queryRunner.dropUniqueConstraint(
-        'user_notification_preference',
-        uniqueConstraint,
-      );
-    }
-
-    const preferenceFk = preferenceTable!.foreignKeys.find(fk =>
-      fk.columnNames.includes('userId'),
-    );
-
-    if (preferenceFk) {
-      await queryRunner.dropForeignKey(
-        'user_notification_preference',
-        preferenceFk,
-      );
-    }
 
     await queryRunner.dropTable('user_notification_preference');
+
+
+    // --- notification_log reversals ---
+
+    await queryRunner.dropForeignKey(
+      'notification_log',
+      'FK_notification_log_userId',
+    );
+
+    await queryRunner.dropTable('notification_log');
   }
+
 
 }
