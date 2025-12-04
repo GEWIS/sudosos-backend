@@ -84,7 +84,7 @@ export function parseUserNotificationPreferenceFilters(req: RequestWithToken): U
 export default class UserNotificationPreferenceService extends WithManager {
   /**
    * Parses an UserNotificationPreference Object to a BaseUserNotificationPreferenceResponse
-   * @param userNotificationPreference - The UserNotificationPreference to aprse
+   * @param userNotificationPreference - The UserNotificationPreference to parse
    */
   public static asResponse(userNotificationPreference: UserNotificationPreference): BaseUserNotificationPreferenceResponse {
     return {
@@ -193,7 +193,7 @@ export default class UserNotificationPreferenceService extends WithManager {
 
     const users = await this.manager.find(User);
     for (const user of users) {
-      const userPreferences = await new UserNotificationPreferenceService().getUserNotificationPreferences({ userId: user.id });
+      const userPreferences = await this.getUserNotificationPreferences({ userId: user.id });
       
       const missingCombinations = allCombinations.filter(combo =>
         !userPreferences.some(up => up.type === combo.type && up.channel === combo.channel),
@@ -202,7 +202,7 @@ export default class UserNotificationPreferenceService extends WithManager {
       if (missingCombinations.length > 0) {
         await Promise.all(
           missingCombinations.map(combo =>
-            new UserNotificationPreferenceService().createUserNotificationPreference({
+            this.createUserNotificationPreference({
               userId: user.id,
               type: combo.type,
               channel: combo.channel,

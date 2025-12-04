@@ -218,7 +218,7 @@ export default class UserNotificationController extends BaseController {
       const reqUserId = req.token.user.id;
       const { userId } = parseUserNotificationPreferenceFilters(req);
 
-      if (reqUserId == userId) {
+      if (reqUserId === userId) {
         return 'own';
       }
 
@@ -232,8 +232,8 @@ export default class UserNotificationController extends BaseController {
    * Determines which credentials are needed to get user notification preferences
    *    all if user is not connected to user notification preference
    *    own if user is connected to the notification preference
-   * @param req - Request with transaction id as param
-   * @return whether transaction is connected to user token
+   * @param req - Request with notification preference id as param
+   * @return whether notification preference is connected to user token
    */
   static async getRelation(
     req: RequestWithToken,
@@ -246,7 +246,7 @@ export default class UserNotificationController extends BaseController {
 
     if (!preference) return 'all';
 
-    if (preference.userId == req.token.user.id) return 'own';
+    if (preference.userId === req.token.user.id) return 'own';
 
     return 'all';
   }

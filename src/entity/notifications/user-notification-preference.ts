@@ -38,7 +38,7 @@ import { NotificationTypes } from '../../notifications/notification-types';
  * @typedef {BaseEntity} UserNotificationPreference
  * @property {User.model} user - The user for which the notification was made.
  * @property {NotificationTypes} type - The type of notification.
- * @property {NotificationChannels} handler - The channel of the notification.
+ * @property {NotificationChannels} channel - The channel of the notification.
  * @property {boolean} enabled - Whether the user has this notification enabled.
  */
 @Entity()

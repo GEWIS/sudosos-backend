@@ -85,11 +85,11 @@ export default class Notifier {
       channelPrefs.push(...userPrefs);
     }
 
-    const channelsToUse = [
-      this.channels.find(ch => channelPrefs.includes(ch.name)),
-    ];
-    
-    if (!channelsToUse.length) {
+    const channelsToUse = this.channels.filter(ch =>
+      channelPrefs.includes(ch.name),
+    );
+
+    if (channelsToUse.length === 0) {
       await this.noChannelLog(user, payload.type);
       return;
     }
@@ -103,7 +103,7 @@ export default class Notifier {
 
   private async getPreferences(user: User, notifyType: NotificationTypes): Promise<string[]> {
     const preferences = await UserNotificationPreference.find({
-      where: { userId: user.id, type: notifyType },
+      where: { userId: user.id, type: notifyType, enabled: true },
       select: ['channel'],
     });
 
@@ -123,6 +123,7 @@ export default class Notifier {
     const template = channel.getTemplate(notifyType.type);
     if (!template) {
       this.logger.error(`Channel ${channel.constructor.name} has not implemented ${notifyType.type}.`);
+      return;
     }
 
     const rendered = await channel.apply(template, params);
