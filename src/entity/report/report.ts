@@ -63,6 +63,7 @@ export interface ReportEntry {
 export interface ReportProductEntry extends ReportEntry {
   count: number,
   product: ProductRevision,
+  image: string | null
 }
 
 export interface ReportVatEntry extends ReportEntry {

@@ -45,10 +45,12 @@ export interface ReportEntryResponse {
  * @typedef {allOf|ReportEntryResponse} ReportProductEntryResponse
  * @property {integer} count.required - count
  * @property {BaseProductResponse} product.required - product
+ * @property {string} image - image (nullable)
  */
 export interface ReportProductEntryResponse extends ReportEntryResponse {
   count: number,
   product: BaseProductResponse,
+  image?: string | null,
 }
 
 /**

@@ -156,6 +156,9 @@ export default abstract class ReportService extends WithManager {
   public async getProductEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportProductEntry[]> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoinAndSelect('productRevision.vat', 'vatGroup')
+      .innerJoinAndSelect('productRevision.product', 'product')
+      .leftJoin('product.image', 'productImage')
+      .addSelect('productImage.downloadName', 'product_image_download_name')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
       .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
       .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
@@ -170,9 +173,11 @@ export default abstract class ReportService extends WithManager {
       const count = asNumber(data.raw[index].sum_amount);
       const totalInclVat = asDinero(data.raw[index].total_incl_vat);
       const totalExclVat = asDinero(data.raw[index].total_excl_vat);
+      const img = data.raw[index].product_image_download_name;
       return {
         count,
         product: productRevision,
+        image: img ?? null,
         totalInclVat,
         totalExclVat,
       };
