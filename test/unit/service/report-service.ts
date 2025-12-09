@@ -22,7 +22,7 @@ import { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { createTransactions } from '../../helpers/transaction-factory';
 import User from '../../../src/entity/user/user';
-import { BuyerReportService, ReportParameters, SalesReportService } from '../../../src/service/report-service';
+import ReportService, { BuyerReportService, ReportParameters, SalesReportService } from '../../../src/service/report-service';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import { Report } from '../../../src/entity/report/report';
@@ -340,6 +340,20 @@ describe('ReportService', () => {
         });
       });
     });
+
+    it('reportToResponse should include transactionCount for seller', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User) => {
+        const created = await createTransactions(debtor.id, creditor.id, 4);
+        const parameters: ReportParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: creditor.id,
+        };
+        const report = await new SalesReportService().getReport(parameters);
+        const response = ReportService.reportToResponse(report) as any;
+        expect(response.transactionCount).to.equal(created.transactions.length);
+      });
+    });
   });
 
   describe('BuyerReportService', () => {
@@ -537,6 +551,20 @@ describe('ReportService', () => {
           tillDate: new Date(2050, 0, 0),
           forId: debtor.id,
         });
+      });
+    });
+
+    it('reportToResponse should include correct transactionCount for buyer', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (debtor: User, creditor: User) => {
+        const created = await createTransactions(debtor.id, creditor.id, 4);
+        const parameters: ReportParameters = {
+          fromDate: new Date(2000, 0, 0),
+          tillDate: new Date(2050, 0, 0),
+          forId: debtor.id,
+        };
+        const report = await new BuyerReportService().getReport(parameters);
+        const response = ReportService.reportToResponse(report) as any;
+        expect(response.transactionCount).to.equal(created.transactions.length);
       });
     });
   });

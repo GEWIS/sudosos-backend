@@ -129,6 +129,7 @@ export default abstract class ReportService extends WithManager {
       data,
       totalExclVat: report.totalExclVat.toObject(),
       totalInclVat: report.totalInclVat.toObject(),
+      transactionCount: report.transactionCount,
     };
   }
 
@@ -143,7 +144,8 @@ export default abstract class ReportService extends WithManager {
   private addSelectTotals<T>(query: SelectQueryBuilder<T>): SelectQueryBuilder<T> {
     return query
       .addSelect('sum(subTransactionRow.amount * ROUND(productRevision.priceInclVat / (1 + (vatGroup.percentage / 100))))', 'total_excl_vat')
-      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat)', 'total_incl_vat');
+      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat)', 'total_incl_vat')
+      .addSelect('COUNT(DISTINCT transaction.id)', 'transaction_count');
   }
 
   /**
@@ -312,9 +314,9 @@ export default abstract class ReportService extends WithManager {
      * @param forId - The user ID to get the totals for
      * @param fromDate - The from date to get the totals for (inclusive)
      * @param tillDate - The till date to get the totals for (exclusive)
-     * @returns {Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero }>} - The totals
+     * @returns {Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero, transactionCount: number }>} - The totals
      */
-  public async getTotals(forId: number, fromDate: Date, tillDate: Date): Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero }> {
+  public async getTotals(forId: number, fromDate: Date, tillDate: Date): Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero, transactionCount: number }> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoin('productRevision.vat', 'vatGroup')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
@@ -329,9 +331,11 @@ export default abstract class ReportService extends WithManager {
 
     const totalExclVat = asDinero(data.raw[0].total_excl_vat || 0);
     const totalInclVat = asDinero(data.raw[0].total_incl_vat || 0);
+    const transactionCount = asNumber(data.raw[0].transaction_count || 0);
     return {
       totalExclVat,
       totalInclVat,
+      transactionCount,
     };
   }
 
@@ -350,6 +354,7 @@ export default abstract class ReportService extends WithManager {
       tillDate,
       totalExclVat: totals.totalExclVat,
       totalInclVat: totals.totalInclVat,
+      transactionCount: totals.transactionCount,
       data: {
         products: productEntries,
         vat: vatEntries,
@@ -397,4 +402,3 @@ export class BuyerReportService extends ReportService {
     return new BuyerReport(report);
   }
 }
-

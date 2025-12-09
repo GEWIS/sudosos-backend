@@ -46,6 +46,8 @@ export interface IReport {
 
   totalInclVat: Dinero.Dinero;
 
+  transactionCount: number;
+
   data: ReportData;
 }
 
@@ -97,6 +99,7 @@ export interface Report {
   data: ReportData,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero,
+  transactionCount: number,
 }
 
 

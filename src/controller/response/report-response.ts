@@ -109,6 +109,7 @@ export interface ReportDataResponse {
  * @property {ReportDataResponse} data.required - data
  * @property {DineroObjectResponse} totalExclVat.required - totalExclVat
  * @property {DineroObjectResponse} totalInclVat.required - totalInclVat
+ * @property {integer} transactionCount - transactionCount
  */
 export interface ReportResponse {
   forId: number,
@@ -117,4 +118,5 @@ export interface ReportResponse {
   data: ReportDataResponse,
   totalExclVat: DineroObjectResponse,
   totalInclVat: DineroObjectResponse,
+  transactionCount: number,
 }
