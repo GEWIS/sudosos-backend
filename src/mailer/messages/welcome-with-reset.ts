@@ -26,13 +26,7 @@
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
-import { ResetTokenInfo } from '../../service/authentication-service';
-
-interface WelcomeWithResetOptions {
-  email: string,
-  resetTokenInfo: ResetTokenInfo,
-  url?: string;
-}
+import { WelcomeWithResetOptions } from '../../notifications';
 
 const welcomeWithResetDutch = new MailContentBuilder<WelcomeWithResetOptions>({
   getHTML: (context) => `

@@ -45,13 +45,13 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
-import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import { rootStubs } from '../../root-hooks';
+import Notifier from '../../../src/notifications';
 
 describe('DebtorController', () => {
   let ctx: {
@@ -73,7 +73,7 @@ describe('DebtorController', () => {
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let sendNotifyFake: SinonSpy;
 
   before(async () => {
     // initialize test database
@@ -167,10 +167,10 @@ describe('DebtorController', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
+    sendNotifyFake = sandbox.spy();
+    sandbox.stub(Notifier, 'getInstance').returns({
+      notify: sendNotifyFake,
+    } as any);
   });
 
   // close database connection
@@ -524,7 +524,7 @@ describe('DebtorController', () => {
 
       const body = res.body as FineHandoutEventResponse;
       expect(body).to.be.empty;
-      expect(sendMailFake.callCount).to.be.at.least(1);
+      expect(sendNotifyFake.callCount).to.be.at.least(1);
     });
     it('should return 403 if user is not admin', async () => {
       const res = await request(ctx.app)

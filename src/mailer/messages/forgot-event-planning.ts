@@ -26,11 +26,7 @@
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
-
-export interface ForgotEventPlanningOptions {
-  name: string;
-  eventName: string;
-}
+import { ForgotEventPlanningOptions } from '../../notifications';
 
 const forgotEventPlanningEnglish = new MailContentBuilder<ForgotEventPlanningOptions>({
   getHTML: (context) => `<p>What is this? Have you not yet filled in the borrel planning for ${context.eventName}? Shame on you!<br>

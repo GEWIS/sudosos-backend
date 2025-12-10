@@ -26,10 +26,7 @@
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
-
-interface WelcomeToSudososOptions {
-  url?: string;
-}
+import { WelcomeToSudososOptions } from '../../notifications';
 
 const welcomeToSudososDutch = new MailContentBuilder<WelcomeToSudososOptions>({
   getHTML: (context) => `

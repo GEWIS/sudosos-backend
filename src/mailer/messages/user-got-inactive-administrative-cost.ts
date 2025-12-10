@@ -21,16 +21,14 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import { UserGotInactiveAdministrativeCostOptions } from '../../notifications/notification-options';
+
 
 /**
  * This is the module page of the user-got-inactive-administrative-cost.
  *
  * @module internal/mailer
  */
-
-interface UserGotInactiveAdministrativeCostOptions {
-  amount: Dinero,
-}
 
 const formatBalance = (b: Dinero) => {
   return `<span style="font-weight: bold;">${b.toFormat()}</span>`;

@@ -34,9 +34,6 @@ import dinero from 'dinero.js';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
 import Transfer from '../entity/transactions/transfer';
 import Transaction from '../entity/transactions/transaction';
-import InactiveAdministrativeCostNotification from '../mailer/messages/inactive-administrative-cost-notification';
-import Mailer from '../mailer';
-import UserGotInactiveAdministrativeCost from '../mailer/messages/user-got-inactive-administrative-cost';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
@@ -47,6 +44,13 @@ import {
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
+import Notifier from '../notifications';
+import { NotificationTypes } from '../notifications/notification-types';
+import {
+  InactiveAdministrativeCostNotificationOptions,
+  UserGotInactiveAdministrativeCostOptions,
+} from '../notifications/notification-options';
+import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 
 export interface InactiveAdministrativeCostFilterParameters {
@@ -262,9 +266,14 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
       const user = await User.findOne({ where: { id: u } });
 
-      await Mailer.getInstance().send(user, new UserGotInactiveAdministrativeCost({
-        amount: inactiveAdministrativeCost.amount,
-      }));
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.UserGotInactiveAdministrativeCost,
+        userId: user.id,
+        params: new UserGotInactiveAdministrativeCostOptions(
+          inactiveAdministrativeCost.amount,
+        ),
+        overrideChannel: NotificationChannels.EMAIL,
+      });
 
       return inactiveAdministrativeCost;
     }));
@@ -289,8 +298,15 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
       user.inactiveNotificationSend = true;
       await user.save();
-
-      return Mailer.getInstance().send(user, new InactiveAdministrativeCostNotification({ administrativeCostValue: formattedValue }));
+      
+      return Notifier.getInstance().notify({
+        type: NotificationTypes.InactiveAdministrativeCostNotification,
+        userId: user.id,
+        params: new InactiveAdministrativeCostNotificationOptions(
+          formattedValue,
+        ),
+        overrideChannel: NotificationChannels.EMAIL,
+      });
     }),
     );
   }

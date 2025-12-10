@@ -20,16 +20,14 @@
 
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import { InactiveAdministrativeCostNotificationOptions } from '../../notifications/notification-options';
+
 
 /**
  * This is the module page of the inactive-administrative-cost-notification.
  *
  * @module internal/mailer
  */
-
-interface InactiveAdministrativeCostNotificationOptions {
-  administrativeCostValue: string;
-}
 
 const inactiveAdministrativeCostNotificationDutch = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
   getHTML: (context) => `

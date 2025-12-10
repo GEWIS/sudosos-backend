@@ -50,11 +50,10 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asArrayOfNumbers, asDate, asEventType, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import AssignedRole from '../entity/rbac/assigned-role';
-import Mailer from '../mailer';
-import ForgotEventPlanning from '../mailer/messages/forgot-event-planning';
-import { Language } from '../mailer/mail-message';
 import Role from '../entity/rbac/role';
 import { AppDataSource } from '../database/database';
+import Notifier, { ForgotEventPlanningOptions } from '../notifications';
+import { NotificationTypes } from '../notifications/notification-types';
 
 export interface EventFilterParameters {
   name?: string;
@@ -484,10 +483,15 @@ export default class EventService {
         .map((a) => a.user)
         .filter((user, i, all) => i === all.findIndex((u) => u.id === user.id));
 
-      // Send every user an email
-      return Promise.all(users.map(async (user) => Mailer.getInstance().send(user,
-        new ForgotEventPlanning({ name: user.firstName, eventName: event.name }), Language.DUTCH),
-      ));
+      // Send every user a notification
+      return Promise.all(users.map(async (user) => Notifier.getInstance().notify({
+        type: NotificationTypes.ForgotEventPlanning,
+        userId: user.id,
+        params: new ForgotEventPlanningOptions(
+          user.firstName,
+          event.name,
+        ),
+      })));
     }));
   }
 

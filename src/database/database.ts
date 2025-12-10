@@ -96,7 +96,10 @@ import InactiveAdministrativeCost from '../entity/transactions/inactive-administ
 import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
+import NotificationLog from '../entity/notifications/notification-log';
+import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 import { RenameGewisToExternal1763399087409 } from '../migrations/1763399087409-rename-gewis-to-external';
+import { UserNotificationPreference1764615514906 } from '../migrations/1764615514906-user-notification-preference';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -126,6 +129,7 @@ const options: DataSourceOptions = {
     AddOrganMembershipIndex1761328648026,
     UserAdministrativeCost1761845457283,
     RenameGewisToExternal1763399087409,
+    UserNotificationPreference1764615514906,
   ],
   extra: {
     authPlugins: {
@@ -192,6 +196,8 @@ const options: DataSourceOptions = {
     WriteOff,
     WriteOffPdf,
     QRAuthenticator,
+    NotificationLog,
+    UserNotificationPreference,
   ],
   subscribers: [
     TransactionSubscriber,

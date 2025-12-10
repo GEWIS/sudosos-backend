@@ -27,10 +27,7 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-
-interface MembershipExpiryNotificationOptions {
-  balance: Dinero;
-}
+import { MembershipExpiryNotificationOptions } from '../../notifications';
 
 const formatBalance = (balance: Dinero) => {
   const isNegative = balance.getAmount() < 0;
