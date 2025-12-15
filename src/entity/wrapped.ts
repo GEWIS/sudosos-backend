@@ -24,8 +24,9 @@
  * @module entity/wrapped
  * @mergeTarget
  */
-import { BaseEntity, Column, Entity, OneToOne, PrimaryColumn, JoinColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, OneToOne, OneToMany, PrimaryColumn, JoinColumn } from 'typeorm';
 import User from './user/user';
+import WrappedOrganMember from './wrapped/wrapped-organ-member';
 
 /**
  * @typedef {BaseEntity} Wrapped
@@ -92,4 +93,7 @@ export default class Wrapped extends BaseEntity {
     nullable: true,
   })
   public syncedTo: Date | null;
+
+  @OneToMany(() => WrappedOrganMember, (wom) => wom.wrapped)
+  public organs: WrappedOrganMember[];
 }

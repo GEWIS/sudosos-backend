@@ -25,6 +25,9 @@ import Transaction from '../entity/transactions/transaction';
 import SubTransaction from '../entity/transactions/sub-transaction';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
+import OrganMembership from '../entity/organ/organ-membership';
+import WrappedOrganMember from '../entity/wrapped/wrapped-organ-member';
+import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { Between, In } from 'typeorm';
 
 export interface UpdateWrappedParameters {
@@ -48,7 +51,10 @@ export default class WrappedService extends WithManager {
   public async getWrappedForUser(userId: number): Promise<Wrapped | null> {
     const entityManager = this.manager;
 
-    return entityManager.findOne(Wrapped, { where: { userId } });
+    return entityManager.findOne(Wrapped, {
+      where: { userId },
+      relations: ['organs'],
+    });
   }
 
   /**
@@ -72,6 +78,11 @@ export default class WrappedService extends WithManager {
       spentPercentile: Number(data.spentPercentile ?? 0),
       syncedFrom: data.syncedFrom.toISOString(),
       syncedTo: data.syncedTo.toISOString(),
+      organs: (data.organs || []).map((wom) => ({
+        organId: wom.organId,
+        ordinalTransactionCreated: Number(wom.ordinalTransactionCreated ?? 0),
+        ordinalTurnoverCreated: Number(wom.ordinalTurnoverCreated ?? 0),
+      })),
     } as WrappedResponse;
   }
 
@@ -151,6 +162,7 @@ export default class WrappedService extends WithManager {
     await this.updateSpentPercentile(rows);
 
     await this.updateSyncedDates(rows, wrappedYear);
+    await this.updateWrappedOrganMembers(rows, wrappedYear);
   }
 
   /**
@@ -446,5 +458,138 @@ export default class WrappedService extends WithManager {
       .set({ syncedFrom, syncedTo })
       .where('userId IN (:...userIds)', { userIds })
       .execute();
+  }
+
+  /**
+   * Update organ member statistics for the provided Wrapped rows.
+   *
+   * For each user, finds all organs they're a member of, then computes ordinal
+   * rankings (0-based, sequential) for transaction count and turnover among all
+   * sellers (createdBy users) who created transactions for that organ's POS.
+   *
+   * @param rows - list of Wrapped rows to operate on
+   * @param wrappedYear - year for the Wrapped computation
+   */
+  private async updateWrappedOrganMembers(rows: Wrapped[], wrappedYear: number): Promise<void> {
+    const ctx = this.prepareUpdateContext(rows, wrappedYear);
+    if (!ctx) return;
+    const { start, end, manager, userIds } = ctx;
+
+    // Get all organ memberships for the users
+    const organMemberships = await manager.find(OrganMembership, {
+      where: { userId: In(userIds) },
+    });
+
+    if (organMemberships.length === 0) {
+      // Delete any existing WrappedOrganMember records for these users
+      await manager.delete(WrappedOrganMember, { userId: In(userIds) });
+      return;
+    }
+
+    // Group memberships by organId
+    const organIds = [...new Set(organMemberships.map((om) => om.organId))];
+    const userOrgansMap = new Map<number, number[]>();
+    for (const om of organMemberships) {
+      const userId = Number(om.userId);
+      if (!userOrgansMap.has(userId)) {
+        userOrgansMap.set(userId, []);
+      }
+      userOrgansMap.get(userId)!.push(Number(om.organId));
+    }
+
+    // For each organ, compute seller statistics
+    const organStatsMap = new Map<number, Map<number, { count: number; turnover: number }>>();
+
+    for (const organId of organIds) {
+      // Query transactions for this organ's POS
+      const transactionStats = await manager
+        .createQueryBuilder(Transaction, 't')
+        .select('t.createdById', 'sellerId')
+        .addSelect('COUNT(*)', 'transactionCount')
+        .addSelect('COALESCE(SUM(str.amount * pr.priceInclVat), 0)', 'turnover')
+        .innerJoin(PointOfSaleRevision, 'posr', 'posr.pointOfSaleId = t.pointOfSalePointOfSaleId AND posr.revision = t.pointOfSaleRevision')
+        .innerJoin('posr.pointOfSale', 'pos')
+        .innerJoin('pos.owner', 'owner')
+        .innerJoin(SubTransaction, 'st', 'st.transactionId = t.id')
+        .innerJoin(SubTransactionRow, 'str', 'str.subTransactionId = st.id')
+        .innerJoin(ProductRevision, 'pr', 'pr.productId = str.productProductId AND pr.revision = str.productRevision')
+        .innerJoin(User, 'seller', 'seller.id = t.createdById')
+        .where('owner.id = :organId', { organId })
+        .andWhere('owner.active = 1')
+        .andWhere('t.createdAt BETWEEN :start AND :end', { start, end })
+        .andWhere('seller.extensiveDataProcessing = 1')
+        .andWhere('seller.deleted = 0')
+        .andWhere('seller.active = 1')
+        .groupBy('t.createdById')
+        .getRawMany();
+
+      const sellerStats = new Map<number, { count: number; turnover: number }>();
+      for (const stat of transactionStats) {
+        sellerStats.set(Number(stat.sellerId), {
+          count: Number(stat.transactionCount),
+          turnover: Number(stat.turnover),
+        });
+      }
+      organStatsMap.set(organId, sellerStats);
+    }
+
+    // Compute ordinals for each organ
+    const organOrdinalsMap = new Map<number, Map<number, { transactionOrdinal: number; turnoverOrdinal: number }>>();
+
+    for (const [organId, sellerStats] of organStatsMap.entries()) {
+      // Sort sellers by transaction count (descending)
+      const sortedByCount = Array.from(sellerStats.entries())
+        .sort((a, b) => b[1].count - a[1].count);
+
+      // Sort sellers by turnover (descending)
+      const sortedByTurnover = Array.from(sellerStats.entries())
+        .sort((a, b) => b[1].turnover - a[1].turnover);
+
+      // Assign 0-based sequential ordinals
+      const transactionOrdinals = new Map<number, number>();
+      for (let i = 0; i < sortedByCount.length; i++) {
+        transactionOrdinals.set(sortedByCount[i][0], i);
+      }
+
+      const turnoverOrdinals = new Map<number, number>();
+      for (let i = 0; i < sortedByTurnover.length; i++) {
+        turnoverOrdinals.set(sortedByTurnover[i][0], i);
+      }
+
+      const ordinalsMap = new Map<number, { transactionOrdinal: number; turnoverOrdinal: number }>();
+      for (const [sellerId] of sellerStats.entries()) {
+        ordinalsMap.set(sellerId, {
+          transactionOrdinal: transactionOrdinals.get(sellerId) ?? sortedByCount.length,
+          turnoverOrdinal: turnoverOrdinals.get(sellerId) ?? sortedByTurnover.length,
+        });
+      }
+      organOrdinalsMap.set(organId, ordinalsMap);
+    }
+
+    // Delete existing WrappedOrganMember records for these users
+    await manager.delete(WrappedOrganMember, { userId: In(userIds) });
+
+    // Create new WrappedOrganMember records
+    const wrappedOrganMembers: WrappedOrganMember[] = [];
+    for (const wrapped of rows) {
+      const userId = Number(wrapped.userId);
+      const oIds = userOrgansMap.get(userId) || [];
+
+      for (const organId of oIds) {
+        const ordinals = organOrdinalsMap.get(organId)?.get(userId);
+        if (ordinals !== undefined) {
+          const wom = new WrappedOrganMember();
+          wom.userId = userId;
+          wom.organId = organId;
+          wom.ordinalTransactionCreated = ordinals.transactionOrdinal;
+          wom.ordinalTurnoverCreated = ordinals.turnoverOrdinal;
+          wrappedOrganMembers.push(wom);
+        }
+      }
+    }
+
+    if (wrappedOrganMembers.length > 0) {
+      await manager.save(wrappedOrganMembers);
+    }
   }
 }
