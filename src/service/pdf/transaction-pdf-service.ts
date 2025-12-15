@@ -26,20 +26,55 @@
 
 import { HtmlUnstoredPdfService } from './pdf-service';
 import Transaction from '../../entity/transactions/transaction';
+import { createTransactionPdf, ITransactionPdf } from '../../html/transaction.html';
 
-export default class TransactionPdfService extends HtmlUnstoredPdfService<Transaction> {
+export default class TransactionPdfService extends HtmlUnstoredPdfService<Transaction, ITransactionPdf> {
 
-  templateFileName = 'transaction.html';
+  htmlGenerator = createTransactionPdf;
 
-  async getParameters(entity: Transaction): Promise<any> {
+  async getParameters(entity: Transaction): Promise<ITransactionPdf> {
+    const transaction = await this.manager.findOne(Transaction, {
+      where: { id: entity.id },
+      relations: [
+        'from',
+        'createdBy',
+        'subTransactions',
+        'subTransactions.subTransactionRows',
+        'subTransactions.subTransactionRows.product',
+        'subTransactions.subTransactionRows.product.vat',
+      ],
+    });
+
+    if (!transaction) {
+      throw new Error('Transaction not found');
+    }
+
+    const items = transaction.subTransactions.flatMap(st =>
+      st.subTransactionRows.map(row => {
+        const priceIncl = row.product.priceInclVat.getAmount();
+        const vatRate = row.product.vat.percentage;
+        const unitPriceExcl = Math.round(priceIncl / (1 + vatRate / 100)) / 100;
+
+        return {
+          description: row.product.name,
+          qty: row.amount,
+          unit: row.product.priceInclVat.toFormat(), // display only
+          unitPriceExclVat: unitPriceExcl,          // calculations
+          vatRate: vatRate,
+        };
+      }),
+    );
+
     return {
-      transactionId: entity.id,
-      fromUserFirstName: entity.from.firstName,
-      fromUserLastName: entity.from.lastName,
-      createdByUserFirstName: entity.createdBy.firstName,
-      createdByUserLastName: entity.createdBy.lastName,
-      date: entity.createdAt.toISOString(),
-      serviceEmail: 'test@gewis.nl',
+      transactionId: transaction.id.toString(),
+      fromUserFirstName: transaction.from.firstName,
+      fromUserLastName: transaction.from.lastName,
+      fromId: transaction.from.id.toString(),
+      createdByUserFirstName: transaction.createdBy.firstName,
+      createdByUserLastName: transaction.createdBy.lastName,
+      date: transaction.createdAt.toLocaleDateString('nl-NL'),
+      items,
+      serviceEmail: process.env.FINANCIAL_RESPONSIBLE || '',
     };
   }
 }
