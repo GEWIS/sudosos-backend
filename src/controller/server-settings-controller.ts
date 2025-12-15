@@ -31,6 +31,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import WebSocketService from '../service/websocket-service';
+import { asBoolean } from '../helpers/validators';
 
 /**
  * @typedef {object} UpdateMaintenanceModeRequest
@@ -76,10 +77,10 @@ export default class ServerSettingsController extends BaseController {
       },
       '/wrapped-enabled': {
         GET: {
-          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'ServerSettings', ['wrappedEnabled']),
+          policy: async () => true,
           handler: this.getWrappedEnabled.bind(this),
         },
-        POST: {
+        PUT: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'ServerSettings', ['wrappedEnabled']),
           handler: this.setWrappedEnabled.bind(this),
           body: { modelName: 'UpdateWrappedEnabledRequest' },
@@ -143,7 +144,7 @@ export default class ServerSettingsController extends BaseController {
   }
 
   /**
-   * POST /server-settings/wrapped-enabled
+   * PUT /server-settings/wrapped-enabled
    * @summary Set the wrapped-enabled server setting
    * @operationId setWrappedEnabled
    * @tags serverSettings - Operations of the server settings controller
@@ -157,9 +158,10 @@ export default class ServerSettingsController extends BaseController {
 
     try {
       const body = req.body as UpdateWrappedEnabledRequest;
+      const enabled = asBoolean(body.enabled);
 
       const store = ServerSettingsStore.getInstance();
-      await store.setSetting('wrappedEnabled', body.enabled);
+      await store.setSetting('wrappedEnabled', enabled);
 
       res.status(204).send();
     } catch (error) {
