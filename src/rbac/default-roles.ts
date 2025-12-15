@@ -85,6 +85,10 @@ export default class DefaultRoles {
         VatGroup: {
           get: { all: star },
         },
+        Wrapped: {
+          get: { own: star },
+          update: { own: star },
+        },
       },
     }, {
       name: 'Local User',
@@ -232,6 +236,11 @@ export default class DefaultRoles {
         VoucherGroup: admin,
         WriteOff: admin,
         InactiveAdministrativeCost: admin,
+        Wrapped: {
+          get: { own: star },
+          update: { own: star },
+          override: { all: star },
+        },
       },
     }, {
       name: SELLER_ROLE,
