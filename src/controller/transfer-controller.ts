@@ -70,6 +70,12 @@ export default class TransferController extends BaseController {
           handler: this.deleteTransfer.bind(this),
         },
       },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransferController.getRelation(req), 'Transfer', ['*']),
+          handler: this.getTransferPdf.bind(this),
+        },
+      },
     };
   }
 
@@ -217,6 +223,54 @@ export default class TransferController extends BaseController {
         this.logger.error('Could not delete transfer:', error);
         res.status(500).json('Internal server error.');
       }
+    }
+  }
+
+  /**
+   * GET /transfers/{id}/pdf
+   * @summary Get the PDF of the transfer
+   * @operationId getTransferPdf
+   * @tags transfers - Operations of the transfer controller
+   * @param {integer} id.path.required - The transfer ID
+   * @security JWT
+   * @returns {string} 200 - The requested pdf of the transfer - application/pdf
+   * @return {string} 400 - Transfer is decorated and has its own PDF service
+   * @return {string} 404 - Transfer not found
+   * @return {string} 500 - Internal server error
+   */
+  public async getTransferPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const transferId = parseInt(id, 10);
+    this.logger.trace('Get transfer PDF', id, 'by user', req.token.user);
+
+    try {
+      const transfer = await Transfer.findOne({
+        where: { id: transferId },
+        relations: ['from', 'to', 'invoice', 'deposit', 'payoutRequest', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
+      });
+      if (!transfer) {
+        res.status(404).json('Transfer not found.');
+        return;
+      }
+
+      if (transfer.invoice || transfer.deposit || transfer.payoutRequest || transfer.fine
+        || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
+        res.status(400).json('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+        return;
+      }
+
+      const pdf = await transfer.createPdf();
+      const fileName = `transfer-${transfer.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf+tex');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.status(200).send(pdf);
+    } catch (error) {
+      if (error.message && error.message.includes('base transfer')) {
+        res.status(400).json('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+        return;
+      }
+      this.logger.error('Could not return transfer PDF:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 }

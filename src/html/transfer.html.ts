@@ -27,8 +27,6 @@ export interface ITransferPdf {
   toUserFirstName: string;
   toUserLastName: string;
   toAccount: string;
-  createdByUserFirstName: string;
-  createdByUserLastName: string;
   date: string;
   description: string;
   amount: string;
@@ -37,48 +35,47 @@ export interface ITransferPdf {
 
 export function createTransferPdf(options: ITransferPdf): string {
   const meta = `
-        <div class="card">
-            <h3>From</h3>
-            <p>${options.fromUserFirstName} ${options.fromUserLastName}</p>
-            <div class="small">Account: ${options.fromAccount}</div>
-        </div>
-        <div class="card">
-            <h3>To</h3>
-            <p>${options.toUserFirstName} ${options.toUserLastName}</p>
-            <div class="small">Account: ${options.toAccount}</div>
-        </div>
-        <div class="card">
-            <h3>Created by</h3>
-            <p>${options.createdByUserFirstName} ${options.createdByUserLastName}</p>
-            <div class="small">Date: ${options.date}</div>
-        </div>
-    `;
+    <div class="card">
+      <h3>From</h3>
+      <p>${options.fromUserFirstName} ${options.fromUserLastName}</p>
+      <div class="small">Account: ${options.fromAccount}</div>
+    </div>
+    <div class="card">
+      <h3>To</h3>
+      <p>${options.toUserFirstName} ${options.toUserLastName}</p>
+      <div class="small">Account: ${options.toAccount}</div>
+    </div>
+    <div class="card">
+      <h3>Date</h3>
+      <p>${options.date}</p>
+    </div>
+  `;
 
   const details = `
-        <table class="items" role="table">
-            <thead>
-                <tr>
-                    <td>Description</td>
-                    <td class="total">Amount</td>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>${options.description}</td>
-                    <td class="total">${options.amount}</td>
-                </tr>
-            </tbody>
-        </table>
+    <table class="items" role="table">
+      <thead>
+        <tr>
+          <td>Description</td>
+          <td class="total">Amount</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${options.description}</td>
+          <td class="total">${options.amount}</td>
+        </tr>
+      </tbody>
+    </table>
 
-        <div class="totals">
-            <table>
-                <tr>
-                    <td class="label grand">Total</td>
-                    <td class="amt grand">${options.amount}</td>
-                </tr>
-            </table>
-        </div>
-    `;
+    <div class="totals">
+      <table>
+        <tr>
+          <td class="label grand">Total</td>
+          <td class="amt grand">${options.amount}</td>
+        </tr>
+      </table>
+    </div>
+  `;
 
   return createBasePdf({
     pageTitle: 'Transfer PDF',
@@ -88,6 +85,5 @@ export function createTransferPdf(options: ITransferPdf): string {
     meta,
     details,
     serviceEmail: options.serviceEmail,
-    logoBase64: options.logoBase64,
   });
 }

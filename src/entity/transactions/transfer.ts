@@ -40,6 +40,8 @@ import UserFineGroup from '../fine/userFineGroup';
 import VatGroup from '../vat-group';
 import WriteOff from './write-off';
 import InactiveAdministrativeCost from './inactive-administrative-cost';
+import { UnstoredPdfAble } from '../file/pdf-able';
+import TransferPdfService from '../../service/pdf/transfer-pdf-service';
 
 /**
  * @typedef {BaseEntity} Transfer
@@ -54,7 +56,7 @@ import InactiveAdministrativeCost from './inactive-administrative-cost';
  * description of the transfer.
  */
 @Entity()
-export default class Transfer extends BaseEntity {
+export default class Transfer extends UnstoredPdfAble(BaseEntity) {
   // These IDs are required, because TypeORM findOptions will convert the relations from LEFT JOIN
   // to INNER JOIN when having a where clause on a relational entity.
   @Column({ nullable: true })
@@ -107,4 +109,6 @@ export default class Transfer extends BaseEntity {
 
   @OneToOne(() => InactiveAdministrativeCost, (a) => a.transfer, { nullable: true })
   public inactiveAdministrativeCost: InactiveAdministrativeCost | null;
+
+  pdfService = new TransferPdfService();
 }
