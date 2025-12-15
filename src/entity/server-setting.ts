@@ -35,6 +35,7 @@ export interface ISettings {
   maintenanceMode: boolean;
   allowGewisSyncDelete: boolean;
   strictPosToken: boolean;
+  wrappedEnabled: boolean;
 }
 
 /**

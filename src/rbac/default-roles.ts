@@ -222,6 +222,7 @@ export default class DefaultRoles {
         Transaction: admin,
         Transfer: admin,
         Roles: admin,
+        ServerSettings: admin,
         User: {
           ...admin,
           acceptToS: { own: star },

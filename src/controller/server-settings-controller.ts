@@ -40,6 +40,22 @@ interface UpdateMaintenanceModeRequest {
   enabled: boolean;
 }
 
+/**
+ * @typedef {object} UpdateWrappedEnabledRequest
+ * @property {boolean} enabled.required - Whether wrapped is intended to be enabled
+ */
+interface UpdateWrappedEnabledRequest {
+  enabled: boolean;
+}
+
+/**
+ * @typedef {object} WrappedEnabledResponse
+ * @property {boolean} enabled.required - Whether wrapped is intended to be enabled
+ */
+interface WrappedEnabledResponse {
+  enabled: boolean;
+}
+
 export default class ServerSettingsController extends BaseController {
   private logger: Logger = log4js.getLogger('ServerSettingsController');
 
@@ -56,6 +72,17 @@ export default class ServerSettingsController extends BaseController {
           handler: this.setMaintenanceMode.bind(this),
           body: { modelName: 'UpdateMaintenanceModeRequest' },
           restrictions: { availableDuringMaintenance: true },
+        },
+      },
+      '/wrapped-enabled': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'ServerSettings', ['wrappedEnabled']),
+          handler: this.getWrappedEnabled.bind(this),
+        },
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', 'all', 'ServerSettings', ['wrappedEnabled']),
+          handler: this.setWrappedEnabled.bind(this),
+          body: { modelName: 'UpdateWrappedEnabledRequest' },
         },
       },
     };
@@ -86,6 +113,57 @@ export default class ServerSettingsController extends BaseController {
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not update maintenance mode:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /server-settings/wrapped-enabled
+   * @summary Get the wrapped-enabled server setting
+   * @operationId getWrappedEnabled
+   * @tags serverSettings - Operations of the server settings controller
+   * @security JWT
+   * @return {WrappedEnabledResponse} 200 - Success.
+   * @return {string} 500 - Internal server error.
+   */
+  public async getWrappedEnabled(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get wrapped-enabled by', req.token.user);
+
+    try {
+      const store = ServerSettingsStore.getInstance();
+      const enabled = await store.getSettingFromDatabase('wrappedEnabled');
+
+      res.status(200).json({
+        enabled,
+      } as WrappedEnabledResponse);
+    } catch (error) {
+      this.logger.error('Could not get wrapped-enabled:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /server-settings/wrapped-enabled
+   * @summary Set the wrapped-enabled server setting
+   * @operationId setWrappedEnabled
+   * @tags serverSettings - Operations of the server settings controller
+   * @security JWT
+   * @param {UpdateWrappedEnabledRequest} request.body.required
+   * @return {string} 204 - Success.
+   * @return {string} 500 - Internal server error.
+   */
+  public async setWrappedEnabled(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Set wrapped-enabled by', req.token.user);
+
+    try {
+      const body = req.body as UpdateWrappedEnabledRequest;
+
+      const store = ServerSettingsStore.getInstance();
+      await store.setSetting('wrappedEnabled', body.enabled);
+
+      res.status(204).send();
+    } catch (error) {
+      this.logger.error('Could not update wrapped-enabled:', error);
       res.status(500).json('Internal server error.');
     }
   }

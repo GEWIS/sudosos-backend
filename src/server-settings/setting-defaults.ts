@@ -34,6 +34,7 @@ const SettingsDefaults: ISettings = {
   maintenanceMode: false,
   allowGewisSyncDelete: false,
   strictPosToken: false,
+  wrappedEnabled: false,
 };
 
 export default SettingsDefaults;
