@@ -24,6 +24,7 @@ import { expect, request } from 'chai';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import log4js, { Logger } from 'log4js';
+import sinon from 'sinon';
 import TransactionController from '../../../src/controller/transaction-controller';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
@@ -1202,6 +1203,94 @@ describe('TransactionController', (): void => {
         .get(`/transactions/${transRes.body.id}/invoices`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
       
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /transactions/:id/pdf', () => {
+    let createPdfStub: sinon.SinonStub;
+    let testTransaction: Transaction;
+
+    before(async () => {
+      // Create a transaction for testing
+      const createRes = await request(ctx.app)
+        .post('/transactions')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(ctx.validTransReq);
+      testTransaction = await Transaction.findOne({ 
+        where: { id: createRes.body.id },
+        relations: ['from', 'createdBy'],
+      });
+    });
+
+    beforeEach(() => {
+      createPdfStub = sinon.stub(Transaction.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should return HTTP 200 with PDF for transaction', async () => {
+      expect(testTransaction).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/transactions/${testTransaction.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-type']).to.include('application/pdf');
+      expect(res.headers['content-disposition']).to.include(`transaction-${testTransaction.id}.pdf`);
+    });
+
+    it('should return HTTP 404 if transaction does not exist', async () => {
+      const maxId = ctx.transactions.reduce((max, t) => Math.max(max, t.id), 0);
+      const nonExistentId = maxId + 100;
+
+      const res = await request(ctx.app)
+        .get(`/transactions/${nonExistentId}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Transaction not found.');
+    });
+
+    it('should return HTTP 400 if PDF generation fails with PdfError', async () => {
+      createPdfStub.restore();
+      const { PdfError } = require('../../../src/errors');
+      createPdfStub = sinon.stub(Transaction.prototype, 'createPdf').rejects(new PdfError('Transaction missing required relations'));
+
+      expect(testTransaction).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/transactions/${testTransaction.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transaction missing required relations');
+    });
+
+    it('should return HTTP 500 if PDF generation fails with other error', async () => {
+      createPdfStub.restore();
+      createPdfStub = sinon.stub(Transaction.prototype, 'createPdf').rejects(new Error('PDF generation failed'));
+
+      expect(testTransaction).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/transactions/${testTransaction.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+    });
+
+    it('should return HTTP 403 if not authorized', async () => {
+      expect(testTransaction).to.not.be.null;
+
+      const res = await request(ctx.app)
+        .get(`/transactions/${testTransaction.id}/pdf`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
       expect(res.status).to.equal(403);
     });
   });

@@ -381,6 +381,7 @@ export default class TransactionController extends BaseController {
    * @security JWT
    * @returns {string} 200 - The requested pdf of the transaction - application/pdf
    * @return {string} 404 - Transaction not found
+   * @return {string} 400 - PDF generation failed
    * @return {string} 500 - Internal server error
    */
   public async getTransactionPdf(req: RequestWithToken, res: Response): Promise<void> {
@@ -397,7 +398,7 @@ export default class TransactionController extends BaseController {
 
       const pdf = await transaction.createPdf();
       const fileName = `transaction-${transaction.id}.pdf`;
-      res.setHeader('Content-Type', 'application/pdf+tex');
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.status(200).send(pdf);
     } catch (error: any) {

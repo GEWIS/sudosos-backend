@@ -259,7 +259,7 @@ export default class TransferController extends BaseController {
 
       const pdf = await transfer.createPdf();
       const fileName = `transfer-${transfer.id}.pdf`;
-      res.setHeader('Content-Type', 'application/pdf+tex');
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.status(200).send(pdf);
     } catch (error: any) {

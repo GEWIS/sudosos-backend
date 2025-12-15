@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -17,14 +17,15 @@
  *
  *  @license
  */
+
 import { createBasePdf } from './base.html';
 
 export interface ITransactionItem {
   description: string;
   qty: number;
   unit: string;
-  unitPriceExclVat: number; // euro value
-  vatRate: number;          // e.g. 9 or 21
+  unitPriceExclVat: number;
+  vatRate: number;
 }
 
 export interface ITransactionPdf {
