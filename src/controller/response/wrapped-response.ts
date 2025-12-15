@@ -26,6 +26,7 @@ import BaseResponse from './base-response';
  * @property {number} spentPercentile.required - The top percentile of the user based on amount spent
  * @property {string} syncedFrom.required - The starting date from which the data was considered
  * @property {string} syncedTo.required - The last time the data was synced
+ * @property {Array.<WrappedOrganMemberResponse>} organs.required - Organ member statistics for the user
  */
 export default interface WrappedResponse extends BaseResponse {
   userId: number;
@@ -33,6 +34,7 @@ export default interface WrappedResponse extends BaseResponse {
   spentPercentile: number;
   syncedFrom: string;
   syncedTo: string;
+  organs: WrappedOrganMemberResponse[];
 }
 
 /**
@@ -49,4 +51,16 @@ export interface WrappedTransactions {
   transactionMaxDate: string;
   transactionMaxAmount: number;
   transactionHeatmap: number[];
+}
+
+/**
+ * @typedef {object} WrappedOrganMemberResponse
+ * @property {integer} organId.required - The ID of the organ
+ * @property {integer} ordinalTransactionCreated.required - 0-based ranking for transaction count created
+ * @property {integer} ordinalTurnoverCreated.required - 0-based ranking for turnover amount created
+ */
+export interface WrappedOrganMemberResponse {
+  organId: number;
+  ordinalTransactionCreated: number;
+  ordinalTurnoverCreated: number;
 }

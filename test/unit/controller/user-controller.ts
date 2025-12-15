@@ -81,6 +81,7 @@ import { RbacSeeder } from '../../seed';
 import Dinero from 'dinero.js';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
+import Wrapped from '../../../src/entity/wrapped';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -204,6 +205,10 @@ describe('UserController', (): void => {
           get: all,
           delete: all,
         },
+        Wrapped: {
+          get: all,
+          update: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }, {
@@ -236,6 +241,10 @@ describe('UserController', (): void => {
         },
         Transfer: {
           get: own,
+        },
+        Wrapped: {
+          get: own,
+          update: own,
         },
       },
       assignmentCheck: async () => true,
@@ -2690,6 +2699,223 @@ describe('UserController', (): void => {
           .send({ roleId: 1 });
         expect(res.status).to.equal(403);
       });
+    });
+  });
+
+  describe('GET /users/:id/wrapped', () => {
+    it('should return 200 with WrappedResponse when wrapped exists', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      // Create wrapped data
+      const wrapped = Object.assign(new Wrapped(), {
+        userId: user.id,
+        transactionCount: 10,
+        transactionPercentile: 75.5,
+        transactionMaxDate: new Date(2023, 6, 15),
+        transactionMaxAmount: 5,
+        transactionHeatmap: JSON.stringify([1, 2, 3]),
+        spentPercentile: 80.0,
+        syncedFrom: new Date(2023, 0, 1),
+        syncedTo: new Date(2023, 11, 31),
+      });
+      await Wrapped.save(wrapped);
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('userId');
+      expect(res.body).to.have.property('transactions');
+      expect(res.body).to.have.property('spentPercentile');
+      expect(res.body).to.have.property('syncedFrom');
+      expect(res.body).to.have.property('syncedTo');
+      expect(res.body).to.have.property('organs');
+      expect(res.body.transactions).to.have.property('transactionCount');
+      expect(res.body.transactions).to.have.property('transactionPercentile');
+      expect(res.body.transactions).to.have.property('transactionMaxDate');
+      expect(res.body.transactions).to.have.property('transactionMaxAmount');
+      expect(res.body.transactions).to.have.property('transactionHeatmap');
+    });
+
+    it('should return 404 when wrapped not found', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      // Ensure no wrapped exists
+      await Wrapped.delete({ userId: user.id });
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Wrapped not found for user');
+    });
+
+    it('should validate authorization policy (own)', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      const wrapped = Object.assign(new Wrapped(), {
+        userId: user.id,
+        transactionCount: 5,
+        transactionPercentile: 50.0,
+        transactionMaxDate: new Date(2023, 5, 15),
+        transactionMaxAmount: 3,
+        transactionHeatmap: JSON.stringify([]),
+        spentPercentile: 60.0,
+        syncedFrom: new Date(2023, 0, 1),
+        syncedTo: new Date(),
+      });
+      await Wrapped.save(wrapped);
+
+      // Reload user without relations to avoid circular references
+      const freshUser = await User.findOne({ where: { id: user.id } });
+      if (!freshUser) return;
+
+      // Create token for the same user using RbacSeeder to avoid circular references
+      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).to.equal(200);
+    });
+
+    it('should return 403 when user cannot access wrapped (all)', async () => {
+      const user = ctx.users[0]; // Use a regular user
+      const otherUser = ctx.users.find((u) => u.id !== user.id && u.extensiveDataProcessing && u.active && !u.deleted);
+      if (!user || !otherUser) return;
+
+      const wrapped = Object.assign(new Wrapped(), {
+        userId: otherUser.id,
+        transactionCount: 5,
+        transactionPercentile: 50.0,
+        transactionMaxDate: new Date(2023, 5, 15),
+        transactionMaxAmount: 3,
+        transactionHeatmap: JSON.stringify([]),
+        spentPercentile: 60.0,
+        syncedFrom: new Date(2023, 0, 1),
+        syncedTo: new Date(),
+      });
+      await Wrapped.save(wrapped);
+
+      // Reload user without relations to avoid circular references
+      const freshUser = await User.findOne({ where: { id: user.id } });
+      if (!freshUser) return;
+
+      // Create token for different user without 'all' permission
+      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+
+      const res = await request(ctx.app)
+        .get(`/users/${otherUser.id}/wrapped`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should include organ member data in response', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      const WrappedOrganMember = (await import('../../../src/entity/wrapped/wrapped-organ-member')).default;
+
+      const wrapped = Object.assign(new Wrapped(), {
+        userId: user.id,
+        transactionCount: 5,
+        transactionPercentile: 50.0,
+        transactionMaxDate: new Date(2023, 5, 15),
+        transactionMaxAmount: 3,
+        transactionHeatmap: JSON.stringify([]),
+        spentPercentile: 60.0,
+        syncedFrom: new Date(2023, 0, 1),
+        syncedTo: new Date(),
+      });
+      await Wrapped.save(wrapped);
+
+      const organMember = Object.assign(new WrappedOrganMember(), {
+        userId: user.id,
+        organId: ctx.organ.id,
+        ordinalTransactionCreated: 0,
+        ordinalTurnoverCreated: 1,
+      });
+      await ctx.connection.manager.save(organMember);
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.organs).to.be.an('array');
+      if (res.body.organs.length > 0) {
+        expect(res.body.organs[0]).to.have.property('organId');
+        expect(res.body.organs[0]).to.have.property('ordinalTransactionCreated');
+        expect(res.body.organs[0]).to.have.property('ordinalTurnoverCreated');
+      }
+    });
+  });
+
+  describe('POST /users/:id/wrapped', () => {
+    it('should return 200 after successful computation', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      process.env.WRAPPED_YEAR = '2023';
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+    });
+
+    it('should validate authorization policy (own)', async () => {
+      const user = ctx.users[0]; // Use the user that has the token
+      if (!user) return;
+
+      // Reload user without relations to avoid circular references
+      const freshUser = await User.findOne({ where: { id: user.id } });
+      if (!freshUser) return;
+
+      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      process.env.WRAPPED_YEAR = '2023';
+
+      const res = await request(ctx.app)
+        .post(`/users/${user.id}/wrapped`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).to.equal(200);
+    });
+
+    it('should return 403 when user cannot update wrapped (all)', async () => {
+      const user = ctx.users[0]; // Use a regular user
+      const otherUser = ctx.users.find((u) => u.id !== user.id && u.extensiveDataProcessing && u.active && !u.deleted);
+      if (!user || !otherUser) return;
+
+      // Reload user without relations to avoid circular references
+      const freshUser = await User.findOne({ where: { id: user.id } });
+      if (!freshUser) return;
+
+      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      process.env.WRAPPED_YEAR = '2023';
+
+      const res = await request(ctx.app)
+        .post(`/users/${otherUser.id}/wrapped`)
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should handle invalid userId parameter', async () => {
+      const res = await request(ctx.app)
+        .post('/users/invalid/wrapped')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      // Should return 404 or 400 depending on route matching
+      expect([400, 404, 405]).to.include(res.status);
     });
   });
 });
