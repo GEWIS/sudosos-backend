@@ -48,6 +48,10 @@ describe('ServerSettingsController', () => {
         Maintenance: {
           update: all,
         },
+        ServerSettings: {
+          get: all,
+          update: all,
+        },
       },
       assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
     }]);
@@ -130,6 +134,84 @@ describe('ServerSettingsController', () => {
       stub.restore();
       expect(store.getSetting('maintenanceMode')).to.equal(enabled);
       await expect(store.getSettingFromDatabase('maintenanceMode')).to.eventually.equal(enabled);
+    });
+  });
+
+  describe('GET /server-settings/wrapped-enabled', () => {
+    it('should return 200 and correctly get wrapped-enabled', async () => {
+      const store = ServerSettingsStore.getInstance();
+      const enabled = await store.getSettingFromDatabase('wrappedEnabled');
+
+      const res = await request(ctx.app)
+        .get('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.deep.equal({ enabled });
+    });
+    it('should return 500 if database error', async () => {
+      const stub = sinon.stub(ServerSettingsStore.prototype, 'getSettingFromDatabase')
+        .throws(new Error('Mock database error'));
+
+      const res = await request(ctx.app)
+        .get('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+
+      stub.restore();
+    });
+  });
+
+  describe('PUT /server-settings/wrapped-enabled', () => {
+    it('should return 204 and correctly set wrapped-enabled', async () => {
+      const store = ServerSettingsStore.getInstance();
+      const enabled = await store.getSettingFromDatabase('wrappedEnabled');
+
+      const res = await request(ctx.app)
+        .put('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ enabled: !enabled });
+      expect(res.status).to.equal(204);
+      expect(res.body).to.be.empty;
+
+      expect(store.getSetting('wrappedEnabled')).to.equal(!enabled);
+      await expect(store.getSettingFromDatabase('wrappedEnabled')).to.eventually.equal(!enabled);
+
+      // Cleanup
+      await store.setSetting('wrappedEnabled', enabled);
+    });
+    it('should return 400 if invalid request', async () => {
+      const res = await request(ctx.app)
+        .put('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ enabled: 'Ploperdeplop' });
+      expect(res.status).to.equal(400);
+    });
+    it('should return 403 if not admin', async () => {
+      const res = await request(ctx.app)
+        .put('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ enabled: true });
+      expect(res.status).to.equal(403);
+      expect(res.body).to.be.empty;
+    });
+    it('should return 500 if database error', async () => {
+      const store = ServerSettingsStore.getInstance();
+      const enabled = await store.getSettingFromDatabase('wrappedEnabled');
+
+      const stub = sinon.stub(ServerSettingsStore.prototype, 'setSetting')
+        .throws(new Error('Mock database error'));
+
+      const res = await request(ctx.app)
+        .put('/server-settings/wrapped-enabled')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ enabled: !enabled });
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+
+      stub.restore();
+      expect(store.getSetting('wrappedEnabled')).to.equal(enabled);
+      await expect(store.getSettingFromDatabase('wrappedEnabled')).to.eventually.equal(enabled);
     });
   });
 });
