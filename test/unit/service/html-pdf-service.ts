@@ -183,12 +183,7 @@ describe('BaseHtmlPdfService', () => {
       const html = await service['getHtml'](entity);
 
       expect(getParametersSpy).to.have.been.calledOnceWith(entity);
-      expect(htmlGeneratorSpy).to.have.been.calledOnce;
-      const actualParams = htmlGeneratorSpy.getCall(0).args[0];
-      expect(actualParams.title).to.eq(expectedParams.title);
-      expect(actualParams.heading).to.eq(expectedParams.heading);
-      expect(actualParams.content).to.eq(expectedParams.content);
-      expect(actualParams.date).to.be.a('string');
+      expect(htmlGeneratorSpy).to.have.been.calledOnceWith(expectedParams);
       expect(html).to.eq(expectedHtml);
 
       getParametersSpy.restore();

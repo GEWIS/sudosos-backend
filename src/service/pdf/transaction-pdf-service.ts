@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2026 Study association GEWIS
+ *  Copyright (C) 2024  Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,6 @@
  *  @license
  */
 
-
 /**
  * This is the page of transaction-pdf-service.
  *
@@ -28,7 +27,6 @@
 import { HtmlUnstoredPdfService } from './pdf-service';
 import Transaction from '../../entity/transactions/transaction';
 import { createTransactionPdf, ITransactionPdf } from '../../html/transaction.html';
-import { PdfError } from '../../errors';
 
 export default class TransactionPdfService extends HtmlUnstoredPdfService<Transaction, ITransactionPdf> {
 
@@ -48,11 +46,7 @@ export default class TransactionPdfService extends HtmlUnstoredPdfService<Transa
     });
 
     if (!transaction) {
-      throw new PdfError('Transaction not found');
-    }
-
-    if (!transaction.from || !transaction.createdBy) {
-      throw new PdfError('Transaction missing required relations');
+      throw new Error('Transaction not found');
     }
 
     const items = transaction.subTransactions.flatMap(st =>
@@ -64,8 +58,8 @@ export default class TransactionPdfService extends HtmlUnstoredPdfService<Transa
         return {
           description: row.product.name,
           qty: row.amount,
-          unit: row.product.priceInclVat.toFormat(),
-          unitPriceExclVat: unitPriceExcl,
+          unit: row.product.priceInclVat.toFormat(), // display only
+          unitPriceExclVat: unitPriceExcl,          // calculations
           vatRate: vatRate,
         };
       }),
