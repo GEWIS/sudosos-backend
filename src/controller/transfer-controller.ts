@@ -34,6 +34,7 @@ import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination } from '../helpers/pagination';
 import userTokenInOrgan from '../helpers/token-helper';
+import { PdfError } from '../errors';
 
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
@@ -68,6 +69,12 @@ export default class TransferController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransferController.getRelation(req), 'Transfer', ['*']),
           handler: this.deleteTransfer.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransferController.getRelation(req), 'Transfer', ['*']),
+          handler: this.getTransferPdf.bind(this),
         },
       },
     };
@@ -221,6 +228,47 @@ export default class TransferController extends BaseController {
         this.logger.error('Could not delete transfer:', error);
         res.status(500).json('Internal server error.');
       }
+    }
+  }
+
+  /**
+   * GET /transfers/{id}/pdf
+   * @summary Get the PDF of the transfer
+   * @operationId getTransferPdf
+   * @tags transfers - Operations of the transfer controller
+   * @param {integer} id.path.required - The transfer ID
+   * @security JWT
+   * @returns {string} 200 - The requested pdf of the transfer - application/pdf
+   * @return {string} 400 - Transfer is decorated and has its own PDF service
+   * @return {string} 404 - Transfer not found
+   * @return {string} 500 - Internal server error
+   */
+  public async getTransferPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const transferId = parseInt(id, 10);
+    this.logger.trace('Get transfer PDF', id, 'by user', req.token.user);
+
+    try {
+      const transfer = await Transfer.findOne({
+        where: { id: transferId },
+      });
+      if (!transfer) {
+        res.status(404).json('Transfer not found.');
+        return;
+      }
+
+      const pdf = await transfer.createPdf();
+      const fileName = `transfer-${transfer.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf+tex');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.status(200).send(pdf);
+    } catch (error: any) {
+      if (error instanceof PdfError) {
+        res.status(400).json(error.message);
+        return;
+      }
+      this.logger.error('Could not return transfer PDF:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 }

@@ -23,6 +23,7 @@ import dinero from 'dinero.js';
 import express, { Application, json } from 'express';
 import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
+import sinon from 'sinon';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TransferRequest from '../../../src/controller/request/transfer-request';
 import { TransferResponse } from '../../../src/controller/response/transfer-response';
@@ -38,6 +39,13 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import WriteOff from '../../../src/entity/transactions/write-off';
+import Invoice from '../../../src/entity/invoices/invoice';
+import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
+import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
+import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
+import Fine from '../../../src/entity/fine/fine';
+import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
+import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 
 describe('TransferController', async (): Promise<void> => {
   let connection: DataSource;
@@ -502,6 +510,285 @@ describe('TransferController', async (): Promise<void> => {
 
       expect(res.status).to.equal(403);
       expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+  });
+
+  describe('GET /transfers/{id}/pdf', () => {
+    let createPdfStub: sinon.SinonStub;
+    let compileHtmlStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      // Stub the createPdf method on Transfer instances for tests that don't need real validation
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should return HTTP 200 with PDF for undecorated transfer', async () => {
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        toId: ctx.users[1].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer',
+        version: 1,
+      });
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-type']).to.include('application/pdf');
+      expect(res.headers['content-disposition']).to.include(`transfer-${transfer.id}.pdf`);
+    });
+
+    it('should return HTTP 404 if transfer does not exist', async () => {
+      const maxId = ctx.transfers.reduce((max, t) => Math.max(max, t.id), 0);
+      const nonExistentId = maxId + 100;
+
+      const res = await request(app)
+        .get(`/transfers/${nonExistentId}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('Transfer not found.');
+    });
+
+    it('should return HTTP 400 if transfer has invoice', async () => {
+      // Restore the stub so the real createPdf method runs and validation can occur
+      createPdfStub.restore();
+      // Stub the compileHtml method instead to avoid actual PDF generation
+      const TransferPdfService = require('../../../src/service/pdf/transfer-pdf-service').default;
+      compileHtmlStub = sinon.stub(TransferPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+      
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        toId: ctx.users[1].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer with invoice',
+        version: 1,
+      });
+
+      const invoice = await Invoice.save({
+        to: ctx.users[1],
+        transfer,
+        addressee: 'Test Addressee',
+        reference: 'TEST-REF-001',
+        street: 'Test Street',
+        postalCode: '1234AB',
+        city: 'Test City',
+        country: 'Netherlands',
+        version: 1,
+      });
+
+      transfer.invoice = invoice;
+      await Transfer.save(transfer);
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+      
+      // Restore the compileHtml stub
+      if (compileHtmlStub) compileHtmlStub.restore();
+      // Re-stub createPdf for other tests
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    it('should return HTTP 400 if transfer has writeOff', async () => {
+      createPdfStub.restore();
+      const TransferPdfService = require('../../../src/service/pdf/transfer-pdf-service').default;
+      compileHtmlStub = sinon.stub(TransferPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+      const transfer = await Transfer.save({
+        fromId: null,
+        toId: ctx.users[0].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer with writeOff',
+        version: 1,
+      });
+
+      const writeOff = await WriteOff.save({
+        to: ctx.users[0],
+        transfer,
+        amount: DineroTransformer.Instance.from(100),
+        version: 1,
+      });
+
+      transfer.writeOff = writeOff;
+      await Transfer.save(transfer);
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+      
+      if (compileHtmlStub) compileHtmlStub.restore();
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    it('should return HTTP 400 if transfer has deposit', async () => {
+      createPdfStub.restore();
+      const TransferPdfService = require('../../../src/service/pdf/transfer-pdf-service').default;
+      compileHtmlStub = sinon.stub(TransferPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+      const transfer = await Transfer.save({
+        fromId: null,
+        toId: ctx.users[0].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer with deposit',
+        version: 1,
+      });
+
+      const stripePaymentIntent = await StripePaymentIntent.save({
+        stripeId: 'test_pi_123',
+        amount: DineroTransformer.Instance.from(100),
+        paymentIntentStatuses: [],
+        version: 1,
+      });
+
+      const deposit = await StripeDeposit.save({
+        transfer,
+        to: ctx.users[0],
+        stripePaymentIntent,
+        version: 1,
+      });
+
+      transfer.deposit = deposit;
+      await Transfer.save(transfer);
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+      
+      if (compileHtmlStub) compileHtmlStub.restore();
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    it('should return HTTP 400 if transfer has payoutRequest', async () => {
+      createPdfStub.restore();
+      const TransferPdfService = require('../../../src/service/pdf/transfer-pdf-service').default;
+      compileHtmlStub = sinon.stub(TransferPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        toId: null,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer with payoutRequest',
+        version: 1,
+      });
+
+      const payoutRequest = await PayoutRequest.save({
+        requestedBy: ctx.users[0],
+        transfer,
+        amount: DineroTransformer.Instance.from(100),
+        bankAccountNumber: 'NL91ABNA0417164300',
+        bankAccountName: 'Test Account',
+        version: 1,
+      });
+
+      transfer.payoutRequest = payoutRequest;
+      await Transfer.save(transfer);
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+      
+      if (compileHtmlStub) compileHtmlStub.restore();
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    it('should return HTTP 400 if transfer has fine', async () => {
+      createPdfStub.restore();
+      const TransferPdfService = require('../../../src/service/pdf/transfer-pdf-service').default;
+      compileHtmlStub = sinon.stub(TransferPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        toId: null,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer with fine',
+        version: 1,
+      });
+
+      const fineHandoutEvent = await FineHandoutEvent.save({
+        referenceDate: new Date(),
+        createdBy: ctx.users[0],
+        version: 1,
+      });
+
+      const userFineGroup = await UserFineGroup.save({
+        user: ctx.users[0],
+        userId: ctx.users[0].id,
+        version: 1,
+      });
+
+      const fine = await Fine.save({
+        fineHandoutEvent,
+        userFineGroup,
+        transfer,
+        amount: DineroTransformer.Instance.from(100),
+        version: 1,
+      });
+
+      transfer.fine = fine;
+      await Transfer.save(transfer);
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Transfer is not a base transfer and cannot be used to generate a PDF directly.');
+      
+      if (compileHtmlStub) compileHtmlStub.restore();
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    it('should return HTTP 403 if not authorized', async () => {
+      const adminUser = await User.findOne({ where: { id: 1 } });
+      const sellerUser = await User.findOne({ where: { id: 3 } });
+      const transfer = await Transfer.save({
+        fromId: adminUser.id,
+        toId: sellerUser.id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer',
+        version: 1,
+      });
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return HTTP 500 if PDF generation fails', async () => {
+      createPdfStub.restore();
+      createPdfStub = sinon.stub(Transfer.prototype, 'createPdf').rejects(new Error('PDF generation failed'));
+
+      const transfer = await Transfer.save({
+        fromId: ctx.users[0].id,
+        toId: ctx.users[1].id,
+        amountInclVat: DineroTransformer.Instance.from(100),
+        description: 'Test transfer',
+        version: 1,
+      });
+
+      const res = await request(app)
+        .get(`/transfers/${transfer.id}/pdf`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
     });
   });
 });

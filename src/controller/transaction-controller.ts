@@ -42,6 +42,7 @@ import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
 import InvoiceService from '../service/invoice-service';
 import POSTokenVerifier from '../helpers/pos-token-verifier';
+import { PdfError } from '../errors';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -399,7 +400,11 @@ export default class TransactionController extends BaseController {
       res.setHeader('Content-Type', 'application/pdf+tex');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.status(200).send(pdf);
-    } catch (error) {
+    } catch (error: any) {
+      if (error instanceof PdfError) {
+        res.status(400).json(error.message);
+        return;
+      }
       this.logger.error('Could not return transaction PDF:', error);
       res.status(500).json('Internal server error.');
     }
