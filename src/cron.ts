@@ -37,6 +37,7 @@ import UserSyncServiceFactory from './service/sync/user/user-sync-service-factor
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import WrappedService from './service/wrapped-service';
 
 class CronApplication {
   logger: Logger;
@@ -88,6 +89,15 @@ async function createCronTasks(): Promise<void> {
       logger.error('Could not sync balances.', error);
     }));
   });
+  await new WrappedService().updateWrapped();
+  const syncWrapped = cron.schedule('45 1 * 12 *', () => {
+    logger.debug('Syncing wrapped.');
+    new WrappedService().updateWrapped().then(() => {
+      logger.debug('Synced wrapped.');
+    }).catch((error => {
+      logger.error('Could not sync wrapped.', error);
+    }));
+  });
   const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
     logger.debug('Syncing event shift answers.');
     EventService.syncAllEventShiftAnswers()
@@ -101,7 +111,7 @@ async function createCronTasks(): Promise<void> {
       .catch((error) => logger.error('Could not send event planning reminder emails.', error));
   });
 
-  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders];
+  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders];
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();

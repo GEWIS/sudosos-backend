@@ -39,6 +39,7 @@ import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import WrappedService from './service/wrapped-service';
 
 class MaintenanceApplication {
   logger: Logger;
@@ -95,6 +96,11 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   application.logger.info('Updating balances...');
   await new BalanceService().updateBalances({});
   application.logger.info('Balances updated');
+
+  // Update wrapped
+  application.logger.info('Updating wrapped...');
+  await new WrappedService().updateWrapped({});
+  application.logger.info('Wrapped updated');
 
   // Setup user synchronization services based on environment variables
   const syncServices: UserSyncService[] = [];

@@ -97,6 +97,8 @@ import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
 import { RenameGewisToExternal1763399087409 } from '../migrations/1763399087409-rename-gewis-to-external';
+import Wrapped from '../entity/wrapped';
+import { AddWrappedTable1764842063654 } from '../migrations/1764842063654-add-wrapped-table';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -126,6 +128,7 @@ const options: DataSourceOptions = {
     AddOrganMembershipIndex1761328648026,
     UserAdministrativeCost1761845457283,
     RenameGewisToExternal1763399087409,
+    AddWrappedTable1764842063654,
   ],
   extra: {
     authPlugins: {
@@ -189,6 +192,7 @@ const options: DataSourceOptions = {
     Event,
     EventShift,
     EventShiftAnswer,
+    Wrapped,
     WriteOff,
     WriteOffPdf,
     QRAuthenticator,
