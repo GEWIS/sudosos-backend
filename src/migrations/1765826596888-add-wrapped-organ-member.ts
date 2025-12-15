@@ -28,6 +28,24 @@ export class AddWrappedOrganMember1765826596888 implements MigrationInterface {
         name: this.WRAPPED_ORGAN_MEMBER_TABLE,
         columns: [
           {
+            name: 'createdAt',
+            type: 'datetime(6)',
+            default: 'CURRENT_TIMESTAMP(6)',
+            isNullable: false,
+          },
+          {
+            name: 'updatedAt',
+            type: 'datetime(6)',
+            default: 'CURRENT_TIMESTAMP(6)',
+            onUpdate: 'CURRENT_TIMESTAMP(6)',
+            isNullable: false,
+          },
+          {
+            name: 'version',
+            type: 'int',
+            isNullable: false,
+          },
+          {
             name: 'userId',
             type: 'int',
             isPrimary: true,
@@ -50,30 +68,14 @@ export class AddWrappedOrganMember1765826596888 implements MigrationInterface {
             default: '0',
           },
         ],
+        indices: [
+          {
+            name: 'IDX_wrapped_organ_member_createdAt',
+            columnNames: ['createdAt'],
+          },
+        ],
       }),
       true,
-    );
-
-    await queryRunner.createForeignKey(
-      this.WRAPPED_ORGAN_MEMBER_TABLE,
-      new TableForeignKey({
-        columnNames: ['userId'],
-        referencedTableName: 'user',
-        referencedColumnNames: ['id'],
-        onDelete: 'CASCADE',
-        onUpdate: 'NO ACTION',
-      }),
-    );
-
-    await queryRunner.createForeignKey(
-      this.WRAPPED_ORGAN_MEMBER_TABLE,
-      new TableForeignKey({
-        columnNames: ['organId'],
-        referencedTableName: 'user',
-        referencedColumnNames: ['id'],
-        onDelete: 'CASCADE',
-        onUpdate: 'NO ACTION',
-      }),
     );
 
     await queryRunner.createForeignKey(
@@ -84,18 +86,39 @@ export class AddWrappedOrganMember1765826596888 implements MigrationInterface {
         referencedColumnNames: ['userId'],
         onDelete: 'CASCADE',
         onUpdate: 'NO ACTION',
+        name: 'FK_wrapped_organ_member_userId_wrapped',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      this.WRAPPED_ORGAN_MEMBER_TABLE,
+      new TableForeignKey({
+        columnNames: ['organId'],
+        referencedTableName: 'user',
+        referencedColumnNames: ['id'],
+        onDelete: 'NO ACTION',
+        onUpdate: 'NO ACTION',
+        name: 'FK_wrapped_organ_member_organId_user',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      this.WRAPPED_ORGAN_MEMBER_TABLE,
+      new TableForeignKey({
+        columnNames: ['userId'],
+        referencedTableName: 'user',
+        referencedColumnNames: ['id'],
+        onDelete: 'NO ACTION',
+        onUpdate: 'NO ACTION',
+        name: 'FK_wrapped_organ_member_userId_user',
       }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    const table = await queryRunner.getTable(this.WRAPPED_ORGAN_MEMBER_TABLE);
-    if (table) {
-      const foreignKeys = table.foreignKeys;
-      for (const fk of foreignKeys) {
-        await queryRunner.dropForeignKey(this.WRAPPED_ORGAN_MEMBER_TABLE, fk);
-      }
-    }
+    await queryRunner.dropForeignKey(this.WRAPPED_ORGAN_MEMBER_TABLE, 'FK_wrapped_organ_member_userId_wrapped');
+    await queryRunner.dropForeignKey(this.WRAPPED_ORGAN_MEMBER_TABLE, 'FK_wrapped_organ_member_organId_user');
+    await queryRunner.dropForeignKey(this.WRAPPED_ORGAN_MEMBER_TABLE, 'FK_wrapped_organ_member_userId_user');
     await queryRunner.dropTable(this.WRAPPED_ORGAN_MEMBER_TABLE, true);
   }
 }
