@@ -137,9 +137,9 @@ export default class InactiveAdministrativeCostService extends WithManager {
     const users = await User.find({
       where: { type: In(EligibleInactiveUsers), deleted: false },
     });
-    const eligibleUsers: UserToInactiveAdministrativeCostResponse[] = [];
+    const eligibleUserIds: number[] = [];
 
-    // go through all users and get their last transfer and transaction
+    // First, collect all users eligible based on date criteria and notification status
     for (const user of users) {
       if (notification && user.inactiveNotificationSend) continue;
 
@@ -156,12 +156,19 @@ export default class InactiveAdministrativeCostService extends WithManager {
       }
 
       if (!isNotEligible) {
-        const response: UserToInactiveAdministrativeCostResponse = { userId: user.id };
-        eligibleUsers.push(response);
+        eligibleUserIds.push(user.id);
       }
     }
 
-    return eligibleUsers;
+    // Then, get balances for all eligible users in a single query
+    if (eligibleUserIds.length === 0) {
+      return [];
+    }
+
+    const balances = await new BalanceService(this.manager).getBalances({ ids: eligibleUserIds });
+    return balances.records
+      .filter(balance => balance.amount.amount > 0)
+      .map(balance => ({ userId: balance.id }));
   }
 
   /**

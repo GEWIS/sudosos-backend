@@ -61,6 +61,7 @@ import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import { inUserContext, UserFactory } from '../../helpers/user-factory';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -253,7 +254,30 @@ describe('InactiveAdministrativeCostService', () => {
   describe('checkInactiveUsers', async (): Promise<void> => {
     it('should return all users who should receive a notification', async () => {
       const user = await User.findOne({ where: { id: ctx.users[0].id } });
+      await new BalanceService().updateBalances({});
 
+      // Ensure user has positive balance first - add enough to cover negative balance + buffer
+      const initialBalance = await new BalanceService().getBalance(user.id);
+      const amountToAdd = initialBalance.amount.amount <= 0 
+        ? Math.abs(initialBalance.amount.amount) + 1000 
+        : 0;
+      if (amountToAdd > 0) {
+        const addMoneyReq: TransferRequest = {
+          amount: {
+            amount: amountToAdd,
+            precision: dinero.defaultPrecision,
+            currency: dinero.defaultCurrency,
+          },
+          description: 'add money for test',
+          fromId: 0,
+          toId: user.id,
+          createdAt: new Date(2020, 1).toString(),
+        };
+        await new TransferService().createTransfer(addMoneyReq);
+        await new BalanceService().updateBalances({});
+      }
+
+      // Create old transfer (this debits money but user should still have positive balance)
       const req: TransferRequest = {
         amount: {
           amount: 10,
@@ -266,13 +290,40 @@ describe('InactiveAdministrativeCostService', () => {
         createdAt: new Date(2020, 1).toString(),
       };
       await new TransferService().createTransfer(req);
+      await new BalanceService().updateBalances({});
+
+      // Verify user has positive balance
+      const finalBalance = await new BalanceService().getBalance(user.id);
+      expect(finalBalance.amount.amount).to.be.greaterThan(0);
 
       const users: UserToInactiveAdministrativeCostResponse[] = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
-      expect(user.id).to.be.eql(users[0].userId);
+      const userIds = users.map(u => u.userId);
+      expect(userIds).to.include(user.id);
     });
     it('should still return users that had an inactive administrative cost as last transfer', async () => {
       const user = await User.findOne({ where: { id: ctx.users[0].id } });
+      await new BalanceService().updateBalances({});
+
+      // Ensure user has positive balance first - add enough to cover negative balance + buffer + administrative cost
+      const initialBalance = await new BalanceService().getBalance(user.id);
+      const administrativeCostValue = ServerSettingsStore.getInstance().getSetting('administrativeCostValue') as number;
+      const amountToAdd = initialBalance.amount.amount <= 0 
+        ? Math.abs(initialBalance.amount.amount) + administrativeCostValue + 1000 
+        : administrativeCostValue + 1000;
+      const addMoneyReq: TransferRequest = {
+        amount: {
+          amount: amountToAdd,
+          precision: dinero.defaultPrecision,
+          currency: dinero.defaultCurrency,
+        },
+        description: 'add money for test',
+        fromId: 0,
+        toId: user.id,
+        createdAt: new Date(2020, 1).toString(),
+      };
+      await new TransferService().createTransfer(addMoneyReq);
+      await new BalanceService().updateBalances({});
 
       const req: TransferRequest = {
         amount: {
@@ -286,10 +337,18 @@ describe('InactiveAdministrativeCostService', () => {
         createdAt: new Date(2020, 1).toString(),
       };
       const transfer = await new TransferService().createTransfer(req);
+      await new BalanceService().updateBalances({});
       const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
+      await new BalanceService().updateBalances({});
+
+      // Verify user has positive balance
+      const finalBalance = await new BalanceService().getBalance(user.id);
+      expect(finalBalance.amount.amount).to.be.greaterThan(0);
+
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
 
-      expect(user.id).to.be.eql(users[0].userId);
+      const userIds = users.map(u => u.userId);
+      expect(userIds).to.include(user.id);
       expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
     });
     it('should not return users which already had a notification send', async () => {
@@ -313,6 +372,33 @@ describe('InactiveAdministrativeCostService', () => {
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
       expect(users).not.contain(user);
+    });
+    it('should not return users with balance <= 0', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        // Create an old transfer that gives user a negative balance and makes them eligible by date
+        const oldTransferReq: TransferRequest = {
+          amount: {
+            amount: 100,
+            precision: dinero.defaultPrecision,
+            currency: dinero.defaultCurrency,
+          },
+          description: 'old transfer creating negative balance',
+          fromId: user.id,
+          toId: 0,
+          createdAt: new Date(2020, 1).toString(),
+        };
+        await new TransferService().createTransfer(oldTransferReq);
+        await new BalanceService().updateBalances({});
+
+        // Verify user has balance <= 0
+        const finalBalance = await new BalanceService().getBalance(user.id);
+        expect(finalBalance.amount.amount).to.be.at.most(0);
+
+        const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
+
+        const userIds = users.map(u => u.userId);
+        expect(userIds).to.not.include(user.id);
+      });
     });
   });
 
