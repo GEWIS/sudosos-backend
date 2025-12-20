@@ -33,6 +33,8 @@ import SubTransaction from './sub-transaction';
 import User from '../user/user';
 import BaseEntity from '../base-entity';
 import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
+import { UnstoredPdfAble } from '../file/pdf-able';
+import TransactionPdfService from '../../service/pdf/transaction-pdf-service';
 
 /**
  * @typedef {BaseEntity} Transaction
@@ -44,7 +46,7 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
  * products in the transaction are bought.
  */
 @Entity()
-export default class Transaction extends BaseEntity {
+export default class Transaction extends UnstoredPdfAble(BaseEntity) {
   @ManyToOne(() => User, { nullable: false })
   public from: User;
 
@@ -58,4 +60,6 @@ export default class Transaction extends BaseEntity {
 
   @ManyToOne(() => PointOfSaleRevision)
   public pointOfSale: PointOfSaleRevision;
+
+  pdfService = new TransactionPdfService();
 }

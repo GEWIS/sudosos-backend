@@ -38,7 +38,6 @@ import FileService from '../file-service';
 import { PdfError } from '../../errors';
 import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
 import WithManager from '../../database/with-manager';
-import PdfTemplateGenerator from './pdf-template-generator';
 import { postCompileHtml } from '@gewis/pdf-compiler-ts';
 import { createClient, type Client as PdfCompilerClient } from '@gewis/pdf-compiler-ts/dist/client/client';
 
@@ -67,6 +66,13 @@ export interface IStoredPdfService<T, S extends Pdf> {
  * Parameters must be a record (object) with string keys.
  */
 export type PdfTemplateParameters = Record<string, any>;
+
+/**
+ * Type alias for a function that generates HTML from a data object.
+ * @param options The data to be used in the HTML template.
+ * @returns The generated HTML as a string.
+ */
+export type HtmlGenerator<P> = (options: P) => string;
 
 interface IRouteParams {
   params: any;
@@ -181,10 +187,10 @@ export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = Pd
   protected client: PdfCompilerClient;
 
   /**
-   * The template file name (e.g., 'invoice.html') located in static/pdf/
-   * The template should use {{ key }} placeholders that will be replaced with data from getParameters().
+   * The function that generates the HTML.
+   * This function should take a data object and return the complete HTML string.
    */
-  abstract templateFileName: string;
+  abstract htmlGenerator: HtmlGenerator<P>;
 
   constructor(manager?: EntityManager) {
     super(manager);
@@ -203,7 +209,7 @@ export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = Pd
    */
   protected async getHtml(entity: T): Promise<string> {
     const data = await this.getParameters(entity);
-    return PdfTemplateGenerator.applyTemplate(this.templateFileName, data);
+    return this.htmlGenerator(data);
   }
 
   /**
