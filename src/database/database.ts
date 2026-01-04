@@ -96,7 +96,10 @@ import InactiveAdministrativeCost from '../entity/transactions/inactive-administ
 import {
   UserAdministrativeCost1761845457283,
 } from '../migrations/1761845457283-user-administrative-cost';
+import NotificationLog from '../entity/notifications/notification-log';
+import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 import { RenameGewisToExternal1763399087409 } from '../migrations/1763399087409-rename-gewis-to-external';
+import { UserNotificationPreference1764615514906 } from '../migrations/1764615514906-user-notification-preference';
 import Wrapped from '../entity/wrapped';
 import WrappedOrganMember from '../entity/wrapped/wrapped-organ-member';
 import { AddWrappedTable1764842063654 } from '../migrations/1764842063654-add-wrapped-table';
@@ -130,6 +133,7 @@ const options: DataSourceOptions = {
     AddOrganMembershipIndex1761328648026,
     UserAdministrativeCost1761845457283,
     RenameGewisToExternal1763399087409,
+    UserNotificationPreference1764615514906,
     AddWrappedTable1764842063654,
     AddWrappedOrganMember1765826596888,
   ],
@@ -200,6 +204,8 @@ const options: DataSourceOptions = {
     WriteOff,
     WriteOffPdf,
     QRAuthenticator,
+    NotificationLog,
+    UserNotificationPreference,
   ],
   subscribers: [
     TransactionSubscriber,

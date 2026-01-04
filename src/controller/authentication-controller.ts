@@ -43,13 +43,13 @@ import ResetLocalRequest from './request/reset-local-request';
 import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
 import AuthenticationEanRequest from './request/authentication-ean-request';
 import EanAuthenticator from '../entity/authenticator/ean-authenticator';
-import Mailer from '../mailer';
-import PasswordReset from '../mailer/messages/password-reset';
 import AuthenticationNfcRequest from './request/authentication-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
+import { NotificationTypes } from '../notifications/notification-types';
+import Notifier, { WelcomeWithResetOptions } from '../notifications';
 import UserService from '../service/user-service';
 
 /**
@@ -438,9 +438,14 @@ export default class AuthenticationController extends BaseController {
       }
 
       const resetTokenInfo = await new AuthenticationService().createResetToken(user);
-      Mailer.getInstance().send(user, new PasswordReset({ email: user.email, resetTokenInfo }))
-        .then()
-        .catch((error) => this.logger.error(error));
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.PasswordReset,
+        userId: user.id,
+        params: new WelcomeWithResetOptions(
+          user.email,
+          resetTokenInfo,
+        ),
+      });
       // send email with link.
       res.status(204).send();
       return;

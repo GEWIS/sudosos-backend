@@ -31,12 +31,12 @@ import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controll
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
-import nodemailer, { Transporter } from 'nodemailer';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { EventSeeder, UserSeeder } from '../../seed';
 import { rootStubs } from '../../root-hooks';
+import Notifier from '../../../src/notifications';
 
 describe('eventService', () => {
   let ctx: {
@@ -233,7 +233,7 @@ describe('eventService', () => {
 
   describe('sendEventPlanningReminders', () => {
     let sandbox: SinonSandbox;
-    let sendMailFake: SinonSpy;
+    let sendNotifyFake: SinonSpy;
 
     beforeEach(() => {
       // Restore the default stub
@@ -243,10 +243,10 @@ describe('eventService', () => {
       Mailer.reset();
 
       sandbox = sinon.createSandbox();
-      sendMailFake = sandbox.spy();
-      sandbox.stub(nodemailer, 'createTransport').returns({
-        sendMail: sendMailFake,
-      } as any as Transporter);
+      sendNotifyFake = sandbox.spy();
+      sandbox.stub(Notifier, 'getInstance').returns({
+        notify: sendNotifyFake,
+      } as any);
     });
 
     afterEach(() => {
@@ -260,7 +260,7 @@ describe('eventService', () => {
 
       await EventService.sendEventPlanningReminders(referenceDate);
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(sendNotifyFake.callCount).to.equal(users.length);
     });
     it('should send a reminder to events starting between two to three days when no date given', async () => {
       const event = ctx.events[0];
@@ -273,7 +273,7 @@ describe('eventService', () => {
 
       await EventService.sendEventPlanningReminders();
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(sendNotifyFake.callCount).to.equal(users.length);
 
       // Cleanup
       await EventService.updateEvent(event.id, {
@@ -291,7 +291,7 @@ describe('eventService', () => {
 
       await EventService.sendEventPlanningReminders(now);
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(sendNotifyFake.callCount).to.equal(users.length);
 
       // Cleanup
       await EventService.updateEvent(event.id, {
@@ -309,7 +309,7 @@ describe('eventService', () => {
 
       await EventService.sendEventPlanningReminders(now);
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(sendNotifyFake.callCount).to.equal(users.length);
 
       // Cleanup
       await EventService.updateEvent(event.id, {
@@ -326,7 +326,7 @@ describe('eventService', () => {
 
       await EventService.sendEventPlanningReminders(now);
 
-      expect(sendMailFake.callCount).to.equal(0);
+      expect(sendNotifyFake.callCount).to.equal(0);
 
       // Cleanup
       await EventService.updateEvent(event.id, {

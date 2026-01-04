@@ -28,9 +28,9 @@ import { EntitySubscriberInterface, EventSubscriber, InsertEvent } from 'typeorm
 import Transaction from '../entity/transactions/transaction';
 import User, { NotifyDebtUserTypes } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
-import Mailer from '../mailer';
-import UserDebtNotification from '../mailer/messages/user-debt-notification';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { NotificationTypes } from '../notifications/notification-types';
+import Notifier, { UserDebtNotificationOptions } from '../notifications';
 import log4js from 'log4js';
 
 @EventSubscriber()
@@ -89,11 +89,19 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     // User was not in debt before this new transaction
 
     if (!NotifyDebtUserTypes.includes(user.type)) return;
-    // User should be notified of debt
 
-    Mailer.getInstance().send(user, new UserDebtNotification({
-      balance: DineroTransformer.Instance.from(currentBalance),
-      url: '',
-    })).catch((e) => log4js.getLogger('Transaction').error(e));
+    // User should be notified of debt
+    try {
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.UserDebtNotification,
+        userId: user.id,
+        params: new UserDebtNotificationOptions(
+          '',
+          DineroTransformer.Instance.from(currentBalance),
+        ),
+      });
+    } catch (e) {
+      log4js.getLogger('Transaction').error(e);
+    }
   }
 }

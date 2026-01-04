@@ -26,10 +26,7 @@
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
-
-export interface HelloWorldOptions {
-  name: string;
-}
+import { HelloWorldOptions } from '../../notifications';
 
 const helloWorldEnglish = new MailContentBuilder<HelloWorldOptions>({
   getHTML: (context) => `<p>Hello world, ${context.name}!</p>`,

@@ -24,14 +24,9 @@
  * @module internal/mailer
  */
 
-import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-
-interface UserDebtNotificationOptions {
-  url: string;
-  balance: Dinero;
-}
+import { UserDebtNotificationOptions } from '../../notifications';
 
 const userDebtNotificationDutch = new MailContentBuilder<UserDebtNotificationOptions>({
   getHTML: (context) => `

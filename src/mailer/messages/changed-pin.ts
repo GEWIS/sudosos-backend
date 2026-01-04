@@ -26,8 +26,7 @@
 
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import MailContentBuilder from './mail-content-builder';
-
-interface ChangedPinOptions {}
+import { ChangedPinOptions } from '../../notifications';
 
 const changedPinDutch = new MailContentBuilder<ChangedPinOptions>({
   getHTML: '<p>De pincode van je account in SudoSOS is zojuist veranderd.</p>',

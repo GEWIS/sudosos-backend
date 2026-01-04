@@ -38,15 +38,14 @@ import {
   PaginatedFinancialMutationResponse,
 } from '../controller/response/financial-mutation-response';
 import TransferService, { TransferFilterParameters } from './transfer-service';
-import Mailer from '../mailer';
-import WelcomeToSudosos from '../mailer/messages/welcome-to-sudosos';
 import { AcceptTosRequest } from '../controller/request/accept-tos-request';
 import AuthenticationService from './authentication-service';
-import WelcomeWithReset from '../mailer/messages/welcome-with-reset';
-import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
 import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
+import { NotificationTypes } from '../notifications/notification-types';
+import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../notifications';
+import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
 import PointOfSaleService from './point-of-sale-service';
 
 /**
@@ -357,12 +356,19 @@ export default class UserService {
     // Local users will receive a reset link.
     if (LocalUserTypes.includes(user.type)) {
       const resetTokenInfo = await new AuthenticationService().createResetToken(user);
-      Mailer.getInstance().send(user, new WelcomeWithReset({ email: user.email, resetTokenInfo })).then().catch((e) => {
-        throw e;
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.WelcomeWithReset,
+        userId: user.id,
+        params: new WelcomeWithResetOptions(
+          user.email,
+          resetTokenInfo,
+        ),
       });
     } else {
-      Mailer.getInstance().send(user, new WelcomeToSudosos({})).then().catch((e) => {
-        throw e;
+      await Notifier.getInstance().notify({
+        type: NotificationTypes.WelcomeToSudosos,
+        userId: user.id,
+        params: new WelcomeToSudososOptions(),
       });
     }
     return Promise.resolve(this.getSingleUser(user.id));

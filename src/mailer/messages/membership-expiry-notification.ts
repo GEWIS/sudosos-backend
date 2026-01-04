@@ -27,10 +27,9 @@
 import { Dinero } from 'dinero.js';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
-
-interface MembershipExpiryNotificationOptions {
-  balance: Dinero;
-}
+import { MembershipExpiryNotificationOptions } from '../../notifications';
+import Mail from 'nodemailer/lib/mailer';
+import User from '../../entity/user/user';
 
 const formatBalance = (balance: Dinero) => {
   const isNegative = balance.getAmount() < 0;
@@ -84,5 +83,14 @@ export default class MembershipExpiryNotification extends MailMessage<Membership
   public constructor(options: MembershipExpiryNotificationOptions) {
     const opt: MembershipExpiryNotificationOptions = { ...options };
     super(opt, mailContents);
+  }
+
+  public override getOptions(to: User, language: Language): Mail.Options {
+    const options = super.getOptions(to, language);
+
+    return {
+      ...options,
+      bcc: process.env.FINANCIAL_RESPONSIBLE,
+    };
   }
 }

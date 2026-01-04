@@ -39,6 +39,7 @@ import { UserSyncService } from './service/sync/user/user-sync-service';
 import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import ServerSettingsStore from './server-settings/server-settings-store';
+import UserNotificationPreferenceService from './service/user-notification-preference-service';
 import WrappedService from './service/wrapped-service';
 
 class MaintenanceApplication {
@@ -97,6 +98,10 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   await new BalanceService().updateBalances({});
   application.logger.info('Balances updated');
 
+  // Sync user notification preferences
+  application.logger.info('Syncing user notification preferences...');
+  await new UserNotificationPreferenceService().syncAllUserNotificationPreferences();
+  application.logger.info('User notification preferences synced');
   // Update wrapped
   application.logger.info('Updating wrapped...');
   await new WrappedService().updateWrapped({});
