@@ -75,7 +75,7 @@ export function parseUserNotificationPreferenceFilters(req: RequestWithToken): U
   return {
     userNotificationPreferenceId: asNumber(req.query.userNotificationPreferenceId),
     userId: asNumber(req.query.userId),
-    type: req.query.code as string,
+    type: req.query.type as string,
     channel: req.query.channel as string,
     enabled: req.query.enabled === undefined ? undefined : Boolean(req.query.enabled),
   };

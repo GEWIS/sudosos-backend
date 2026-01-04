@@ -446,7 +446,6 @@ export default class AuthenticationController extends BaseController {
           user.email,
           resetTokenInfo,
         ),
-        overrideChannel: NotificationChannels.EMAIL,
       });
       // send email with link.
       res.status(204).send();

@@ -150,7 +150,6 @@ export default class GewisDBSyncService extends UserSyncService {
             params: new MembershipExpiryNotificationOptions(
               DineroTransformer.Instance.from(currentBalance.amount.amount),
             ),
-            overrideChannel: NotificationChannels.EMAIL,
           });
         }
       }

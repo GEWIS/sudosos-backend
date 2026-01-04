@@ -42,7 +42,6 @@ interface NotificationPayload<P> {
   type: NotificationTypes;
   userId: number;
   params: P;
-  overrideChannel?: NotificationChannels;
 }
 
 export default class Notifier {
@@ -76,27 +75,31 @@ export default class Notifier {
 
     const user = await User.findOne({ where: { id: payload.userId } });
 
-    const channelPrefs: string[] = [];
-
-    if (payload.overrideChannel) {
-      channelPrefs.push(payload.overrideChannel);
-    } else {
-      const userPrefs = await this.getPreferences(user, notifyType.type);
-      channelPrefs.push(...userPrefs);
+    if (!user) {
+      throw new Error('Could not find user');
     }
 
+    const channelPrefs = new Set<string>();
+
+    if (notifyType.isMandatory) {
+      channelPrefs.add(NotificationChannels.EMAIL);
+    }
+
+    const userPrefs = await this.getPreferences(user, notifyType.type);
+    userPrefs.forEach(pref => channelPrefs.add(pref));
+
     const channelsToUse = this.channels.filter(ch =>
-      channelPrefs.includes(ch.name),
+      channelPrefs.has(ch.name),
     );
 
     if (channelsToUse.length === 0) {
       await this.noChannelLog(user, payload.type);
-      return;
+      throw new Error('No channel found to send for.');
     }
 
     await Promise.allSettled(
       channelsToUse.map(ch =>
-        this.sendViaChannel(ch as any, user, notifyType, payload.params),
+        this.sendViaChannel(ch, user, notifyType, payload.params),
       ),
     );
   }
@@ -127,10 +130,13 @@ export default class Notifier {
     }
 
     const rendered = await channel.apply(template, params);
+    try {
+      await channel.log(user, notifyType.type);
 
-    await channel.send(user, rendered);
-
-    await channel.log(user, notifyType.type);
+      await channel.send(user, rendered);
+    } catch (error) {
+      throw error;
+    }
   }
 
   private async noChannelLog(user: User, code: NotificationTypes): Promise<void> {

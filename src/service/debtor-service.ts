@@ -269,7 +269,6 @@ export default class DebtorService extends WithManager {
           type: NotificationTypes.UserGotFined,
           userId: user.id,
           params: notificationOption,
-          overrideChannel: NotificationChannels.EMAIL,
         }),
       ),
     );

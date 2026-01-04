@@ -79,7 +79,6 @@ export default class TestController extends BaseController {
         type: NotificationTypes.HelloWorld,
         userId: req.token.user.id,
         params: new HelloWorldOptions(req.token.user.firstName),
-        overrideChannel: NotificationChannels.EMAIL,
       });
       res.status(204).send();
     } catch (e) {

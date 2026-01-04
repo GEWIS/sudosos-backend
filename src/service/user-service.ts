@@ -363,14 +363,12 @@ export default class UserService {
           user.email,
           resetTokenInfo,
         ),
-        overrideChannel: NotificationChannels.EMAIL,
       });
     } else {
       await Notifier.getInstance().notify({
         type: NotificationTypes.WelcomeToSudosos,
         userId: user.id,
         params: new WelcomeToSudososOptions(),
-        overrideChannel: NotificationChannels.EMAIL,
       });
     }
     return Promise.resolve(this.getSingleUser(user.id));

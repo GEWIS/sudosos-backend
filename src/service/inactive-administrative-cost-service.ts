@@ -272,7 +272,6 @@ export default class InactiveAdministrativeCostService extends WithManager {
         params: new UserGotInactiveAdministrativeCostOptions(
           inactiveAdministrativeCost.amount,
         ),
-        overrideChannel: NotificationChannels.EMAIL,
       });
 
       return inactiveAdministrativeCost;
@@ -305,7 +304,6 @@ export default class InactiveAdministrativeCostService extends WithManager {
         params: new InactiveAdministrativeCostNotificationOptions(
           formattedValue,
         ),
-        overrideChannel: NotificationChannels.EMAIL,
       });
     }),
     );

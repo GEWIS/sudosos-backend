@@ -97,7 +97,6 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
         '',
         DineroTransformer.Instance.from(currentBalance),
       ),
-      overrideChannel: NotificationChannels.EMAIL,
     });
   }
 }
