@@ -130,8 +130,12 @@ export default class AuthenticationSecureController extends BaseController {
     this.logger.trace('Refresh token for user', req.token.user.id);
 
     try {
-      const userOptions = UserService.getOptions({ id: req.token.user.id });
+      const userOptions = UserService.getOptions({ id: req.token.user.id, allowPos: true });
       const user = await User.findOne(userOptions);
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
@@ -220,8 +224,12 @@ export default class AuthenticationSecureController extends BaseController {
         return;
       }
 
-      const userOptions = UserService.getOptions({ id: req.token.user.id });
+      const userOptions = UserService.getOptions({ id: req.token.user.id, allowPos: true });
       const user = await User.findOne(userOptions);
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
