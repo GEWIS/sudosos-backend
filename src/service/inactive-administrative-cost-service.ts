@@ -50,7 +50,6 @@ import {
   InactiveAdministrativeCostNotificationOptions,
   UserGotInactiveAdministrativeCostOptions,
 } from '../notifications/notification-options';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 
 export interface InactiveAdministrativeCostFilterParameters {

@@ -30,7 +30,6 @@ import User, { NotifyDebtUserTypes } from '../entity/user/user';
 import BalanceService from '../service/balance-service';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { NotificationTypes } from '../notifications/notification-types';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import Notifier, { UserDebtNotificationOptions } from '../notifications';
 
 @EventSubscriber()

@@ -44,7 +44,6 @@ import BalanceService from './balance-service';
 import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import { NotificationTypes } from '../notifications/notification-types';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../notifications';
 import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
 import PointOfSaleService from './point-of-sale-service';

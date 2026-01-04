@@ -38,7 +38,6 @@ import { ISettings } from '../../entity/server-setting';
 import { EntityManager } from 'typeorm';
 import Notifier, { MembershipExpiryNotificationOptions } from '../../notifications';
 import { NotificationTypes } from '../../notifications/notification-types';
-import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 
 export default class GewisDBSyncService extends UserSyncService {
 

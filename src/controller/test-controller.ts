@@ -31,7 +31,6 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import Notifier, { HelloWorldOptions } from '../notifications';
 import { NotificationTypes } from '../notifications/notification-types';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 export default class TestController extends BaseController {
   /**

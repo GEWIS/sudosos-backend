@@ -50,7 +50,6 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
 import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { WelcomeWithResetOptions } from '../notifications';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import UserService from '../service/user-service';
 
 /**

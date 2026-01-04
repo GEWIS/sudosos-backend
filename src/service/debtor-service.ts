@@ -50,7 +50,6 @@ import WithManager from '../database/with-manager';
 import QueryFilter from '../helpers/query-filter';
 import Notifier, { UserGotFinedOptions, UserWillGetFinedOptions } from '../notifications';
 import { NotificationTypes } from '../notifications/notification-types';
-import { NotificationChannels } from '../entity/notifications/user-notification-preference';
 
 export interface CalculateFinesParams {
   userTypes?: UserType[];
