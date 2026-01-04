@@ -42,6 +42,7 @@ import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
 import InvoiceService from '../service/invoice-service';
 import POSTokenVerifier from '../helpers/pos-token-verifier';
+import { PdfError } from '../errors';
 
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
@@ -86,6 +87,12 @@ export default class TransactionController extends BaseController {
         DELETE: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', await TransactionController.getRelation(req), 'Transaction', ['*']),
           handler: this.deleteTransaction.bind(this),
+        },
+      },
+      '/:id(\\d+)/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', await TransactionController.getRelation(req), 'Transaction', ['*']),
+          handler: this.getTransactionPdf.bind(this),
         },
       },
       '/:id(\\d+)/invoices': {
@@ -365,6 +372,44 @@ export default class TransactionController extends BaseController {
     }
   }
 
+  /**
+   * GET /transactions/{id}/pdf
+   * @summary Get the PDF of the transaction
+   * @operationId getTransactionPdf
+   * @tags transactions - Operations of the transaction controller
+   * @param {integer} id.path.required - The transaction ID
+   * @security JWT
+   * @returns {string} 200 - The requested pdf of the transaction - application/pdf
+   * @return {string} 404 - Transaction not found
+   * @return {string} 400 - PDF generation failed
+   * @return {string} 500 - Internal server error
+   */
+  public async getTransactionPdf(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    const transactionId = parseInt(id, 10);
+    this.logger.trace('Get transaction PDF', id, 'by user', req.token.user);
+
+    try {
+      const transaction = await Transaction.findOne({ where: { id: transactionId }, relations: ['from', 'createdBy']  });
+      if (!transaction) {
+        res.status(404).json('Transaction not found.');
+        return;
+      }
+
+      const pdf = await transaction.createPdf();
+      const fileName = `transaction-${transaction.id}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.status(200).send(pdf);
+    } catch (error: any) {
+      if (error instanceof PdfError) {
+        res.status(400).json(error.message);
+        return;
+      }
+      this.logger.error('Could not return transaction PDF:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
 
   /**
    * Determines the relation between the user and the transaction (by filters in the request).

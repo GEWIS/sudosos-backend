@@ -21,6 +21,7 @@
 
 import {
   BaseHtmlPdfService,
+  HtmlGenerator,
   HtmlPdfService,
   HtmlUnstoredPdfService,
   PdfTemplateParameters,
@@ -31,7 +32,6 @@ import Pdf from '../../../src/entity/file/pdf-file';
 import User from '../../../src/entity/user/user';
 import FileService from '../../../src/service/file-service';
 import { PdfError } from '../../../src/errors';
-import PdfTemplateGenerator from '../../../src/service/pdf/pdf-template-generator';
 
 // Mock entity for testing
 class TestEntity {
@@ -73,9 +73,11 @@ class TestUnstoredPdfAbleEntity extends TestEntity {
   }
 }
 
+const testGenerator: HtmlGenerator<PdfTemplateParameters> = (params) => `<html>${params.content}</html>`;
+
 // Concrete implementation of BaseHtmlPdfService for testing
 class TestBaseHtmlPdfService extends BaseHtmlPdfService<TestEntity, PdfTemplateParameters> {
-  templateFileName = 'example.html';
+  htmlGenerator = testGenerator;
 
   async getParameters(entity: TestEntity): Promise<PdfTemplateParameters> {
     return {
@@ -89,7 +91,7 @@ class TestBaseHtmlPdfService extends BaseHtmlPdfService<TestEntity, PdfTemplateP
 
 // Concrete implementation of HtmlPdfService for testing
 class TestHtmlPdfService extends HtmlPdfService<TestPdf, any, PdfTemplateParameters> {
-  templateFileName = 'example.html';
+  htmlGenerator = testGenerator;
 
   pdfConstructor = TestPdf;
 
@@ -105,7 +107,7 @@ class TestHtmlPdfService extends HtmlPdfService<TestPdf, any, PdfTemplateParamet
 
 // Concrete implementation of HtmlUnstoredPdfService for testing
 class TestHtmlUnstoredPdfService extends HtmlUnstoredPdfService<TestUnstoredPdfAbleEntity, PdfTemplateParameters> {
-  templateFileName = 'example.html';
+  htmlGenerator = testGenerator;
 
   async getParameters(entity: TestUnstoredPdfAbleEntity): Promise<PdfTemplateParameters> {
     return {
@@ -120,18 +122,15 @@ class TestHtmlUnstoredPdfService extends HtmlUnstoredPdfService<TestUnstoredPdfA
 describe('BaseHtmlPdfService', () => {
   let service: TestBaseHtmlPdfService;
   let compileHtmlStub: SinonStub;
-  let applyTemplateStub: SinonStub;
 
   beforeEach(() => {
     service = new TestBaseHtmlPdfService();
-    applyTemplateStub = sinon.stub(PdfTemplateGenerator, 'applyTemplate');
   });
 
   afterEach(() => {
     if (compileHtmlStub) {
       compileHtmlStub.restore();
     }
-    applyTemplateStub.restore();
   });
 
   describe('constructor', () => {
@@ -174,25 +173,26 @@ describe('BaseHtmlPdfService', () => {
   describe('getHtml', () => {
     it('should get parameters and apply template', async () => {
       const entity = new TestEntity();
-      const expectedParams = {
-        title: 'Test Title',
-        heading: 'Test Heading',
-        content: 'Test Content',
-        date: '2024-01-01',
-      };
-      const expectedHtml = '<html>Test HTML</html>';
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
 
-      applyTemplateStub.returns(expectedHtml);
-      const getParametersStub = sinon.stub(service, 'getParameters').resolves(expectedParams);
+      const getParametersSpy = sinon.spy(service, 'getParameters');
+      const htmlGeneratorSpy = sinon.spy(service, 'htmlGenerator');
 
       // eslint-disable-next-line @typescript-eslint/dot-notation
       const html = await service['getHtml'](entity);
 
-      expect(getParametersStub).to.have.been.calledOnceWith(entity);
-      expect(applyTemplateStub).to.have.been.calledOnceWith('example.html', expectedParams);
+      expect(getParametersSpy).to.have.been.calledOnceWith(entity);
+      expect(htmlGeneratorSpy).to.have.been.calledOnce;
+      const actualParams = htmlGeneratorSpy.getCall(0).args[0];
+      expect(actualParams.title).to.eq(expectedParams.title);
+      expect(actualParams.heading).to.eq(expectedParams.heading);
+      expect(actualParams.content).to.eq(expectedParams.content);
+      expect(actualParams.date).to.be.a('string');
       expect(html).to.eq(expectedHtml);
 
-      getParametersStub.restore();
+      getParametersSpy.restore();
+      htmlGeneratorSpy.restore();
     });
   });
 
@@ -233,15 +233,14 @@ describe('BaseHtmlPdfService', () => {
   describe('createPdf', () => {
     it('should create PDF buffer from HTML template', async () => {
       const entity = new TestEntity();
-      const expectedHtml = '<html>Test HTML</html>';
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
       const pdfBuffer = Buffer.from('PDF content');
 
-      applyTemplateStub.returns(expectedHtml);
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
 
       const result = await service.createPdfBuffer(entity);
 
-      expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
       expect(result).to.be.instanceOf(Buffer);
       expect(result.toString()).to.eq(pdfBuffer.toString());
@@ -251,13 +250,11 @@ describe('BaseHtmlPdfService', () => {
   describe('createRaw', () => {
     it('should return HTML as buffer', async () => {
       const entity = new TestEntity();
-      const expectedHtml = '<html>Test HTML</html>';
-
-      applyTemplateStub.returns(expectedHtml);
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
 
       const result = await service.createRaw(entity);
 
-      expect(applyTemplateStub).to.have.been.calledOnce;
       expect(result).to.be.instanceOf(Buffer);
       expect(result.toString('utf-8')).to.eq(expectedHtml);
     });
@@ -267,18 +264,15 @@ describe('BaseHtmlPdfService', () => {
 describe('HtmlPdfService', () => {
   let service: TestHtmlPdfService;
   let uploadPdfStub: SinonStub;
-  let applyTemplateStub: SinonStub;
   let compileHtmlStub: SinonStub;
 
   beforeEach(() => {
     service = new TestHtmlPdfService('./test-location');
     uploadPdfStub = sinon.stub(service.fileService, 'uploadPdf');
-    applyTemplateStub = sinon.stub(PdfTemplateGenerator, 'applyTemplate');
   });
 
   afterEach(() => {
     uploadPdfStub.restore();
-    applyTemplateStub.restore();
     if (compileHtmlStub) {
       compileHtmlStub.restore();
     }
@@ -295,17 +289,16 @@ describe('HtmlPdfService', () => {
     it('should create and upload PDF entity', async () => {
       const entity = new TestPdfAbleEntity();
       const user = Object.assign(new User(), { id: 1 } as User);
-      const expectedHtml = '<html>Test HTML</html>';
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
       const pdfBuffer = Buffer.from('PDF content');
       const expectedPdf = new TestPdf();
 
-      applyTemplateStub.returns(expectedHtml);
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
       uploadPdfStub.resolves(expectedPdf);
 
       const result = await service.createPdfWithEntity(entity);
 
-      expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
       expect(uploadPdfStub).to.have.been.calledOnce;
       expect(uploadPdfStub).to.have.been.calledWith(
@@ -321,16 +314,13 @@ describe('HtmlPdfService', () => {
 
 describe('HtmlUnstoredPdfService', () => {
   let service: TestHtmlUnstoredPdfService;
-  let applyTemplateStub: SinonStub;
   let compileHtmlStub: SinonStub;
 
   beforeEach(() => {
     service = new TestHtmlUnstoredPdfService();
-    applyTemplateStub = sinon.stub(PdfTemplateGenerator, 'applyTemplate');
   });
 
   afterEach(() => {
-    applyTemplateStub.restore();
     if (compileHtmlStub) {
       compileHtmlStub.restore();
     }
@@ -339,15 +329,14 @@ describe('HtmlUnstoredPdfService', () => {
   describe('createPdf', () => {
     it('should return PDF buffer', async () => {
       const entity = new TestUnstoredPdfAbleEntity();
-      const expectedHtml = '<html>Test HTML</html>';
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
       const pdfBuffer = Buffer.from('PDF content');
 
-      applyTemplateStub.returns(expectedHtml);
       compileHtmlStub = sinon.stub(service, 'compileHtml' as any).resolves(pdfBuffer);
 
       const result = await service.createPdfBuffer(entity);
 
-      expect(applyTemplateStub).to.have.been.calledOnce;
       expect(compileHtmlStub).to.have.been.calledOnceWith(expectedHtml);
       expect(result).to.be.instanceOf(Buffer);
       expect(result.toString()).to.eq(pdfBuffer.toString());
@@ -357,13 +346,11 @@ describe('HtmlUnstoredPdfService', () => {
   describe('createRaw', () => {
     it('should return HTML as buffer', async () => {
       const entity = new TestUnstoredPdfAbleEntity();
-      const expectedHtml = '<html>Test HTML</html>';
-
-      applyTemplateStub.returns(expectedHtml);
+      const expectedParams = await service.getParameters(entity);
+      const expectedHtml = service.htmlGenerator(expectedParams);
 
       const result = await service.createRaw(entity);
 
-      expect(applyTemplateStub).to.have.been.calledOnce;
       expect(result).to.be.instanceOf(Buffer);
       expect(result.toString('utf-8')).to.eq(expectedHtml);
     });
