@@ -102,12 +102,29 @@ export default class UserNotificationPreferenceService extends WithManager {
     return userNotificationPreferences.map(userPreference => UserNotificationPreferenceService.asResponse(userPreference));
   }
 
+  private static isNotificationType(value: any): value is NotificationTypes {
+    return Object.values(NotificationTypes).includes(value);
+  }
+
+  private static isNotificationChannel(value: any): value is NotificationChannels {
+    return Object.values(NotificationChannels).includes(value);
+  }
+
   /**
    * Creates an UserNotificationPreference from an UserNotificationPreferenceRequest
    * @param requestParams
    */
   public async createUserNotificationPreference(requestParams: UserNotificationPreferenceRequestParams): Promise<UserNotificationPreference> {
     const { userId, type, channel, enabled } = requestParams;
+
+    if (!UserNotificationPreferenceService.isNotificationType(type)) {
+      throw new Error('Type is not a notification type');
+    }
+
+    if (!UserNotificationPreferenceService.isNotificationChannel(channel)) {
+      throw new Error('channel is nto a notification channel');
+    }
+
     const user = await this.manager.findOne(User, { where: { id: userId } });
 
     const newUserNotificationPreference: UserNotificationPreference = Object.assign(new UserNotificationPreference(), {

@@ -71,6 +71,7 @@ export default class Notifier {
 
     if (!notifyType) {
       this.logger.error(`Could not get notify type: ${payload.type}`);
+      return;
     }
 
     const user = await User.findOne({ where: { id: payload.userId } });
@@ -131,12 +132,12 @@ export default class Notifier {
 
     const rendered = await channel.apply(template, params);
     try {
-      await channel.log(user, notifyType.type);
-
       await channel.send(user, rendered);
     } catch (error) {
       throw error;
     }
+
+    await channel.log(user, notifyType.type);
   }
 
   private async noChannelLog(user: User, code: NotificationTypes): Promise<void> {
