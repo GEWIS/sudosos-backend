@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,7 @@ const SettingsDefaults: ISettings = {
   maintenanceMode: false,
   allowGewisSyncDelete: false,
   strictPosToken: false,
+  wrappedEnabled: false,
 };
 
 export default SettingsDefaults;

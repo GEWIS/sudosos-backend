@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -45,10 +45,12 @@ export interface ReportEntryResponse {
  * @typedef {allOf|ReportEntryResponse} ReportProductEntryResponse
  * @property {integer} count.required - count
  * @property {BaseProductResponse} product.required - product
+ * @property {string} image - image (nullable)
  */
 export interface ReportProductEntryResponse extends ReportEntryResponse {
   count: number,
   product: BaseProductResponse,
+  image?: string | null,
 }
 
 /**
@@ -107,6 +109,7 @@ export interface ReportDataResponse {
  * @property {ReportDataResponse} data.required - data
  * @property {DineroObjectResponse} totalExclVat.required - totalExclVat
  * @property {DineroObjectResponse} totalInclVat.required - totalInclVat
+ * @property {integer} transactionCount - transactionCount
  */
 export interface ReportResponse {
   forId: number,
@@ -115,4 +118,5 @@ export interface ReportResponse {
   data: ReportDataResponse,
   totalExclVat: DineroObjectResponse,
   totalInclVat: DineroObjectResponse,
+  transactionCount: number,
 }

@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -84,6 +84,10 @@ export default class DefaultRoles {
         },
         VatGroup: {
           get: { all: star },
+        },
+        Wrapped: {
+          get: { own: star },
+          update: { own: star },
         },
       },
     }, {
@@ -222,6 +226,7 @@ export default class DefaultRoles {
         Transaction: admin,
         Transfer: admin,
         Roles: admin,
+        ServerSettings: admin,
         User: {
           ...admin,
           acceptToS: { own: star },
@@ -231,6 +236,11 @@ export default class DefaultRoles {
         VoucherGroup: admin,
         WriteOff: admin,
         InactiveAdministrativeCost: admin,
+        Wrapped: {
+          get: { own: star },
+          update: { own: star },
+          override: { all: star },
+        },
       },
     }, {
       name: SELLER_ROLE,

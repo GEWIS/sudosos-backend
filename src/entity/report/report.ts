@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -46,6 +46,8 @@ export interface IReport {
 
   totalInclVat: Dinero.Dinero;
 
+  transactionCount: number;
+
   data: ReportData;
 }
 
@@ -63,6 +65,7 @@ export interface ReportEntry {
 export interface ReportProductEntry extends ReportEntry {
   count: number,
   product: ProductRevision,
+  image: string | null
 }
 
 export interface ReportVatEntry extends ReportEntry {
@@ -96,6 +99,7 @@ export interface Report {
   data: ReportData,
   totalExclVat: Dinero.Dinero,
   totalInclVat: Dinero.Dinero,
+  transactionCount: number,
 }
 
 

@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -129,6 +129,7 @@ export default abstract class ReportService extends WithManager {
       data,
       totalExclVat: report.totalExclVat.toObject(),
       totalInclVat: report.totalInclVat.toObject(),
+      transactionCount: report.transactionCount,
     };
   }
 
@@ -143,7 +144,8 @@ export default abstract class ReportService extends WithManager {
   private addSelectTotals<T>(query: SelectQueryBuilder<T>): SelectQueryBuilder<T> {
     return query
       .addSelect('sum(subTransactionRow.amount * ROUND(productRevision.priceInclVat / (1 + (vatGroup.percentage / 100))))', 'total_excl_vat')
-      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat)', 'total_incl_vat');
+      .addSelect('sum(subTransactionRow.amount * productRevision.priceInclVat)', 'total_incl_vat')
+      .addSelect('COUNT(DISTINCT transaction.id)', 'transaction_count');
   }
 
   /**
@@ -156,6 +158,9 @@ export default abstract class ReportService extends WithManager {
   public async getProductEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportProductEntry[]> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoinAndSelect('productRevision.vat', 'vatGroup')
+      .innerJoinAndSelect('productRevision.product', 'product')
+      .leftJoin('product.image', 'productImage')
+      .addSelect('productImage.downloadName', 'product_image_download_name')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
       .innerJoin(SubTransaction, 'subTransaction', 'subTransaction.id = subTransactionRow.subTransactionId')
       .innerJoin(Transaction, 'transaction', 'transaction.id = subTransaction.transactionId')
@@ -170,9 +175,11 @@ export default abstract class ReportService extends WithManager {
       const count = asNumber(data.raw[index].sum_amount);
       const totalInclVat = asDinero(data.raw[index].total_incl_vat);
       const totalExclVat = asDinero(data.raw[index].total_excl_vat);
+      const img = data.raw[index].product_image_download_name;
       return {
         count,
         product: productRevision,
+        image: img ?? null,
         totalInclVat,
         totalExclVat,
       };
@@ -307,9 +314,9 @@ export default abstract class ReportService extends WithManager {
      * @param forId - The user ID to get the totals for
      * @param fromDate - The from date to get the totals for (inclusive)
      * @param tillDate - The till date to get the totals for (exclusive)
-     * @returns {Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero }>} - The totals
+     * @returns {Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero, transactionCount: number }>} - The totals
      */
-  public async getTotals(forId: number, fromDate: Date, tillDate: Date): Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero }> {
+  public async getTotals(forId: number, fromDate: Date, tillDate: Date): Promise<{ totalExclVat: Dinero.Dinero, totalInclVat: Dinero.Dinero, transactionCount: number }> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
       .innerJoin('productRevision.vat', 'vatGroup')
       .innerJoin(SubTransactionRow, 'subTransactionRow', 'subTransactionRow.productProductId = productRevision.productId AND subTransactionRow.productRevision = productRevision.revision')
@@ -324,9 +331,11 @@ export default abstract class ReportService extends WithManager {
 
     const totalExclVat = asDinero(data.raw[0].total_excl_vat || 0);
     const totalInclVat = asDinero(data.raw[0].total_incl_vat || 0);
+    const transactionCount = asNumber(data.raw[0].transaction_count || 0);
     return {
       totalExclVat,
       totalInclVat,
+      transactionCount,
     };
   }
 
@@ -345,6 +354,7 @@ export default abstract class ReportService extends WithManager {
       tillDate,
       totalExclVat: totals.totalExclVat,
       totalInclVat: totals.totalInclVat,
+      transactionCount: totals.transactionCount,
       data: {
         products: productEntries,
         vat: vatEntries,
@@ -392,4 +402,3 @@ export class BuyerReportService extends ReportService {
     return new BuyerReport(report);
   }
 }
-

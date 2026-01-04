@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,7 @@ import UserSyncManager from './service/sync/user/user-sync-manager';
 import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
+import WrappedService from './service/wrapped-service';
 
 class MaintenanceApplication {
   logger: Logger;
@@ -101,6 +102,10 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   application.logger.info('Syncing user notification preferences...');
   await new UserNotificationPreferenceService().syncAllUserNotificationPreferences();
   application.logger.info('User notification preferences synced');
+  // Update wrapped
+  application.logger.info('Updating wrapped...');
+  await new WrappedService().updateWrapped({});
+  application.logger.info('Wrapped updated');
 
   // Setup user synchronization services based on environment variables
   const syncServices: UserSyncService[] = [];

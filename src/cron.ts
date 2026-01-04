@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -38,6 +38,7 @@ import UserSyncManager from './service/sync/user/user-sync-manager';
 import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
+import WrappedService from './service/wrapped-service';
 
 class CronApplication {
   logger: Logger;
@@ -89,6 +90,15 @@ async function createCronTasks(): Promise<void> {
       logger.error('Could not sync balances.', error);
     }));
   });
+  await new WrappedService().updateWrapped();
+  const syncWrapped = cron.schedule('45 1 * 12 *', () => {
+    logger.debug('Syncing wrapped.');
+    new WrappedService().updateWrapped().then(() => {
+      logger.debug('Synced wrapped.');
+    }).catch((error => {
+      logger.error('Could not sync wrapped.', error);
+    }));
+  });
   const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
     logger.debug('Syncing event shift answers.');
     EventService.syncAllEventShiftAnswers()
@@ -110,7 +120,7 @@ async function createCronTasks(): Promise<void> {
     });
   });
 
-  application.tasks = [syncBalances, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
+  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();

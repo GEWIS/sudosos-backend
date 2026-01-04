@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -100,6 +100,10 @@ import NotificationLog from '../entity/notifications/notification-log';
 import UserNotificationPreference from '../entity/notifications/user-notification-preference';
 import { RenameGewisToExternal1763399087409 } from '../migrations/1763399087409-rename-gewis-to-external';
 import { UserNotificationPreference1764615514906 } from '../migrations/1764615514906-user-notification-preference';
+import Wrapped from '../entity/wrapped';
+import WrappedOrganMember from '../entity/wrapped/wrapped-organ-member';
+import { AddWrappedTable1764842063654 } from '../migrations/1764842063654-add-wrapped-table';
+import { AddWrappedOrganMember1765826596888 } from '../migrations/1765826596888-add-wrapped-organ-member';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -130,6 +134,8 @@ const options: DataSourceOptions = {
     UserAdministrativeCost1761845457283,
     RenameGewisToExternal1763399087409,
     UserNotificationPreference1764615514906,
+    AddWrappedTable1764842063654,
+    AddWrappedOrganMember1765826596888,
   ],
   extra: {
     authPlugins: {
@@ -193,6 +199,8 @@ const options: DataSourceOptions = {
     Event,
     EventShift,
     EventShiftAnswer,
+    Wrapped,
+    WrappedOrganMember,
     WriteOff,
     WriteOffPdf,
     QRAuthenticator,

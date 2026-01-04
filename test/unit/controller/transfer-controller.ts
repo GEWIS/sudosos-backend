@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -241,6 +241,75 @@ describe('TransferController', async (): Promise<void> => {
 
       expect(res.body).to.be.empty;
       expect(res.status).to.equal(403);
+    });
+
+    // New tests for fromDate and tillDate filtering
+    it('should return correct transfers when fromDate is set', async () => {
+      let fromDate = new Date(ctx.transfers[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
+      let res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ fromDate });
+      expect(res.status).to.equal(200);
+
+      let transfers = res.body.records as TransferResponse[];
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || defaultPagination();
+      expect(transfers.length).to.equal(pagination);
+      transfers.forEach((t) => {
+        expect(new Date(t.createdAt)).to.be.greaterThan(fromDate);
+      });
+
+      fromDate = new Date(ctx.transfers[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
+      res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ fromDate });
+      expect(res.status).to.equal(200);
+      transfers = res.body.records as TransferResponse[];
+
+      expect(transfers.length).to.equal(0);
+    });
+
+    it('should return 400 when fromDate is not a date', async () => {
+      const res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ fromDate: 'Wie dit leest trekt een bak' });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return correct transfers when tillDate is set', async () => {
+      let tillDate = new Date(ctx.transfers[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
+      let res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ tillDate });
+      expect(res.status).to.equal(200);
+
+      let transfers = res.body.records as TransferResponse[];
+      const pagination = parseInt(process.env.PAGINATION_DEFAULT, 10) || defaultPagination();
+      expect(transfers.length).to.equal(pagination);
+      transfers.forEach((t) => {
+        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
+      });
+
+      tillDate = new Date(ctx.transfers[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
+      res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ tillDate });
+      expect(res.status).to.equal(200);
+      transfers = res.body.records as TransferResponse[];
+
+      expect(transfers.length).to.equal(0);
+    });
+
+    it('should return 400 when tillDate is not a date', async () => {
+      const res = await request(app)
+        .get('/transfers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .query({ tillDate: 'Wie dit leest trekt een bak' });
+      expect(res.status).to.equal(400);
     });
   });
 

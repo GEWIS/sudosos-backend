@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransferService from '../service/transfer-service';
+import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination } from '../helpers/pagination';
@@ -101,6 +101,8 @@ export default class TransferController extends BaseController {
    * @operationId getAllTransfers
    * @tags transfers - Operations of transfer controller
    * @security JWT
+   * @param {string} fromDate.query - Start date for selected transfers (inclusive)
+   * @param {string} tillDate.query - End date for selected transfers (exclusive)
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
    * @return {Array.<TransferResponse>} 200 - All existing transfers
@@ -110,9 +112,11 @@ export default class TransferController extends BaseController {
     const { body } = req;
     this.logger.trace('Get all transfers by user', body, 'by user', req.token.user);
 
+    let filters;
     let take;
     let skip;
     try {
+      filters = parseGetTransferFilters(req);
       const pagination = parseRequestPagination(req);
       take = pagination.take;
       skip = pagination.skip;
@@ -122,7 +126,7 @@ export default class TransferController extends BaseController {
     }
 
     try {
-      const transfers = await new TransferService().getTransfers({}, { take, skip });
+      const transfers = await new TransferService().getTransfers(filters, { take, skip });
       res.json(transfers);
     } catch (error) {
       this.logger.error('Could not return all transfers:', error);

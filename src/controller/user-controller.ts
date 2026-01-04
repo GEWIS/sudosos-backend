@@ -1,6 +1,6 @@
 /**
  *  SudoSOS back-end API service.
- *  Copyright (C) 2024  Study association GEWIS
+ *  Copyright (C) 2026 Study association GEWIS
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published
@@ -72,6 +72,7 @@ import { PdfError } from '../errors';
 import { WaiveFinesRequest } from './request/debtor-request';
 import Dinero from 'dinero.js';
 import Role from '../entity/rbac/role';
+import WrappedService from '../service/wrapped-service';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -343,6 +344,16 @@ export default class UserController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'delete', 'all', 'Fine', ['*']),
           handler: this.waiveUserFines.bind(this),
           body: { modelName: 'WaiveFinesRequest', allowBlankTarget: true },
+        },
+      },
+      '/:id(\\d+)/wrapped': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', UserController.getRelation(req), 'Wrapped', ['*']),
+          handler: this.getUserWrapped.bind(this),
+        },
+        POST: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', UserController.getRelation(req), 'Wrapped', ['*']),
+          handler: this.computedWrapped.bind(this),
         },
       },
     };
@@ -1665,5 +1676,56 @@ export default class UserController extends BaseController {
 
     await UserService.addUserRole(user, role);
     res.status(204).send();
+  }
+
+  /**
+   * GET /users/{id}/wrapped
+   * @summary Get wrapped for a user
+   * @operationId getWrapped
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @return {WrappedResponse} 200 - The requested user's wrapped
+   * @return {string} 404 - Wrapped for user not found error
+   * @return {string} 500 - Internal server error
+   */
+  private async getUserWrapped(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+
+    try {
+      const userId = parseInt(rawUserId, 10);
+    
+      const wrappedRes = await new WrappedService().getWrappedForUser(userId);
+      if (wrappedRes == null) {
+        res.status(404).json('Wrapped not found for user');
+        return;
+      }
+
+      res.json(WrappedService.asWrappedResponse(wrappedRes));
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  /**
+   * POST /users/{id}/wrapped
+   * @summary Recompute wrapped for a user
+   * @operationId updateWrapped
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @return {WrappedResponse} 200 - The requested user's wrapped
+   * @return {string} 500 - Internal server error
+   */
+  private async computedWrapped(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+
+    try {
+      const userId = parseInt(rawUserId, 10);
+
+      res.json(await new WrappedService().updateWrapped({ ids: [userId] }));
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error' });
+    }
   }
 }
