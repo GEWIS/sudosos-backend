@@ -63,6 +63,7 @@ export interface UserFilterParameters {
   organId?: number,
   assignedRoleIds?: number | number[],
   pointOfSaleId?: number,
+  allowPos?: boolean,
 }
 
 export type FinancialMutationsFilterParams = TransactionFilterParameters & TransferFilterParameters;
@@ -211,8 +212,8 @@ export default class UserService {
     if (params.pointOfSaleId !== undefined) {
       where.pointOfSale = { id: params.pointOfSaleId };
       // When filtering by pointOfSaleId, we need to allow POINT_OF_SALE type users
-    } else if (!params.type) {
-      // Exclude POINT_OF_SALE type unless type filter is explicitly set
+    } else if (!params.type && !params.allowPos) {
+      // Exclude POINT_OF_SALE type unless type filter is explicitly set or allowPos is true
       where.type = Not(UserType.POINT_OF_SALE);
     }
 

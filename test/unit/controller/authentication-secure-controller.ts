@@ -144,6 +144,31 @@ describe('AuthenticationSecureController', () => {
         true,
       ).valid).to.be.true;
     });
+
+    it('should handle refresh token request with POS token', async () => {
+      // Bug report: When requesting a refresh token of a POS token, the backend returns a 500.
+      // Error: TypeError: Cannot read properties of null (reading 'id') at RoleManager.getRoles
+      // This test triages the bug by attempting to refresh a POS token.
+      
+      const pos = ctx.pointsOfSale[0];
+      const posUser = pos.user;
+      const posToken = await ctx.tokenHandler.signToken(
+        await new RbacSeeder().getToken(posUser, [], [], pos.id),
+        'nonce',
+      );
+
+      const res = await request(ctx.app)
+        .get('/authentication/refreshToken')
+        .set('Authorization', `Bearer ${posToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
   });
 
   describe( 'GET /authentication/pointofsale/{id}', () => {
