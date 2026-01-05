@@ -136,12 +136,20 @@ export default class AuthenticationSecureController extends BaseController {
         res.status(404).json('User not found.');
         return;
       }
+
+      let expiry: number | undefined = undefined;
+
+      if (req.token.posId) {
+        expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
+      }
+
       const token = await new AuthenticationService().getSaltedToken({
         user,
         context: {
           roleManager: this.roleManager,
           tokenHandler: this.tokenHandler,
         },
+        expiry,
         posId: req.token.posId,
       });
       res.json(token);
