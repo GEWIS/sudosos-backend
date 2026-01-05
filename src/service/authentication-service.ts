@@ -48,6 +48,8 @@ import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import RBACService from './rbac-service';
 import Role from '../entity/rbac/role';
 import WithManager from '../database/with-manager';
+import ServerSettingsStore from '../server-settings/server-settings-store';
+import { ISettings } from '../entity/server-setting';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -243,7 +245,13 @@ export default class AuthenticationService extends WithManager {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
 
-    return this.getSaltedToken({ user: authenticator.user, context, posId });
+    let expiry: number | undefined = undefined;
+
+    if (posId) {
+      expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
+    }
+
+    return this.getSaltedToken({ user: authenticator.user, context, posId, expiry });
   }
 
   /**
