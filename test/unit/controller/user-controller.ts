@@ -2310,7 +2310,7 @@ describe('UserController', (): void => {
         .query(parameters);
       expect(res.status).to.equal(404);
     });
-    it('should preserve createdAt when editing transaction (GH#675)', async () => {
+    it('should use transaction.createdAt for sales reports when editing transaction (GH#675)', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
@@ -2321,23 +2321,13 @@ describe('UserController', (): void => {
         const req = await createValidTransactionRequest(debtor.id, creditor.id);
         const tx = await new TransactionService().createTransaction(req);
 
+        // Set transaction createdAt to previous month
         const dateStr = toMySQLString(txDate);
         await AppDataSource.query(
           `UPDATE \`transaction\` SET createdAt = '${dateStr}' WHERE id = ${tx.id}`,
         );
 
-        const transaction = await Transaction.findOne({
-          where: { id: tx.id },
-          relations: ['subTransactions'],
-        });
-        if (transaction?.subTransactions) {
-          for (const st of transaction.subTransactions) {
-            await AppDataSource.query(
-              `UPDATE \`sub_transaction\` SET createdAt = '${dateStr}' WHERE id = ${st.id}`,
-            );
-          }
-        }
-
+        // Verify transaction appears in previous month's report
         let res = await request(ctx.app)
           .get(`/users/${creditor.id}/transactions/sales/report`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -2350,13 +2340,7 @@ describe('UserController', (): void => {
         const amountBefore = reportBefore.totalInclVat.amount;
         expect(amountBefore).to.be.greaterThan(0);
 
-        const txBefore = await Transaction.findOne({
-          where: { id: tx.id },
-          relations: ['subTransactions', 'subTransactions.subTransactionRows'],
-        });
-        const createdAtBefore = txBefore.createdAt;
-        expect(createdAtBefore.getTime()).to.equal(txDate.getTime());
-
+        // Edit the transaction (this will recreate subTransactions with new createdAt)
         const updateReq: TransactionRequest = {
           ...req,
           subTransactions: req.subTransactions.map((st) => ({
@@ -2374,14 +2358,13 @@ describe('UserController', (): void => {
           .send(updateReq);
         expect(res.status).to.equal(200);
 
+        // Verify transaction.createdAt is preserved
         const txAfter = await Transaction.findOne({
           where: { id: tx.id },
-          relations: ['subTransactions', 'subTransactions.subTransactionRows'],
         });
-        const createdAtAfter = txAfter.createdAt;
-        
-        expect(createdAtAfter.getTime()).to.equal(createdAtBefore.getTime());
+        expect(txAfter.createdAt.getTime()).to.equal(txDate.getTime());
 
+        // Verify transaction still appears in previous month's report (using transaction.createdAt)
         res = await request(ctx.app)
           .get(`/users/${creditor.id}/transactions/sales/report`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -2392,6 +2375,7 @@ describe('UserController', (): void => {
         expect(res.status).to.equal(200);
         const reportAfter = res.body as ReportResponse;
 
+        // Verify transaction does not appear in current month's report
         res = await request(ctx.app)
           .get(`/users/${creditor.id}/transactions/sales/report`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
