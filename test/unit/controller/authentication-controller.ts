@@ -56,6 +56,7 @@ import Role from '../../../src/entity/rbac/role';
 import RoleResponse from '../../../src/controller/response/rbac/role-response';
 import { RbacSeeder, UserSeeder } from '../../seed';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -68,6 +69,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     user: User,
     user2: User,
     user3: User,
+    posUser: User,
     role: Role,
     maintenanceOverrideRole: Role,
     request: AuthenticationMockRequest,
@@ -130,6 +132,12 @@ describe('AuthenticationController', async (): Promise<void> => {
         active: true,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
       } as User),
+      posUser: await User.save({
+        firstName: 'POS User',
+        type: UserType.POINT_OF_SALE,
+        active: true,
+        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      } as User),
       request: {
         userId: 1,
         nonce: 'test',
@@ -146,6 +154,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
     await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], LocalAuthenticator);
     await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], KeyAuthenticator);
+    await userSeeder.seedHashAuthenticator([ctx.posUser], KeyAuthenticator);
 
     await EanAuthenticator.save({
       userId: ctx.user.id,
@@ -363,7 +372,9 @@ describe('AuthenticationController', async (): Promise<void> => {
       userId: 1,
       key: '1',
     };
+
     testHashAuthentication('key', validKeyRequest, { ...validKeyRequest, key: '2' });
+
     it('should return an HTTP 403 if user does not exist', async () => {
       const userId = 0;
       const res = await request(ctx.app)
@@ -372,12 +383,77 @@ describe('AuthenticationController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
     });
+
     it('should return an HTTP 403 if user does not have a key', async () => {
       const res = await request(ctx.app)
         .post('/authentication/key')
         .send({ userId: 3, key: '1' } as AuthenticationKeyRequest);
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
+    });
+
+    describe('HashAuthentication posId handling', () => {
+      let hashAuthStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Mock the HashAuthentication method
+        hashAuthStub = sinon.stub(AuthenticationService.prototype, 'HashAuthentication')
+          .resolves({
+            user: ctx.user,
+            token: 'test-token',
+            rolesWithPermissions: [],
+            organs: [],
+            lesser: false,
+          } as unknown as AuthenticationResponse);
+      });
+
+      afterEach(() => {
+        if (hashAuthStub) {
+          hashAuthStub.restore();
+        }
+      });
+
+      it('should call HashAuthentication with correct posId when user is a POS', async () => {
+        const pos = await PointOfSale.save({
+          owner: ctx.user,
+          user: ctx.posUser,
+          currentRevision: 1,
+        });
+
+        const keyRequest: AuthenticationKeyRequest = {
+          userId: ctx.posUser.id,
+          key: '1',
+        };
+
+        await request(ctx.app)
+          .post('/authentication/key')
+          .send(keyRequest);
+
+        // Verify HashAuthentication was called with a posId
+        expect(hashAuthStub.calledOnce).to.be.true;
+        const callArgs = hashAuthStub.getCall(0).args;
+        expect(callArgs[0]).to.equal('1');
+        expect(callArgs[2]).to.deep.include({ roleManager: ctx.roleManager, tokenHandler: ctx.tokenHandler });
+        expect(callArgs[3]).to.equal(pos.id); // posId
+      });
+
+      it('should call HashAuthentication without a posId when user is not a POS', async () => {
+        const keyRequest: AuthenticationKeyRequest = {
+          userId: ctx.user.id,
+          key: '1',
+        };
+
+        await request(ctx.app)
+          .post('/authentication/key')
+          .send(keyRequest);
+
+        // Verify HashAuthentication was called without posId (undefined)
+        expect(hashAuthStub.calledOnce).to.be.true;
+        const callArgs = hashAuthStub.getCall(0).args;
+        expect(callArgs[0]).to.equal('1');
+        expect(callArgs[2]).to.deep.include({ roleManager: ctx.roleManager, tokenHandler: ctx.tokenHandler });
+        expect(callArgs[3]).to.be.undefined; // posId should be undefined for non-POS users
+      });
     });
   });
 
