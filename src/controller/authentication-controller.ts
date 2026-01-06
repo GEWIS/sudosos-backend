@@ -584,7 +584,7 @@ export default class AuthenticationController extends BaseController {
       };
 
       const result = await new AuthenticationService().HashAuthentication(body.key,
-        keyAuthenticator, context, keyAuthenticator.user.pointOfSale?.id);
+        keyAuthenticator, context);
 
       if (!result) {
         res.status(403).json({

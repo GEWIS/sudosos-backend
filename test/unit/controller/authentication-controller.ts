@@ -434,7 +434,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         const callArgs = hashAuthStub.getCall(0).args;
         expect(callArgs[0]).to.equal('1');
         expect(callArgs[2]).to.deep.include({ roleManager: ctx.roleManager, tokenHandler: ctx.tokenHandler });
-        expect(callArgs[3]).to.equal(pos.id); // posId
+        expect(callArgs).to.not.include(pos.id); // posId
       });
 
       it('should call HashAuthentication without a posId when user is not a POS', async () => {

@@ -245,11 +245,9 @@ export default class AuthenticationService extends WithManager {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
 
-    let expiry: number | undefined = undefined;
-
-    if (posId) {
-      expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
-    }
+    const expiry = authenticator.user.type === UserType.POINT_OF_SALE ?
+      ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale']
+      : undefined;
 
     return this.getSaltedToken({ user: authenticator.user, context, posId, expiry });
   }
