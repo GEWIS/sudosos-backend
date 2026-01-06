@@ -26,11 +26,12 @@ import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { describe } from 'mocha';
 import UserController from '../../../src/controller/user-controller';
+import TransactionController from '../../../src/controller/transaction-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Product from '../../../src/entity/product/product';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TokenHandler from '../../../src/authentication/token-handler';
-import Database from '../../../src/database/database';
+import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import ProductCategory from '../../../src/entity/product/product-category';
@@ -72,8 +73,11 @@ import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { SeededRole } from '../../seed/rbac-seeder';
-import { createTransactions } from '../../helpers/transaction-factory';
+import { createTransactions, createValidTransactionRequest } from '../../helpers/transaction-factory';
 import { ReportResponse } from '../../../src/controller/response/report-response';
+import TransactionService from '../../../src/service/transaction-service';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { toMySQLString } from '../../../src/helpers/timestamps';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
@@ -188,6 +192,9 @@ describe('UserController', (): void => {
         },
         Transaction: {
           get: all,
+          create: all,
+          update: all,
+          delete: all,
         },
         Transfer: {
           get: all,
@@ -238,6 +245,9 @@ describe('UserController', (): void => {
         },
         Transaction: {
           get: own,
+          create: own,
+          update: own,
+          delete: own,
         },
         Transfer: {
           get: own,
@@ -274,9 +284,15 @@ describe('UserController', (): void => {
       roleManager,
     }, tokenHandler);
 
+    const transactionController = new TransactionController({
+      specification: ctx.specification,
+      roleManager,
+    });
+
     ctx.app.use(json());
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use('/users', ctx.controller.getRouter());
+    ctx.app.use('/transactions', transactionController.getRouter());
 
     await Promise.all(ctx.userFineGroups.map(async (g) => {
       g.user.currentFines = g;
@@ -2293,6 +2309,102 @@ describe('UserController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .query(parameters);
       expect(res.status).to.equal(404);
+    });
+    it('should preserve createdAt when editing transaction (GH#675)', async () => {
+      await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+        const txDate = new Date(now.getFullYear(), now.getMonth() - 1, 15, 12, 0, 0);
+
+        const req = await createValidTransactionRequest(debtor.id, creditor.id);
+        const tx = await new TransactionService().createTransaction(req);
+
+        const dateStr = toMySQLString(txDate);
+        await AppDataSource.query(
+          `UPDATE \`transaction\` SET createdAt = '${dateStr}' WHERE id = ${tx.id}`,
+        );
+
+        const transaction = await Transaction.findOne({
+          where: { id: tx.id },
+          relations: ['subTransactions'],
+        });
+        if (transaction?.subTransactions) {
+          for (const st of transaction.subTransactions) {
+            await AppDataSource.query(
+              `UPDATE \`sub_transaction\` SET createdAt = '${dateStr}' WHERE id = ${st.id}`,
+            );
+          }
+        }
+
+        let res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/sales/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({
+            fromDate: monthStart.toISOString(),
+            tillDate: monthEnd.toISOString(),
+          });
+        expect(res.status).to.equal(200);
+        const reportBefore = res.body as ReportResponse;
+        const amountBefore = reportBefore.totalInclVat.amount;
+        expect(amountBefore).to.be.greaterThan(0);
+
+        const txBefore = await Transaction.findOne({
+          where: { id: tx.id },
+          relations: ['subTransactions', 'subTransactions.subTransactionRows'],
+        });
+        const createdAtBefore = txBefore.createdAt;
+        expect(createdAtBefore.getTime()).to.equal(txDate.getTime());
+
+        const updateReq: TransactionRequest = {
+          ...req,
+          subTransactions: req.subTransactions.map((st) => ({
+            ...st,
+            subTransactionRows: st.subTransactionRows.map((row) => ({
+              ...row,
+              amount: row.amount + 0,
+            })),
+          })),
+        };
+
+        res = await request(ctx.app)
+          .patch(`/transactions/${tx.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(updateReq);
+        expect(res.status).to.equal(200);
+
+        const txAfter = await Transaction.findOne({
+          where: { id: tx.id },
+          relations: ['subTransactions', 'subTransactions.subTransactionRows'],
+        });
+        const createdAtAfter = txAfter.createdAt;
+        
+        expect(createdAtAfter.getTime()).to.equal(createdAtBefore.getTime());
+
+        res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/sales/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({
+            fromDate: monthStart.toISOString(),
+            tillDate: monthEnd.toISOString(),
+          });
+        expect(res.status).to.equal(200);
+        const reportAfter = res.body as ReportResponse;
+
+        res = await request(ctx.app)
+          .get(`/users/${creditor.id}/transactions/sales/report`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .query({
+            fromDate: monthEnd.toISOString(),
+            tillDate: nextMonthEnd.toISOString(),
+          });
+        expect(res.status).to.equal(200);
+        const reportNextMonth = res.body as ReportResponse;
+
+        expect(reportAfter.totalInclVat.amount).to.equal(amountBefore);
+        expect(reportNextMonth.totalInclVat.amount).to.equal(0);
+      });
     });
   });
   describe('GET /users/{id}transactions/purchases/report', () => {
