@@ -378,8 +378,8 @@ export class SalesReportService extends ReportService {
   protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
     return query
       .where('subTransaction.toId = :userId', { userId: forId })
-      .andWhere('subTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
-      .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
+      .andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
   async getReport(parameters: ReportParameters): Promise<SalesReport> {
@@ -393,8 +393,8 @@ export class BuyerReportService extends ReportService {
   protected addSubTransactionRowFilter<T>(query: SelectQueryBuilder<T>, forId: number, fromDate: Date, tillDate: Date): SelectQueryBuilder<T> {
     return query
       .where('transaction.fromId = :userId', { userId: forId })
-      .andWhere('subTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
-      .andWhere('subTransaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
+      .andWhere('transaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('transaction.createdAt < :tillDate', { tillDate: toMySQLString(tillDate) });
   }
 
   async getReport(parameters: ReportParameters): Promise<BuyerReport> {
