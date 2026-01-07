@@ -303,6 +303,7 @@ export default class AuthenticationSecureController extends BaseController {
    * @summary Secure NFC authentication that requires POS user authentication
    * @operationId secureNfcAuthentication
    * @tags authenticate - Operations of authentication controller
+   * @security JWT
    * @param {AuthenticationSecureNfcRequest} request.body.required - The NFC login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
