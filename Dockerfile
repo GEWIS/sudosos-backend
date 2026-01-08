@@ -6,7 +6,7 @@ RUN npm install
 COPY ./ ./
 RUN npm run build \
  && npm run swagger
-RUN npm ci --production
+RUN npm ci --production --ignore-scripts
 
 # The target image that will be run
 FROM node:18-alpine AS target
