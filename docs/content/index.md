@@ -11,14 +11,14 @@ hero:
     link: https://github.com/GEWIS/sudosos-frontend/blob/develop/apps/dashboard/src/assets/img/bier.png
   actions:
     - theme: brand
-      text: Getting Started
-      link: /getting-started
+      text: SudoSOS 101
+      link: /general/0-welcome-to-sudosos
+    - theme: alt
+      text: Contributing
+      link: /contributing
     - theme: alt
       text: Documentation
       link: /documentation
-    - theme: alt
-      text: GitHub
-      link: https://github.com/GEWIS/sudosos-backend
 
 features:
   - title: Swagger API Documentation
