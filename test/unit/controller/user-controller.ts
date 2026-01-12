@@ -2319,7 +2319,12 @@ describe('UserController', (): void => {
         const txDate = new Date(now.getFullYear(), now.getMonth() - 1, 15, 12, 0, 0);
 
         const req = await createValidTransactionRequest(debtor.id, creditor.id);
-        const tx = await new TransactionService().createTransaction(req);
+        const transactionService = new TransactionService();
+        const verification = await transactionService.verifyTransaction(req);
+        if (!verification.valid || !verification.context) {
+          throw new Error('Invalid transaction');
+        }
+        const tx = await transactionService.createTransaction(req, verification.context);
 
         // Set transaction createdAt to previous month
         const dateStr = toMySQLString(txDate);

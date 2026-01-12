@@ -36,7 +36,6 @@ import { TransactionResponse } from './response/transaction-response';
 import { parseRequestPagination } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
-import User from '../entity/user/user';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 import UserService from '../service/user-service';
@@ -184,19 +183,29 @@ export default class TransactionController extends BaseController {
         }
       }
 
-      if (!await new TransactionService().verifyTransaction(body)) {
+      const transactionService = new TransactionService();
+      
+      // Verify transaction and get context with loaded entities
+      const verification = await transactionService.verifyTransaction(body);
+      
+      if (!verification.valid || !verification.context) {
         res.status(400).json('Invalid transaction.');
         return;
       }
 
-      // verify balance if user cannot have negative balance.
-      const user = await User.findOne({ where: { id: body.from } });
-      if (!user.canGoIntoDebt && !await new TransactionService().verifyBalance(body)) {
+      const { context } = verification;
+      const fromUser = context.users.get(body.from)!;
+
+      // verify balance if user cannot have negative balance, using cached total cost
+      if (!fromUser.canGoIntoDebt && !await transactionService.verifyBalance(body, context.totalCost)) {
         res.status(403).json('Insufficient balance.');
-      } else {
-        // create the transaction
-        res.json(await new TransactionService().createTransaction(body));
+        return;
       }
+
+      // create the transaction using context
+      const result = await transactionService.createTransaction(body, context);
+      
+      res.json(result);
     } catch (error) {
       this.logger.error('Could not create transaction:', error);
       res.status(500).json('Internal server error.');
@@ -258,13 +267,15 @@ export default class TransactionController extends BaseController {
     // handle request
     try {
       if (await Transaction.findOne({ where: { id: parseInt(id, 10) } })) {
-        if (await new TransactionService().verifyTransaction(body, true)) {
-          res.status(200).json(await new TransactionService().updateTransaction(
-            parseInt(id, 10), body,
-          ));
-        } else {
+        const transactionService = new TransactionService();
+        const verification = await transactionService.verifyTransaction(body, true);
+        if (!verification.valid || !verification.context) {
           res.status(400).json('Invalid transaction.');
+          return;
         }
+        res.status(200).json(await transactionService.updateTransaction(
+          parseInt(id, 10), body,
+        ));
       } else {
         res.status(404).json('Transaction not found.');
       }
@@ -360,12 +371,12 @@ export default class TransactionController extends BaseController {
         }
       }
 
-      if (await new TransactionService().verifyTransaction(body)) {
-        res.status(200).json(true);
-      } else  {
+      const verification = await new TransactionService().verifyTransaction(body);
+      if (!verification.valid) {
         res.status(400).json('Transaction is invalid');
         return;
       }
+      res.status(200).json(true);
     } catch (error) {
       this.logger.error('Could not validate transaction:', error);
       res.status(500).json('Internal server error');

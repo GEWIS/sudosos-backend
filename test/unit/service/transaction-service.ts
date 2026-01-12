@@ -168,7 +168,7 @@ describe('TransactionService', (): void => {
 
   describe('Verify transaction', () => {
     it('should return true if the transaction request is valid', async () => {
-      expect(await new TransactionService().verifyTransaction(ctx.validTransReq)).to.be.true;
+      expect((await new TransactionService().verifyTransaction(ctx.validTransReq)).valid).to.be.true;
     });
     it('should return false if the point of sale does not exist', async () => {
       // undefined pos
@@ -176,14 +176,14 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq,
         pointOfSale: undefined,
       } as TransactionRequest;
-      expect(await new TransactionService().verifyTransaction(badPOSReq), 'undefined accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badPOSReq)).valid, 'undefined accepted').to.be.false;
 
       // non existent pos
       badPOSReq.pointOfSale = {
         revision: 1,
         id: 12345,
       };
-      expect(await new TransactionService().verifyTransaction(badPOSReq), 'non existent accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badPOSReq)).valid, 'non existent accepted').to.be.false;
     });
     it('should return false if the point of sale is soft deleted', async () => {
       const pointOfSale = ctx.pointsOfSale.find((p) => p.pointOfSale.deletedAt != null && p.revision === p.pointOfSale.currentRevision);
@@ -195,7 +195,7 @@ describe('TransactionService', (): void => {
           revision: pointOfSale.revision,
         },
       } as TransactionRequest;
-      expect(await new TransactionService().verifyTransaction(badPOSReq), 'soft deleted point of sale accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badPOSReq)).valid, 'soft deleted point of sale accepted').to.be.false;
     });
     it('should return false if a specified top level user is invalid', async () => {
       // undefined from
@@ -203,30 +203,30 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq,
         from: undefined,
       } as TransactionRequest;
-      expect(await new TransactionService().verifyTransaction(badFromReq), 'undefined from accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badFromReq)).valid, 'undefined from accepted').to.be.false;
 
       // non existent from user
       badFromReq.from = 0;
-      expect(await new TransactionService().verifyTransaction(badFromReq), 'non existent from accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badFromReq)).valid, 'non existent from accepted').to.be.false;
 
       // inactive from user
       badFromReq.from = 5;
-      expect(await new TransactionService().verifyTransaction(badFromReq), 'inactive from accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badFromReq)).valid, 'inactive from accepted').to.be.false;
 
       // undefined createdBy
       const badCreatedByReq = {
         ...ctx.validTransReq,
         createdBy: undefined,
       } as TransactionRequest;
-      expect(await new TransactionService().verifyTransaction(badCreatedByReq), 'undefined createdBy accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badCreatedByReq)).valid, 'undefined createdBy accepted').to.be.false;
 
       // non existent createdBy user
       badCreatedByReq.createdBy = 0;
-      expect(await new TransactionService().verifyTransaction(badCreatedByReq), 'nonexistent createdBy accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badCreatedByReq)).valid, 'nonexistent createdBy accepted').to.be.false;
 
       // inactive createdBy user
       badCreatedByReq.createdBy = 5;
-      expect(await new TransactionService().verifyTransaction(badCreatedByReq), 'inactive createdBy accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badCreatedByReq)).valid, 'inactive createdBy accepted').to.be.false;
     });
     it('should return false if the price is set incorrectly', async () => {
       // undefined price
@@ -234,7 +234,7 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq,
         totalPriceInclVat: undefined,
       } as TransactionRequest;
-      expect(await new TransactionService().verifyTransaction(badPriceReq), 'undefined accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badPriceReq)).valid, 'undefined accepted').to.be.false;
 
       // incorrect price
       badPriceReq.totalPriceInclVat = {
@@ -242,7 +242,7 @@ describe('TransactionService', (): void => {
         currency: 'EUR',
         precision: 2,
       };
-      expect(await new TransactionService().verifyTransaction(badPriceReq), 'incorrect accepted').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badPriceReq)).valid, 'incorrect accepted').to.be.false;
     });
     it('should return false if from user is an organ', async () => {
       const organ = ctx.users[ctx.users.findIndex((u) => u.type === UserType.ORGAN)];
@@ -250,7 +250,7 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq,
         from: organ.id,
       };
-      expect(await new TransactionService().verifyTransaction(badFromReq), 'organ accepted as from-user').to.be.false;
+      expect((await new TransactionService().verifyTransaction(badFromReq)).valid, 'organ accepted as from-user').to.be.false;
     });
     it('should return false if an involved user has not accepted TOS', async () => {
       const user = Object.assign(new User(), {
@@ -267,13 +267,13 @@ describe('TransactionService', (): void => {
         ...ctx.validTransReq,
         from: user.id,
       };
-      expect(await new TransactionService().verifyTransaction(badFromReq)).to.be.false;
+      expect((await new TransactionService().verifyTransaction(badFromReq)).valid).to.be.false;
 
       const badCreatedByReq: TransactionRequest = {
         ...ctx.validTransReq,
         createdBy: user.id,
       };
-      expect(await new TransactionService().verifyTransaction(badCreatedByReq)).to.be.false;
+      expect((await new TransactionService().verifyTransaction(badCreatedByReq)).valid).to.be.false;
 
       const badToReq: TransactionRequest = {
         ...ctx.validTransReq,
@@ -284,23 +284,37 @@ describe('TransactionService', (): void => {
           },
         ],
       };
-      expect(await new TransactionService().verifyTransaction(badToReq)).to.be.false;
+      expect((await new TransactionService().verifyTransaction(badToReq)).valid).to.be.false;
     });
   });
 
   describe('Verifiy sub transaction', () => {
     it('should return true if the sub transaction request is valid', async () => {
-      expect(await new TransactionService().verifySubTransaction(
-        ctx.validTransReq.subTransactions[0], ctx.pointsOfSale[0],
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](
+        ctx.validTransReq.subTransactions[0], ctx.pointsOfSale[0], verification.context,
       )).to.be.true;
     });
     it('should return false if the container is invalid', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined container
       const badContainerReq = {
         ...ctx.validTransReq.subTransactions[0],
         container: undefined,
       } as SubTransactionRequest;
-      expect(await new TransactionService().verifySubTransaction(badContainerReq, ctx.pointsOfSale[0]), 'undefined accepted')
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badContainerReq, ctx.pointsOfSale[0], context), 'undefined accepted')
         .to.be.false;
 
       // non existent container
@@ -308,7 +322,8 @@ describe('TransactionService', (): void => {
         revision: 1,
         id: 12345,
       };
-      expect(await new TransactionService().verifySubTransaction(badContainerReq, ctx.pointsOfSale[0]), 'non existent accepted')
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badContainerReq, ctx.pointsOfSale[0], context), 'non existent accepted')
         .to.be.false;
 
       // container not in point of sale
@@ -318,10 +333,18 @@ describe('TransactionService', (): void => {
         revision: badContainer.revision,
         id: badContainer.containerId,
       };
-      expect(await new TransactionService().verifySubTransaction(badContainerReq, ctx.pointsOfSale[0]), 'container not in point of sale accepted')
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badContainerReq, ctx.pointsOfSale[0], context), 'container not in point of sale accepted')
         .to.be.false;
     });
     it('should return false if the container is soft deleted', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       const container = ctx.containers.find((c) => c.container.deletedAt != null && c.revision === c.container.currentRevision);
       const badContainerReq = {
         ...ctx.validTransReq.subTransactions[0],
@@ -330,32 +353,51 @@ describe('TransactionService', (): void => {
           revision: container.revision,
         },
       } as SubTransactionRequest;
-      expect(await new TransactionService().verifySubTransaction(badContainerReq, ctx.pointsOfSale[0]), 'soft deleted container accepted')
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badContainerReq, ctx.pointsOfSale[0], context), 'soft deleted container accepted')
         .to.be.false;
     });
     it('should return false if the to user is invalid', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined to
       const badToReq = {
         ...ctx.validTransReq.subTransactions[0],
         to: undefined,
       } as SubTransactionRequest;
-      expect(await new TransactionService().verifySubTransaction(badToReq, ctx.pointsOfSale[0]), 'undefined to accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badToReq, ctx.pointsOfSale[0], context), 'undefined to accepted').to.be.false;
 
       // non existent to user
       badToReq.to = 0;
-      expect(await new TransactionService().verifySubTransaction(badToReq, ctx.pointsOfSale[0]), 'non existent to accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badToReq, ctx.pointsOfSale[0], context), 'non existent to accepted').to.be.false;
 
       // inactive to user
       badToReq.to = 5;
-      expect(await new TransactionService().verifySubTransaction(badToReq, ctx.pointsOfSale[0]), 'inactive to accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badToReq, ctx.pointsOfSale[0], context), 'inactive to accepted').to.be.false;
     });
     it('should return false if the price is set incorrectly', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined price
       const badPriceReq = {
         ...ctx.validTransReq.subTransactions[0],
         totalPriceInclVat: undefined,
       } as SubTransactionRequest;
-      expect(await new TransactionService().verifySubTransaction(badPriceReq, ctx.pointsOfSale[0]), 'undefined accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badPriceReq, ctx.pointsOfSale[0], context), 'undefined accepted').to.be.false;
 
       // incorrect price
       badPriceReq.totalPriceInclVat = {
@@ -363,30 +405,46 @@ describe('TransactionService', (): void => {
         currency: 'EUR',
         precision: 2,
       };
-      expect(await new TransactionService().verifySubTransaction(badPriceReq, ctx.pointsOfSale[0]), 'incorrect accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransaction'](badPriceReq, ctx.pointsOfSale[0], context), 'incorrect accepted').to.be.false;
     });
   });
 
   describe('Verifiy sub transaction row', () => {
     it('should return true if the sub transaction row request is valid', async () => {
-      expect(await new TransactionService().verifySubTransactionRow(
-        ctx.validTransReq.subTransactions[0].subTransactionRows[0], ctx.containers[0],
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](
+        ctx.validTransReq.subTransactions[0].subTransactionRows[0], ctx.containers[0], verification.context,
       )).to.be.true;
     });
     it('should return false if the product is invalid', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined product
       const badProductReq = {
         ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         product: undefined,
       } as SubTransactionRowRequest;
-      expect(await new TransactionService().verifySubTransactionRow(badProductReq, ctx.containers[0]), 'undefined product accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badProductReq, ctx.containers[0], context), 'undefined product accepted').to.be.false;
 
       // non existent product
       badProductReq.product = {
         revision: 1,
         id: 12345,
       };
-      expect(await new TransactionService().verifySubTransactionRow(badProductReq, ctx.containers[0]), 'non existent product accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badProductReq, ctx.containers[0], context), 'non existent product accepted').to.be.false;
 
       // product not in container
       const badProduct = ctx.products.find((p1) => !ctx.pointsOfSale[0].containers
@@ -396,9 +454,17 @@ describe('TransactionService', (): void => {
         revision: badProduct.revision,
         id: badProduct.productId,
       };
-      expect(await new TransactionService().verifySubTransactionRow(badProductReq, ctx.containers[0]), 'product not in container accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badProductReq, ctx.containers[0], context), 'product not in container accepted').to.be.false;
     });
     it('should return false if the product is soft deleted', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       const product = ctx.products.find((p) => p.product.deletedAt != null && p.revision === p.product.currentRevision);
       const badProductReq = {
         ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
@@ -407,31 +473,50 @@ describe('TransactionService', (): void => {
           revision: product.revision,
         },
       } as SubTransactionRowRequest;
-      expect(await new TransactionService().verifySubTransactionRow(badProductReq, ctx.containers[0]), 'soft deleted product accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badProductReq, ctx.containers[0], context), 'soft deleted product accepted').to.be.false;
     });
     it('should return false if the specified amount of the product is invalid', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined amount
       const badAmountReq = {
         ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         amount: undefined,
       } as SubTransactionRowRequest;
-      expect(await new TransactionService().verifySubTransactionRow(badAmountReq, ctx.containers[0]), 'undefined amount accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badAmountReq, ctx.containers[0], context), 'undefined amount accepted').to.be.false;
 
       // amount not greater than 0
       badAmountReq.amount = 0;
-      expect(await new TransactionService().verifySubTransactionRow(badAmountReq, ctx.containers[0]), 'amount not greater than 0 accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badAmountReq, ctx.containers[0], context), 'amount not greater than 0 accepted').to.be.false;
 
       // amount not an integer
       badAmountReq.amount = 1.1;
-      expect(await new TransactionService().verifySubTransactionRow(badAmountReq, ctx.containers[0]), 'non integer amount accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badAmountReq, ctx.containers[0], context), 'non integer amount accepted').to.be.false;
     });
     it('should return false if the price is set incorrectly', async () => {
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const context = verification.context;
+
       // undefined price
       const badPriceReq = {
         ...ctx.validTransReq.subTransactions[0].subTransactionRows[0],
         totalPriceInclVat: undefined,
       } as SubTransactionRowRequest;
-      expect(await new TransactionService().verifySubTransactionRow(badPriceReq, ctx.containers[0]), 'undefined accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badPriceReq, ctx.containers[0], context), 'undefined accepted').to.be.false;
 
       // incorrect price
       badPriceReq.totalPriceInclVat = {
@@ -439,7 +524,8 @@ describe('TransactionService', (): void => {
         currency: 'EUR',
         precision: 2,
       };
-      expect(await new TransactionService().verifySubTransactionRow(badPriceReq, ctx.containers[0]), 'incorrect accepted').to.be.false;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      expect(await transactionService['verifySubTransactionRow'](badPriceReq, ctx.containers[0], context), 'incorrect accepted').to.be.false;
     });
   });
 
@@ -724,7 +810,12 @@ describe('TransactionService', (): void => {
   describe('Create a transaction', () => {
     it('should return a transaction response corresponding to the saved transaction', async () => {
       // check response without prices
-      const savedTransaction = await new TransactionService().createTransaction(ctx.validTransReq);
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const savedTransaction = await transactionService.createTransaction(ctx.validTransReq, verification.context);
       const correctResponse = await new TransactionService().getSingleTransaction(savedTransaction.id);
       expect(savedTransaction, 'request not saved correctly').to.eql(correctResponse);
 
@@ -748,7 +839,12 @@ describe('TransactionService', (): void => {
       user.inactiveNotificationSend = true;
       await user.save();
 
-      await new TransactionService().createTransaction(ctx.validTransReq);
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      await transactionService.createTransaction(ctx.validTransReq, verification.context);
 
       const updatedUser = await User.findOne({ where: { id: ctx.validTransReq.from } });
       expect(updatedUser.inactiveNotificationSend).to.be.eq(false);
@@ -757,7 +853,12 @@ describe('TransactionService', (): void => {
 
   describe('Delete a transaction', () => {
     it('should return a transaction response corresponding to the deleted transaction', async () => {
-      const savedTransaction = await new TransactionService().createTransaction(ctx.validTransReq);
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const savedTransaction = await transactionService.createTransaction(ctx.validTransReq, verification.context);
       const deletedTransaction = await new TransactionService().deleteTransaction(savedTransaction.id);
       expect(deletedTransaction, 'return value incorrect').to.eql(savedTransaction);
 
@@ -796,7 +897,12 @@ describe('TransactionService', (): void => {
   describe('Update a transaction', () => {
     it('should return a transaction response corresponding to the updated transaction', async () => {
       // create a transaction
-      const savedTransaction = await new TransactionService().createTransaction(ctx.validTransReq);
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(ctx.validTransReq);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      const savedTransaction = await transactionService.createTransaction(ctx.validTransReq, verification.context);
 
       const updateReq = { ...ctx.validTransReq };
       const price = Math.round(updateReq.subTransactions[0].subTransactionRows[0].totalPriceInclVat.amount / updateReq.subTransactions[0].subTransactionRows[0].amount);
@@ -860,7 +966,7 @@ describe('TransactionService', (): void => {
           const transaction = await createValidTransactionRequest(
             debtor.id, creditor.id,
           );
-          expect(await new TransactionService().verifyTransaction(transaction)).to.be.true;
+          expect((await new TransactionService().verifyTransaction(transaction)).valid).to.be.true;
         });
     });
   });

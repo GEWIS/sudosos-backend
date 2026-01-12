@@ -103,6 +103,18 @@ export interface TransactionFilterParameters {
   excludeFromId?: number,
 }
 
+/**
+ * Context object to cache loaded entities and calculated values during transaction processing
+ */
+interface TransactionContext {
+  users: Map<number, User>;
+  pointOfSale?: PointOfSaleRevision;
+  containers: Map<string, ContainerRevision>;
+  products: Map<string, ProductRevision>;
+  totalCost?: Dinero.Dinero;
+  subTransactionCosts?: Map<number, Dinero.Dinero>; // Indexed by subtransaction index
+}
+
 export function parseGetTransactionsFilters(req: RequestWithToken): TransactionFilterParameters {
   if ((req.query.pointOfSaleRevision && !req.query.pointOfSaleId)
     || (req.query.containerRevision && !req.query.containerId)
@@ -138,43 +150,82 @@ export default class TransactionService extends WithManager {
    * Gets total cost of a transaction with values stored in the database
    * @returns {DineroObject.model} - the total cost of a transaction
    * @param rows
+   * @param productMap - Optional map of pre-loaded products to avoid queries
    */
-  public async getTotalCost(rows: SubTransactionRowRequest[]): Promise<Dinero.Dinero> {
-    // get costs of individual rows
-    const rowCosts = await Promise.all(rows.map(async (row) => {
-      const options =  await ProductService.getOptions({
-        productRevision: row.product.revision,
-        productId: row.product.id,
-        allowDeleted: true,
+  public async getTotalCost(
+    rows: SubTransactionRowRequest[],
+    productMap?: Map<string, ProductRevision>,
+  ): Promise<Dinero.Dinero> {
+    // If product map is provided, use it; otherwise batch load all products
+    let products: Map<string, ProductRevision>;
+    
+    if (productMap) {
+      products = productMap;
+    } else {
+      // Batch load all products in a single query
+      const productKeys = rows.map((row) => ({ id: row.product.id, revision: row.product.revision }));
+      const uniqueProducts = Array.from(
+        new Map(productKeys.map((p) => [`${p.id}-${p.revision}`, p])).values(),
+      );
+
+      if (uniqueProducts.length === 0) {
+        return dinero({ amount: 0 });
+      }
+
+      // Batch load all products in parallel using Promise.all
+      const allProducts = await Promise.all(
+        uniqueProducts.map(async (p) => {
+          const options = await ProductService.getOptions({
+            productRevision: p.revision,
+            productId: p.id,
+            allowDeleted: true,
+          });
+          return this.manager.findOne(ProductRevision, options);
+        }),
+      );
+      
+      // Filter out null results
+      const validProducts = allProducts.filter((p): p is ProductRevision => p !== null);
+
+      products = new Map();
+      validProducts.forEach((product) => {
+        products.set(`${product.productId}-${product.revision}`, product);
       });
+    }
 
-      const rowCost = await this.manager.findOne(ProductRevision, options)
-        .then((product) => product.priceInclVat.multiply(row.amount));
-
-      return rowCost;
-    }));
-
-    // sum the costs
-    return rowCosts.reduce((total, current) => total.add(current), dinero({ amount: 0 }));
+    // Calculate total cost in a single pass using reduce
+    return rows.reduce((total, row) => {
+      const key = `${row.product.id}-${row.product.revision}`;
+      const product = products.get(key);
+      if (!product) {
+        return total; // Skip missing products instead of adding 0
+      }
+      return total.add(product.priceInclVat.multiply(row.amount));
+    }, dinero({ amount: 0 }));
   }
 
   /**
    * Verifies whether a user has a sufficient balance to complete the transaction
    * @param {TransactionRequest.model} req - the transaction request to verify
+   * @param totalCost - Optional pre-calculated total cost to avoid recalculation
    * @returns {boolean} - whether user's balance is ok or not
    */
-  public async verifyBalance(req: TransactionRequest): Promise<boolean> {
-    const rows: SubTransactionRowRequest[] = [];
-    req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
-
-    // check whether from user has sufficient balance
-    const totalCost = await this.getTotalCost(rows);
+  public async verifyBalance(req: TransactionRequest, totalCost?: Dinero.Dinero): Promise<boolean> {
+    let cost: Dinero.Dinero;
+    
+    if (totalCost) {
+      cost = totalCost;
+    } else {
+      const rows: SubTransactionRowRequest[] = [];
+      req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
+      cost = await this.getTotalCost(rows);
+    }
 
     // get user balance and compare
     const userBalance = dinero((await new BalanceService().getBalance(req.from)).amount);
 
     // return whether user balance is sufficient to complete the transaction
-    return userBalance.greaterThanOrEqual(totalCost);
+    return userBalance.greaterThanOrEqual(cost);
   }
 
   /**
@@ -189,13 +240,16 @@ export default class TransactionService extends WithManager {
   }
 
   /**
-   * Verifies whether a sub transaction row within a sub transaction is valid
+   * Verifies whether a sub transaction row within a sub transaction is valid (using context)
    * @param {SubTransactionRowRequest.model} req - the sub transaction row request to verify
    * @param container
+   * @param context - transaction context with loaded entities
    * @returns {boolean} - whether sub transaction row is ok or not
    */
-  public async verifySubTransactionRow(
-    req: SubTransactionRowRequest, container: ContainerRevision,
+  private async verifySubTransactionRow(
+    req: SubTransactionRowRequest,
+    container: ContainerRevision,
+    context: TransactionContext,
   ): Promise<boolean> {
     // check if fields provided in subtransactionrow
     if (!req.product || !req.totalPriceInclVat
@@ -211,32 +265,32 @@ export default class TransactionService extends WithManager {
       return false;
     }
 
-    // check if product exists
-    const options = await ProductService.getOptions({
-      productRevision: req.product.revision,
-      productId: req.product.id,
-    });
-    options.withDeleted = false;
-
-    const product = await this.manager.findOne(ProductRevision, options);
+    // check if product exists using context
+    const productKey = `${req.product.id}-${req.product.revision}`;
+    const product = context.products.get(productKey);
     if (!product) {
       return false;
     }
 
-    // check whether the request price corresponds to the database price
-    const cost = await this.getTotalCost([req]);
+    // check whether the request price corresponds to the database price using cached product
+    const cost = await this.getTotalCost([req], context.products);
     return TransactionService.dineroEq(req.totalPriceInclVat, cost);
   }
 
+
   /**
-   * Verifies whether a sub transaction within a transaction is valid
+   * Verifies whether a sub transaction within a transaction is valid (using context)
    * @param {SubTransactionRequest.model} req - the sub transaction request to verify
    * @param {PointOfSaleRevision.model} pointOfSale - the point of sale in the request
+   * @param context - transaction context with loaded entities
    * @param isUpdate
    * @returns {boolean} - whether sub transaction is ok or not
    */
-  public async verifySubTransaction(
-    req: SubTransactionRequest, pointOfSale: PointOfSaleRevision, isUpdate?: boolean,
+  private async verifySubTransaction(
+    req: SubTransactionRequest,
+    pointOfSale: PointOfSaleRevision,
+    context: TransactionContext,
+    isUpdate?: boolean,
   ): Promise<boolean> {
     // check if fields provided in the transaction
     if (!req.to || !req.container || !req.totalPriceInclVat
@@ -250,83 +304,134 @@ export default class TransactionService extends WithManager {
       return false;
     }
 
-    // check if to user exists, check if they are active in database if the call is not an update
-    const user = await this.manager.findOne(User, { where: { id: req.to } });
+    // check if to user exists using context
+    const user = context.users.get(req.to);
     if (!user || (!isUpdate && !user.active)) {
       return false;
     }
 
-    // check whether the request price corresponds to the database price
+    // check whether the request price corresponds to the database price using cached products
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactionRows.forEach((row) => rows.push(row));
-    const cost = await this.getTotalCost(rows);
+    const cost = await this.getTotalCost(rows, context.products);
     if (!TransactionService.dineroEq(req.totalPriceInclVat, cost)) {
       return false;
     }
 
-    // check if container exists in database and get products for subtransactionrow check
-    const container = await this.manager.findOne(ContainerRevision, {
-      where: {
-        revision: req.container.revision,
-        container: { id: req.container.id, deletedAt: IsNull() },
-      },
-      relations: ['container', 'products'],
-    });
-
+    // get container from context
+    const containerKey = `${req.container.id}-${req.container.revision}`;
+    const container = context.containers.get(containerKey);
     if (!container) {
       return false;
     }
 
-    // verify subtransaction rows
+    // verify subtransaction rows using context
     const verification = await Promise.all(req.subTransactionRows.map(
-      async (row) => this.verifySubTransactionRow(row, container),
+      async (row) => this.verifySubTransactionRow(row, container, context),
     ));
 
     return !verification.includes(false);
   }
 
+
   /**
-   * Verifies whether a transaction is valid
+   * Verifies whether a transaction is valid and returns context with loaded entities
    * @param {TransactionRequest.model} req - the transaction request to verify
    * @param isUpdate
-   * @returns {boolean} - whether transaction is ok or not
+   * @returns {Promise<{valid: boolean, context?: TransactionContext}>} - verification result and context (context is always provided if valid)
    */
-  public async verifyTransaction(req: TransactionRequest, isUpdate?: boolean):
-  Promise<boolean> {
+  public async verifyTransaction(
+    req: TransactionRequest,
+    isUpdate?: boolean,
+  ): Promise<{ valid: boolean; context?: TransactionContext }> {
+    const context: TransactionContext = {
+      users: new Map(),
+      containers: new Map(),
+      products: new Map(),
+    };
+
     // check fields provided in the transaction
     if (!req.from || !req.createdBy
         || !req.subTransactions || req.subTransactions.length === 0
         || !req.pointOfSale || !req.totalPriceInclVat) {
-      return false;
+      return { valid: false };
     }
 
-    // check existence of users and whether they are active
-    const ids: number[] = [req.from];
-    if (req.createdBy !== req.from) {
-      ids.push(req.createdBy);
-    }
+    // Collect all user IDs needed
+    const userIds = new Set<number>([req.from, req.createdBy]);
+    req.subTransactions.forEach((sub) => {
+      if (sub.to) {
+        userIds.add(sub.to);
+      }
+    });
 
-    // don't check active users if verification is done on an update
-    const users = await this.manager.find(User, { where: { id: In(ids) } });
-    if (users.length !== ids.length
+    // Batch load all users
+    const users = await this.manager.find(User, { where: { id: In(Array.from(userIds)) } });
+    if (users.length !== userIds.size
       || (!isUpdate && !users.every((user) => user.active && user.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED))) {
-      return false;
+      return { valid: false };
     }
 
-    const fromUser = await this.manager.findOne(User, { where: { id: req.from } });
-    if (fromUser.type === UserType.ORGAN) {
-      return false;
+    users.forEach((user) => context.users.set(user.id, user));
+
+    const fromUser = context.users.get(req.from);
+    if (!fromUser || fromUser.type === UserType.ORGAN) {
+      return { valid: false };
     }
 
-    // check whether the request price corresponds to the database price
+    // Collect all product IDs/revisions for batch loading
     const rows: SubTransactionRowRequest[] = [];
     req.subTransactions.forEach((sub) => sub.subTransactionRows.forEach((row) => rows.push(row)));
-    const cost = await this.getTotalCost(rows);
-    if (!TransactionService.dineroEq(req.totalPriceInclVat, cost)) {
-      return false;
+
+    // Batch load all products in parallel using Promise.all
+    const productKeys = rows.map((row) => ({ id: row.product.id, revision: row.product.revision }));
+    const uniqueProducts = Array.from(
+      new Map(productKeys.map((p) => [`${p.id}-${p.revision}`, p])).values(),
+    );
+
+    if (uniqueProducts.length > 0) {
+      const allProducts = await Promise.all(
+        uniqueProducts.map(async (p) => {
+          const options = await ProductService.getOptions({
+            productRevision: p.revision,
+            productId: p.id,
+            allowDeleted: true,
+          });
+          return this.manager.findOne(ProductRevision, options);
+        }),
+      );
+      
+      // Filter out null results and add to context
+      allProducts
+        .filter((p): p is ProductRevision => p !== null)
+        .forEach((product) => {
+          context.products.set(`${product.productId}-${product.revision}`, product);
+        });
     }
 
-    // check if point of sale exists in database and get containers for subtransaction check
+    // Calculate total cost using loaded products
+    const cost = await this.getTotalCost(rows, context.products);
+    context.totalCost = cost;
+    if (!TransactionService.dineroEq(req.totalPriceInclVat, cost)) {
+      return { valid: false };
+    }
+
+    // Calculate cost per subtransaction and cache in context
+    context.subTransactionCosts = new Map<number, Dinero.Dinero>();
+    req.subTransactions.forEach((sub, index) => {
+      const subRows = sub.subTransactionRows;
+      const subCost = subRows.reduce((total, row) => {
+        const productKey = `${row.product.id}-${row.product.revision}`;
+        const product = context.products.get(productKey);
+        if (product) {
+          return total.add(product.priceInclVat.multiply(row.amount));
+        }
+        return total;
+      }, dinero({ amount: 0 }));
+      context.subTransactionCosts.set(index, subCost);
+    });
+
+    // Load point of sale
     const pointOfSale = await this.manager.findOne(PointOfSaleRevision, {
       where: {
         revision: req.pointOfSale.revision,
@@ -336,24 +441,64 @@ export default class TransactionService extends WithManager {
     });
 
     if (!pointOfSale) {
-      return false;
+      return { valid: false };
+    }
+    context.pointOfSale = pointOfSale;
+
+    // Load all containers
+    const containerKeys = req.subTransactions.map((sub) => ({
+      id: sub.container.id,
+      revision: sub.container.revision,
+    }));
+    const uniqueContainers = Array.from(
+      new Map(containerKeys.map((c) => [`${c.id}-${c.revision}`, c])).values(),
+    );
+
+    // Batch load all containers in parallel using Promise.all
+    const allContainers = await Promise.all(
+      uniqueContainers.map(async ({ id, revision }) => {
+        return this.manager.findOne(ContainerRevision, {
+          where: {
+            revision,
+            container: { id, deletedAt: IsNull() },
+          },
+          relations: ['container', 'products'],
+        });
+      }),
+    );
+    
+    // Filter out null results and add to context
+    allContainers
+      .filter((c): c is ContainerRevision => c !== null)
+      .forEach((container) => {
+        context.containers.set(`${container.containerId}-${container.revision}`, container);
+      });
+
+    // Verify subtransactions using context
+    const verification = await Promise.all(req.subTransactions.map(
+      async (sub) => this.verifySubTransaction(sub, pointOfSale, context, isUpdate),
+    ));
+    
+    if (verification.includes(false)) {
+      return { valid: false };
     }
 
-    // verify subtransactions
-    const verification = await Promise.all(req.subTransactions.map(
-      async (sub) => this.verifySubTransaction(sub, pointOfSale, isUpdate),
-    ));
-    return !verification.includes(false);
+    return { valid: true, context };
   }
+
 
   /**
    * Creates a transaction from a transaction request
    * @param {TransactionRequest.model} req - the transaction request to cast
+   * @param context - transaction context with loaded entities (required)
    * @param update
    * @returns {Transaction.model} - the transaction
    */
-  public async asTransaction(req: TransactionRequest, update?: Transaction):
-  Promise<Transaction | undefined> {
+  public async asTransaction(
+    req: TransactionRequest,
+    context: TransactionContext,
+    update?: Transaction,
+  ): Promise<Transaction | undefined> {
     if (!req) {
       return undefined;
     }
@@ -365,53 +510,67 @@ export default class TransactionService extends WithManager {
       updatedAt: new Date(),
     }) : Object.assign(new Transaction(), {})) as Transaction;
 
-    // get users
-    transaction.from = await this.manager.findOne(User, { where: { id: req.from } });
-    transaction.createdBy = await this.manager.findOne(User, { where: { id: req.createdBy } });
+    // get users from context
+    transaction.from = context.users.get(req.from);
+    transaction.createdBy = context.users.get(req.createdBy);
 
-    // set subtransactions
+    // set subtransactions using context
     transaction.subTransactions = await Promise.all(req.subTransactions.map(
-      async (subTransaction) => this.asSubTransaction(subTransaction),
+      async (subTransaction) => this.asSubTransaction(subTransaction, context),
     ));
 
-    // get point of sale revision
-    transaction.pointOfSale = await this.manager.findOne(PointOfSaleRevision, {
-      where: {
-        revision: req.pointOfSale.revision,
-        pointOfSale: { id: req.pointOfSale.id },
-      },
-      relations: ['pointOfSale'],
-    });
+    // get point of sale revision from context
+    transaction.pointOfSale = context.pointOfSale;
 
     return transaction;
   }
 
+
   /**
-   * Creates a transaction response from a transaction
+   * Creates a transaction response from a transaction (using cached cost)
    * @returns {TransactionResponse.model} - the transaction response
    * @param transaction
+   * @param totalCost - Optional pre-calculated total cost
+   * @param context - Optional transaction context with cached entities and costs
    */
-  public async asTransactionResponse(transaction: Transaction):
-  Promise<TransactionResponse | undefined> {
+  public async asTransactionResponse(
+    transaction: Transaction,
+    totalCost?: Dinero.Dinero,
+    context?: TransactionContext,
+  ): Promise<TransactionResponse | undefined> {
     if (!transaction) {
       return undefined;
     }
 
-    // get sub transaction rows to calculate total cost
-    const rows: SubTransactionRowRequest[] = [];
-    transaction.subTransactions.forEach(
-      (sub) => sub.subTransactionRows.forEach((row) => rows.push(
-        {
-          product: {
-            id: row.product.product.id,
-            revision: row.product.revision,
-          },
-          amount: row.amount,
-          totalPriceInclVat: undefined,
-        } as SubTransactionRowRequest,
-      )),
-    );
-    const cost = await this.getTotalCost(rows);
+    // Use cached cost if provided, otherwise calculate
+    let cost: Dinero.Dinero;
+    if (totalCost) {
+      cost = totalCost;
+    } else {
+      const rows: SubTransactionRowRequest[] = [];
+      transaction.subTransactions.forEach(
+        (sub) => sub.subTransactionRows.forEach((row) => rows.push(
+          {
+            product: {
+              id: row.product.product.id,
+              revision: row.product.revision,
+            },
+            amount: row.amount,
+            totalPriceInclVat: undefined,
+          } as SubTransactionRowRequest,
+        )),
+      );
+      cost = await this.getTotalCost(rows);
+    }
+
+    // Use cached subtransaction costs from context if available
+    const subTransactionCosts = context?.subTransactionCosts;
+    const subTransactions = await Promise.all(transaction.subTransactions.map(
+      async (subTransaction, index) => {
+        const cachedSubCost = subTransactionCosts?.get(index);
+        return this.asSubTransactionResponse(subTransaction, cachedSubCost);
+      },
+    ));
 
     return {
       id: transaction.id,
@@ -419,9 +578,7 @@ export default class TransactionService extends WithManager {
       updatedAt: transaction.updatedAt.toISOString(),
       from: parseUserToBaseResponse(transaction.from, false),
       createdBy: parseUserToBaseResponse(transaction.createdBy, false),
-      subTransactions: await Promise.all(transaction.subTransactions.map(
-        async (subTransaction) => this.asSubTransactionResponse(subTransaction),
-      )),
+      subTransactions,
       pointOfSale: parsePOSToBasePOS(transaction.pointOfSale, false),
       totalPriceInclVat: { ...cost.toObject() } as DineroObjectResponse,
     } as TransactionResponse;
@@ -430,10 +587,13 @@ export default class TransactionService extends WithManager {
   /**
    * Creates a sub transaction from a sub transaction request
    * @param {SubTransactionRequest.model} req - the sub transaction request to cast
+   * @param context - transaction context with loaded entities (required)
    * @returns {SubTransaction.model} - the sub transaction
    */
-  public async asSubTransaction(req: SubTransactionRequest):
-  Promise<SubTransaction | undefined> {
+  private async asSubTransaction(
+    req: SubTransactionRequest,
+    context: TransactionContext,
+  ): Promise<SubTransaction | undefined> {
     if (!req) {
       return undefined;
     }
@@ -441,51 +601,55 @@ export default class TransactionService extends WithManager {
     // the subtransaction
     const subTransaction = {} as SubTransaction;
 
-    // get user
-    subTransaction.to = await this.manager.findOne(User, { where: { id: req.to } });
+    // get user from context
+    subTransaction.to = context.users.get(req.to);
 
-    // get container revision
-    subTransaction.container = await this.manager.findOne(ContainerRevision, {
-      where: {
-        revision: req.container.revision,
-        container: { id: req.container.id },
-      },
-      withDeleted: true,
-      relations: ['container'],
-    });
+    // get container revision from context
+    const containerKey = `${req.container.id}-${req.container.revision}`;
+    subTransaction.container = context.containers.get(containerKey);
 
-    // sub transaction rows
+    // sub transaction rows using context
     subTransaction.subTransactionRows = await Promise.all(req.subTransactionRows.map(
-      async (row) => this.asSubTransactionRow(row, subTransaction),
+      async (row) => this.asSubTransactionRow(row, subTransaction, context),
     ));
 
     return subTransaction;
   }
 
+
   /**
    * Creates a sub transaction response from a sub transaction
    * @returns {SubTransactionResponse.model} - the sub transaction response
    * @param subTransaction
+   * @param cachedCost - Optional pre-calculated cost to avoid recalculation
    */
-  public async asSubTransactionResponse(subTransaction: SubTransaction):
-  Promise<SubTransactionResponse | undefined> {
+  public async asSubTransactionResponse(
+    subTransaction: SubTransaction,
+    cachedCost?: Dinero.Dinero,
+  ): Promise<SubTransactionResponse | undefined> {
     if (!subTransaction) {
       return undefined;
     }
 
-    // get sub transaction rows to calculate total cost
-    const rows: SubTransactionRowRequest[] = [];
-    subTransaction.subTransactionRows.forEach((row) => rows.push(
-      {
-        product: {
-          id: row.product.product.id,
-          revision: row.product.revision,
-        },
-        amount: row.amount,
-        totalPriceInclVat: undefined,
-      } as SubTransactionRowRequest,
-    ));
-    const cost = await this.getTotalCost(rows);
+    // Use cached cost if provided, otherwise calculate
+    let cost: Dinero.Dinero;
+    if (cachedCost) {
+      cost = cachedCost;
+    } else {
+      // get sub transaction rows to calculate total cost
+      const rows: SubTransactionRowRequest[] = [];
+      subTransaction.subTransactionRows.forEach((row) => rows.push(
+        {
+          product: {
+            id: row.product.product.id,
+            revision: row.product.revision,
+          },
+          amount: row.amount,
+          totalPriceInclVat: undefined,
+        } as SubTransactionRowRequest,
+      ));
+      cost = await this.getTotalCost(rows);
+    }
 
     return {
       id: subTransaction.id,
@@ -502,27 +666,27 @@ export default class TransactionService extends WithManager {
   }
 
   /**
-   * Creates a sub transaction row from a sub transaction row request
+   * Creates a sub transaction row from a sub transaction row request (using context)
    * @param {SubTransactionRowRequest.model} req - the sub transaction row request to cast
    * @param {SubTransaction.model} subTransaction - the sub transaction to connect
+   * @param context - transaction context with loaded entities
    * @returns {SubTransactionRow.model} - the sub transaction row
    */
-  public async asSubTransactionRow(
-    req: SubTransactionRowRequest, subTransaction: SubTransaction,
+  private async asSubTransactionRow(
+    req: SubTransactionRowRequest,
+    subTransaction: SubTransaction,
+    context: TransactionContext,
   ): Promise<SubTransactionRow | undefined> {
     if (!req) {
       return undefined;
     }
 
-    const options = await ProductService.getOptions({
-      productRevision: req.product.revision,
-      productId: req.product.id,
-      allowDeleted: true,
-    });
-
-    const product = await this.manager.findOne(ProductRevision, options);
+    // get product from context
+    const productKey = `${req.product.id}-${req.product.revision}`;
+    const product = context.products.get(productKey);
     return { product, amount: req.amount, subTransaction } as SubTransactionRow;
   }
+
 
   /**
    * Invalidates user balance cache
@@ -762,19 +926,25 @@ export default class TransactionService extends WithManager {
   /**
    * Saves a transaction to the database, the transaction request should be verified beforehand
    * @param {TransactionRequest.model} req - the transaction request to save
-   * @returns {Transaction.model} - the saved transaction
+   * @param context - transaction context with loaded entities (required)
+   * @returns {TransactionResponse.model} - the saved transaction
    */
-  public async createTransaction(req: TransactionRequest):
-  Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req);
+  public async createTransaction(
+    req: TransactionRequest,
+    context: TransactionContext,
+  ): Promise<TransactionResponse | undefined> {
+    const transaction = await this.asTransaction(req, context);
 
-    await transaction.save();
-    if (transaction.from.inactiveNotificationSend === true) {
-      await UserService.updateUser(transaction.from.id, { inactiveNotificationSend: false });
+    // Use manager.save() instead of entity.save() for better batch performance
+    // TypeORM will handle cascade saves more efficiently with manager.save()
+    const savedTransaction = await this.manager.save(Transaction, transaction);
+    
+    if (savedTransaction.from.inactiveNotificationSend === true) {
+      await UserService.updateUser(savedTransaction.from.id, { inactiveNotificationSend: false });
     }
 
-    // save transaction and return response
-    return this.asTransactionResponse(transaction);
+    // save transaction and return response using cached cost and context
+    return this.asTransactionResponse(savedTransaction, context.totalCost, context);
   }
 
   /**
@@ -808,7 +978,14 @@ export default class TransactionService extends WithManager {
    */
   public async updateTransaction(id: number, req: TransactionRequest):
   Promise<TransactionResponse | undefined> {
-    const transaction = await this.asTransaction(req, await this.manager.findOne(Transaction, { where: { id } }));
+    // Verify and get context
+    const verification = await this.verifyTransaction(req, true);
+    if (!verification.valid || !verification.context) {
+      return undefined;
+    }
+
+    const existingTransaction = await this.manager.findOne(Transaction, { where: { id } });
+    const transaction = await this.asTransaction(req, verification.context, existingTransaction);
 
     // delete old transaction
     await this.deleteTransaction(id);

@@ -154,7 +154,12 @@ export async function requestToTransaction(
   let total = 0;
   await Promise.all(
     transactionRequests.map(async (t) => {
-      const transactionResponse = await new TransactionService().createTransaction(t);
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(t);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in factory');
+      }
+      const transactionResponse = await transactionService.createTransaction(t, verification.context);
       transactions.push({
         tId: transactionResponse.id,
         amount: transactionResponse.totalPriceInclVat.amount,
