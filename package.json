@@ -31,7 +31,7 @@
     "maintenance": "ts-node src/maintenance.ts",
     "init:migrate": "npm run migrate && npm run seed && npm run maintenance",
     "init:schema": "npm run schema && npm run seed && npm run maintenance",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",
