@@ -33,6 +33,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -155,7 +156,8 @@ describe('TransactionSubscriber', () => {
 
       const amount = Math.ceil(currentBalance.getAmount() / product.priceInclVat.getAmount()) + 1 ;
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
-      await (new TransactionService()).createTransaction({
+      const transactionService = new TransactionService();
+      const transactionRequest = {
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,
@@ -179,7 +181,12 @@ describe('TransactionSubscriber', () => {
             totalPriceInclVat,
           }],
         }],
-      });
+      } as TransactionRequest;
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      await transactionService.createTransaction(transactionRequest, verification.context);
 
       expect(sendMailFake).to.be.calledOnce;
     });
@@ -197,7 +204,8 @@ describe('TransactionSubscriber', () => {
       const amount = Math.floor(currentBalance.getAmount() / product.priceInclVat.getAmount());
       expect(amount).to.be.at.least(1);
       const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
-      await (new TransactionService()).createTransaction({
+      const transactionService = new TransactionService();
+      const transactionRequest = {
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,
@@ -221,7 +229,12 @@ describe('TransactionSubscriber', () => {
             totalPriceInclVat,
           }],
         }],
-      });
+      } as TransactionRequest;
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      await transactionService.createTransaction(transactionRequest, verification.context);
 
       expect(sendMailFake).to.not.be.called;
     });
@@ -238,7 +251,8 @@ describe('TransactionSubscriber', () => {
       const amount = 1;
       const totalPriceInclVat = product.priceInclVat.toObject();
 
-      await (new TransactionService()).createTransaction({
+      const transactionService = new TransactionService();
+      const transactionRequest = {
         from: user.id,
         pointOfSale: {
           id: pos.pointOfSaleId,
@@ -262,7 +276,12 @@ describe('TransactionSubscriber', () => {
             totalPriceInclVat,
           }],
         }],
-      });
+      } as TransactionRequest;
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+      await transactionService.createTransaction(transactionRequest, verification.context);
 
       expect(sendMailFake).to.not.be.called;
     });
@@ -336,7 +355,8 @@ describe('TransactionSubscriber', () => {
           // User should go into debt after second item
         };
 
-        await (new TransactionService()).createTransaction({
+        const transactionService3 = new TransactionService();
+        const transactionRequest3 = {
           from: u.id,
           pointOfSale: {
             id: pos.pointOfSaleId,
@@ -345,7 +365,12 @@ describe('TransactionSubscriber', () => {
           createdBy: u.id,
           totalPriceInclVat,
           subTransactions: [subTransaction],
-        });
+        } as TransactionRequest;
+        const verification3 = await transactionService3.verifyTransaction(transactionRequest3);
+        if (!verification3.valid || !verification3.context) {
+          throw new Error('Invalid transaction in test');
+        }
+        await transactionService3.createTransaction(transactionRequest3, verification3.context);
 
         // restore getBalance so we can query the true current balance
         getBalanceStub.restore();
