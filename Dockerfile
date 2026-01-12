@@ -1,10 +1,5 @@
 # Build in a different image to keep the target image clean
-FROM node:22-alpine AS build
-RUN apk add --no-cache \
-  python3 \
-  make \
-  g++ \
-  pkgconfig
+FROM node:22-bookworm AS build
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install
@@ -14,7 +9,7 @@ RUN npm run build \
 RUN HUSKY=0 npm ci --production
 
 # The target image that will be run
-FROM node:22-alpine AS target
+FROM node:22-bookworm AS target
 
 RUN apk add openssl
 
