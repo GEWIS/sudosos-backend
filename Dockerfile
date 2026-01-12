@@ -6,6 +6,7 @@ RUN npm install
 COPY ./ ./
 RUN npm run build \
  && npm run swagger
+RUN npx husky install
 RUN npm ci --production
 
 # The target image that will be run
