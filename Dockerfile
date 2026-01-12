@@ -6,8 +6,7 @@ RUN npm install
 COPY ./ ./
 RUN npm run build \
  && npm run swagger
-ENV HUSKY=0
-RUN npm ci --production
+RUN HUSKY=0 npm ci --production
 
 # The target image that will be run
 FROM node:18-alpine AS target
