@@ -1,5 +1,6 @@
 # Build in a different image to keep the target image clean
 FROM node:22-bookworm AS build
+
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install
@@ -11,12 +12,13 @@ RUN HUSKY=0 npm ci --production
 # The target image that will be run
 FROM node:22-bookworm AS target
 
-RUN apk add openssl
+RUN apt-get update \
+ && apt-get install -y openssl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build --chown=node /app/node_modules /app/node_modules
-RUN npm install @socket.io/pm2 pm2-graceful-intercom -g
-RUN npm install -g typeorm
+RUN npm install -g @socket.io/pm2 pm2-graceful-intercom typeorm
 
 COPY --from=build --chown=node /app/init_scripts /app/init_scripts
 COPY --from=build --chown=node /app/pm2.json /app/pm2.json
