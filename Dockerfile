@@ -1,6 +1,8 @@
 # Build in a different image to keep the target image clean
 FROM node:22-alpine AS build
 
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
 RUN npm install
