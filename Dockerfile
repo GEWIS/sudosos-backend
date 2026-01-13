@@ -1,5 +1,5 @@
 # Build in a different image to keep the target image clean
-FROM node:22-bookworm AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
@@ -10,11 +10,8 @@ RUN npm run build \
 RUN HUSKY=0 npm ci --production
 
 # The target image that will be run
-FROM node:22-bookworm AS target
-
-RUN apt-get update \
- && apt-get install -y openssl \
- && rm -rf /var/lib/apt/lists/*
+FROM node:22-alpine AS target
+RUN apk add openssl
 
 WORKDIR /app
 COPY --from=build --chown=node /app/node_modules /app/node_modules
