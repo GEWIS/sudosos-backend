@@ -18,8 +18,12 @@
  *  @license
  */
 
-import { DataSource } from 'typeorm';
-import User, { NotifyDebtUserTypes, TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import { DataSource, Not } from 'typeorm';
+import User, {
+  NotifyDebtUserTypes,
+  TermsOfServiceStatus,
+  UserType,
+} from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -33,7 +37,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
-import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { SubTransactionRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -43,13 +47,20 @@ import {
   ProductSeeder,
   TransactionSeeder,
   TransferSeeder,
+  UserNotificationSeeder,
   UserSeeder,
 } from '../../seed';
 import { rootStubs } from '../../root-hooks';
-import { SubTransactionRequest } from '../../../src/controller/request/transaction-request';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import UserDebtNotification from '../../../src/mailer/messages/user-debt-notification';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
+import UserNotificationPreference from '../../../src/entity/notifications/user-notification-preference';
+import UserNotificationPreferenceService from '../../../src/service/user-notification-preference-service';
+import { NotificationTypes } from '../../../src/notifications/notification-types';
+import {
+  UserNotificationPreferenceUpdateParams,
+} from '../../../src/controller/request/user-notification-preference-request';
+import { createValidTransactionRequest } from '../../helpers/transaction-factory';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -64,6 +75,7 @@ describe('TransactionSubscriber', () => {
     transactions: Transaction[],
     subTransactions: SubTransaction[],
     transfers: Transfer[];
+    notificationPreferences: UserNotificationPreference[];
   };
 
   let sandbox: SinonSandbox;
@@ -89,6 +101,7 @@ describe('TransactionSubscriber', () => {
     const { containerRevisions } = await new ContainerSeeder().seed([adminUser], productRevisions);
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser], containerRevisions);
     const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const notificationPreferences = await new UserNotificationSeeder().seed(users);
     const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
@@ -105,6 +118,7 @@ describe('TransactionSubscriber', () => {
       transactions,
       subTransactions,
       transfers,
+      notificationPreferences,
     };
 
     env = process.env.NODE_ENV;
@@ -142,6 +156,20 @@ describe('TransactionSubscriber', () => {
   describe('afterInsert', () => {
     it('should send an email if someone gets into debt', async () => {
       const user = ctx.usersNotInDebt[1];
+      
+      // Disable transaction notifications for this test
+      const transactionNotificationPrefs = ctx.notificationPreferences.filter((pref) =>
+        pref.userId === user.id &&
+        (pref.type === NotificationTypes.TransactionNotificationSelf ||
+         pref.type === NotificationTypes.TransactionNotificationChargedByOther),
+      );
+      for (const pref of transactionNotificationPrefs) {
+        await new UserNotificationPreferenceService().updateUserNotificationPreference({
+          userNotificationPreferenceId: pref.id,
+          enabled: false,
+        });
+      }
+      
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
@@ -192,6 +220,20 @@ describe('TransactionSubscriber', () => {
     });
     it('should not send email if someone does not go into debt', async () => {
       const user = ctx.usersNotInDebt[2];
+      
+      // Disable transaction notifications for this test
+      const transactionNotificationPrefs = ctx.notificationPreferences.filter((pref) =>
+        pref.userId === user.id &&
+        (pref.type === NotificationTypes.TransactionNotificationSelf ||
+         pref.type === NotificationTypes.TransactionNotificationChargedByOther),
+      );
+      for (const pref of transactionNotificationPrefs) {
+        await new UserNotificationPreferenceService().updateUserNotificationPreference({
+          userNotificationPreferenceId: pref.id,
+          enabled: false,
+        });
+      }
+      
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.least(0);
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
@@ -240,6 +282,20 @@ describe('TransactionSubscriber', () => {
     });
     it('should not send email if someone is already in debt', async () => {
       const user = ctx.usersInDebt[0];
+      
+      // Disable transaction notifications for this test
+      const transactionNotificationPrefs = ctx.notificationPreferences.filter((pref) =>
+        pref.userId === user.id &&
+        (pref.type === NotificationTypes.TransactionNotificationSelf ||
+         pref.type === NotificationTypes.TransactionNotificationChargedByOther),
+      );
+      for (const pref of transactionNotificationPrefs) {
+        await new UserNotificationPreferenceService().updateUserNotificationPreference({
+          userNotificationPreferenceId: pref.id,
+          enabled: false,
+        });
+      }
+      
       const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
       expect(currentBalance.getAmount()).to.be.at.most(-1);
       expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
@@ -381,6 +437,200 @@ describe('TransactionSubscriber', () => {
         expect(newBalance.amount.amount).to.be.below(0);
         expect(sendMailFake).to.be.called;
       });
+    });
+    it('should send a notification email if the user wants from itself', async () => {
+      // Find a user that is not in debt and has the notification preference
+      let user: User | undefined;
+      let notificationPreference: UserNotificationPreference | undefined;
+      
+      for (const candidateUser of ctx.usersNotInDebt) {
+        const pref = ctx.notificationPreferences.find((p) =>
+          p.userId === candidateUser.id && p.type === NotificationTypes.TransactionNotificationSelf,
+        );
+        if (pref && candidateUser.active && candidateUser.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED) {
+          user = candidateUser;
+          notificationPreference = pref;
+          break;
+        }
+      }
+      
+      expect(user).to.not.be.undefined;
+      expect(notificationPreference).to.not.be.undefined;
+      
+      if (!user || !notificationPreference) {
+        throw new Error('Could not find a suitable user with notification preference for this test');
+      }
+
+      const updateParams: UserNotificationPreferenceUpdateParams = {
+        userNotificationPreferenceId: notificationPreference.id,
+        enabled: true,
+      };
+      await new UserNotificationPreferenceService().updateUserNotificationPreference(updateParams);
+
+      const balanceService = new BalanceService();
+      const balance = await balanceService.getBalance(user.id);
+      const currentBalance = balance.amount;
+
+      expect(currentBalance.amount).to.be.at.least(0);
+
+      // Find another user to be the seller (product owner)
+      // The transaction is "from itself" meaning user initiated it, but they're buying from someone else
+      const seller = ctx.users.find((u) => u.id !== user.id && u.active);
+      expect(seller).to.not.be.undefined;
+      
+      if (!seller) {
+        throw new Error('Could not find a seller for the transaction');
+      }
+
+      // Use the transaction factory helper to create a valid transaction request
+      // This ensures we have a POS with containers and products
+      // byId = user.id (buyer and creator), toId = seller.id (product owner/seller)
+      const transactionRequest = await createValidTransactionRequest(user.id, seller.id);
+
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error(`Invalid transaction in test. User: ${user.id}, active: ${user.active}, acceptedToS: ${user.acceptedToS}`);
+      }
+
+      await (new TransactionService()).createTransaction(transactionRequest, verification.context);
+
+      expect(sendMailFake).to.be.calledOnce;
+    });
+    it('should send a notification email when charged by others', async () => {
+      const user = ctx.usersNotInDebt[4];
+      const notificationPreference = ctx.notificationPreferences.find((pref) =>
+        pref.userId === user.id && pref.type === NotificationTypes.TransactionNotificationChargedByOther,
+      );
+
+      const updateParams: UserNotificationPreferenceUpdateParams = {
+        userNotificationPreferenceId: notificationPreference.id,
+        enabled: true,
+      };
+      await new UserNotificationPreferenceService().updateUserNotificationPreference(updateParams);
+
+      const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+      expect(currentBalance.getAmount()).to.be.at.least(0);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+      const creator = await User.findOne({ where: { id: Not(user.id) } });
+
+      const transactionRequest: TransactionRequest = {
+        from: user.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: creator.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      };
+
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+
+      await (new TransactionService()).createTransaction(transactionRequest, verification.context);
+
+      expect(sendMailFake).to.be.calledOnce;
+    });
+    it('should not send a notification email', async () => {
+      const user = ctx.usersNotInDebt[5];
+
+      const notificationPreferenceSelf = ctx.notificationPreferences.find((pref) =>
+        pref.userId === user.id && pref.type === NotificationTypes.TransactionNotificationSelf,
+      );
+      const notificationPreferenceOther = ctx.notificationPreferences.find((pref) =>
+        pref.userId === user.id && pref.type === NotificationTypes.TransactionNotificationChargedByOther,
+      );
+
+      const updateParamsSelf: UserNotificationPreferenceUpdateParams = {
+        userNotificationPreferenceId: notificationPreferenceSelf.id,
+        enabled: false,
+      };
+      const updateParamsOther: UserNotificationPreferenceUpdateParams = {
+        userNotificationPreferenceId: notificationPreferenceOther.id,
+        enabled: false,
+      };
+      await new UserNotificationPreferenceService().updateUserNotificationPreference(updateParamsSelf);
+      await new UserNotificationPreferenceService().updateUserNotificationPreference(updateParamsOther);
+
+      const currentBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers).amount;
+      expect(currentBalance.getAmount()).to.be.at.least(0);
+      expect((await new BalanceService().getBalance(user.id)).amount.amount).to.equal(currentBalance.getAmount());
+
+      const pos = ctx.pointOfSales.find((p) => p.pointOfSale.owner.id !== user.id);
+      const container = ctx.containers.find((c) => c.container.owner.id !== user.id);
+      const product = ctx.products.find((p) => p.product.owner.id !== user.id);
+
+      expect(pos).to.not.be.undefined;
+      expect(container).to.not.be.undefined;
+      expect(product).to.not.be.undefined;
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+      const transactionRequest: TransactionRequest = {
+        from: user.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: user.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      };
+
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+
+      await (new TransactionService()).createTransaction(transactionRequest, verification.context);
+
+      expect(sendMailFake).to.not.be.called;
     });
   });
 });

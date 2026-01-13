@@ -20,6 +20,7 @@
 import { TemplateOptions } from './notification-types';
 import { Dinero } from 'dinero.js';
 import { ResetTokenInfo } from '../service/authentication-service';
+import { TransactionResponse } from '../controller/response/transaction-response';
 
 /**
  * Options for notifying a user that they will receive a fine.
@@ -178,6 +179,21 @@ export class WelcomeToSudososOptions extends TemplateOptions {
      */
   constructor(
     public url?: string,
+  ) {
+    super();
+  }
+}
+
+// We make it a type to use Dinero itself for declarations
+type DineroObject = Dinero.Dinero;
+
+/**
+ * Email to notify user about a just made transaction
+ */
+export class TransactionNotificationOptions extends TemplateOptions {
+  constructor(
+    public transaction: TransactionResponse,
+    public balance: DineroObject,
   ) {
     super();
   }

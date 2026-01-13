@@ -32,6 +32,9 @@ import DineroTransformer from '../entity/transformer/dinero-transformer';
 import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { UserDebtNotificationOptions } from '../notifications';
 import log4js from 'log4js';
+import TransactionService from '../service/transaction-service';
+import { TransactionResponse } from '../controller/response/transaction-response';
+import { TransactionNotificationOptions } from '../notifications/notification-options';
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {
@@ -52,6 +55,11 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     }
 
     const user = await event.manager.findOne(User, { where: { id: entity.from.id } });
+    if (!user) {
+      log4js.getLogger('Transaction').error(`User not found for transaction ${entity.id}`);
+      return;
+    }
+
     const balance = await new BalanceService().getBalance(user.id);
 
     let currentBalance = balance.amount.amount;
@@ -75,6 +83,11 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
           }
         }
       }
+    }
+
+    const transaction = await new TransactionService().asTransactionResponse(entity);
+    if (transaction) {
+      await this.sendReceipt(user, transaction, currentBalance);
     }
 
     if (currentBalance >= 0) return;
@@ -103,5 +116,33 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     } catch (e) {
       log4js.getLogger('Transaction').error(e);
     }
+  }
+
+  private async sendReceipt(user: User, transaction: TransactionResponse, balance: number) {
+    try {
+      const type = TransactionSubscriber.checkOwnTransaction(transaction)
+        ? NotificationTypes.TransactionNotificationSelf
+        : NotificationTypes.TransactionNotificationChargedByOther;
+
+      await Notifier.getInstance().notify({
+        type,
+        userId: user.id,
+        params: new TransactionNotificationOptions(
+          transaction,
+          DineroTransformer.Instance.from(balance),
+        ),
+      });
+    } catch (e) {
+      // "No channel found" is expected when user doesn't have notification enabled
+      if (e instanceof Error && e.message === 'No channel found to send for.') {
+        return;
+      }
+      log4js.getLogger('Transaction').error(e);
+    }
+  }
+
+
+  private static checkOwnTransaction(transaction: TransactionResponse): boolean {
+    return  transaction.from.id === transaction.createdBy.id;
   }
 }
