@@ -1,7 +1,7 @@
 # Build in a different image to keep the target image clean
 FROM node:22-alpine AS build
 
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ py3-setuptools
 
 WORKDIR /app
 COPY ./package.json ./package-lock.json ./
