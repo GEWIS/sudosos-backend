@@ -34,7 +34,7 @@ import bodyParser from 'body-parser';
 import { finishTestDB } from '../../helpers/test-helpers';
 import UserNotificationPreferenceService from '../../../src/service/user-notification-preference-service';
 import { expect } from 'chai';
-import { NotificationTypes } from '../../../src/notifications/notification-types';
+import {NotificationTypeRegistry, NotificationTypes} from '../../../src/notifications/notification-types';
 import {
   PaginatedUserNotificationPreferenceResponse,
 } from '../../../src/controller/response/user-notification-preference-response';
@@ -133,6 +133,42 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
       expect(res.length).to.equal(actualPreferences.length);
 
       res.forEach((p) => expect(p.enabled).to.be.true);
+    });
+    it('should return only mandatory preferences when isMandatory is true', async () => {
+      const res: UserNotificationPreference[] = await new UserNotificationPreferenceService().getUserNotificationPreferences(
+        { isMandatory: true },
+      );
+
+      res.forEach((p) => {
+        const isMandatoryInRegistry = NotificationTypeRegistry.isTypeMandatory(p.type as NotificationTypes);
+        expect(isMandatoryInRegistry).to.be.true;
+
+        expect(p.isMandatory).to.be.true;
+      });
+
+      const expectedCount = ctx.userNotificationPreferences.filter(
+        (p) => NotificationTypeRegistry.isTypeMandatory(p.type as NotificationTypes) === true,
+      ).length;
+
+      expect(res.length).to.equal(expectedCount);
+    });
+
+    it('should return only non-mandatory preferences when isMandatory is false', async () => {
+      const res: UserNotificationPreference[] = await new UserNotificationPreferenceService().getUserNotificationPreferences(
+        { isMandatory: false },
+      );
+
+      res.forEach((p) => {
+        const isMandatoryInRegistry = NotificationTypeRegistry.isTypeMandatory(p.type as NotificationTypes);
+        expect(isMandatoryInRegistry).to.be.false;
+        expect(p.isMandatory).to.be.false;
+      });
+
+      const expectedCount = ctx.userNotificationPreferences.filter(
+        (p) => NotificationTypeRegistry.isTypeMandatory(p.type as NotificationTypes) === false,
+      ).length;
+
+      expect(res.length).to.equal(expectedCount);
     });
   });
 

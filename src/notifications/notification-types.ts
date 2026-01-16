@@ -86,6 +86,10 @@ export class NotificationTypeRegistry {
   static list(): Map<string, NotificationType<any>> {
     return this.types;
   }
+
+  public static isTypeMandatory(type: NotificationTypes): boolean {
+    return this.get(type).isMandatory;
+  }
 }
 
 
