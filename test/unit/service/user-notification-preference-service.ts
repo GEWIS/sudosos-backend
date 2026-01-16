@@ -34,7 +34,7 @@ import bodyParser from 'body-parser';
 import { finishTestDB } from '../../helpers/test-helpers';
 import UserNotificationPreferenceService from '../../../src/service/user-notification-preference-service';
 import { expect } from 'chai';
-import {NotificationTypeRegistry, NotificationTypes} from '../../../src/notifications/notification-types';
+import { NotificationTypeRegistry, NotificationTypes } from '../../../src/notifications/notification-types';
 import {
   PaginatedUserNotificationPreferenceResponse,
 } from '../../../src/controller/response/user-notification-preference-response';

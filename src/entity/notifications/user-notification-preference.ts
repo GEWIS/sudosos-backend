@@ -32,7 +32,7 @@ export enum NotificationChannels {
 
 import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import User from '../user/user';
-import {NotificationTypeRegistry, NotificationTypes} from '../../notifications/notification-types';
+import { NotificationTypeRegistry, NotificationTypes } from '../../notifications/notification-types';
 
 /**
  * @typedef {BaseEntity} UserNotificationPreference

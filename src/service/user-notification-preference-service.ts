@@ -22,7 +22,7 @@
 import WithManager from '../database/with-manager';
 import { asNumber } from '../helpers/validators';
 import { RequestWithToken } from '../middleware/token-middleware';
-import {FindManyOptions, FindOptionsRelations, In} from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import QueryFilter from '../helpers/query-filter';
 import User from '../entity/user/user';
@@ -36,7 +36,7 @@ import {
   UserNotificationPreferenceUpdateParams,
   UserNotificationPreferenceRequestParams,
 } from '../controller/request/user-notification-preference-request';
-import {NotificationTypeRegistry, NotificationTypes} from '../notifications/notification-types';
+import { NotificationTypeRegistry, NotificationTypes } from '../notifications/notification-types';
 
 /**
  * This is the module page of the notification-service.
