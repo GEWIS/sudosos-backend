@@ -34,7 +34,7 @@ import BaseResponse from './base-response';
  * @property {string} type - The notification type
  * @property {string} channel - The notification channel
  * @property {boolean} enabled - Whether the preference is enabled
- * @property {boolean} isMadatory - Whether the type is mandatory
+ * @property {boolean} isMandatory - Whether the type is mandatory
  */
 export interface BaseUserNotificationPreferenceResponse extends BaseResponse {
   user: BaseUserResponse;

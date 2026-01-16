@@ -87,8 +87,14 @@ export class NotificationTypeRegistry {
     return this.types;
   }
 
+  /**
+   * Checks whether a given notification type is marked as mandatory.
+   *
+   * @param type The notification type to check.
+   * @returns True if the notification type is mandatory; otherwise, false.
+   */
   public static isTypeMandatory(type: NotificationTypes): boolean {
-    return this.get(type).isMandatory;
+    return this.get(type)?.isMandatory ?? false;
   }
 }
 

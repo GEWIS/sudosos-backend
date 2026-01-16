@@ -82,7 +82,7 @@ export function parseUserNotificationPreferenceFilters(req: RequestWithToken): U
     type: req.query.type as string,
     channel: req.query.channel as string,
     enabled: req.query.enabled === undefined ? undefined : Boolean(req.query.enabled),
-    isMandatory: Boolean(req.query.isMandatory),
+    isMandatory: req.query.isMandatory === undefined ? undefined : Boolean(req.query.isMandatory),
   };
 }
 
@@ -258,7 +258,7 @@ export default class UserNotificationPreferenceService extends WithManager {
 
       if (restParams.type) {
         if (!matchingTypes.includes(restParams.type as NotificationTypes)) {
-          whereClause.type = 'NON_EXISTENT_TYPE_MATCH';
+          whereClause.type = In([]);
         }
       } else {
         whereClause.type = In(matchingTypes);

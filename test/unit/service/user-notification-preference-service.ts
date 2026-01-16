@@ -170,6 +170,16 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
 
       expect(res.length).to.equal(expectedCount);
     });
+
+    it('should return an empty array if type and isMandatory filter conflict', async () => {
+      const mandatoryType = NotificationTypes.ChangedPin;
+      
+      const res: UserNotificationPreference[] = await new UserNotificationPreferenceService().getUserNotificationPreferences(
+        { type: mandatoryType, isMandatory: false },
+      );
+
+      expect(res.length).to.equal(0);
+    });
   });
 
   describe('paginatedUserNotificationPreferences function', async (): Promise<void> => {
