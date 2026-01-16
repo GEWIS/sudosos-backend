@@ -22,7 +22,7 @@
 import WithManager from '../database/with-manager';
 import { asNumber } from '../helpers/validators';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { FindManyOptions, FindOptionsRelations } from 'typeorm';
+import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import QueryFilter from '../helpers/query-filter';
 import User from '../entity/user/user';
@@ -36,7 +36,7 @@ import {
   UserNotificationPreferenceUpdateParams,
   UserNotificationPreferenceRequestParams,
 } from '../controller/request/user-notification-preference-request';
-import { NotificationTypes } from '../notifications/notification-types';
+import { NotificationTypeRegistry, NotificationTypes } from '../notifications/notification-types';
 
 /**
  * This is the module page of the notification-service.
@@ -69,6 +69,10 @@ export interface UserNotificationPreferenceFilterParams {
      * Filter based on enabled notifications.
      */
   enabled?: boolean;
+  /**
+   * Filter based on whether the notification is mandatory
+   */
+  isMandatory?: boolean;
 }
 
 export function parseUserNotificationPreferenceFilters(req: RequestWithToken): UserNotificationPreferenceFilterParams {
@@ -78,6 +82,7 @@ export function parseUserNotificationPreferenceFilters(req: RequestWithToken): U
     type: req.query.type as string,
     channel: req.query.channel as string,
     enabled: req.query.enabled === undefined ? undefined : Boolean(req.query.enabled),
+    isMandatory: req.query.isMandatory === undefined ? undefined : Boolean(req.query.isMandatory),
   };
 }
 
@@ -95,6 +100,7 @@ export default class UserNotificationPreferenceService extends WithManager {
       type: userNotificationPreference.type,
       channel: userNotificationPreference.channel,
       enabled: userNotificationPreference.enabled,
+      isMandatory: userNotificationPreference.isMandatory,
     };
   }
 
@@ -232,6 +238,8 @@ export default class UserNotificationPreferenceService extends WithManager {
   }
 
   public static getOptions(params: UserNotificationPreferenceFilterParams): FindManyOptions<UserNotificationPreference> {
+    const { isMandatory, ...restParams } = params;
+
     const filterMapping = {
       userNotificationPreferenceId: 'id',
       userId: 'userId',
@@ -240,18 +248,31 @@ export default class UserNotificationPreferenceService extends WithManager {
       enabled: 'enabled',
     };
 
+    const whereClause: any = QueryFilter.createFilterWhereClause(filterMapping, restParams);
+
+    if (isMandatory !== undefined) {
+      const allTypes = Object.values(NotificationTypes);
+      const matchingTypes = allTypes.filter(type =>
+        NotificationTypeRegistry.isTypeMandatory(type) === isMandatory,
+      );
+
+      if (restParams.type) {
+        if (!matchingTypes.includes(restParams.type as NotificationTypes)) {
+          whereClause.type = In([]);
+        }
+      } else {
+        whereClause.type = In(matchingTypes);
+      }
+    }
+
     const relations: FindOptionsRelations<UserNotificationPreference> = {
       user: true,
     };
 
-    const options: FindManyOptions<UserNotificationPreference> = {
-      where: {
-        ...QueryFilter.createFilterWhereClause(filterMapping, params),
-      },
+    return {
+      where: whereClause,
       order: { createdAt: 'DESC' },
+      relations,
     };
-
-    return { ...options, relations };
   }
-
 }

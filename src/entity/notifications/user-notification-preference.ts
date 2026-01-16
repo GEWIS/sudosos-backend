@@ -32,7 +32,7 @@ export enum NotificationChannels {
 
 import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import User from '../user/user';
-import { NotificationTypes } from '../../notifications/notification-types';
+import { NotificationTypeRegistry, NotificationTypes } from '../../notifications/notification-types';
 
 /**
  * @typedef {BaseEntity} UserNotificationPreference
@@ -59,4 +59,13 @@ export default class UserNotificationPreference extends BaseEntity {
 
   @Column({ nullable: false })
   public enabled: boolean;
+
+  /**
+   * Returns whether this notification type is mandatory.
+   *
+   * @returns {boolean} True if this notification type is mandatory, false otherwise.
+   */
+  get isMandatory(): boolean {
+    return NotificationTypeRegistry.isTypeMandatory(this.type);
+  }
 }
