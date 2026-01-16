@@ -89,6 +89,10 @@ export default class DefaultRoles {
           get: { own: star },
           update: { own: star },
         },
+        UserNotificationPreference: {
+          get: { own: star },
+          update: { own: star },
+        },
       },
     }, {
       name: 'Local User',
@@ -241,6 +245,7 @@ export default class DefaultRoles {
           update: { own: star },
           override: { all: star },
         },
+        UserNotificationPreference: admin,
       },
     }, {
       name: SELLER_ROLE,
