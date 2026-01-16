@@ -25,7 +25,7 @@ import {
   ForgotEventPlanningOptions,
   HelloWorldOptions,
   InactiveAdministrativeCostNotificationOptions,
-  MembershipExpiryNotificationOptions,
+  MembershipExpiryNotificationOptions, TransactionNotificationOptions,
   UserDebtNotificationOptions, UserGotFinedOptions, UserGotInactiveAdministrativeCostOptions,
   UserWillGetFinedOptions, WelcomeToSudososOptions,
   WelcomeWithResetOptions,
@@ -101,5 +101,17 @@ NotificationTypeRegistry.register<WelcomeWithResetOptions>({
   type: NotificationTypes.WelcomeWithReset,
   paramClass: WelcomeWithResetOptions,
   isMandatory: true,
+});
+
+NotificationTypeRegistry.register<TransactionNotificationOptions>({
+  type: NotificationTypes.TransactionNotificationSelf,
+  paramClass: TransactionNotificationOptions,
+  isMandatory: false,
+});
+
+NotificationTypeRegistry.register<TransactionNotificationOptions>({
+  type: NotificationTypes.TransactionNotificationChargedByOther,
+  paramClass: TransactionNotificationOptions,
+  isMandatory: false,
 });
 

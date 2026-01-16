@@ -26,11 +26,18 @@ import MailMessage from '../../mailer/mail-message';
 import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 import {
   ChangedPinTemplate,
-  ForgotEventPlanningTemplate, HelloWorldTemplate,
+  ForgotEventPlanningTemplate,
+  HelloWorldTemplate,
   InactiveAdministrativeCostNotificationTemplate,
   MembershipExpiryNotificationTemplate,
-  PasswordResetTemplate, UserDebtNotificationTemplate, UserGotFinedTemplate, UserGotInactiveAdministrativeCostTemplate,
-  UserWillGetFinedTemplate, WelcomeToSudososTemplate, WelcomeWithResetTemplate,
+  PasswordResetTemplate,
+  TransactionNotificationTemplate,
+  UserDebtNotificationTemplate,
+  UserGotFinedTemplate,
+  UserGotInactiveAdministrativeCostTemplate,
+  UserWillGetFinedTemplate,
+  WelcomeToSudososTemplate,
+  WelcomeWithResetTemplate,
 } from '../templates/notification-email-templates';
 
 /**
@@ -57,6 +64,8 @@ MailMessage<EmailTemplate<any>>
     UserWillGetFined: UserWillGetFinedTemplate,
     WelcomeToSudosos: WelcomeToSudososTemplate,
     WelcomeWithReset: WelcomeWithResetTemplate,
+    TransactionNotificationSelf: TransactionNotificationTemplate,
+    TransactionNotificationChargedByOther: TransactionNotificationTemplate,
   };
 
   readonly name = NotificationChannels.EMAIL;

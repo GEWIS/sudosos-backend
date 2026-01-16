@@ -58,6 +58,8 @@ export enum NotificationTypes {
   UserWillGetFined = 'UserWillGetFined',
   WelcomeToSudosos = 'WelcomeToSudosos',
   WelcomeWithReset = 'WelcomeWithReset',
+  TransactionNotificationSelf = 'TransactionNotificationSelf',
+  TransactionNotificationChargedByOther = 'TransactionNotificationChargedByOther',
 }
 
 export interface NotificationType<P extends TemplateOptions = any> {
