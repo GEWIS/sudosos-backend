@@ -41,7 +41,9 @@ import verifyValidUserId from './request/validators/inactive-administrative-cost
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import User from '../entity/user/user';
 import { In } from 'typeorm';
-import { asBoolean } from '../helpers/validators';
+import { asBoolean, asFromAndTillDate } from '../helpers/validators';
+import { PdfError } from '../errors';
+import { formatTitleDate } from '../helpers/pdf';
 
 
 export default class InactiveAdministrativeCostController extends BaseController {
@@ -103,6 +105,18 @@ export default class InactiveAdministrativeCostController extends BaseController
           policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'all', 'InactiveAdministrativeCost', ['*']),
           handler: this.handoutInactiveAdministrativeCost.bind(this),
           body: { modelName: 'HandoutInactiveAdministrativeCostsRequest' },
+        },
+      },
+      '/report': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'InactiveAdministrativeCost', ['*']),
+          handler: this.getInactiveAdministrativeCostReport.bind(this),
+        },
+      },
+      '/report/pdf': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'InactiveAdministrativeCost', ['*']),
+          handler: this.getInactiveAdministrativeCostReportPdf.bind(this),
         },
       },
     };
@@ -345,6 +359,87 @@ export default class InactiveAdministrativeCostController extends BaseController
       res.status(200).send(response);
     } catch (error) {
       this.logger.error('Could not check inactive users:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /inactive-administrative-costs/report
+   * @summary Get a report of all inactive administrative costs
+   * @operationId getInactiveAdministrativeCostReport
+   * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
+   * @security JWT
+   * @param {string} fromDate.query - The start date of the report, inclusive
+   * @param {string} toDate.query - The end date of the report, exclusive
+   * @return {InactiveAdministrativeCostReportResponse} 200 - The requested report
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getInactiveAdministrativeCostReport(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get inactive administrative cost report by user', req.token.user);
+
+    let fromDate, toDate;
+    try {
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+      res.json(report.toResponse());
+    } catch (error) {
+      this.logger.error('Could not get inactive administrative cost report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /inactive-administrative-costs/report/pdf
+   * @summary Get a report of all inactive administrative costs in pdf format
+   * @operationId getInactiveAdministrativeCostReportPdf
+   * @tags inactiveAdministrativeCosts - Operations of the inactive administrative cost controller
+   * @security JWT
+   * @param {string} fromDate.query.required - The start date of the report, inclusive
+   * @param {string} toDate.query.required - The end date of the report, exclusive
+   * @returns {string} 200 - The requested report - application/pdf
+   * @return {string} 400 - Validation error
+   * @return {string} 502 - PDF Generator service failed
+   * @return {string} 500 - Internal server error
+   */
+  public async getInactiveAdministrativeCostReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get inactive administrative cost report PDF by user', req.token.user);
+
+    let fromDate, toDate;
+    try {
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      const pdf = await report.createPdf();
+      const from = formatTitleDate(fromDate);
+      const to = formatTitleDate(toDate);
+      const fileName = `inactive-cost-report-${from}-${to}.pdf`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.status(200).send(pdf);
+    } catch (error) {
+      this.logger.error('Could not get inactive administrative cost report PDF:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
       res.status(500).json('Internal server error.');
     }
   }

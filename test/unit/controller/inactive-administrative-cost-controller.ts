@@ -40,6 +40,7 @@ import { expect, request } from 'chai';
 import Swagger from '../../../src/start/swagger';
 import {
   BaseInactiveAdministrativeCostResponse,
+  InactiveAdministrativeCostReportResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { INVALID_USER_ID } from '../../../src/controller/request/validators/validation-errors';
@@ -49,6 +50,9 @@ import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
 import nodemailer, { Transporter } from 'nodemailer';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import VatGroup from '../../../src/entity/vat-group';
+import { InactiveAdministrativeCostReport } from '../../../src/entity/report/inactive-administrative-cost-report';
+import { PdfError } from '../../../src/errors';
 
 describe('InactiveAdministrativeCostController', async () => {
   let ctx: {
@@ -146,6 +150,15 @@ describe('InactiveAdministrativeCostController', async () => {
     app.use('/inactive-administrative-costs', controller.getRouter());
 
     await ServerSettingsStore.getInstance().initialize();
+
+    // Create and set up high VAT group for testing
+    const highVatGroup = await VatGroup.create({
+      percentage: 21,
+      deleted: false,
+      hidden: false,
+      name: 'High VAT',
+    }).save();
+    await ServerSettingsStore.getInstance().setSetting('highVatGroupId', highVatGroup.id);
 
     const validInactiveAdministrativeCostRequest: CreateInactiveAdministrativeCostRequest = {
       forId: localUser.id,
@@ -511,6 +524,186 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('userIds is not a valid array of user IDs');
+    });
+  });
+  describe('GET /inactive-administrative-costs/report', () => {
+    it('should return correct model', async () => {
+      const fromDate = new Date('2021-01-01');
+      const toDate = new Date();
+
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'InactiveAdministrativeCostReportResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
+    it('should return report', async () => {
+      const fromDate = new Date('2021-01-01');
+      const toDate = new Date();
+
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+
+      expect(res.status).to.equal(200);
+
+      const report = res.body as InactiveAdministrativeCostReportResponse;
+      expect(report.fromDate).to.equal(fromDate.toISOString());
+      expect(report.toDate).to.equal(toDate.toISOString());
+      expect(report).to.have.property('totalAmountInclVat');
+      expect(report).to.have.property('totalAmountExclVat');
+      expect(report).to.have.property('vatAmount');
+      expect(report).to.have.property('vatPercentage');
+      expect(report).to.have.property('count');
+      expect(report.vatPercentage).to.be.a('number');
+      expect(report.count).to.be.a('number');
+    });
+
+    it('should return 400 if fromDate is not a valid date', async () => {
+      const fromDate = '39Vooooo';
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if toDate is not a valid date', async () => {
+      const fromDate = new Date();
+      const toDate = '39Vooooo';
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if fromDate is not before toDate', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime());
+      toDate.setDate(toDate.getDate() - 1);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 403 if not admin', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /inactive-administrative-costs/report/pdf', () => {
+    let createPdfStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      createPdfStub = sinon.stub(InactiveAdministrativeCostReport.prototype, 'createPdf').resolves(Buffer.from('PDF content'));
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it('should return 200 with PDF if admin', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-type']).to.include('application/pdf');
+      expect(res.headers['content-disposition']).to.include('inactive-cost-report-');
+      expect(res.headers['content-disposition']).to.include('.pdf');
+    });
+
+    it('should return 502 if pdf generation fails with PdfError', async () => {
+      createPdfStub.restore();
+      createPdfStub = sinon.stub(InactiveAdministrativeCostReport.prototype, 'createPdf').rejects(new PdfError('PDF generation failed'));
+
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+
+      expect(res.status).to.equal(502);
+      expect(res.body).to.equal('PDF Generator service failed.');
+    });
+
+    it('should return 500 if pdf generation fails with other error', async () => {
+      createPdfStub.restore();
+      createPdfStub = sinon.stub(InactiveAdministrativeCostReport.prototype, 'createPdf').rejects(new Error('PDF generation failed'));
+
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
+    });
+
+    it('should return 403 if not admin', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return 400 if fromDate is not a valid date', async () => {
+      const fromDate = '41Vooooo';
+      const toDate = new Date();
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if toDate is not a valid date', async () => {
+      const fromDate = new Date();
+      const toDate = '41Vooooo';
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return 400 if fromDate is not before toDate', async () => {
+      const fromDate = new Date();
+      const toDate = new Date(fromDate.getTime());
+      toDate.setDate(toDate.getDate() - 1);
+      const res = await request(ctx.app)
+        .get('/inactive-administrative-costs/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate, toDate });
+      expect(res.status).to.equal(400);
     });
   });
 });

@@ -81,7 +81,7 @@ export function createBasePdf(options: IPdfBase): string {
         .head-right .sub{font-size:12px;opacity:0.95}
 
         .body{padding:26px;padding-bottom:120px}
-        .meta{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+        .meta{display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:18px;margin-bottom:18px}
         .card{background:linear-gradient(180deg, #FFFFFF, #FCFCFC);border:1px solid #EFEFEF;padding:16px;border-radius:10px}
         .card h3{margin:0 0 6px 0;font-size:13px;color:var(--muted)}
         .card p{margin:0;font-weight:600;color:var(--ink)}

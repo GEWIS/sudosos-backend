@@ -62,6 +62,8 @@ import nodemailer, { Transporter } from 'nodemailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
+import VatGroup from '../../../src/entity/vat-group';
+import QueryFilter from '../../../src/helpers/query-filter';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -128,6 +130,15 @@ describe('InactiveAdministrativeCostService', () => {
     const { subTransactions, transactions } = await new TransactionSeeder().seed(users, pos, begin, end);
 
     await ServerSettingsStore.getInstance().initialize();
+
+    // Create and set up high VAT group for testing
+    const highVatGroup = await VatGroup.create({
+      percentage: 21,
+      deleted: false,
+      hidden: false,
+      name: 'High VAT',
+    }).save();
+    await ServerSettingsStore.getInstance().setSetting('highVatGroupId', highVatGroup.id);
 
     // start app
     const app = express();
@@ -442,5 +453,131 @@ describe('InactiveAdministrativeCostService', () => {
       expect(_pagination.skip).to.equal(1);
     });
 
+  });
+
+  describe('getInactiveAdministrativeCostReport', async (): Promise<void> => {
+    it('should return report with correct date range filtering', async () => {
+      const fromDate = new Date(2020, 1, 1);
+      const toDate = new Date(2021, 1, 1);
+
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      expect(report.fromDate).to.deep.equal(fromDate);
+      expect(report.toDate).to.deep.equal(toDate);
+      expect(report).to.have.property('totalAmountInclVat');
+      expect(report).to.have.property('totalAmountExclVat');
+      expect(report).to.have.property('vatAmount');
+      expect(report).to.have.property('vatPercentage');
+      expect(report).to.have.property('count');
+    });
+
+    it('should correctly sum all amounts within date range', async () => {
+      const fromDate = new Date(2020, 1, 1);
+      const toDate = new Date(2021, 1, 1);
+
+      // Get all costs in the date range manually
+      const allCosts = await InactiveAdministrativeCost.find({
+        where: {
+          createdAt: QueryFilter.createFilterWhereDate(fromDate, toDate),
+        },
+      });
+
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      // Calculate expected total manually
+      let expectedTotal = dinero({ amount: 0, currency: 'EUR', precision: 2 });
+      for (const cost of allCosts) {
+        expectedTotal = expectedTotal.add(cost.amount);
+      }
+
+      expect(report.totalAmountInclVat.getAmount()).to.equal(expectedTotal.getAmount());
+      expect(report.count).to.equal(allCosts.length);
+    });
+
+    it('should correctly calculate VAT amounts with total as source of truth', async () => {
+      const fromDate = new Date(2020, 1, 1);
+      const toDate = new Date(2021, 1, 1);
+
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      // Verify VAT percentage is retrieved from server settings
+      const highVatGroupId = ServerSettingsStore.getInstance().getSetting('highVatGroupId') as number;
+      const highVatGroup = await VatGroup.findOne({ where: { id: highVatGroupId } });
+      expect(report.vatPercentage).to.equal(highVatGroup.percentage);
+
+      // Verify VAT calculations - total (incl VAT) is the source of truth
+      const totalInclVat = report.totalAmountInclVat.getAmount();
+      const totalExclVat = report.totalAmountExclVat.getAmount();
+      const vatAmount = report.vatAmount.getAmount();
+
+      // Calculate base (excl VAT) from total by dividing by (1 + VAT percentage)
+      const expectedExclVat = Math.round(totalInclVat / (1 + report.vatPercentage / 100));
+      
+      // VAT amount should be calculated as difference to ensure amounts always add up
+      const expectedVatAmount = totalInclVat - expectedExclVat;
+
+      expect(totalExclVat).to.equal(expectedExclVat);
+      expect(vatAmount).to.equal(expectedVatAmount);
+      // Verify amounts always add up correctly (total = base + VAT)
+      expect(totalExclVat + vatAmount).to.equal(totalInclVat);
+    });
+
+    it('should return zero amounts when no costs exist in date range', async () => {
+      const fromDate = new Date(2030, 1, 1);
+      const toDate = new Date(2031, 1, 1);
+
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      expect(report.count).to.equal(0);
+      expect(report.totalAmountInclVat.getAmount()).to.equal(0);
+      expect(report.totalAmountExclVat.getAmount()).to.equal(0);
+      expect(report.vatAmount.getAmount()).to.equal(0);
+      expect(report.vatPercentage).to.be.a('number');
+    });
+
+    it('should filter costs correctly by date range boundaries', async () => {
+      // Get a cost that exists
+      const existingCost = ctx.inactiveAdministrativeCosts[0];
+      if (!existingCost) {
+        // Skip if no costs exist
+        return;
+      }
+
+      const costDate = existingCost.createdAt;
+
+      // Test inclusive start date
+      const fromDate = new Date(costDate.getTime() - 1000);
+      const toDate = new Date(costDate.getTime() + 1000);
+      const report = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+
+      // Should include the cost
+      expect(report.count).to.be.greaterThan(0);
+
+      // Test exclusive end date
+      const fromDate2 = new Date(costDate.getTime() - 1000);
+      const toDate2 = new Date(costDate.getTime() - 500);
+      const report2 = await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate2, toDate2);
+
+      // Should not include the cost (end date is exclusive and before cost date)
+      expect(report2.count).to.equal(0);
+    });
+
+    it('should throw error if high VAT group is not found', async () => {
+      const originalVatGroupId = ServerSettingsStore.getInstance().getSetting('highVatGroupId') as number;
+      await ServerSettingsStore.getInstance().setSetting('highVatGroupId', -1);
+
+      const fromDate = new Date(2020, 1, 1);
+      const toDate = new Date(2021, 1, 1);
+
+      try {
+        await new InactiveAdministrativeCostService().getInactiveAdministrativeCostReport(fromDate, toDate);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.include('High vat group not found');
+      } finally {
+        // Restore original VAT group
+        await ServerSettingsStore.getInstance().setSetting('highVatGroupId', originalVatGroupId);
+      }
+    });
   });
 });

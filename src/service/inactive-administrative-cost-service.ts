@@ -50,6 +50,8 @@ import {
   InactiveAdministrativeCostNotificationOptions,
   UserGotInactiveAdministrativeCostOptions,
 } from '../notifications/notification-options';
+import { InactiveAdministrativeCostReport } from '../entity/report/inactive-administrative-cost-report';
+import VatGroup from '../entity/vat-group';
 
 
 export interface InactiveAdministrativeCostFilterParameters {
@@ -374,5 +376,59 @@ export default class InactiveAdministrativeCostService extends WithManager {
     };
 
     return { ...options, relations };
+  }
+
+  /**
+   * Gets the high VAT group from server settings
+   * @private
+   */
+  private static async getHighVATGroup(): Promise<VatGroup> {
+    const id = ServerSettingsStore.getInstance().getSetting('highVatGroupId') as ISettings['highVatGroupId'];
+    const vatGroup = await VatGroup.findOne({ where: { id } });
+    if (vatGroup) return vatGroup;
+    else throw new Error('High vat group not found');
+  }
+
+  /**
+   * Gets a report of inactive administrative costs within the given date range
+   * @param fromDate - The start date of the report (inclusive)
+   * @param toDate - The end date of the report (exclusive)
+   */
+  public async getInactiveAdministrativeCostReport(fromDate: Date, toDate: Date): Promise<InactiveAdministrativeCostReport> {
+    // Query all inactive administrative costs within the date range
+    const costs = await this.manager.find(InactiveAdministrativeCost, {
+      where: {
+        createdAt: QueryFilter.createFilterWhereDate(fromDate, toDate),
+      },
+    });
+
+    // Sum all amounts (these are incl. VAT)
+    let totalAmountInclVat = dinero({ amount: 0, currency: 'EUR', precision: 2 });
+    for (const cost of costs) {
+      totalAmountInclVat = totalAmountInclVat.add(cost.amount);
+    }
+
+    // Get high VAT percentage from server settings
+    const highVatGroup = await InactiveAdministrativeCostService.getHighVATGroup();
+    const vatPercentage = highVatGroup.percentage;
+
+    // Calculate base (excl VAT) from total (incl VAT) - total is the source of truth
+    // Divide total by (1 + VAT percentage) to get base amount, rounded to cents
+    const totalAmountInclVatAmount = totalAmountInclVat.getAmount();
+    const totalAmountExclVatAmount = Math.round(totalAmountInclVatAmount / (1 + vatPercentage / 100));
+    const totalAmountExclVat = dinero({ amount: totalAmountExclVatAmount, currency: 'EUR', precision: 2 });
+    
+    // Calculate VAT amount as the difference to ensure amounts always add up correctly
+    const vatAmount = totalAmountInclVat.subtract(totalAmountExclVat);
+
+    return new InactiveAdministrativeCostReport({
+      fromDate,
+      toDate,
+      totalAmountInclVat,
+      totalAmountExclVat,
+      vatAmount,
+      vatPercentage,
+      count: costs.length,
+    });
   }
 }
