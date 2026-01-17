@@ -169,9 +169,16 @@ export default class InactiveAdministrativeCostService extends WithManager {
     }
 
     const balances = await new BalanceService(this.manager).getBalances({ ids: eligibleUserIds });
-    return balances.records
+    const eligibleUsersWithPositiveBalance = balances.records
       .filter(balance => balance.amount.amount > 0)
-      .map(balance => ({ userId: balance.id }));
+      .map(balance => balance.id);
+
+    if (eligibleUsersWithPositiveBalance.length === 0) {
+      return [];
+    }
+
+    const mapped = await User.find({ where: { id: In(eligibleUsersWithPositiveBalance) } });
+    return mapped.map(user => parseUserToBaseResponse(user, false));
   }
 
   /**

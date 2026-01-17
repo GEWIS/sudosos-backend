@@ -298,7 +298,7 @@ describe('InactiveAdministrativeCostService', () => {
 
       const users: UserToInactiveAdministrativeCostResponse[] = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
-      const userIds = users.map(u => u.userId);
+      const userIds = users.map(u => u.id);
       expect(userIds).to.include(user.id);
     });
     it('should still return users that had an inactive administrative cost as last transfer', async () => {
@@ -347,7 +347,7 @@ describe('InactiveAdministrativeCostService', () => {
 
       const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: false });
 
-      const userIds = users.map(u => u.userId);
+      const userIds = users.map(u => u.id);
       expect(userIds).to.include(user.id);
       expect(transfer.id).to.not.eq(inactiveAdministrativeCost.transfer.id);
     });
@@ -396,7 +396,7 @@ describe('InactiveAdministrativeCostService', () => {
 
         const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
 
-        const userIds = users.map(u => u.userId);
+        const userIds = users.map(u => u.id);
         expect(userIds).to.not.include(user.id);
       });
     });

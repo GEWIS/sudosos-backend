@@ -242,6 +242,7 @@ export default class InactiveAdministrativeCostController extends BaseController
       const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(inactiveAdministrativeCostId);
       if (!inactiveAdministrativeCost) {
         res.status(404).json('InactiveAdministrativeCost not found.');
+        return;
       }
       res.status(204).send();
     } catch (error) {

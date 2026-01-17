@@ -37,11 +37,9 @@ export interface BaseInactiveAdministrativeCostResponse extends BaseResponse {
 }
 
 /**
- * @typedef {object} UserToInactiveAdministrativeCostResponse
- * @property {number} userId - User ID
+ * @typedef {allOf|BaseUserResponse} UserToInactiveAdministrativeCostResponse
  */
-export interface UserToInactiveAdministrativeCostResponse {
-  userId: number;
+export interface UserToInactiveAdministrativeCostResponse extends BaseUserResponse {
 }
 
 /**
