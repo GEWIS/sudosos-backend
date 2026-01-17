@@ -395,7 +395,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.be.equal(200);
       expect(ctx.specification.validateModel(
-        'UserToInactiveAdministrativeCostResponse',
+        'Array.<UserToInactiveAdministrativeCostResponse>',
         res.body,
         false,
         true,
