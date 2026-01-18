@@ -224,7 +224,7 @@ describe('UserController', (): void => {
         User: {
           get: own,
           acceptToS: own,
-          update: { own: new Set<string>(['firstName', 'lastName', 'extensiveDataProcessing']) },
+          update: { own: new Set<string>(['firstName', 'lastName', 'extensiveDataProcessing', 'settings']) },
         },
         Product: {
           get: own,
@@ -3017,6 +3017,228 @@ describe('UserController', (): void => {
 
       // Should return 404 or 400 depending on route matching
       expect([400, 404, 405]).to.include(res.status);
+    });
+  });
+
+  describe('GET /users/:id/settings', () => {
+    it('should return HTTP 200 and all user settings with defaults', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('betaEnabled');
+      expect(res.body).to.have.property('dashboardTheme');
+      if ('language' in res.body) {
+        expect(res.body.language).to.be.undefined;
+      }
+      expect(res.body.betaEnabled).to.equal(false);
+      expect(res.body.dashboardTheme).to.be.null;
+    });
+
+    it('should return HTTP 200 with updated settings', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      // First update settings
+      await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ betaEnabled: true, language: 'nl-NL' });
+
+      // Then get them
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true);
+      expect(res.body.language).to.equal('nl-NL');
+    });
+
+    it('should return HTTP 404 if user does not exist', async () => {
+      const nonExistentId = 99999;
+      const res = await request(ctx.app)
+        .get(`/users/${nonExistentId}/settings`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('User not found.');
+    });
+
+    it('should return HTTP 403 if user tries to access another user\'s settings', async () => {
+      const otherUser = ctx.users[1];
+      if (!otherUser) return;
+
+      const res = await request(ctx.app)
+        .get(`/users/${otherUser.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return HTTP 200 if admin accesses any user\'s settings', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('betaEnabled');
+      expect(res.body).to.have.property('dashboardTheme');
+      expect(res.body).to.have.property('language');
+    });
+  });
+
+  describe('PATCH /users/:id/settings', () => {
+    it('should return HTTP 200 and update a single setting', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ betaEnabled: true });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true);
+      expect(res.body.dashboardTheme).to.be.null;
+    });
+
+    it('should return HTTP 200 and update multiple settings', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({
+          betaEnabled: true,
+          language: 'nl-NL',
+          dashboardTheme: { organId: 1, organName: 'Test Organ' },
+        });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true);
+      expect(res.body.language).to.equal('nl-NL');
+      expect(res.body.dashboardTheme).to.deep.equal({ organId: 1, organName: 'Test Organ' });
+    });
+
+    it('should return HTTP 200 and persist settings', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      // Update settings
+      await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ betaEnabled: true, language: 'en-US' });
+
+      // Get settings to verify persistence
+      const res = await request(ctx.app)
+        .get(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true);
+      expect(res.body.language).to.equal('en-US');
+    });
+
+    it('should return HTTP 200 and handle partial updates', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      // Set initial values
+      await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ betaEnabled: true, language: 'nl-NL' });
+
+      // Update only one setting
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ language: 'pl-PL' });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true); // Should remain unchanged
+      expect(res.body.language).to.equal('pl-PL'); // Should be updated
+    });
+
+    it('should return HTTP 200 and handle null dashboardTheme', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      // Set dashboardTheme first
+      await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ dashboardTheme: { organId: 1, organName: 'Test' } });
+
+      // Then set it to null
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ dashboardTheme: null });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.dashboardTheme).to.be.null;
+    });
+
+    it('should return HTTP 404 if user does not exist', async () => {
+      const nonExistentId = 99999;
+      const res = await request(ctx.app)
+        .patch(`/users/${nonExistentId}/settings`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ betaEnabled: true });
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('User not found.');
+    });
+
+    it('should return HTTP 403 if user tries to update another user\'s settings', async () => {
+      const otherUser = ctx.users[1];
+      if (!otherUser) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${otherUser.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ betaEnabled: true });
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return HTTP 200 if admin updates any user\'s settings', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ betaEnabled: true, language: 'en-US' });
+
+      expect(res.status).to.equal(200);
+      expect(res.body.betaEnabled).to.equal(true);
+      expect(res.body.language).to.equal('en-US');
+    });
+
+    it('should validate request body against specification', async () => {
+      const user = ctx.users[0];
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/settings`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ invalidField: 'value' });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.have.property('valid');
+      expect(res.body.valid).to.equal(false);
     });
   });
 });

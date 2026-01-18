@@ -25,6 +25,7 @@
  */
 
 import { UserType } from '../../entity/user/user';
+import { SupportedLanguage } from '../../entity/user-setting';
 
 export default interface BaseUserRequest {
   firstName: string;
@@ -93,4 +94,16 @@ export interface UpdateInvoiceUserRequest {
  */
 export interface AddRoleRequest {
   roleId: number;
+}
+
+/**
+ * @typedef {object} PatchUserSettingsRequest
+ * @property {boolean} betaEnabled - Whether beta features are enabled
+ * @property {object} dashboardTheme - Dashboard theme configuration with organId and organName, or null
+ * @property {string} language - enum:nl-NL,en-US,pl-PL - ISO language code or undefined
+ */
+export interface PatchUserSettingsRequest {
+  betaEnabled?: boolean;
+  dashboardTheme?: { organId: number; organName: string } | null;
+  language?: SupportedLanguage | undefined;
 }
