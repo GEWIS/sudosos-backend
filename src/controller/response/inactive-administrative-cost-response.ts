@@ -51,3 +51,23 @@ export interface PaginatedInactiveAdministrativeCostResponse {
   _pagination: PaginationResult,
   records: BaseInactiveAdministrativeCostResponse[]
 }
+
+/**
+ * @typedef {object} InactiveAdministrativeCostReportResponse
+ * @property {string} fromDate.required - The start date of the report (ISO string)
+ * @property {string} toDate.required - The end date of the report (ISO string)
+ * @property {DineroObjectResponse} totalAmountInclVat.required - Total amount including VAT
+ * @property {DineroObjectResponse} totalAmountExclVat.required - Total amount excluding VAT
+ * @property {DineroObjectResponse} vatAmount.required - VAT amount
+ * @property {number} vatPercentage.required - VAT percentage
+ * @property {number} count.required - Number of inactive administrative costs transactions in the report
+ */
+export interface InactiveAdministrativeCostReportResponse {
+  fromDate: string;
+  toDate: string;
+  totalAmountInclVat: DineroObjectResponse;
+  totalAmountExclVat: DineroObjectResponse;
+  vatAmount: DineroObjectResponse;
+  vatPercentage: number;
+  count: number;
+}

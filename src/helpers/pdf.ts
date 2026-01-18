@@ -125,3 +125,12 @@ export function entryToProduct(entry: ReportProductEntry): Product {
 export function subTransactionRowToProduct(str: SubTransactionRow): Product {
   return productToPdfProduct(str.product, str.amount);
 }
+
+/**
+ * Format a date to YYYYMMDD string format for use in PDF filenames and titles
+ * @param date - The date to format
+ * @returns Formatted date string in YYYYMMDD format
+ */
+export function formatTitleDate(date: Date): string {
+  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+}
