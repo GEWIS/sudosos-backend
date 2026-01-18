@@ -65,6 +65,7 @@ export default class DefaultRoles {
         },
         User: {
           get: { own: star },
+          update: { own: new Set(['settings']) },
           authenticate: {
             own: new Set(['pointOfSale']),
             organ: new Set(['pointOfSale']),

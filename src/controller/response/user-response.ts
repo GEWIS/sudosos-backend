@@ -28,6 +28,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { TermsOfServiceStatus } from '../../entity/user/user';
 import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
+import { SupportedLanguage } from '../../entity/user-setting';
 
 /**
  * @typedef {allOf|BaseResponse} BaseUserResponse
@@ -99,4 +100,16 @@ export interface InvoiceUserResponse {
 export interface PaginatedUserResponse {
   _pagination: PaginationResult,
   records: UserResponse[],
+}
+
+/**
+ * @typedef {object} UserSettingsResponse
+ * @property {boolean} betaEnabled.required - Whether beta features are enabled
+ * @property {object} dashboardTheme.required - Dashboard theme configuration with organId and organName, or null
+ * @property {string} language - enum:nl-NL,en-US,pl-PL - ISO language code (e.g., "nl-NL", "en-US", "pl-PL") or undefined
+ */
+export interface UserSettingsResponse {
+  betaEnabled: boolean;
+  dashboardTheme: { organId: number; organName: string } | null;
+  language: SupportedLanguage | undefined;
 }

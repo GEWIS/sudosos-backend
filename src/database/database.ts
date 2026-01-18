@@ -104,6 +104,8 @@ import Wrapped from '../entity/wrapped';
 import WrappedOrganMember from '../entity/wrapped/wrapped-organ-member';
 import { AddWrappedTable1764842063654 } from '../migrations/1764842063654-add-wrapped-table';
 import { AddWrappedOrganMember1765826596888 } from '../migrations/1765826596888-add-wrapped-organ-member';
+import UserSetting from '../entity/user-setting';
+import { UserSetting1768697568707 } from '../migrations/1768697568707-user-setting';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -136,6 +138,7 @@ const options: DataSourceOptions = {
     UserNotificationPreference1764615514906,
     AddWrappedTable1764842063654,
     AddWrappedOrganMember1765826596888,
+    UserSetting1768697568707,
   ],
   extra: {
     authPlugins: {
@@ -206,6 +209,7 @@ const options: DataSourceOptions = {
     QRAuthenticator,
     NotificationLog,
     UserNotificationPreference,
+    UserSetting,
   ],
   subscribers: [
     TransactionSubscriber,

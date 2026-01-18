@@ -73,6 +73,8 @@ import { WaiveFinesRequest } from './request/debtor-request';
 import Dinero from 'dinero.js';
 import Role from '../entity/rbac/role';
 import WrappedService from '../service/wrapped-service';
+import UserSettingsStore from '../user-settings/user-settings-store';
+import { PatchUserSettingsRequest } from './request/user-request';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -354,6 +356,17 @@ export default class UserController extends BaseController {
         POST: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', UserController.getRelation(req), 'Wrapped', ['*']),
           handler: this.computedWrapped.bind(this),
+        },
+      },
+      '/:id(\\d+)/settings': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', UserController.getRelation(req), 'User', ['settings']),
+          handler: this.getUserSettings.bind(this),
+        },
+        PATCH: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', UserController.getRelation(req), 'User', ['settings']),
+          handler: this.patchUserSettings.bind(this),
+          body: { modelName: 'PatchUserSettingsRequest', allowExtraProperties: false },
         },
       },
     };
@@ -1726,6 +1739,76 @@ export default class UserController extends BaseController {
       res.json(await new WrappedService().updateWrapped({ ids: [userId] }));
     } catch (error) {
       res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  /**
+   * GET /users/{id}/settings
+   * @summary Get all user settings
+   * @operationId getUserSettings
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @return {UserSettingsResponse} 200 - The user's settings
+   * @return {string} 404 - User not found
+   * @return {string} 500 - Internal server error
+   */
+  private async getUserSettings(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+
+    try {
+      const userId = parseInt(rawUserId, 10);
+      
+      const user = await User.findOne({ where: { id: userId } });
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      const store = new UserSettingsStore();
+      const settings = await store.getAllSettings(userId);
+      const response = UserSettingsStore.toResponse(settings);
+      res.json(response);
+    } catch (error) {
+      this.logger.error('Could not get user settings:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PATCH /users/{id}/settings
+   * @summary Update user settings
+   * @operationId patchUserSettings
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {PatchUserSettingsRequest} request.body.required - The settings to update
+   * @security JWT
+   * @return {UserSettingsResponse} 200 - The updated user settings
+   * @return {string} 404 - User not found
+   * @return {string} 500 - Internal server error
+   */
+  private async patchUserSettings(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+    const body = req.body as PatchUserSettingsRequest;
+
+    try {
+      const userId = parseInt(rawUserId, 10);
+      
+      const user = await User.findOne({ where: { id: userId } });
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      const store = new UserSettingsStore();
+      await store.setSettings(userId, body);
+
+      const settings = await store.getAllSettings(userId);
+
+      res.json(UserSettingsStore.toResponse(settings));
+    } catch (error) {
+      this.logger.error('Could not update user settings:', error);
+      res.status(500).json('Internal server error.');
     }
   }
 }
