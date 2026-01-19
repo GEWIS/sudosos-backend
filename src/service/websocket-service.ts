@@ -28,7 +28,6 @@ import QRAuthenticator from '../entity/authenticator/qr-authenticator';
 import AuthenticationResponse from '../controller/response/authentication-response';
 
 const SYSTEM_ROOM = 'system';
-const WEBSOCKET_PORT = 8080;
 
 /**
  * This is the module page of the websocket-service.
@@ -54,7 +53,7 @@ export default class WebSocketService {
     if (process.env.NODE_ENV == 'production') {
       this.setupAdapter();
     } else {
-      const port = WEBSOCKET_PORT;
+      const port = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
 
       this.server.listen(port, () => {
         this.logger.info(`WebSocket opened on port ${port}.`);
