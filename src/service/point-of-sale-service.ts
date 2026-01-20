@@ -183,7 +183,7 @@ export default class PointOfSaleService {
     await PointOfSaleRevision.save(pointOfSaleRevision);
 
     // Set roles
-    if (update.cashierRoleIds !== undefined) {
+    if (Array.isArray(update.cashierRoleIds)) {
       base.cashierRoles = await Role.find({ where: { id: In(update.cashierRoleIds) } });
     }
     // Increment current revision.
