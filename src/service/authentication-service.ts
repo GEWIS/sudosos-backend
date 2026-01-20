@@ -210,9 +210,9 @@ export default class AuthenticationService extends WithManager {
     pass: string, Type: new () => T): Promise<T> {
     const repo = this.manager.getRepository(Type);
     let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
-    
+
     // Use lower rounds for PIN authenticators
-    const hash = Type.name === 'PinAuthenticator'
+    const hash = (Type as any).IS_PIN_AUTHENTICATOR === true
       ? await this.hashPinPassword(pass)
       : await this.hashPassword(pass);
 
