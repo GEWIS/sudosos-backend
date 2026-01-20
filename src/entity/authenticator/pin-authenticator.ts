@@ -41,4 +41,9 @@ import HashBasedAuthenticationMethod from './hash-based-authentication-method';
  * @index 0
  */
 @Entity()
-export default class PinAuthenticator extends HashBasedAuthenticationMethod {}
+export default class PinAuthenticator extends HashBasedAuthenticationMethod {
+  /**
+   * Static property to identify PIN authenticators for type checking.
+   */
+  public static readonly IS_PIN_AUTHENTICATOR = true;
+}

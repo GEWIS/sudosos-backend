@@ -243,6 +243,34 @@ describe('AuthenticationService', (): void => {
       await verifyLogin(LocalAuthenticator, 'Im so right', 'Im so wrong');
     });
 
+    it('should use hashPinPassword for PIN authenticators and hashPassword for others', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const service = new AuthenticationService();
+        
+        // Mock both methods
+        const hashPinPasswordSpy = sinon.spy(service, 'hashPinPassword');
+        const hashPasswordSpy = sinon.spy(service, 'hashPassword');
+        
+        // Set PIN authentication - should call hashPinPassword
+        await service.setUserAuthenticationHash(user, '1234', PinAuthenticator);
+        expect(hashPinPasswordSpy).to.have.been.calledOnceWith('1234');
+        expect(hashPasswordSpy).to.not.have.been.called;
+        
+        // Reset spies
+        hashPinPasswordSpy.resetHistory();
+        hashPasswordSpy.resetHistory();
+        
+        // Set local password authentication - should call hashPassword
+        await service.setUserAuthenticationHash(user, 'password123', LocalAuthenticator);
+        expect(hashPasswordSpy).to.have.been.calledOnceWith('password123');
+        expect(hashPinPasswordSpy).to.not.have.been.called;
+        
+        // Restore spies
+        hashPinPasswordSpy.restore();
+        hashPasswordSpy.restore();
+      });
+    });
+
     describe('with posId parameter', () => {
       it('should include posId in token when provided for PIN authentication', async () => {
         await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
