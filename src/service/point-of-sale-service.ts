@@ -183,8 +183,9 @@ export default class PointOfSaleService {
     await PointOfSaleRevision.save(pointOfSaleRevision);
 
     // Set roles
-    base.cashierRoles = await Role.find({ where: { id: In(update.cashierRoleIds ?? []) } });
-
+    if (Array.isArray(update.cashierRoleIds)) {
+      base.cashierRoles = await Role.find({ where: { id: In(update.cashierRoleIds) } });
+    }
     // Increment current revision.
     // eslint-disable-next-line no-param-reassign
     base.currentRevision = base.currentRevision ? base.currentRevision + 1 : 1;
