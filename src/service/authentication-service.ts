@@ -71,6 +71,11 @@ export default class AuthenticationService extends WithManager {
   private static BCRYPT_ROUNDS: number = parseInt(process.env.BCRYPT_ROUNDS, 10) ?? 12;
 
   /**
+   * Amount of salt rounds to use for PIN authentication (lower for performance).
+   */
+  private static BCRYPT_ROUNDS_PIN: number = parseInt(process.env.BCRYPT_ROUNDS_PIN, 10) ?? 1;
+
+  /**
    * ResetToken expiry time in seconds
    */
   private RESET_TOKEN_EXPIRES: () => number =
@@ -86,6 +91,15 @@ export default class AuthenticationService extends WithManager {
   public async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     return Promise.resolve(bcrypt.hash(password, salt));
+  }
+
+  /**
+   * Helper function hashes a PIN with fewer rounds for better performance.
+   * @param pin - PIN code to hash
+   */
+  public async hashPinPassword(pin: string): Promise<string> {
+    const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS_PIN);
+    return Promise.resolve(bcrypt.hash(pin, salt));
   }
 
   /**
@@ -190,7 +204,11 @@ export default class AuthenticationService extends WithManager {
     pass: string, Type: new () => T): Promise<T> {
     const repo = this.manager.getRepository(Type);
     let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
-    const hash = await this.hashPassword(pass);
+    
+    // Use lower rounds for PIN authenticators
+    const hash = Type.name === 'PinAuthenticator'
+      ? await this.hashPinPassword(pass)
+      : await this.hashPassword(pass);
 
     if (authenticator) {
       // We only need to update the hash
