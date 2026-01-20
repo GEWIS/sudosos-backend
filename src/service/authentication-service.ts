@@ -68,12 +68,18 @@ export default class AuthenticationService extends WithManager {
   /**
    * Amount of salt rounds to use.
    */
-  private static BCRYPT_ROUNDS: number = parseInt(process.env.BCRYPT_ROUNDS, 10) ?? 12;
+  private static BCRYPT_ROUNDS: number = (() => {
+    const env = parseInt(process.env.BCRYPT_ROUNDS, 10);
+    return Number.isNaN(env) ? 12 : env;
+  })();
 
   /**
    * Amount of salt rounds to use for PIN authentication (lower for performance).
    */
-  private static BCRYPT_ROUNDS_PIN: number = parseInt(process.env.BCRYPT_ROUNDS_PIN, 10) ?? 1;
+  private static BCRYPT_ROUNDS_PIN: number = (() => {
+    const env = parseInt(process.env.BCRYPT_ROUNDS_PIN, 10);
+    return Number.isNaN(env) ? 1 : env;
+  })();
 
   /**
    * ResetToken expiry time in seconds
