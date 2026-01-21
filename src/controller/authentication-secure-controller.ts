@@ -38,10 +38,12 @@ import WebSocketService from '../service/websocket-service';
 import QRService from '../service/qr-service';
 import AuthenticationSecurePinRequest from './request/authentication-secure-pin-request';
 import AuthenticationSecureNfcRequest from './request/authentication-secure-nfc-request';
+import AuthenticationSecureEanRequest from './request/authentication-secure-ean-request';
 import { UserType } from '../entity/user/user';
 import AuthenticationController from './authentication-controller';
 import AuthenticationService from '../service/authentication-service';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import EanAuthenticator from '../entity/authenticator/ean-authenticator';
 import { AuthenticationContext } from '../service/authentication-service';
 import UserService from '../service/user-service';
 
@@ -112,6 +114,13 @@ export default class AuthenticationSecureController extends BaseController {
         POST: {
           policy: async () => Promise.resolve(true),
           handler: this.secureNfcLogin.bind(this),
+          restrictions: { lesser: false },
+        },
+      },
+      '/ean-secure': {
+        POST: {
+          policy: async () => Promise.resolve(true),
+          handler: this.secureEanLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
@@ -355,6 +364,67 @@ export default class AuthenticationSecureController extends BaseController {
       res.json(token);
     } catch (error) {
       this.logger.error('Could not authenticate using secure NFC:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * POST /authentication/ean-secure
+   * @summary Secure EAN authentication that requires POS user authentication
+   * @operationId secureEanAuthentication
+   * @tags authenticate - Operations of authentication controller
+   * @security JWT
+   * @param {AuthenticationSecureEanRequest} request.body.required - The EAN login request with posId
+   * @return {AuthenticationResponse} 200 - The created json web token
+   * @return {string} 403 - Authentication error (invalid POS user or credentials)
+   * @return {string} 500 - Internal server error
+   */
+  private async secureEanLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationSecureEanRequest;
+    this.logger.trace('Secure EAN authentication for eanCode', body.eanCode, 'by POS user', req.token.user.id);
+
+    try {
+      // Verify the caller is a POS user
+      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
+        res.status(403).json('Only POS users can use secure EAN authentication.');
+        return;
+      }
+
+      // Verify the POS user's ID matches the posId in the request
+      const pointOfSale = await PointOfSale.findOne({ where: { user: { id: tokenUser.id } } });
+      if (!pointOfSale || pointOfSale.id !== body.posId) {
+        res.status(403).json('POS user ID does not match the requested posId.');
+        return;
+      }
+
+      // Look up the EAN authenticator
+      const authenticator = await EanAuthenticator.findOne({
+        where: { eanCode: body.eanCode },
+        relations: UserService.getRelations<EanAuthenticator>(),
+      });
+      if (authenticator == null || authenticator.user == null) {
+        res.status(403).json({
+          message: 'Invalid credentials.',
+        });
+        return;
+      }
+
+      const context: AuthenticationContext = {
+        roleManager: this.roleManager,
+        tokenHandler: this.tokenHandler,
+      };
+
+      this.logger.trace('Successful secure EAN authentication for user', authenticator.user);
+
+      const token = await new AuthenticationService().getSaltedToken({
+        user: authenticator.user,
+        context,
+        posId: body.posId,
+      });
+      res.json(token);
+    } catch (error) {
+      this.logger.error('Could not authenticate using secure EAN:', error);
       res.status(500).json('Internal server error.');
     }
   }

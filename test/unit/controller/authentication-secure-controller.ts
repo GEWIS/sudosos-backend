@@ -48,8 +48,10 @@ import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import sinon from 'sinon';
 import AuthenticationSecurePinRequest from '../../../src/controller/request/authentication-secure-pin-request';
 import AuthenticationSecureNfcRequest from '../../../src/controller/request/authentication-secure-nfc-request';
+import AuthenticationSecureEanRequest from '../../../src/controller/request/authentication-secure-ean-request';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
+import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
 
 describe('AuthenticationSecureController', () => {
   let ctx: {
@@ -894,6 +896,106 @@ describe('AuthenticationSecureController', () => {
 
       const res = await request(ctx.app)
         .post('/authentication/nfc-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body.message).to.equal('Invalid credentials.');
+    });
+  });
+
+  describe('POST /authentication/ean-secure', () => {
+    let posUserToken: string;
+    let memberUserWithEan: User;
+
+    before(async () => {
+      // Set up EAN authenticator for a member user
+      memberUserWithEan = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
+      const eanAuth = new EanAuthenticator();
+      eanAuth.user = memberUserWithEan;
+      eanAuth.eanCode = 'secure-ean-code-1234';
+      await eanAuth.save();
+
+      // Create token for POS user
+      const posUser = ctx.pointOfSaleUsers[0];
+      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+    });
+
+    const validSecureEanRequest: AuthenticationSecureEanRequest = {
+      eanCode: 'secure-ean-code-1234',
+      posId: 0, // Will be set to actual POS ID in tests
+    };
+
+    it('should return HTTP 200 and token when valid POS user authenticates with correct EAN', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecureEanRequest,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/ean-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'AuthenticationResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+
+      const auth = res.body as AuthenticationResponse;
+      expect(auth.user.id).to.equal(memberUserWithEan.id);
+      expect(auth.token).to.be.a('string');
+
+      // Verify the token contains posId
+      const decoded = await ctx.tokenHandler.verifyToken(auth.token);
+      expect(decoded.posId).to.equal(pos.id);
+    });
+
+    it('should return HTTP 403 when caller is not a POS user', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const requestBody = {
+        ...validSecureEanRequest,
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/ean-secure')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('Only POS users can use secure EAN authentication.');
+    });
+
+    it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        ...validSecureEanRequest,
+        posId: pos.id + 999, // Wrong POS ID
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/ean-secure')
+        .set('Authorization', `Bearer ${posUserToken}`)
+        .send(requestBody);
+
+      expect(res.status).to.equal(403);
+      expect(res.body).to.equal('POS user ID does not match the requested posId.');
+    });
+
+    it('should return HTTP 403 when EAN code does not exist', async () => {
+      const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
+      const requestBody = {
+        eanCode: 'non-existent-ean-code',
+        posId: pos.id,
+      };
+
+      const res = await request(ctx.app)
+        .post('/authentication/ean-secure')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 

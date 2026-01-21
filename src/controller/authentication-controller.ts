@@ -194,6 +194,7 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * POST /authentication/pin
+   * @deprecated Use /authentication/pin-secure instead
    * @summary PIN login and hand out token
    * @operationId pinAuthentication
    * @tags authenticate - Operations of authentication controller
@@ -457,6 +458,7 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * POST /authentication/nfc
+   * @deprecated Use /authentication/nfc-secure instead
    * @summary NFC login and hand out token
    * @operationId nfcAuthentication
    * @tags authenticate - Operations of authentication controller
@@ -500,6 +502,7 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * POST /authentication/ean
+   * @deprecated Use /authentication/ean-secure instead
    * @summary EAN login and hand out token
    * @operationId eanAuthentication
    * @tags authenticate - Operations of authentication controller
