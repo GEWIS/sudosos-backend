@@ -43,6 +43,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenHandler from '../../../src/authentication/token-handler';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import bcrypt from 'bcrypt';
 
 export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
   expect(user.firstName).to.equal(ADResponse.givenName);
@@ -339,6 +340,152 @@ describe('AuthenticationService', (): void => {
           // Verify posId is not in the token
           const decoded = await ctx.tokenHandler.verifyToken(result!.token);
           expect(decoded.posId).to.be.undefined;
+        });
+      });
+    });
+
+    describe('PIN migration', () => {
+      function extractBcryptRounds(hash: string): number | null {
+        if (!hash || hash.length < 7 || !hash.startsWith('$2')) {
+          return null;
+        }
+        const roundsStr = hash.substring(4, 6);
+        const rounds = parseInt(roundsStr, 10);
+        return Number.isNaN(rounds) ? null : rounds;
+      }
+
+      it('should migrate PIN hash from old rounds to new rounds on authentication', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          const pin = '1234';
+          const oldRounds = 12;
+          // Bcrypt has a minimum of 4 rounds, so genSalt(1) actually creates 4 rounds
+          const newRounds = 4;
+
+          // Create a PIN hash with old rounds (12) manually
+          const oldSalt = await bcrypt.genSalt(oldRounds);
+          const oldHash = await bcrypt.hash(pin, oldSalt);
+
+          // Verify it was created with old rounds
+          expect(extractBcryptRounds(oldHash)).to.equal(oldRounds);
+
+          // Save the PIN authenticator with old hash
+          const pinAuthenticator = Object.assign(new PinAuthenticator(), {
+            user,
+            hash: oldHash,
+          });
+          await pinAuthenticator.save();
+
+          // Verify the hash is saved with old rounds
+          const savedAuth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
+          expect(savedAuth).to.not.be.null;
+          expect(extractBcryptRounds(savedAuth.hash)).to.equal(oldRounds);
+
+          // Authenticate, this should trigger migration
+          const service = new AuthenticationService();
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
+          };
+
+          const result = await service.HashAuthentication(pin, savedAuth, context);
+          expect(result).to.not.be.undefined;
+          expect(result?.token).to.be.a('string');
+
+          // Wait a bit for async migration to complete
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Verify the hash was migrated to new rounds
+          const migratedAuth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
+          expect(migratedAuth).to.not.be.null;
+          expect(extractBcryptRounds(migratedAuth.hash)).to.equal(newRounds);
+          expect(migratedAuth.hash).to.not.equal(oldHash);
+
+          // Verify the PIN still works with the new hash
+          const isValid = await service.compareHash(pin, migratedAuth.hash);
+          expect(isValid).to.be.true;
+        });
+      });
+
+      it('should not migrate PIN hash if already using new rounds', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          const pin = '5678';
+          // Bcrypt has a minimum of 4 rounds, so genSalt(1) actually creates 4 rounds
+          const newRounds = 4;
+
+          // Create a PIN hash with new rounds (4) manually
+          const newSalt = await bcrypt.genSalt(newRounds);
+          const newHash = await bcrypt.hash(pin, newSalt);
+
+          // Verify it was created with new rounds
+          expect(extractBcryptRounds(newHash)).to.equal(newRounds);
+
+          // Save the PIN authenticator with new hash
+          const pinAuthenticator = Object.assign(new PinAuthenticator(), {
+            user,
+            hash: newHash,
+          });
+          await pinAuthenticator.save();
+
+          const originalHash = pinAuthenticator.hash;
+
+          // Authenticate, should not trigger migration
+          const service = new AuthenticationService();
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
+          };
+
+          const result = await service.HashAuthentication(pin, pinAuthenticator, context);
+          expect(result).to.not.be.undefined;
+
+          // Wait a bit for any async operations
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Verify the hash was NOT changed (already at new rounds)
+          const unchangedAuth = await PinAuthenticator.findOne({ where: { user: { id: user.id } } });
+          expect(unchangedAuth).to.not.be.null;
+          expect(extractBcryptRounds(unchangedAuth.hash)).to.equal(newRounds);
+          // Verify rounds are still the same (hash itself might differ due to salt, but rounds should match)
+          expect(extractBcryptRounds(unchangedAuth.hash)).to.equal(extractBcryptRounds(originalHash));
+        });
+      });
+
+      it('should not migrate non-PIN authenticators', async () => {
+        await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+          const password = 'password123';
+          const oldRounds = 12;
+
+          // Create a local password hash with old rounds manually
+          const oldSalt = await bcrypt.genSalt(oldRounds);
+          const oldHash = await bcrypt.hash(password, oldSalt);
+
+          // Save the local authenticator with old hash
+          const localAuthenticator = Object.assign(new LocalAuthenticator(), {
+            user,
+            hash: oldHash,
+          });
+          await localAuthenticator.save();
+
+          const originalHash = localAuthenticator.hash;
+
+          // Authenticate, should NOT trigger migration (not a PIN)
+          const service = new AuthenticationService();
+          const context = {
+            roleManager: ctx.roleManager,
+            tokenHandler: ctx.tokenHandler,
+          };
+
+          const result = await service.HashAuthentication(password, localAuthenticator, context);
+          expect(result).to.not.be.undefined;
+
+          // Wait a bit for any async operations
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Verify the hash was NOT changed (non-PIN authenticators don't migrate)
+          const unchangedAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } } });
+          expect(unchangedAuth).to.not.be.null;
+          expect(unchangedAuth.hash).to.equal(originalHash);
+          expect(extractBcryptRounds(unchangedAuth.hash)).to.equal(oldRounds);
         });
       });
     });
