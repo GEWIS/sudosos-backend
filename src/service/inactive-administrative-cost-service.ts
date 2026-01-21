@@ -93,21 +93,23 @@ export default class InactiveAdministrativeCostService extends WithManager {
     return ServerSettingsStore.getInstance().getSetting('administrativeCostValue') as ISettings['administrativeCostValue'];
   }
 
-  private async lastTransferQuery(userId: number): Promise<Transfer> {
+  private async lastTransferQuery(userId: number): Promise<Transfer | null> {
     return Transfer.getRepository()
       .createQueryBuilder('transfer')
-      .select('MAX(transfer.createdAt) as createdAt')
       .leftJoin(InactiveAdministrativeCost, 'inactiveAdministrativeCost', 'inactiveAdministrativeCost.transferId = transfer.id')
-      .where('inactiveAdministrativeCost.Id is NULL')
+      .where('inactiveAdministrativeCost.id IS NULL')
       .andWhere('transfer.fromId = :userId', { userId })
+      .orderBy('transfer.createdAt', 'DESC')
+      .limit(1)
       .getOne();
   }
 
-  private async lastTransactionQuery(userId: number): Promise<Transaction> {
+  private async lastTransactionQuery(userId: number): Promise<Transaction | null> {
     return Transaction.getRepository()
       .createQueryBuilder('transaction')
-      .select('MAX(createdAt) as createdAt')
-      .where(`transaction.fromId = ${userId}`)
+      .where('transaction.fromId = :userId', { userId })
+      .orderBy('transaction.createdAt', 'DESC')
+      .limit(1)
       .getOne();
   }
 
@@ -153,10 +155,10 @@ export default class InactiveAdministrativeCostService extends WithManager {
       const lastTransfer = await this.lastTransferQuery(user.id);
       const lastTransaction = await this.lastTransactionQuery(user.id);
 
-      if (lastTransfer !== null) if (InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
+      if (lastTransfer && InactiveAdministrativeCostService.yearDifference(lastTransfer.createdAt) < differenceDate) {
         isNotEligible = true;
       }
-      if (lastTransaction !== null) if (InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
+      if (lastTransaction && InactiveAdministrativeCostService.yearDifference(lastTransaction.createdAt) < differenceDate) {
         isNotEligible = true;
       }
 
