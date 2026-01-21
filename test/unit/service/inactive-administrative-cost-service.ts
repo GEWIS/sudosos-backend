@@ -229,27 +229,31 @@ describe('InactiveAdministrativeCostService', () => {
   describe('deleteInactiveAdministrativeCost', async (): Promise<void> => {
     it('should delete a given inactive administrative cost', async () => {
       const createdInactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost(ctx.validAdminCostRequest);
-      const deletedInactiveAdministrativeCost = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(createdInactiveAdministrativeCost.id);
+      const transferId = createdInactiveAdministrativeCost.transfer.id;
 
-      // Check creation of transfer
-      const undoTransfer = await Transfer.findOne({ where: { id: deletedInactiveAdministrativeCost.creditTransferId } });
+      await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(createdInactiveAdministrativeCost.id);
 
-      expect(undoTransfer).not.be.null;
-      expect(deletedInactiveAdministrativeCost.creditTransferId).to.be.eq(undoTransfer.id);
+      // Verify InactiveAdministrativeCost is deleted
+      const deletedCost = await InactiveAdministrativeCost.findOne({ where: { id: createdInactiveAdministrativeCost.id } });
+      expect(deletedCost).to.be.null;
+
+      // Verify linked Transfer is deleted
+      const deletedTransfer = await Transfer.findOne({ where: { id: transferId } });
+      expect(deletedTransfer).to.be.null;
     });
-    it('should return undefined when entity does not exist', async () => {
+    it('should return void when entity does not exist', async () => {
       const lastId = ctx.inactiveAdministrativeCosts.length;
-      const res = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(lastId + 1);
-
-      expect(res).not.be.undefined;
+      // Method should complete without throwing when entity does not exist
+      await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(lastId + 1);
     });
-    it('should restore the user’s balance when an inactive administrative cost is deleted', async () => {
+    it('should restore the user\'s balance when an inactive administrative cost is deleted', async () => {
       const balances = await new BalanceService().getBalances({});
       const user = balances.records.find(x => x.amount.amount > 100);
 
       const before = (await new BalanceService().getBalance(user.id)).amount.amount;
 
       const created = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost({ forId: user.id });
+      const transferId = created.transfer.id;
       await new BalanceService().updateBalances({});
       const afterDeduction = (await new BalanceService().getBalance(user.id)).amount.amount;
 
@@ -257,6 +261,14 @@ describe('InactiveAdministrativeCostService', () => {
       await new BalanceService().updateBalances({});
       const afterRefund = (await new BalanceService().getBalance(user.id)).amount.amount;
 
+      // Verify both entities are deleted
+      const deletedCost = await InactiveAdministrativeCost.findOne({ where: { id: created.id } });
+      expect(deletedCost).to.be.null;
+
+      const deletedTransfer = await Transfer.findOne({ where: { id: transferId } });
+      expect(deletedTransfer).to.be.null;
+
+      // Verify balance is restored
       expect(afterDeduction).to.be.lessThan(before);
       expect(afterRefund).to.be.closeTo(before, 1);
     });

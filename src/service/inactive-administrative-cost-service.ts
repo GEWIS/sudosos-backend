@@ -186,36 +186,25 @@ export default class InactiveAdministrativeCostService extends WithManager {
   }
 
   /**
-   * Deletes the given InactiveAdministrativeCost and creates an undo transfer
+   * Hard deletes the given InactiveAdministrativeCost and its linked Transfer.
    * @param inactiveAdministrativeCostId
    */
-  public async deleteInactiveAdministrativeCost(inactiveAdministrativeCostId: number)
-    : Promise<InactiveAdministrativeCost | undefined> {
-    // Find base inactive administrative cost entity.
+  public async deleteInactiveAdministrativeCost(inactiveAdministrativeCostId: number): Promise<void> {
+    // Find inactive administrative cost entity with transfer relation
     const inactiveAdministrativeCost = await this.manager.findOne(InactiveAdministrativeCost, { ...InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId }) });
-    if (!inactiveAdministrativeCost) return undefined;
+    if (!inactiveAdministrativeCost) return;
 
-    // Get amount from transfer
-    const amount: DineroObjectRequest = inactiveAdministrativeCost.transfer.amountInclVat.toObject();
+    // Store transfer reference before deletion
+    const transfer = inactiveAdministrativeCost.transfer;
 
-    // We create an undo transfer that sends the money back to the person.
-    const undoTransfer: TransferRequest = {
-      amount,
-      description: 'Deletion of InactiveAdministrativeCost',
-      fromId: 0,
-      toId: inactiveAdministrativeCost.fromId,
-    };
+    // Delete InactiveAdministrativeCost first to clear the reference from Transfer
+    await this.manager.delete(InactiveAdministrativeCost, inactiveAdministrativeCostId);
 
-    // Save new transfer and delete the administrative cost
-    await new TransferService(this.manager).postTransfer(undoTransfer).then(async (response) => {
-      const transfer = await Transfer.findOne({ where: { id: response.id } });
-      if (!transfer) throw new Error('Transfer not found during deletion of inactive administrative cost, aborting');
-      inactiveAdministrativeCost.creditTransfer = transfer;
-    });
-    await this.manager.save(InactiveAdministrativeCost, inactiveAdministrativeCost);
+    // Delete the linked Transfer
+    await this.manager.delete(Transfer, transfer.id);
 
-    const options = InactiveAdministrativeCostService.getOptions({ inactiveAdministrativeCostId: inactiveAdministrativeCost.id });
-    return this.manager.findOne(InactiveAdministrativeCost, options);
+    // Invalidate balance caches for affected users
+    await TransferService.invalidateBalanceCaches(transfer);
   }
 
   /**

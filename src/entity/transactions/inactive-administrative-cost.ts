@@ -49,14 +49,4 @@ export default class InactiveAdministrativeCost extends BaseEntity {
   @OneToOne(() => Transfer, { nullable: false })
   @JoinColumn()
   public transfer: Transfer;
-
-  @Column({ nullable: true })
-  public creditTransferId?: number;
-
-  /**
-   * If this inactive administrative cost is deleted, this will be credit transfer.
-   */
-  @OneToOne(() => Transfer, { nullable: true })
-  @JoinColumn()
-  public creditTransfer?: Transfer;
 }
