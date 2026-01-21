@@ -171,7 +171,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @param {integer} id.path.required - The id of the requested inactive administrative cost
    * @tags inactiveAdministrativeCosts - Operations of the invoices controller
    * @security JWT
-   * @return {BaseInactiveAdministrativeCostResponse} 200 - All existing inactive administrative cost
+   * @return {InactiveAdministrativeCostResponse} 200 - All existing inactive administrative cost
    * @return {string} 404 - InactiveAdministrativeCost not found
    * @return {string} 500 - Internal server error
    */
@@ -190,9 +190,8 @@ export default class InactiveAdministrativeCostController extends BaseController
         res.status(404).json('Unknown inactive administrative cost ID.');
         return;
       }
-      const response = InactiveAdministrativeCostService.asInactiveAdministrativeCostResponse(inactiveAdministrativeCost);
 
-      res.json(response);
+      res.json(inactiveAdministrativeCost.toResponse());
     } catch (error) {
       this.logger.error('Could not return inactive administrative cost', error);
       res.status(500).json('Internal server error.');
@@ -208,7 +207,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @security JWT
    * @param {CreateInactiveAdministrativeCostRequest} request.body.required -
    * The inactive administrative cost which should be created
-   * @return {BaseInactiveAdministrativeCostResponse} 200 - The created inactive administrative cost entity
+   * @return {InactiveAdministrativeCostResponse} 200 - The created inactive administrative cost entity
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
@@ -225,7 +224,7 @@ export default class InactiveAdministrativeCostController extends BaseController
       }
 
       const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost(body);
-      res.json(InactiveAdministrativeCostService.asInactiveAdministrativeCostResponse(inactiveAdministrativeCost));
+      res.json(inactiveAdministrativeCost.toResponse());
     } catch (error) {
       if (error instanceof NotImplementedError) {
         res.status(501).json(error.message);

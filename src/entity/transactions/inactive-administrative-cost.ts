@@ -24,6 +24,9 @@ import BaseEntity from '../base-entity';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import Transfer from './transfer';
+import { BaseInactiveAdministrativeCostResponse, InactiveAdministrativeCostResponse } from '../../controller/response/inactive-administrative-cost-response';
+import { parseUserToBaseResponse } from '../../helpers/revision-to-response';
+import TransferService from '../../service/transfer-service';
 
 /**
  * @typedef {BaseEntity} InactiveAdministrativeCost
@@ -36,7 +39,7 @@ export default class InactiveAdministrativeCost extends BaseEntity {
   @Column({ nullable: false })
   public fromId: number;
 
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false, eager: true })
   @JoinColumn({ name: 'fromId' })
   public from: User;
 
@@ -49,4 +52,21 @@ export default class InactiveAdministrativeCost extends BaseEntity {
   @OneToOne(() => Transfer, { nullable: false })
   @JoinColumn()
   public transfer: Transfer;
+
+  toBaseResponse(): BaseInactiveAdministrativeCostResponse {
+    return {
+      id: this.id,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+      from: parseUserToBaseResponse(this.from, false),
+      amount: this.amount.toObject(),
+    };
+  }
+
+  toResponse(): InactiveAdministrativeCostResponse {
+    return {
+      ...this.toBaseResponse(),
+      transfer: TransferService.asTransferResponse(this.transfer),
+    };
+  }
 }
