@@ -253,11 +253,14 @@ export default class InactiveAdministrativeCostController extends BaseController
     this.logger.trace('Delete inactive administrative costs', inactiveAdministrativeCostId, 'by user', req.token.user);
 
     try {
-      const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(inactiveAdministrativeCostId);
-      if (!inactiveAdministrativeCost) {
+      // Check if entity exists before attempting deletion
+      const existingCost = await new InactiveAdministrativeCostService().getInactiveAdministrativeCosts({ inactiveAdministrativeCostId });
+      if (!existingCost || existingCost.length === 0) {
         res.status(404).json('InactiveAdministrativeCost not found.');
         return;
       }
+
+      await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(inactiveAdministrativeCostId);
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not delete InactiveAdministrativeCost:', error);

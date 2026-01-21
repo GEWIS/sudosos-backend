@@ -106,6 +106,9 @@ import { AddWrappedTable1764842063654 } from '../migrations/1764842063654-add-wr
 import { AddWrappedOrganMember1765826596888 } from '../migrations/1765826596888-add-wrapped-organ-member';
 import UserSetting from '../entity/user-setting';
 import { UserSetting1768697568707 } from '../migrations/1768697568707-user-setting';
+import {
+  RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
+} from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -139,6 +142,7 @@ const options: DataSourceOptions = {
     AddWrappedTable1764842063654,
     AddWrappedOrganMember1765826596888,
     UserSetting1768697568707,
+    RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
   ],
   extra: {
     authPlugins: {
