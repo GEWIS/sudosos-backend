@@ -35,11 +35,8 @@ import TokenHandler from '../authentication/token-handler';
 import RoleManager from '../rbac/role-manager';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import OrganMembership from '../entity/organ/organ-membership';
-import {
-  bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP,
-} from '../helpers/ad';
-import { asUserResponse } from './user-service';
-import UserService from './user-service';
+import { bindUser, getLDAPConnection, getLDAPSettings, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
+import UserService, { asUserResponse } from './user-service';
 import HashBasedAuthenticationMethod from '../entity/authenticator/hash-based-authentication-method';
 import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
@@ -536,6 +533,17 @@ export default class AuthenticationService extends WithManager {
     posId?: number;
   }): Promise<AuthenticationResponse> {
     const { user, context, salt, expiry, posId } = params;
+    
+    // Update lastSeen locally
+    user.lastSeen = new Date();
+    
+    // Save in background without awaiting
+    this.manager.save(User, user).catch((error) => {
+      // Log error but don't block
+      const logger: Logger = log4js.getLogger('AuthenticationService');
+      logger.error('Failed to save lastSeen timestamp:', error);
+    });
+    
     const [froles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
       context.roleManager.getUserOrgans(user),

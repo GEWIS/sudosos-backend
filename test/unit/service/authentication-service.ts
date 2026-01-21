@@ -709,4 +709,77 @@ describe('AuthenticationService', (): void => {
       });
     });
   });
+
+  describe('lastSeen tracking', () => {
+    it('should have lastSeen as null on user creation', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        expect(user.lastSeen).to.be.null;
+      });
+    });
+
+    it('should set lastSeen after successful login', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        expect(user.lastSeen).to.be.null;
+
+        const context = {
+          roleManager: ctx.roleManager,
+          tokenHandler: ctx.tokenHandler,
+        };
+
+        const response = await new AuthenticationService().getSaltedToken({
+          user,
+          context,
+        });
+
+        expect(response).to.not.be.undefined;
+        
+        // Verify the user object was updated locally
+        expect(user.lastSeen).to.not.be.null;
+        expect(user.lastSeen).to.be.instanceOf(Date);
+        
+        // Verify it's saved to database
+        await new Promise(resolve => setTimeout(resolve, 50)); // Wait for background save
+        const dbUser = await User.findOne({ where: { id: user.id } });
+        expect(dbUser?.lastSeen).to.not.be.null;
+        expect(dbUser?.lastSeen).to.be.instanceOf(Date);
+      });
+    });
+
+    it('should update lastSeen on subsequent logins', async () => {
+      await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
+        const context = {
+          roleManager: ctx.roleManager,
+          tokenHandler: ctx.tokenHandler,
+        };
+
+        // First login
+        await new AuthenticationService().getSaltedToken({
+          user,
+          context,
+        });
+
+        const firstLastSeen = user.lastSeen;
+        expect(firstLastSeen).to.not.be.null;
+
+        // Wait a bit to ensure timestamp difference
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Second login
+        await new AuthenticationService().getSaltedToken({
+          user,
+          context,
+        });
+
+        const secondLastSeen = user.lastSeen;
+        expect(secondLastSeen).to.not.be.null;
+        expect(secondLastSeen!.getTime()).to.be.greaterThan(firstLastSeen!.getTime());
+        
+        // Verify database was updated
+        await new Promise(resolve => setTimeout(resolve, 50)); // Wait for background save
+        const dbUser = await User.findOne({ where: { id: user.id } });
+        expect(dbUser?.lastSeen).to.not.be.null;
+        expect(dbUser?.lastSeen!.getTime()).to.be.greaterThan(firstLastSeen!.getTime());
+      });
+    });
+  });
 });

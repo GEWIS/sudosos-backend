@@ -159,6 +159,12 @@ export default class User extends BaseEntity {
   })
   public inactiveNotificationSend: boolean;
 
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  public lastSeen: Date | null;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
