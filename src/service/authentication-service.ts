@@ -45,6 +45,7 @@ import ResetToken from '../entity/authenticator/reset-token';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../controller/request/authentication-reset-token-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
+import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import RBACService from './rbac-service';
 import Role from '../entity/rbac/role';
 import WithManager from '../database/with-manager';
@@ -106,6 +107,52 @@ export default class AuthenticationService extends WithManager {
   public async hashPinPassword(pin: string): Promise<string> {
     const salt = await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS_PIN);
     return Promise.resolve(bcrypt.hash(pin, salt));
+  }
+
+  /**
+   * Extracts the bcrypt rounds from a hash string.
+   * Bcrypt hash format: $2b$rounds$salt+hash
+   * @param hash - The bcrypt hash string
+   * @returns The number of rounds used, or null if not a valid bcrypt hash
+   */
+  private extractBcryptRounds(hash: string): number | null {
+    // Bcrypt hash format: $2b$10$... where 10 is the rounds (2 digits)
+    if (!hash || hash.length < 7 || !hash.startsWith('$2')) {
+      return null;
+    }
+    const roundsStr = hash.substring(4, 6);
+    const rounds = parseInt(roundsStr, 10);
+    return Number.isNaN(rounds) ? null : rounds;
+  }
+
+  /**
+   * Migrates a PIN authenticator to use the new bcrypt rounds if needed.
+   * This is called asynchronously and does not block authentication.
+   * @param authenticator - The PIN authenticator to potentially migrate
+   * @param pin - The plain text PIN (only used if migration is needed)
+   */
+  private async migratePinAuthenticatorIfNeeded(
+    authenticator: PinAuthenticator,
+    pin: string,
+  ): Promise<void> {
+    try {
+      const currentRounds = this.extractBcryptRounds(authenticator.hash);
+      if (currentRounds === null) {
+        // Not a valid bcrypt hash, skip migration
+        return;
+      }
+
+      // If the hash uses more rounds than the target, migrate it
+      if (currentRounds > AuthenticationService.BCRYPT_ROUNDS_PIN) {
+        const newHash = await this.hashPinPassword(pin);
+        authenticator.hash = newHash;
+        await authenticator.save();
+      }
+    } catch (error) {
+      // Log error but don't throw
+      const logger = log4js.getLogger('AuthenticationService');
+      logger.warn('Failed to migrate PIN authenticator:', error);
+    }
   }
 
   /**
@@ -268,6 +315,11 @@ export default class AuthenticationService extends WithManager {
     : Promise<AuthenticationResponse | undefined> {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
+
+    // Migrate PIN authenticators to new bcrypt rounds if needed (non-blocking)
+    if ((authenticator.constructor as any).IS_PIN_AUTHENTICATOR === true) {
+      void this.migratePinAuthenticatorIfNeeded(authenticator as unknown as PinAuthenticator, pass);
+    }
 
     const expiry = authenticator.user.type === UserType.POINT_OF_SALE ?
       ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale']
