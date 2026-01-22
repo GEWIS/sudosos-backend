@@ -41,7 +41,7 @@ jobs:
           gh pr create \
             --base main \
             --head develop \
-            --title "Release: update `main` from `develop`" \
+            --title 'Release: update `main` from `develop`' \
             --body "This PR is automatically created to prepare a release from develop to main." \
             --draft
         env:
