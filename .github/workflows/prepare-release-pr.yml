@@ -1,0 +1,48 @@
+name: Prepare Release PR
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for existing PR
+        id: check-pr
+        run: |
+          PR=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number' || echo "")
+          if [ -z "$PR" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "number=$PR" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create draft PR
+        if: steps.check-pr.outputs.exists == 'false'
+        run: |
+          gh pr create \
+            --base main \
+            --head develop \
+            --title "Release: update `main` from `develop`" \
+            --body "This PR is automatically created to prepare a release from develop to main." \
+            --draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
