@@ -43,7 +43,9 @@ import InactiveAdministrativeCostService from '../../../src/service/inactive-adm
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import {
-  BaseInactiveAdministrativeCostResponse, UserToInactiveAdministrativeCostResponse,
+  BaseInactiveAdministrativeCostResponse,
+  InactiveAdministrativeCostResponse,
+  UserToInactiveAdministrativeCostResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import BalanceService from '../../../src/service/balance-service';
 import {
@@ -67,14 +69,14 @@ import QueryFilter from '../../../src/helpers/query-filter';
 
 chai.use(deepEqualInAnyOrder);
 
-function keyMapping(inactiveAdministrativeCost: BaseInactiveAdministrativeCostResponse | InactiveAdministrativeCost) {
+function keyMapping(inactiveAdministrativeCost: BaseInactiveAdministrativeCostResponse | InactiveAdministrativeCostResponse | InactiveAdministrativeCost) {
   return {
     id: inactiveAdministrativeCost.id,
     fromId: inactiveAdministrativeCost.from.id,
   };
 }
 
-export type T = BaseInactiveAdministrativeCostResponse | InactiveAdministrativeCost;
+export type T = BaseInactiveAdministrativeCostResponse | InactiveAdministrativeCostResponse | InactiveAdministrativeCost;
 
 function returnsAll(response: T[], superset: InactiveAdministrativeCost[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));

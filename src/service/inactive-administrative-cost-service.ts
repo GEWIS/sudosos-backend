@@ -38,7 +38,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asNumber } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import {
-  BaseInactiveAdministrativeCostResponse,
+  InactiveAdministrativeCostResponse,
   UserToInactiveAdministrativeCostResponse,
 } from '../controller/response/inactive-administrative-cost-response';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
@@ -113,23 +113,8 @@ export default class InactiveAdministrativeCostService extends WithManager {
       .getOne();
   }
 
-  public static toArrayResponse(inactiveAdministrativeCosts: InactiveAdministrativeCost[]): BaseInactiveAdministrativeCostResponse[] {
-    return inactiveAdministrativeCosts.map(inactiveAdministrativeCost => InactiveAdministrativeCostService.asInactiveAdministrativeCostResponse(inactiveAdministrativeCost));
-  }
-
-  /**
-   * Parses an InactiveAdministrativeCost Object to a BaseInactiveAdministrativeCostResponse
-   * @param inactiveAdministrativeCost - The InactiveAdministrativeCost to parse
-   */
-  public static asInactiveAdministrativeCostResponse(inactiveAdministrativeCost: InactiveAdministrativeCost): BaseInactiveAdministrativeCostResponse {
-    return {
-      id: inactiveAdministrativeCost.id,
-      createdAt: inactiveAdministrativeCost.createdAt.toISOString(),
-      updatedAt: inactiveAdministrativeCost.updatedAt.toISOString(),
-      from: parseUserToBaseResponse(inactiveAdministrativeCost.from, false),
-      amount: inactiveAdministrativeCost.amount.toObject(),
-      transfer: inactiveAdministrativeCost.transfer ? TransferService.asTransferResponse(inactiveAdministrativeCost.transfer) : undefined,
-    };
+  public static toArrayResponse(inactiveAdministrativeCosts: InactiveAdministrativeCost[]): InactiveAdministrativeCostResponse[] {
+    return inactiveAdministrativeCosts.map(inactiveAdministrativeCost => inactiveAdministrativeCost.toResponse());
   }
 
   /**

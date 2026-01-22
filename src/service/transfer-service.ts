@@ -81,6 +81,7 @@ export default class TransferService extends WithManager {
       fine: transfer.fine ? DebtorService.asFineResponse(transfer.fine) : null,
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
       writeOff: transfer.writeOff ? WriteOffService.asBaseWriteOffResponse(transfer.writeOff) : null,
+      inactiveAdministrativeCost: transfer.inactiveAdministrativeCost ? transfer.inactiveAdministrativeCost.toBaseResponse() : null,
       vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }

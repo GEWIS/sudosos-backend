@@ -1411,6 +1411,7 @@ describe('UserController', (): void => {
         false,
         true,
       );
+      console.error(validation.errors);
       expect(validation.valid).to.be.true;
     });
     it('should give correct transfers from/to/created by user', async () => {

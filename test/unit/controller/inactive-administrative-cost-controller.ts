@@ -39,7 +39,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { expect, request } from 'chai';
 import Swagger from '../../../src/start/swagger';
 import {
-  BaseInactiveAdministrativeCostResponse,
+  InactiveAdministrativeCostResponse,
   InactiveAdministrativeCostReportResponse,
 } from '../../../src/controller/response/inactive-administrative-cost-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
@@ -223,7 +223,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.equal(200);
 
-      const inactiveAdministrativeCosts = res.body.records as BaseInactiveAdministrativeCostResponse[];
+      const inactiveAdministrativeCosts = res.body.records as InactiveAdministrativeCostResponse[];
       const pagination = res.body._pagination as PaginationResult;
 
       const inactiveAdministrativeCostsCount = await InactiveAdministrativeCost.count();
@@ -251,7 +251,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.equal(200);
 
-      const inactiveAdministrativeCosts = res.body.records as BaseInactiveAdministrativeCostResponse[];
+      const inactiveAdministrativeCosts = res.body.records as InactiveAdministrativeCostResponse[];
       for (const inactiveAdministrativeCost of inactiveAdministrativeCosts) {
         expect(inactiveAdministrativeCost.from.id).to.equal(userId);
       }
@@ -272,7 +272,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .query({ take, skip })
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      const inactiveAdministrativeCosts = res.body.records as BaseInactiveAdministrativeCostResponse[];
+      const inactiveAdministrativeCosts = res.body.records as InactiveAdministrativeCostResponse[];
       const pagination = res.body._pagination as PaginationResult;
 
       const inactiveAdministrativeCostsCount = await InactiveAdministrativeCost.count();
@@ -333,7 +333,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
-        'BaseInactiveAdministrativeCostResponse',
+        'InactiveAdministrativeCostResponse',
         res.body,
         false,
         true,
@@ -346,7 +346,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect((res.body as BaseInactiveAdministrativeCostResponse).id).to.be.equal(inactiveAdministrativeCost.id);
+      expect((res.body as InactiveAdministrativeCostResponse).id).to.be.equal(inactiveAdministrativeCost.id);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const inactiveAdministrativeCost = (await InactiveAdministrativeCost.find())[0];
