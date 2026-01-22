@@ -501,7 +501,7 @@ describe('UserController', (): void => {
       expect(res.body.id).to.equal(user.id);
     });
   });
-  
+
   describe('GET /users/usertype/:userType', () => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
@@ -1411,7 +1411,6 @@ describe('UserController', (): void => {
         false,
         true,
       );
-      console.error(validation.errors);
       expect(validation.valid).to.be.true;
     });
     it('should give correct transfers from/to/created by user', async () => {
