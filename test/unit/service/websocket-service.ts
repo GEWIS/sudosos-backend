@@ -313,19 +313,19 @@ describe('WebSocketService', () => {
       expect(handler).to.not.be.undefined;
     });
 
-    it('should not emit unregistered event type', async (done) => {
+    it('should not emit unregistered event type', async () => {
       let eventReceived = false;
       
       clientSocket.on('unregistered:event', () => {
         eventReceived = true;
       });
 
-      await webSocketService.emit('unregistered:event', { data: 'test' }).then(() => {
-        setTimeout(() => {
-          expect(eventReceived).to.be.false;
-          done();
-        }, 100);
-      });
+      await webSocketService.emit('unregistered:event', { data: 'test' });
+      
+      // Wait a bit to ensure event would have been received if it was emitted
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      expect(eventReceived).to.be.false;
     });
 
     it('should emit transaction without pointOfSale', async () => {
@@ -612,7 +612,7 @@ describe('WebSocketService', () => {
       expect(handler.guard).to.be.a('function');
     });
 
-    it('should not emit to rooms with unparseable room names', async (done) => {
+    it('should not emit to rooms with unparseable room names', async () => {
       let eventReceived = false;
       
       const eventRegistry = (webSocketService as any).eventRegistry;
@@ -625,12 +625,12 @@ describe('WebSocketService', () => {
         eventReceived = true;
       });
 
-      await webSocketService.emit('test:event', { data: 'test' }).then(() => {
-        setTimeout(() => {
-          expect(eventReceived).to.be.false;
-          done();
-        }, 100);
-      });
+      await webSocketService.emit('test:event', { data: 'test' });
+      
+      // Wait a bit to ensure event would have been received if it was emitted
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      expect(eventReceived).to.be.false;
     });
   });
 
