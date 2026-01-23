@@ -175,6 +175,36 @@ export default class WebSocketService {
       },
     });
 
+    // Register user transaction rooms
+    this.registerRoom({
+      pattern: 'user:{id}:transactions',
+      policy: async (context) => {
+        const userId = context.parsedRoom?.entityId;
+        if (!userId) return false;
+
+        const relation = context.user.id === userId ? 'own' : 'all';
+        return this.roleManager.can(
+          context.token.roles,
+          'get',
+          relation,
+          'Transaction',
+          ['*'],
+        );
+      },
+    });
+
+    // Register global transaction rooms
+    this.registerRoom({
+      pattern: 'transactions:all',
+      policy: async (context) => this.roleManager.can(
+        context.token.roles,
+        'get',
+        'all',
+        'Transaction',
+        ['*'],
+      ),
+    });
+
 
     // Register transaction:created event handler
     this.eventRegistry.register<TransactionResponse>('transaction:created', {
@@ -265,10 +295,16 @@ export default class WebSocketService {
       }
     }
 
+    // Authenticate before allowing any socket events to race it.
+    this.io.use((client, next) => {
+      void this.handleAuthentication(client)
+        .then(() => next())
+        .catch(() => next());
+    });
+
     // Register connection handler only once
-    this.io.on('connection', async (client: Socket) => {
+    this.io.on('connection', (client: Socket) => {
       this.setupConnectionHandlers(client);
-      await this.handleAuthentication(client);
     });
     this.connectionHandlerRegistered = true;
   }
@@ -278,13 +314,25 @@ export default class WebSocketService {
    * @param client - The socket client to authenticate.
    */
   private async handleAuthentication(client: Socket): Promise<void> {
+    const auth = client.handshake.auth as Record<string, unknown> | undefined;
+    const authToken = auth?.token;
+    const tokenFromAuth = typeof authToken === 'string' ? authToken : undefined;
+
     const tokenQuery = client.handshake.query.token;
     // Normalize token: Socket.IO query params can be string | string[] | undefined
-    const tokenString = Array.isArray(tokenQuery) ? tokenQuery[0] : tokenQuery;
+    const tokenFromQuery = typeof tokenQuery === 'string'
+      ? tokenQuery
+      : (Array.isArray(tokenQuery) ? tokenQuery[0] : undefined);
+
+    const tokenString = tokenFromAuth ?? tokenFromQuery;
     
     if (!tokenString || typeof tokenString !== 'string') {
       this.logger.trace(`Client ${client.id} connected without authentication`);
       return;
+    }
+
+    if (!tokenFromAuth && tokenFromQuery) {
+      this.logger.debug('WebSocket token passed via query is deprecated; use handshake.auth.token instead.');
     }
 
     try {
@@ -295,8 +343,8 @@ export default class WebSocketService {
       });
 
       if (user) {
-        (client.data as SocketData).user = user;
-        (client.data as SocketData).token = token;
+        client.data.user = user;
+        client.data.token = token;
         this.logger.trace(`Client ${client.id} connected and authenticated as user ${user.id}`);
       } else {
         this.logger.warn(`Client ${client.id} authenticated with invalid user ID: ${token.user.id}`);
@@ -351,7 +399,7 @@ export default class WebSocketService {
       return;
     }
 
-    const socketData = client.data as SocketData;
+    const socketData = client.data as Partial<SocketData>;
     
     // Check if authentication is required (room has a policy)
     if (registration.policy) {

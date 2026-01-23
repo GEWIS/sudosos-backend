@@ -25,6 +25,7 @@ import WebSocketService from '../../../src/service/websocket-service';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
+import User from '../../../src/entity/user/user';
 
 describe('WebSocketService', () => {
   const ORIGINAL_ENV = process.env;
@@ -32,13 +33,20 @@ describe('WebSocketService', () => {
   let clientSocket: any;
   let getInstanceStub: sinon.SinonStub;
   let webSocketService: WebSocketService;
+  let verifyTokenStub: sinon.SinonStub;
+  let roleCanStub: sinon.SinonStub;
+
+  const getPort = (): number => {
+    const server = WebSocketService.server;
+    return (server?.address() as any)?.port;
+  };
 
   before((done) => {
     // Save original process.env and set test environment
     process.env = {
       ...ORIGINAL_ENV,
       NODE_ENV: 'development',
-      WEBSOCKET_PORT: '8080', // Explicitly set port for tests
+      WEBSOCKET_PORT: '0', // Use ephemeral port for tests
     };
 
     // Create a mock for ServerSettingsStore
@@ -50,8 +58,10 @@ describe('WebSocketService', () => {
     getInstanceStub = sinon.stub(ServerSettingsStore, 'getInstance').returns(serverSettingsMock);
 
     // Create mock token handler and role manager
-    const mockTokenHandler = {} as TokenHandler;
-    const mockRoleManager = {} as RoleManager;
+    verifyTokenStub = sinon.stub().resolves(undefined);
+    roleCanStub = sinon.stub().resolves(true);
+    const mockTokenHandler = { verifyToken: verifyTokenStub } as unknown as TokenHandler;
+    const mockRoleManager = { can: roleCanStub } as unknown as RoleManager;
 
     // Initialize WebSocket service
     webSocketService = new WebSocketService({
@@ -74,10 +84,17 @@ describe('WebSocketService', () => {
   beforeEach((done) => {
     // Reset mocks before each test
     serverSettingsMock.getSettingFromDatabase.reset();
+    verifyTokenStub.resetBehavior();
+    roleCanStub.resetBehavior();
+    roleCanStub.resolves(true);
+
+    // Ensure the singleton always points to the main test instance.
+    // Some tests create additional WebSocketService instances, which would otherwise overwrite it.
+    // @ts-ignore
+    WebSocketService.instance = webSocketService;
 
     // Get the actual port the server is listening on
-    const server = WebSocketService.server;
-    const port = (server?.address() as any)?.port || 8080;
+    const port = getPort();
 
     // Connect a client before each test and wait for connection
     clientSocket = io(`http://localhost:${port}`, {
@@ -123,12 +140,18 @@ describe('WebSocketService', () => {
   });
 
   describe('initiateWebSocket function', () => {
-    it('should start server on port 8080', () => {
+    it('should start server on configured port', () => {
       const server = WebSocketService.server;
       expect(server?.listening).to.be.true;
-      const expectedPort = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
       const address = server.address() as { port: number };
-      expect(address?.port).to.equal(expectedPort);
+      expect(address?.port).to.be.a('number');
+
+      const configuredPort = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
+      if (configuredPort === 0) {
+        expect(address?.port).to.be.greaterThan(0);
+      } else {
+        expect(address?.port).to.equal(configuredPort);
+      }
     });
 
     it('should handle client connection', () => {
@@ -381,7 +404,7 @@ describe('WebSocketService', () => {
 
     it('should require authentication for registered rooms', (done) => {
       // Create unauthenticated client
-      const unauthenticatedClient = io('http://localhost:8080', {
+      const unauthenticatedClient = io(`http://localhost:${getPort()}`, {
         query: {}, // No token
       });
 
@@ -407,7 +430,7 @@ describe('WebSocketService', () => {
 
       // This test requires authentication, so we'll test the error path
       // by trying to subscribe without proper auth setup
-      const testClient = io('http://localhost:8080', {
+      const testClient = io(`http://localhost:${getPort()}`, {
         query: {},
         reconnection: false,
         timeout: 5000,
@@ -416,7 +439,7 @@ describe('WebSocketService', () => {
 
       testClient.on('connect', () => {
         testClient.on('error', (error: any) => {
-          if (error.message === 'Authentication required for this room.' || 
+          if (error.message === 'Authentication required for this room.' ||
               error.message === 'Unauthorized to subscribe to this room.') {
             testClient.disconnect();
             done();
@@ -536,10 +559,10 @@ describe('WebSocketService', () => {
     it('should delegate emitQRConfirmed to instance', () => {
       const mockQR = { sessionId: 'test-session' } as any;
       const mockToken = { user: { id: 1 } } as any;
-      
+
       // Should complete without error
       WebSocketService.emitQRConfirmed(mockQR, mockToken);
-      
+
       // Verify method exists
       expect(webSocketService.emitQRConfirmed).to.be.a('function');
     });
@@ -548,7 +571,7 @@ describe('WebSocketService', () => {
       // Should complete without error
       WebSocketService.sendMaintenanceMode(true);
       WebSocketService.sendMaintenanceMode(false);
-      
+
       // Verify method exists
       expect(webSocketService.sendMaintenanceMode).to.be.a('function');
     });
@@ -631,10 +654,10 @@ describe('WebSocketService', () => {
         tokenHandler: mockTokenHandler,
         roleManager: mockRoleManager,
       });
-      
+
       // Close without starting
       await testService.close();
-      
+
       // Should complete without error
       expect(testService.server.listening).to.be.false;
     });
@@ -647,16 +670,16 @@ describe('WebSocketService', () => {
         tokenHandler: mockTokenHandler,
         roleManager: mockRoleManager,
       });
-      
+
       // Start the server
       testService.initiateWebSocket();
-      
+
       // Wait for server to start (or handle port conflict)
       await new Promise((resolve) => setTimeout(resolve, 200));
-      
+
       const server = testService.server;
       await testService.close();
-      
+
       // Server should be closed regardless of initial state
       expect(server.listening).to.be.false;
     });
@@ -664,7 +687,7 @@ describe('WebSocketService', () => {
 
   describe('authentication handling', () => {
     it('should allow connection without token', (done) => {
-      const unauthenticatedClient = io('http://localhost:8080', {
+      const unauthenticatedClient = io(`http://localhost:${getPort()}`, {
         query: {},
         reconnection: false,
         timeout: 5000,
@@ -683,15 +706,98 @@ describe('WebSocketService', () => {
     });
   });
 
+  describe('authenticated subscribe', () => {
+    const tokenString = 'test-token';
+
+    it('should allow authenticated client to subscribe when policy passes', (done) => {
+      const port = getPort();
+      const token = { user: { id: 1 }, roles: [] } as any;
+      verifyTokenStub.resolves(token);
+
+      const findUserStub = sinon.stub(User, 'findOne').resolves({ id: 1 } as any);
+
+      webSocketService.registerRoom({
+        pattern: 'auth_test:{id}:events',
+        policy: async (context) => context.user.id === context.parsedRoom?.entityId,
+      });
+
+      const authClient = io(`http://localhost:${port}`, {
+        auth: { token: tokenString },
+        reconnection: false,
+        timeout: 5000,
+        forceNew: true,
+      });
+
+      const cleanup = (err?: Error) => {
+        if (authClient.connected) authClient.disconnect();
+        findUserStub.restore();
+        done(err);
+      };
+
+      authClient.once('connect', () => {
+        authClient.once('error', (e: any) => cleanup(new Error(`Unexpected error: ${e?.message ?? String(e)}`)));
+        authClient.once('auth_test:event', () => cleanup());
+
+        authClient.emit('subscribe', 'auth_test:1:events');
+        setTimeout(() => {
+          WebSocketService.io.to('auth_test:1:events').emit('auth_test:event', { ok: true });
+        }, 50);
+      });
+
+      authClient.once('connect_error', (error: Error) => cleanup(new Error(`Client connection failed: ${error.message}`)));
+    });
+
+    it('should reject authenticated client subscribe when policy fails', (done) => {
+      const port = getPort();
+      const token = { user: { id: 1 }, roles: [] } as any;
+      verifyTokenStub.resolves(token);
+
+      const findUserStub = sinon.stub(User, 'findOne').resolves({ id: 1 } as any);
+
+      webSocketService.registerRoom({
+        pattern: 'auth_test:{id}:denied',
+        policy: async () => false,
+      });
+
+      const authClient = io(`http://localhost:${port}`, {
+        auth: { token: tokenString },
+        reconnection: false,
+        timeout: 5000,
+        forceNew: true,
+      });
+
+      const cleanup = (err?: Error) => {
+        if (authClient.connected) authClient.disconnect();
+        findUserStub.restore();
+        done(err);
+      };
+
+      authClient.once('connect', () => {
+        authClient.once('error', (error: any) => {
+          try {
+            expect(error?.message).to.equal('Unauthorized to subscribe to this room.');
+            cleanup();
+          } catch (e: any) {
+            cleanup(e);
+          }
+        });
+
+        authClient.emit('subscribe', 'auth_test:1:denied');
+      });
+
+      authClient.once('connect_error', (error: Error) => cleanup(new Error(`Client connection failed: ${error.message}`)));
+    });
+  });
+
   describe('unsubscribe handling', () => {
     it('should handle unsubscribe from room', (done) => {
       // Subscribe first
       clientSocket.emit('subscribe', 'system');
-      
+
       setTimeout(() => {
         // Then unsubscribe
         clientSocket.emit('unsubscribe', 'system');
-        
+
         // Verify unsubscribe completed
         setTimeout(() => {
           done();
@@ -702,11 +808,11 @@ describe('WebSocketService', () => {
     it('should handle unsubscribe from QR session', (done) => {
       // Subscribe first
       clientSocket.emit('subscribe-qr-session', 'test-session-123');
-      
+
       setTimeout(() => {
         // Then unsubscribe
         clientSocket.emit('unsubscribe-qr-session', 'test-session-123');
-        
+
         // Verify unsubscribe completed
         setTimeout(() => {
           done();

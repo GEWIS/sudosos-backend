@@ -28,13 +28,13 @@ import JsonWebToken from '../../authentication/json-web-token';
  * @param userId - The user ID.
  * @param token - The JWT token containing organ information.
  * @param pointOfSaleId - The point of sale ID.
- * @returns The relation string: 'all', 'organ', or 'own'.
+ * @returns The relation: 'all', 'organ', or 'own'.
  */
 export async function getPointOfSaleRelation(
   userId: number,
   token: JsonWebToken,
   pointOfSaleId: number,
-): Promise<string> {
+): Promise<'all' | 'organ' | 'own'> {
   const pos = await PointOfSale.findOne({
     where: { id: pointOfSaleId },
     relations: ['owner', 'user'],
