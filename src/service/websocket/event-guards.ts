@@ -39,8 +39,11 @@ export const InPosGuard: EventGuard<{ pointOfSale?: { id?: number } }> = (eventD
 };
 
 /**
- * Global guard only matches global rooms (isGlobal === true).
+ * ForUser guard checks if transaction belongs to the user in the room.
  */
-export const GlobalGuard: EventGuard = (_eventData, roomContext) => {
-  return roomContext.isGlobal;
+export const ForUserGuard: EventGuard<{ from?: { id?: number } }> = (eventData, roomContext) => {
+  if (roomContext.entityType !== 'user' || roomContext.entityId === null) {
+    return false;
+  }
+  return eventData.from?.id === roomContext.entityId;
 };
