@@ -106,6 +106,9 @@ export class Application {
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
+    if (this.webSocketService) {
+      await this.webSocketService.close();
+    }
     this.tasks.forEach((task) => task.stop());
     await this.connection.destroy();
     this.logger.info('Application stopped.');
@@ -240,6 +243,20 @@ export default async function createApp(): Promise<Application> {
   await setupAuthentication(tokenHandler, application);
   
   // Initialize WebSocket service
+  // Close existing instance's server if it exists (e.g., in tests)
+  try {
+    const existingInstance = WebSocketService.getInstance();
+    if (existingInstance.server.listening) {
+      const l = log4js.getLogger('index');
+      l.info('Closing existing WebSocket server before creating new instance');
+      existingInstance.server.close(() => {
+        l.info('Existing WebSocket server closed');
+      });
+    }
+  } catch {
+    // No existing instance, continue
+  }
+  
   const webSocketService = new WebSocketService({
     tokenHandler,
     roleManager: application.roleManager,
