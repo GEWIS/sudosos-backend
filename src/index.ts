@@ -101,6 +101,8 @@ export class Application {
 
   tasks: cron.ScheduledTask[];
 
+  webSocketService: WebSocketService;
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
@@ -236,6 +238,13 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
+  
+  // Initialize WebSocket service
+  const webSocketService = new WebSocketService({
+    tokenHandler,
+    roleManager: application.roleManager,
+  });
+  application.webSocketService = webSocketService;
 
   application.tasks = [];
 
@@ -274,7 +283,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
 
-  WebSocketService.initiateWebSocket();
+  webSocketService.initiateWebSocket();
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
