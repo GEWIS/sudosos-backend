@@ -36,7 +36,7 @@ import {
   RoomRegistration,
   WebSocketRequestContext,
 } from './websocket/room-policy';
-import { InPosGuard, GlobalGuard } from './websocket/event-guards';
+import { InPosGuard, ForUserGuard } from './websocket/event-guards';
 import { EventRegistry, ResolvedRoom } from './websocket/event-registry';
 import { getPointOfSaleRelation } from './websocket/pos-relation-helper';
 import RoleManager from '../rbac/role-manager';
@@ -78,6 +78,8 @@ export default class WebSocketService {
   private readonly roomPolicyRegistry: RoomPolicyRegistry = new RoomPolicyRegistry();
 
   private readonly eventRegistry: EventRegistry = new EventRegistry();
+
+  private connectionHandlerRegistered: boolean = false;
 
   /**
    * Creates a new WebSocketService instance.
@@ -185,7 +187,14 @@ export default class WebSocketService {
             entityId: transaction.pointOfSale.id,
           });
         }
-
+        
+        if (transaction.from?.id) {
+          rooms.push({
+            roomName: `user:${transaction.from.id}:transactions`,
+            entityId: transaction.from.id,
+          });
+        }
+        
         rooms.push({
           roomName: 'transactions:all',
           entityId: null,
@@ -194,15 +203,16 @@ export default class WebSocketService {
         return rooms;
       },
       guard: async (transaction, roomContext) => {
-        if (roomContext.isGlobal) {
-          return GlobalGuard(transaction, roomContext);
-        }
+        if (roomContext.isGlobal) return true;
 
-        if (roomContext.entityType === 'pos') {
-          return InPosGuard(transaction, roomContext);
+        switch (roomContext.entityType) {
+          case 'pos':
+            return InPosGuard(transaction, roomContext);
+          case 'user':
+            return ForUserGuard(transaction, roomContext);
+          default:
+            return false;
         }
-
-        return false;
       },
     });
   }
@@ -226,20 +236,41 @@ export default class WebSocketService {
    * Initializes the WebSocket server and sets up connection handlers.
    */
   public initiateWebSocket(): void {
+    // Prevent multiple initializations
+    if (this.connectionHandlerRegistered) {
+      this.logger.trace('WebSocket connection handler already registered, skipping initialization');
+      return;
+    }
+
     if (process.env.NODE_ENV == 'production') {
       this.setupAdapter();
     } else {
       const port = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
 
-      this.server.listen(port, () => {
-        this.logger.info(`WebSocket opened on port ${port}.`);
-      });
+      // Only start listening if not already listening
+      if (!this.server.listening) {
+        this.server.listen(port, () => {
+          this.logger.info(`WebSocket opened on port ${port}.`);
+        });
+        // Handle EADDRINUSE error gracefully (e.g., in tests where port might already be in use)
+        this.server.on('error', (error: NodeJS.ErrnoException) => {
+          if (error.code === 'EADDRINUSE') {
+            this.logger.warn(`Port ${port} is already in use. WebSocket server may already be running.`);
+          } else {
+            this.logger.error('WebSocket server error:', error);
+          }
+        });
+      } else {
+        this.logger.trace(`WebSocket server already listening on port ${port}, skipping listen call`);
+      }
     }
 
+    // Register connection handler only once
     this.io.on('connection', async (client: Socket) => {
-      await this.handleAuthentication(client);
       this.setupConnectionHandlers(client);
+      await this.handleAuthentication(client);
     });
+    this.connectionHandlerRegistered = true;
   }
 
   /**
@@ -482,5 +513,51 @@ export default class WebSocketService {
    */
   public static async emitTransactionCreated(transaction: TransactionResponse): Promise<void> {
     await this.getInstance().emitTransactionCreated(transaction);
+  }
+
+  /**
+   * Closes the WebSocket server and cleans up resources.
+   * @returns Promise that resolves when the server is closed.
+   */
+  public async close(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (!this.server.listening) {
+        resolve();
+        return;
+      }
+
+      void this.io.close(() => {
+        // Socket.IO's close() already closes the underlying HTTP server,
+        // but we check if it's still listening before trying to close it again
+        if (this.server.listening) {
+          this.server.close((err) => {
+            if (err) {
+              const nodeErr = err as NodeJS.ErrnoException;
+              if (nodeErr.code !== 'ERR_SERVER_NOT_RUNNING') {
+                this.logger.error('Error closing WebSocket server:', err);
+              } else {
+                this.logger.info('WebSocket server closed');
+              }
+            } else {
+              this.logger.info('WebSocket server closed');
+            }
+            resolve();
+          });
+        } else {
+          // Server was already closed by io.close()
+          this.logger.info('WebSocket server closed');
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Static method for backward compatibility.
+   * Delegates to the singleton instance.
+   * @throws Error if WebSocketService has not been initialized.
+   */
+  public static async close(): Promise<void> {
+    await this.getInstance().close();
   }
 }
