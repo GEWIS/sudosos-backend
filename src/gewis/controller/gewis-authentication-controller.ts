@@ -210,7 +210,7 @@ export default class GewisAuthenticationController extends BaseController {
 
   /**
    * POST /authentication/GEWIS/pin
-   * @deprecated Use /authentication/nfc-secure instead
+   * @deprecated Use /authentication/GEWIS/pin-secure instead
    * @summary PIN login and hand out token.
    * @operationId gewisPinAuthentication
    * @tags authenticate - Operations of authentication controller
