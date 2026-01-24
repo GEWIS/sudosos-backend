@@ -30,7 +30,12 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import User, { UserType } from '../entity/user/user';
-import BaseUserRequest, { AddRoleRequest, CreateUserRequest, UpdateUserRequest } from './request/user-request';
+import BaseUserRequest, {
+  AddRoleRequest,
+  CreateUserRequest,
+  PatchUserTypeRequest,
+  UpdateUserRequest,
+} from './request/user-request';
 import { parseRequestPagination } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
@@ -367,6 +372,13 @@ export default class UserController extends BaseController {
           policy: async (req) => this.roleManager.can(req.token.roles, 'update', UserController.getRelation(req), 'User', ['settings']),
           handler: this.patchUserSettings.bind(this),
           body: { modelName: 'PatchUserSettingsRequest', allowExtraProperties: false },
+        },
+      },
+      '/:id(\\d+)/usertype': {
+        PATCH: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'update', UserController.getRelation(req), 'User', ['type']),
+          handler: this.patchUserType.bind(this),
+          body: { modelName: 'PatchUserTypeRequest', allowExtraProperties: false },
         },
       },
     };
@@ -1809,6 +1821,66 @@ export default class UserController extends BaseController {
     } catch (error) {
       this.logger.error('Could not update user settings:', error);
       res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * PATCH /users/{id}/usertype
+   * @summary Update user type
+   * @operationId patchUserType
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the user
+   * @param {PatchUserTypeRequest} request.body.required - The user type to update to
+   * @security JWT
+   * @return {UserResponse} 200 - The updated user
+   * @return {string} 404 - User not found
+   * @return {string} 400 - Bad request
+   * @return {string} 409 - Conflict error
+   * @return {string} 422 - Unprocessable entity
+   * @return {string} 500 - Internal server error
+   */
+  private async patchUserType(req: RequestWithToken, res: Response): Promise<void> {
+    const { id: rawUserId } = req.params;
+    const body = req.body as PatchUserTypeRequest;
+
+    try {
+      const userId = parseInt(rawUserId, 10);
+      const userOptions = UserService.getOptions({ id: userId });
+      const user = await User.findOne(userOptions);
+      if (!user) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      const allowedTypes = [UserType.MEMBER, UserType.LOCAL_USER];
+
+      if (!allowedTypes.includes(user.type)) {
+        res.status(422).json('It is not possible to change the user type for users of this type.');
+        return;
+      }
+
+      if (!allowedTypes.includes(body.userType)) {
+        res.status(422).json(`User type can only be changed to [${allowedTypes}].`);
+        return;
+      }
+
+      if (body.userType === user.type) {
+        res.status(409).json('User is already of this type.');
+        return;
+      }
+
+      if (!user.email) {
+        res.status(400).json('Cannot change user type of user without email.');
+        return;
+      }
+
+      await UserService.updateUserType(user, body.userType);
+      res.status(200).json(
+        await UserService.getSingleUser(userId),
+      );
+    } catch (e) {
+      res.status(500).send('Internal server error.');
+      this.logger.error(e);
     }
   }
 }
