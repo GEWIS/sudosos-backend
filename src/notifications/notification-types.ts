@@ -60,6 +60,8 @@ export enum NotificationTypes {
   WelcomeWithReset = 'WelcomeWithReset',
   TransactionNotificationSelf = 'TransactionNotificationSelf',
   TransactionNotificationChargedByOther = 'TransactionNotificationChargedByOther',
+  UserTypeUpdated = 'UserTypeUpdated',
+  UserTypeUpdatedWithReset = 'UserTypeUpdatedWithReset',
 }
 
 export interface NotificationType<P extends TemplateOptions = any> {
