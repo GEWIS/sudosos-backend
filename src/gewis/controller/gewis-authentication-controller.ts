@@ -41,6 +41,7 @@ import AuthenticationController from '../../controller/authentication-controller
 import Gewis from '../gewis';
 import UserService from '../../service/user-service';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
+import { UserType } from '../../entity/user/user';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -170,6 +171,11 @@ export default class GewisAuthenticationController extends BaseController {
         //
         const update = webResponseToUpdate(gewisweb);
         await UserService.updateUser(memberUser.user.id, { ...update, active: true });
+      }
+
+      // If a LOCAL_USER authenticates through GEWIS, implicitly convert the account back to a MEMBER account
+      if (memberUser.user.type === UserType.LOCAL_USER) {
+        await UserService.updateUserType(memberUser.user, UserType.MEMBER);
       }
 
       const response = await new AuthenticationService().getSaltedToken({
