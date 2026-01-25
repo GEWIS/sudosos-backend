@@ -50,10 +50,10 @@ process.env.NODE_ENV = 'test';
 if (!process.env.LOG_LEVEL) {
   process.env.LOG_LEVEL = 'OFF';
 }
-if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
+if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'better-sqlite3' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
-  process.env.TYPEORM_CONNECTION = 'sqlite';
+  process.env.TYPEORM_CONNECTION = 'better-sqlite3';
   process.env.TYPEORM_DATABASE = ':memory:';
   process.env.TYPEORM_SYNCHRONIZE = 'true';
 }

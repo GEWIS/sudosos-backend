@@ -61,7 +61,7 @@
     "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "sqlite3": "^5.1.7",
+    "better-sqlite3": "^12.6.2",
     "stripe": "^16.12.0",
     "swagger-model-validator": "^3.0.21",
     "swagger-ui-express": "^5.0.1",
