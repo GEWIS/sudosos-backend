@@ -48,6 +48,7 @@ import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../n
 import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
 import PointOfSaleService from './point-of-sale-service';
 import { UserTypeUpdatedOptions, UserTypeUpdatedWithResetOptions } from '../notifications/notification-options';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -544,6 +545,12 @@ export default class UserService {
         });
         return;
       case UserType.MEMBER:
+        // When an account is converted to a member account, remove local authenticator if it exists
+        const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        if (localAuthenticator) {
+          await localAuthenticator.remove();
+        }
+
         // Notify the user of the change made to their account
         await Notifier.getInstance().notify({
           type: NotificationTypes.UserTypeUpdated,
