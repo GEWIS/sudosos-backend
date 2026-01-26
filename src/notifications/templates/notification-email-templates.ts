@@ -27,6 +27,8 @@ import {
   UserDebtNotificationOptions,
   UserGotFinedOptions,
   UserGotInactiveAdministrativeCostOptions,
+  UserTypeUpdatedOptions,
+  UserTypeUpdatedWithResetOptions,
   UserWillGetFinedOptions,
   WelcomeToSudososOptions,
   WelcomeWithResetOptions,
@@ -44,6 +46,8 @@ import WelcomeToSudosos from '../../mailer/messages/welcome-to-sudosos';
 import InactiveAdministrativeCostNotification from '../../mailer/messages/inactive-administrative-cost-notification';
 import UserGotFined from '../../mailer/messages/user-got-fined';
 import TransactionNotification from '../../mailer/messages/transaction-notification';
+import UserTypeUpdated from '../../mailer/messages/user-type-updated';
+import UserTypeUpdatedWithReset from '../../mailer/messages/user-type-updated-with-reset';
 
 export const ChangedPinTemplate = new EmailTemplate(
   (params: ChangedPinOptions) => new ChangedPin(params),
@@ -95,4 +99,12 @@ export const WelcomeWithResetTemplate = new EmailTemplate(
 
 export const TransactionNotificationTemplate = new EmailTemplate(
   (params: TransactionNotificationOptions) => new TransactionNotification(params),
+);
+
+export const UserTypeUpdatedTemplate = new EmailTemplate(
+  (params: UserTypeUpdatedOptions) => new UserTypeUpdated(params),
+);
+
+export const UserTypeUpdatedWithResetTemplate = new EmailTemplate(
+  (params: UserTypeUpdatedWithResetOptions) => new UserTypeUpdatedWithReset(params),
 );

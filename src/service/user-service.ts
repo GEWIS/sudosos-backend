@@ -47,6 +47,8 @@ import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../notifications';
 import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
 import PointOfSaleService from './point-of-sale-service';
+import { UserTypeUpdatedOptions, UserTypeUpdatedWithResetOptions } from '../notifications/notification-options';
+import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 
 /**
  * Parameters used to filter on Get Users functions.
@@ -522,5 +524,43 @@ export default class UserService {
       .filter((u) => rightIds.indexOf(u) !== -1);
 
     return overlap.length > 0;
+  }
+
+  public static async updateUserType(user: User, toType: UserType) {
+    const fromType = user.type;
+    user.type = toType;
+    await user.save();
+
+    switch (toType) {
+      case UserType.LOCAL_USER:
+        // When an account is converted to a local account, a password needs to be set.
+        await Notifier.getInstance().notify({
+          type: NotificationTypes.UserTypeUpdatedWithReset,
+          userId: user.id,
+          params: new UserTypeUpdatedWithResetOptions(
+            user.email,
+            fromType,
+            toType,
+          ),
+        });
+        return;
+      case UserType.MEMBER:
+        // When an account is converted to a member account, remove local authenticator if it exists
+        const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        if (localAuthenticator) {
+          await localAuthenticator.remove();
+        }
+
+        // Notify the user of the change made to their account
+        await Notifier.getInstance().notify({
+          type: NotificationTypes.UserTypeUpdated,
+          userId: user.id,
+          params: new UserTypeUpdatedOptions(
+            fromType,
+            toType,
+          ),
+        });
+        return;
+    }
   }
 }
