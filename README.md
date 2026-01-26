@@ -1,12 +1,13 @@
+<!-- markdownlint-disable-file MD041 MD033 -->
 <div align="center">
 
-<!-- Centered Logo Image -->
-<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true" alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
+<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true"
+  alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
 
-<!-- Centered Name Beneath Logo -->
 <h1>SudoSOS Backend</h1>
 
 <p align="center">
+  <!-- markdownlint-disable-next-line MD013 -->
   <strong>A comprehensive Point of Sale and Financial Management System for Study Association GEWIS</strong>
 </p>
 
@@ -61,6 +62,7 @@ openssl genrsa -out config/jwt.key 2048
 ```
 
 Verify the key was created correctly:
+
 ```bash
 # Should start with -----BEGIN RSA PRIVATE KEY-----
 head -1 config/jwt.key
@@ -81,12 +83,13 @@ npm run test
 
 ### 4. Initialize Database
 
-> [!WARNING]
-> **IMPORTANT: Clear your database before initializing!**
+> [!WARNING] > **IMPORTANT: Clear your database before initializing!**
+>
 > - For SQLite: Delete the `local.sqlite` file if it exists
 > - For MariaDB: Drop all tables in your database
 
 **Quick Start for Development:**
+
 ```bash
 # For SQLite (recommended for development)
 npm run init:schema
@@ -98,6 +101,7 @@ npm run init:migrate
 ```
 
 This command will:
+
 - Create the database schema
 - Seed it with initial data
 - Run maintenance tasks
@@ -127,6 +131,7 @@ Visit `http://localhost:3000/api-docs` to access the Swagger UI for API document
 For deposit functionality, configure Stripe with **restricted keys only**:
 
 **Required Environment Variables:**
+
 - `STRIPE_PUBLIC_KEY` - Your Stripe publishable key (safe for frontend)
 - `STRIPE_PRIVATE_KEY` - Your Stripe restricted secret key (see permissions below)
 - `STRIPE_WEBHOOK_SECRET` - Webhook endpoint secret for validation
@@ -134,6 +139,7 @@ For deposit functionality, configure Stripe with **restricted keys only**:
 
 **Required Stripe Permissions:**
 When creating your restricted API key, grant only these permissions:
+
 - ✅ "Write access on all webhooks"
 - ✅ "Write access on payment intents"
 
@@ -150,7 +156,7 @@ STRIPE_RETURN_URL=https://your-domain.com/return
 ### Available Scripts
 
 | Script                    | Description                                  |
-|---------------------------|----------------------------------------------|
+| ------------------------- | -------------------------------------------- |
 | `npm run build`           | Compile TypeScript to JavaScript             |
 | `npm run watch`           | Start development server with hot reload     |
 | `npm run test`            | Run all tests                                |
@@ -168,51 +174,15 @@ STRIPE_RETURN_URL=https://your-domain.com/return
 | `npm run cron`            | Start cron job scheduler                     |
 | `npm run serve`           | Start production server                      |
 
-## 📁 Project Structure
-
-```
-src/
-├── authentication/        # JWT token handling and authentication
-├── controller/            # API controllers and request/response handling
-│   ├── request/           # Request DTOs and validation
-│   └── response/          # Response DTOs
-├── database/              # Database configuration and migrations
-├── entity/                # TypeORM entities and data models
-│   ├── authenticator/     # Authentication method entities
-│   ├── container/         # Product container entities
-│   ├── event/             # Event management entities
-│   ├── file/              # File management entities
-│   ├── invoices/          # Invoice-related entities
-│   ├── point-of-sale/     # POS system entities
-│   ├── product/           # Product catalog entities
-│   ├── rbac/              # Role-based access control entities
-│   ├── stripe/            # Payment processing entities
-│   ├── transactions/      # Transaction and financial entities
-│   └── user/              # User management entities
-├── errors/                # Custom error classes
-├── files/                 # File handling utilities
-├── gewis/                 # GEWIS-specific integrations
-├── helpers/               # Utility functions and helpers
-├── mailer/                # Email functionality
-├── middleware/            # Express middleware
-├── migrations/            # Database migration files
-├── rbac/                  # Role-based access control logic
-├── server-settings/       # Server configuration management
-├── service/               # Business logic services
-├── start/                 # Application startup and Swagger setup
-├── subscriber/            # Database event subscribers
-├── index.ts               # Main application entry point
-├── cron.ts                # Scheduled task definitions
-└── maintenance.ts         # Development maintenance script
-```
-
 ## 📚 API Documentation
 
 ### Swagger UI
+
 - **Development**: `http://localhost:3000/api-docs`
 - **Production**: `https://sudosos.gewis.nl/api/api-docs/`
 
 ### Comprehensive Documentation
+
 For detailed documentation, API references, and examples, visit the SudoSOS documentation site [here](http://sudosos.gewis.nl/docs):
 
 ## 🤝 Contributing
@@ -220,17 +190,20 @@ For detailed documentation, API references, and examples, visit the SudoSOS docu
 We welcome contributions! Please follow these guidelines:
 
 ### Development Workflow
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
 3. Make your changes
-4. Run tests: `npm run test`
+4. Run tests: `npm run test`, or `npm run test-file <path-to-test-file>` to run a single test file
 5. Run linting: `npm run lint-fix`
-6. Commit your changes: `git commit -m "feat: Add your feature"` ([follow the conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/))
+6. Commit your changes: `git commit -m "feat: add your feature"` ([follow the conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/))
 7. Push to your branch: `git push origin feature/your-feature-name`
 8. Create a Pull Request
 
 ### IDE Setup (IntelliJ/WebStorm)
+
 For easy ESLint integration:
+
 1. Go to Preferences → Languages & Frameworks → JavaScript → Code Quality Tools → ESLint
 2. Check "Run ESLint --fix on save"
 3. Apply changes
@@ -250,3 +223,4 @@ This project exists thanks to all the people who contribute code.
 <div align="center">
   <p>Made with ❤️ by <a href="https://gewis.nl">Study Association GEWIS</a></p>
 </div>
+
