@@ -67,7 +67,7 @@ At a high level:
 - Endpoint-by-endpoint API reference. Use Swagger.
 - Entity-by-entity code reference. Use TypeDoc.
 
-::::: tip References
+::: tip References
 - Swagger: `https://sudosos.gewis.nl/api/api-docs/`
 - TypeDoc: `/typedoc/`
-:::::
+:::
