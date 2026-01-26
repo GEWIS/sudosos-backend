@@ -3332,5 +3332,18 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(400);
       expect(res.body).to.equal('Cannot change user type of user without email.');
     });
+
+    it('should return HTTP 400 if the user has no memberId', async () => {
+      const user = ctx.users.find((u) => u.email === '' && u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot change to MEMBER since no memberId is associated to this user.');
+    });
   });
 });

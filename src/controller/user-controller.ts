@@ -1874,6 +1874,11 @@ export default class UserController extends BaseController {
         return;
       }
 
+      if (body.userType === UserType.MEMBER && !user.memberUser) {
+        res.status(400).json('Cannot change to MEMBER since no memberId is associated to this user.');
+        return;
+      }
+
       await UserService.updateUserType(user, body.userType);
       res.status(200).json(
         await UserService.getSingleUser(userId),
