@@ -1,305 +1,66 @@
 # External Integrations
 
-This document explains how SudoSOS integrates with external systems to synchronise user data and organisational structure.
-
-::: tip Prerequisites
-Read **[Transaction Flows](/general/3-transaction-flows)** first to understand how the core system works before learning about external integrations.
-:::
-
-## Integration Architecture
+SudoSOS is not a closed system. It depends on GEWIS infrastructure for identity and structure, and on Stripe for payments.
 
-SudoSOS is designed to integrate with external databases and systems to synchronise user data and organisational structure. This allows the system to leverage existing infrastructure while maintaining data consistency.
-
-### Sync Service Pattern
-
-The system uses **sync services** to periodically fetch and update data from external sources:
-
-```mermaid
-graph LR
-    External[External System] --> Sync[Sync Service]
-    Sync --> Guard{Guard Check}
-    Guard -->|Pass| Fetch[Fetch Data]
-    Guard -->|Fail| Skip[Skip Sync]
-    Fetch --> Update[Update Local Data]
-    Update --> DB[(SudoSOS Database)]
-```
-
-### Sync Service Features
-
-- **Guard mechanism** - Determines which users should be synced
-- **Dry run support** - Test sync operations without modifying data
-- **Bidirectional flow** - Fetch new data and update existing records
-- **Cleanup handling** - Remove stale data when external records are deleted
+**After reading this page, you should know** which system is the source of truth for which data, where the integration code lives, and how to debug typical failures.
 
-## GEWIS-Specific Integrations
+## System context
 
-SudoSOS integrates with two primary external systems at GEWIS:
-
-### 1. GEWIS Database (GEWISDB) - Member Information
-
-**Purpose**: Synchronise member details and membership status
-
-**What it syncs**:
-- Member details (name, email, membership status)
-- Membership expiry dates
-- Contact information updates
-- New member registrations
+The system-level diagram lives in **[System Architecture](/general/3-system-architecture)**. This page focuses on what each integration does and how to debug it.
 
-**Implementation**: `GewisDBSyncService` (`src/gewis/service/gewisdb-sync-service.ts`)
-
-**Sync Process**:
-1. Connect to GEWISDB
-2. Fetch current member list
-3. Compare with local SudoSOS users
-4. Update existing members
-5. Create new member accounts
-6. Deactivate expired memberships
-
-### 2. GEWIS Active Directory (LDAP) - Organisational Structure
-
-**Purpose**: Synchronise organ accounts and role assignments
-
-**What it syncs**:
-- Organ accounts (committees, boards)
-- User roles based on AD groups
-- Service accounts
-- Organisational hierarchy
-
-**Implementation**: `LdapSyncService` (`src/service/sync/user/ldap-sync-service.ts`)
-
-**Sync Process**:
-1. Connect to LDAP/Active Directory
-2. Query organ groups and members
-3. Update organ accounts in SudoSOS
-4. Assign roles based on group membership
-5. Remove users from groups they no longer belong to
-
-## Generic Integration Pattern
-
-The sync service pattern can be adapted for other external systems:
-
-```typescript
-// Abstract base class
-export abstract class UserSyncService {
-  // Which user types this service syncs
-  abstract targets: UserType[];
-  
-  // Check if user should be synced
-  async guard(user: User): Promise<boolean>;
-  
-  // Sync user data from external source
-  async sync(user: User, isDryRun: boolean): Promise<boolean>;
-  
-  // Fetch new data from external source
-  async fetch(): Promise<void>;
-  
-  // Cleanup when sync is removed
-  async down(user: User, isDryRun: boolean): Promise<void>;
-}
-```
-
-### Key Features
-
-- **Guard mechanism** - Determines which users should be synced
-- **Dry run support** - Test sync operations without modifying data
-- **Bidirectional flow** - Fetch new data and update existing records
-- **Cleanup handling** - Remove stale data when external records are deleted
-
-## Integration Benefits
-
-### Data Consistency
-- Single source of truth for member information
-- Automatic updates when external data changes
-- Reduced manual data entry and errors
-
-### Organisational Alignment
-- Role assignments reflect current organisational structure
-- Committee changes automatically update permissions
-- Service accounts stay synchronised
-
-### Reduced Maintenance
-- No duplicate data entry
-- Automatic member lifecycle management
-- Centralised user management
-
-## Sync Service Implementation
-
-### Guard Mechanism
-
-The guard mechanism determines which users should be synced:
-
-```typescript
-async guard(user: User): Promise<boolean> {
-  // Check if user meets sync criteria
-  return user.type === 'member' && 
-         user.externalId && 
-         !user.isDeleted;
-}
-```
-
-### Sync Process
-
-The sync process updates user data from external sources:
-
-```typescript
-async sync(user: User, isDryRun: boolean): Promise<boolean> {
-  try {
-    // Fetch external data
-    const externalData = await this.fetchExternalData(user.externalId);
-    
-    if (isDryRun) {
-      // Log what would be changed
-      this.logger.info('Dry run: would update user', user.id);
-      return true;
-    }
-    
-    // Update local user data
-    await this.updateUserData(user, externalData);
-    return true;
-  } catch (error) {
-    this.logger.error('Sync failed for user', user.id, error);
-    return false;
-  }
-}
-```
-
-### Cleanup Process
-
-The cleanup process handles removed external records:
-
-```typescript
-async down(user: User, isDryRun: boolean): Promise<void> {
-  if (isDryRun) {
-    this.logger.info('Dry run: would deactivate user', user.id);
-    return;
-  }
-  
-  // Deactivate user account
-  user.isActive = false;
-  await this.manager.save(user);
-}
-```
-
-## Integration Configuration
-
-### Environment Variables
-
-External integrations require configuration:
-
-```bash
-# GEWISDB Integration
-GEWISDB_HOST=gewisdb.gewis.nl
-GEWISDB_USERNAME=sudosos
-GEWISDB_PASSWORD=secret
-
-# LDAP Integration
-LDAP_URL=ldap://ldap.gewis.nl
-LDAP_BIND_DN=cn=sudosos,ou=services,dc=gewis,dc=nl
-LDAP_BIND_PASSWORD=secret
-LDAP_BASE_DN=ou=people,dc=gewis,dc=nl
-```
-
-### Sync Scheduling
-
-Sync services can be scheduled to run periodically:
-
-```typescript
-// Daily member sync
-@Cron('0 2 * * *') // 2 AM daily
-async syncMembers() {
-  await this.gewisDBSyncService.fetch();
-}
-
-// Hourly role sync
-@Cron('0 * * * *') // Every hour
-async syncRoles() {
-  await this.ldapSyncService.fetch();
-}
-```
-
-## Error Handling
-
-### Connection Errors
-- Retry logic for temporary failures
-- Fallback to cached data when possible
-- Alert administrators for persistent issues
-
-### Data Validation
-- Validate external data before applying
-- Log discrepancies for review
-- Prevent invalid data from entering system
-
-### Rollback Scenarios
-- Revert changes if sync fails
-- Maintain data consistency
-- Preserve audit trails
-
-## Monitoring and Logging
-
-### Sync Status
-- Track sync success/failure rates
-- Monitor data quality metrics
-- Alert on sync failures
-
-### Performance Metrics
-- Sync duration and frequency
-- Data volume processed
-- System resource usage
-
-### Audit Trails
-- Log all sync operations
-- Track data changes
-- Maintain compliance records
-
-## Future Integrations
-
-The sync service pattern can be extended for additional integrations:
-
-### Payment Systems
-- Stripe webhook processing
-- Bank transfer notifications
-- Payment status updates
-
-### Communication Systems
-- Email service integration
-- SMS notifications
-- Push notification services
-
-### Analytics Systems
-- Transaction data export
-- Usage statistics
-- Performance metrics
-
-## Best Practices
-
-### Data Validation
-- Always validate external data
-- Implement data quality checks
-- Handle malformed data gracefully
-
-### Error Recovery
-- Implement retry mechanisms
-- Provide fallback options
-- Maintain system stability
-
-### Security
-- Secure external connections
-- Encrypt sensitive data
-- Implement access controls
-
-### Monitoring
-- Track sync performance
-- Monitor data quality
-- Alert on issues
-
-## Next Steps
-
-Now that you understand external integrations, you can:
-
-1. **[Understanding the Codebase](/general/5-understanding-codebase)** - Start working with the code
-
-Or go back to:
-- **[Transaction Flows](/general/3-transaction-flows)** - Review how the core system works
-- **[Core Concepts](/general/2-core-concepts)** - Review the business domain
-- **[System Architecture](/general/1-architecture)** - Review the technical foundation
-- **[SudoSOS 101](/general/0-welcome-to-sudosos)** - Review the introduction
+## GEWISDB (members and membership data)
+
+- **Source of truth**: GEWIS member database.
+- **What we sync**: member identity and lifecycle (active/expired), plus fields used by SudoSOS.
+- **Where the code lives**: `src/gewis/service/gewisdb-sync-service.ts`
+- **How it runs**: through the user sync manager; in development, `src/maintenance.ts` runs the same tasks that are typically cron-triggered.
+
+**Debugging**
+- Check the configured API URL/key.
+- Check logs for sync decisions (users created/updated/deactivated).
+- Verify that the synced user type matches the expected use (member vs local user, etc.).
+
+## LDAP/AD (organs, groups, roles)
+
+- **Source of truth**: GEWIS LDAP / Active Directory groups.
+- **What we sync**: organ accounts and role assignments based on group membership.
+- **Where the code lives**: `src/service/sync/user/ldap-sync-service.ts`
+- **How it runs**: enabled via environment config (`ENABLE_LDAP=true`) and run by the sync manager (see `src/maintenance.ts` for development).
+
+**Debugging**
+- Confirm LDAP connectivity and bind credentials.
+- Verify the group-to-role mapping (unexpected permissions are usually a group membership issue).
+
+## Stripe (deposits)
+
+Stripe is used for top-ups. The backend owns the rules around allowed amounts and the effect on the ledger.
+
+- **Source of truth**: Stripe for payment state; SudoSOS for the resulting transfers/balance.
+- **Deposit entry point**: `POST /stripe/deposit` (`src/controller/stripe-controller.ts`)
+- **Webhook receiver**: `POST /stripe/webhook` (`src/controller/stripe-webhook-controller.ts`)
+- **Public key**: `GET /stripe/public`
+
+**Debugging**
+- If deposits do not complete: check whether webhook events reach the backend and whether signature verification succeeds.
+- If events are ignored: check that Stripe events carry metadata for this service (the backend ignores events not meant for it).
+- If a deposit is applied twice: check idempotency/duplicate delivery handling in the Stripe service.
+
+## Mail (notifications and receipts)
+
+Mail is used for user-facing notifications (receipts, debt notifications, invoice emails, etc.).
+
+- **Where the code lives**: `src/mailer/` and `src/notifications/`
+- **Typical triggers**: subscribers after transactions/transfers, and scheduled tasks.
+
+**Debugging**
+- Check the configured mail transport.
+- Check whether the event that should trigger mail actually occurred (e.g. a transaction persisted).
+- Check notification preferences if a user is not receiving mail.
+
+## Configuration
+
+Do not embed secrets in documentation. Configuration is done via environment variables; use `.env.example` as the canonical list and document behaviour (not values).
+
+## Next pages
+
+- **[Understanding the Codebase](/general/5-understanding-codebase)**

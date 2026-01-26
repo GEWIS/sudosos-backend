@@ -12,10 +12,7 @@ hero:
   actions:
     - theme: brand
       text: SudoSOS 101
-      link: /general/0-welcome-to-sudosos
-    - theme: alt
-      text: Contributing
-      link: /contributing
+      link: /general/0-overview
     - theme: alt
       text: Documentation
       link: /documentation
