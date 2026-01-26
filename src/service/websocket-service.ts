@@ -272,27 +272,27 @@ export default class WebSocketService {
       return;
     }
 
+    const port = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
+
     if (process.env.NODE_ENV == 'production') {
       this.setupAdapter();
-    } else {
-      const port = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
+    }
 
-      // Only start listening if not already listening
-      if (!this.server.listening) {
-        this.server.listen(port, () => {
-          this.logger.info(`WebSocket opened on port ${port}.`);
-        });
-        // Handle EADDRINUSE error gracefully (e.g., in tests where port might already be in use)
-        this.server.on('error', (error: NodeJS.ErrnoException) => {
-          if (error.code === 'EADDRINUSE') {
-            this.logger.warn(`Port ${port} is already in use. WebSocket server may already be running.`);
-          } else {
-            this.logger.error('WebSocket server error:', error);
-          }
-        });
-      } else {
-        this.logger.trace(`WebSocket server already listening on port ${port}, skipping listen call`);
-      }
+    // Only start listening if not already listening
+    if (!this.server.listening) {
+      this.server.listen(port, () => {
+        this.logger.info(`WebSocket opened on port ${port}.`);
+      });
+      // Handle EADDRINUSE error gracefully (e.g., in tests where port might already be in use)
+      this.server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          this.logger.warn(`Port ${port} is already in use. WebSocket server may already be running.`);
+        } else {
+          this.logger.error('WebSocket server error:', error);
+        }
+      });
+    } else {
+      this.logger.trace(`WebSocket server already listening on port ${port}, skipping listen call`);
     }
 
     // Authenticate before allowing any socket events to race it.
