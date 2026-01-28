@@ -119,6 +119,42 @@ export class WelcomeWithResetOptions extends TemplateOptions {
 }
 
 /**
+ * User type updated notification with a password reset link.
+ */
+export class UserTypeUpdatedWithResetOptions extends TemplateOptions {
+  /**
+   * @param email - The user's email address.
+   * @param fromType - The old user type.
+   * @param toType - The new user type.
+   * @param url - Optional password reset URL.
+   */
+  constructor(
+    public email: string,
+    public fromType: string,
+    public toType: string,
+    public url?: string,
+  ) {
+    super();
+  }
+}
+
+/**
+ * User type updated notification.
+ */
+export class UserTypeUpdatedOptions extends TemplateOptions {
+  /**
+   * @param fromType - The old user type.
+   * @param toType - The new user type.
+   */
+  constructor(
+    public fromType: string,
+    public toType: string,
+  ) {
+    super();
+  }
+}
+
+/**
  * Notification about a user's debt.
  */
 export class UserDebtNotificationOptions extends TemplateOptions {

@@ -35,6 +35,8 @@ import {
   UserDebtNotificationTemplate,
   UserGotFinedTemplate,
   UserGotInactiveAdministrativeCostTemplate,
+  UserTypeUpdatedTemplate,
+  UserTypeUpdatedWithResetTemplate,
   UserWillGetFinedTemplate,
   WelcomeToSudososTemplate,
   WelcomeWithResetTemplate,
@@ -66,6 +68,8 @@ MailMessage<EmailTemplate<any>>
     WelcomeWithReset: WelcomeWithResetTemplate,
     TransactionNotificationSelf: TransactionNotificationTemplate,
     TransactionNotificationChargedByOther: TransactionNotificationTemplate,
+    UserTypeUpdated: UserTypeUpdatedTemplate,
+    UserTypeUpdatedWithReset: UserTypeUpdatedWithResetTemplate,
   };
 
   readonly name = NotificationChannels.EMAIL;

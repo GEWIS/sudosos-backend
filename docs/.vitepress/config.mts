@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 import typedocSidebar from '../content/typedoc/typedoc-sidebar.json'
 import {withMermaid} from "vitepress-plugin-mermaid";
+import generalItems from '../content/general/sidebar';
 
 const apiItems = typedocSidebar.filter((item: any) => !['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
 const internalsItems = typedocSidebar.filter((item: any) => ['helpers', 'internal', 'gewis'].includes(item.text.toLowerCase()));
@@ -21,13 +22,7 @@ export default withMermaid({
       provider: 'local'
     },
     sidebar: [
-      {
-        text: 'General',
-        items: [
-          { text: 'Getting Started', link: '/getting-started' },
-          { text: '.env', link: '/env-variables' },
-        ],
-      },
+      {...generalItems},
       {
         text: 'Documentation',
         items: [{text: 'Introduction', link: '/documentation'}, ...apiItems],

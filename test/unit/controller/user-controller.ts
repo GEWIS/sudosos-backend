@@ -3241,4 +3241,109 @@ describe('UserController', (): void => {
       expect(res.body.valid).to.equal(false);
     });
   });
+
+  describe('PATCH /users/:id/usertype', () => {
+    it('should return HTTP 200 and update user type', async () => {
+      const user = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('type');
+      expect(res.body.type).to.equal(UserType.MEMBER);
+    });
+
+    it('should return HTTP 404 if user does not exist', async () => {
+      const nonExistentId = 99999;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${nonExistentId}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(404);
+      expect(res.body).to.equal('User not found.');
+    });
+
+    it('should return HTTP 403 if user has insufficient permissions', async () => {
+      const user = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return HTTP 422 if user is of invalid type', async () => {
+      const user = ctx.users.find((u) => u.type === UserType.ORGAN);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(422);
+      expect(res.body).to.equal('It is not possible to change the user type for users of this type.');
+    });
+
+    it('should return HTTP 422 if trying to update to invalid type', async () => {
+      const user = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'Organ' });
+
+      expect(res.status).to.equal(422);
+      expect(res.body).to.contain('User type can only be changed to [');
+    });
+
+    it('should return HTTP 409 if user is already of type', async () => {
+      const user = ctx.users.find((u) => u.type === UserType.MEMBER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(409);
+      expect(res.body).to.equal('User is already of this type.');
+    });
+
+    it('should return HTTP 400 if user has no email set', async () => {
+      const user = ctx.users.find((u) => u.email === '' && u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot change user type of user without email.');
+    });
+
+    it('should return HTTP 400 if the user has no memberId', async () => {
+      const user = ctx.users.find((u) => u.email === '' && u.type === UserType.LOCAL_USER);
+      if (!user) return;
+
+      const res = await request(ctx.app)
+        .patch(`/users/${user.id}/usertype`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ userType: 'MEMBER' });
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Cannot change to MEMBER since no memberId is associated to this user.');
+    });
+  });
 });

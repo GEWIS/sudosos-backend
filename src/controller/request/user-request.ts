@@ -107,3 +107,11 @@ export interface PatchUserSettingsRequest {
   dashboardTheme?: { organId: number; organName: string } | null;
   language?: SupportedLanguage | undefined;
 }
+
+/**
+ * @typedef {object} PatchUserTypeRequest
+ * @property {string} userType.required - New user type
+ */
+export interface PatchUserTypeRequest {
+  userType: UserType;
+}

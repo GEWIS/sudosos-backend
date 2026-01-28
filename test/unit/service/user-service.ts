@@ -43,6 +43,9 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { RequestWithToken } from '../../../src/middleware/token-middleware';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
+import UserTypeUpdatedWithReset from '../../../src/mailer/messages/user-type-updated-with-reset';
+import UserTypeUpdated from '../../../src/mailer/messages/user-type-updated';
+import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 
 describe('UserService', async (): Promise<void> => {
   let ctx: {
@@ -66,6 +69,7 @@ describe('UserService', async (): Promise<void> => {
     const organs = users.filter((u) => u.type === UserType.ORGAN);
     const memberUsers = users.filter((u) => u.type === UserType.MEMBER);
     await new UserSeeder().seedMemberAuthenticators(memberUsers, organs);
+    await new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator, users.length);
 
     // Create roles for testing
     const role1 = await Role.save({ name: 'TestRole1', systemDefault: false } as Role);
@@ -846,6 +850,60 @@ describe('UserService', async (): Promise<void> => {
 
         expect(result).to.be.false;
       }
+    });
+  });
+
+  describe('updateUserType', () => {
+    it('should update userType', async () => {
+      const user = ctx.users[0];
+      const newType = UserType.ORGAN;
+
+      await UserService.updateUserType(user, newType);
+
+      await user.reload();
+
+      expect(user.type).to.equal(newType);
+    });
+    describe('update userType to LOCAL_USER', async () => {
+      it('should send email notification with reset link', async () => {
+        const user = ctx.users[0];
+        const newType = UserType.LOCAL_USER;
+
+        await UserService.updateUserType(user, newType);
+
+        expect(sendStub.calledOnce).to.be.true;
+
+        const [messagedUser, message] = sendStub.getCall(0).args;
+        expect(messagedUser.email).to.equal(user.email);
+        expect(message).to.be.instanceOf(UserTypeUpdatedWithReset);
+      });
+    });
+    describe('update userType to MEMBER', async () => {
+      it('should send email notification', async () => {
+        const user = ctx.users[0];
+        const newType = UserType.MEMBER;
+
+        await UserService.updateUserType(user, newType);
+
+        expect(sendStub.calledOnce).to.be.true;
+
+        const [messagedUser, message] = sendStub.getCall(0).args;
+        expect(messagedUser.email).to.equal(user.email);
+        expect(message).to.be.instanceOf(UserTypeUpdated);
+      });
+
+      it('should remove local authentication for the user', async () => {
+        const user = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
+        const newType = UserType.MEMBER;
+
+        let localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        expect(localAuth).to.not.be.null;
+
+        await UserService.updateUserType(user, newType);
+
+        localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        expect(localAuth).to.be.null;
+      });
     });
   });
 });

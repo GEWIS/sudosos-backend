@@ -41,6 +41,7 @@ import AuthenticationController from '../../controller/authentication-controller
 import Gewis from '../gewis';
 import UserService from '../../service/user-service';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
+import { UserType } from '../../entity/user/user';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -172,6 +173,11 @@ export default class GewisAuthenticationController extends BaseController {
         await UserService.updateUser(memberUser.user.id, { ...update, active: true });
       }
 
+      // If a LOCAL_USER authenticates through GEWIS, implicitly convert the account back to a MEMBER account
+      if (memberUser.user.type === UserType.LOCAL_USER) {
+        await UserService.updateUserType(memberUser.user, UserType.MEMBER);
+      }
+
       const response = await new AuthenticationService().getSaltedToken({
         user: memberUser.user,
         context: { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
@@ -210,6 +216,7 @@ export default class GewisAuthenticationController extends BaseController {
 
   /**
    * POST /authentication/GEWIS/pin
+   * @deprecated Use /authentication/GEWIS/pin-secure instead
    * @summary PIN login and hand out token.
    * @operationId gewisPinAuthentication
    * @tags authenticate - Operations of authentication controller
