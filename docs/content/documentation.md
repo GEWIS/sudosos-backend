@@ -1,9 +1,19 @@
-# The SudoSOS Backend Documentation
+# Documentation
 
-## Introduction
+This section is the **generated reference** for SudoSOS Back-end, built from TypeDoc.
 
-Welcome to the SudoSOS Backend documentation! Here, you will find comprehensive information regarding the various entities and modules available in SudoSOS. Each entity or module has a dedicated page, which serves to explain the purpose, functionality, and usage of the entity.
+If you are new to the domain, start with the General docs:
+- **[Overview](/general/0-overview)**
+- **[Core Concepts](/general/1-core-concepts)**
 
-## Swagger API Documentation
+## How this reference is organised
 
-If you are looking for the Swagger documentation, you can find it [here](https://sudosos.gewis.nl/api/api-docs/). This resource provides detailed API specifications and examples to help you integrate with the SudoSOS backend effectively.
+- **Documentation (external)**: modules that are useful to API consumers and frontend/client developers.
+
+  Use this together with Swagger for request/response shapes.
+- **Internals (backend-only)**: helpers and internal modules that are mainly useful when changing the backend implementation.
+
+## API reference (Swagger)
+
+- Production: `https://sudosos.gewis.nl/api/api-docs/`
+- Local development: `http://localhost:3000/api-docs`
