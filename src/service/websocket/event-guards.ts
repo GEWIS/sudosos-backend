@@ -18,7 +18,7 @@
  *  @license
  */
 
-import { ParsedRoom } from './room-authorization';
+import { ParsedRoom } from './room-parser';
 
 /**
  * Guard function that determines if an event should be emitted to a room.

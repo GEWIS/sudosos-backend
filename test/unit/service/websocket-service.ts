@@ -200,7 +200,7 @@ describe('WebSocketService', () => {
 
         // Send maintenance mode and verify we don't receive it after unsubscribing
         setTimeout(() => {
-          WebSocketService.sendMaintenanceMode(true);
+          WebSocketService.emitMaintenanceMode(true);
           
           setTimeout(() => {
             expect(receivedAfterUnsubscribe).to.be.false;
@@ -242,12 +242,12 @@ describe('WebSocketService', () => {
         clientSocket.on('maintenance-mode', () => {
           done();
         });
-        WebSocketService.sendMaintenanceMode(true);
+        WebSocketService.emitMaintenanceMode(true);
       }, 200);
     });
   });
 
-  describe('sendMaintenanceMode function', () => {
+  describe('emitMaintenanceMode function', () => {
     it('should emit maintenance-mode event to subscribed clients', (done) => {
       // Configure ServerSettingsStore mock to return 'true' for maintenance mode
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(true);
@@ -264,7 +264,7 @@ describe('WebSocketService', () => {
 
       // Wait for subscription to complete, then send maintenance mode
       setTimeout(() => {
-        WebSocketService.sendMaintenanceMode(true);
+        WebSocketService.emitMaintenanceMode(true);
       }, 100);
     });
 
@@ -284,7 +284,7 @@ describe('WebSocketService', () => {
 
       // Also send maintenance mode manually to ensure test completes
       setTimeout(() => {
-        WebSocketService.sendMaintenanceMode(false);
+        WebSocketService.emitMaintenanceMode(false);
       }, 300);
     });
   });
@@ -567,13 +567,13 @@ describe('WebSocketService', () => {
       expect(webSocketService.emitQRConfirmed).to.be.a('function');
     });
 
-    it('should delegate sendMaintenanceMode to instance', () => {
+    it('should delegate emitMaintenanceMode to instance', () => {
       // Should complete without error
-      WebSocketService.sendMaintenanceMode(true);
-      WebSocketService.sendMaintenanceMode(false);
+      WebSocketService.emitMaintenanceMode(true);
+      WebSocketService.emitMaintenanceMode(false);
 
       // Verify method exists
-      expect(webSocketService.sendMaintenanceMode).to.be.a('function');
+      expect(webSocketService.emitMaintenanceMode).to.be.a('function');
     });
   });
 

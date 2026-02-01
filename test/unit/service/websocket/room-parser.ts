@@ -19,9 +19,9 @@
  */
 
 import { expect } from 'chai';
-import { parseRoom, matchesRoomPattern } from '../../../../src/service/websocket/room-authorization';
+import { parseRoom, matchesRoomPattern } from '../../../../src/service/websocket/room-parser';
 
-describe('Room Authorization', () => {
+describe('Room Parser', () => {
   describe('parseRoom', () => {
     it('should parse specific room pattern with entity ID', () => {
       const result = parseRoom('pos:123:transactions');

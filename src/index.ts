@@ -247,10 +247,9 @@ export default async function createApp(): Promise<Application> {
   try {
     const existingInstance = WebSocketService.getInstance();
     if (existingInstance.server.listening) {
-      const l = log4js.getLogger('index');
-      l.info('Closing existing WebSocket server before creating new instance');
+      application.logger.info('Closing existing WebSocket server before creating new instance');
       existingInstance.server.close(() => {
-        l.info('Existing WebSocket server closed');
+        application.logger.info('Existing WebSocket server closed');
       });
     }
   } catch {

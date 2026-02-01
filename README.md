@@ -116,27 +116,6 @@ npm run watch
 
 The server will be available at `http://localhost:3000`
 
-### 6. WebSocket (Socket.IO) authentication
-
-The backend exposes a Socket.IO server (default `WEBSOCKET_PORT=8080` in development).
-
-- **Connect with token (preferred)**: provide the JWT in `handshake.auth.token`.
-- **Room subscriptions**: clients must `emit('subscribe', roomName)` to join rooms. Rooms that require authorization will respond with an `error` event if the client is unauthenticated/unauthorized.
-
-Example:
-
-```ts
-import { io } from 'socket.io-client';
-
-const socket = io('http://localhost:8080', {
-  auth: { token: '<jwt>' },
-});
-
-socket.on('error', (err) => console.error(err));
-socket.emit('subscribe', 'pos:123:transactions');
-socket.on('transaction:created', (tx) => console.log(tx));
-```
-
 ### 6. Access API Documentation
 
 Visit `http://localhost:3000/api-docs` to access the Swagger UI for API documentation.

@@ -80,8 +80,8 @@ describe('ServerSettingsController', () => {
       tokenHandler: mockTokenHandler,
       roleManager: mockRoleManager,
     });
-    // Mock sendMaintenanceMode to avoid actual WebSocket operations in tests
-    sinon.stub(webSocketService, 'sendMaintenanceMode').returns(undefined);
+    // Mock emitMaintenanceMode to avoid actual WebSocket operations in tests
+    sinon.stub(webSocketService, 'emitMaintenanceMode').returns(undefined);
     sinon.stub(WebSocketService, 'getInstance').returns(webSocketService);
 
     ctx = {
