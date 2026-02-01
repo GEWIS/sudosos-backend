@@ -66,7 +66,6 @@ export function createTransferPdf(options: ITransferPdf): string {
       </p>
     </div>
 
-
     <table class="items" role="table">
       <thead>
         <tr>
