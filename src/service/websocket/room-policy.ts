@@ -20,7 +20,7 @@
 
 import User from '../../entity/user/user';
 import JsonWebToken from '../../authentication/json-web-token';
-import { ParsedRoom, matchesRoomPattern } from './room-authorization';
+import { ParsedRoom, matchesRoomPattern } from './room-parser';
 
 /**
  * WebSocket request context similar to RequestWithToken but for WebSocket connections.

@@ -30,7 +30,7 @@ import TokenHandler from '../authentication/token-handler';
 import JsonWebToken from '../authentication/json-web-token';
 import User from '../entity/user/user';
 import { TransactionResponse } from '../controller/response/transaction-response';
-import { parseRoom } from './websocket/room-authorization';
+import { parseRoom } from './websocket/room-parser';
 import {
   RoomPolicyRegistry,
   RoomRegistration,
@@ -193,7 +193,7 @@ export default class WebSocketService {
       },
     });
 
-    // Register global transaction rooms
+    // Register global transaction room
     this.registerRoom({
       pattern: 'transactions:all',
       policy: async (context) => this.roleManager.can(
@@ -326,7 +326,7 @@ export default class WebSocketService {
 
     const tokenString = tokenFromAuth ?? tokenFromQuery;
     
-    if (!tokenString || typeof tokenString !== 'string') {
+    if (!tokenString) {
       this.logger.trace(`Client ${client.id} connected without authentication`);
       return;
     }
@@ -339,7 +339,6 @@ export default class WebSocketService {
       const token = await this.tokenHandler.verifyToken(tokenString);
       const user = await User.findOne({ 
         where: { id: token.user.id },
-        relations: { pointOfSale: true },
       });
 
       if (user) {
@@ -550,7 +549,7 @@ export default class WebSocketService {
    * Delegates to the singleton instance.
    * @throws Error if WebSocketService has not been initialized.
    */
-  public static sendMaintenanceMode(enabled: boolean): void {
+  public static emitMaintenanceMode(enabled: boolean): void {
     this.getInstance().sendMaintenanceMode(enabled);
   }
 

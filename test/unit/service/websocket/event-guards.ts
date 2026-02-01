@@ -20,7 +20,7 @@
 
 import { expect } from 'chai';
 import { InPosGuard, ForUserGuard } from '../../../../src/service/websocket/event-guards';
-import { ParsedRoom } from '../../../../src/service/websocket/room-authorization';
+import { ParsedRoom } from '../../../../src/service/websocket/room-parser';
 
 describe('Event Guards', () => {
   describe('InPosGuard', () => {
