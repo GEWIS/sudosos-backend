@@ -53,6 +53,19 @@ export function createTransferPdf(options: ITransferPdf): string {
   `;
 
   const details = `
+    <div style="margin-bottom: 1.5em; padding: 1em; background: #F9F9F9; border-left: 4px solid var(--primary); border-radius: 4px;">
+      <h3 style="margin: 0 0 0.5em 0; font-size: 16px; color: var(--ink);">Balance Transfer</h3>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted);">
+        This document records a balance movement within SudoSOS, showing the transferred amount and the originating and/or receiving account.
+        Balances in SudoSOS qualify as Multi Purpose Vouchers (MPV) under
+        <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016L1065" target="_blank" rel="noopener noreferrer">
+          Directive (EU) 2016/1065
+        </a>.
+        No VAT is due on balance top-ups, payouts, or transfers between accounts.
+        VAT only becomes applicable when a balance is used to purchase goods or services.
+      </p>
+    </div>
+
     <table class="items" role="table">
       <thead>
         <tr>
