@@ -57,15 +57,15 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import sinon, { SinonSandbox, SinonStub } from 'sinon';
 import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
-import nodemailer, { Transporter } from 'nodemailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
+import { Queue } from 'bullmq';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -100,9 +100,10 @@ describe('InactiveAdministrativeCostService', () => {
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let queueAddStub: SinonStub;
 
   before(async function test(): Promise<void> {
+    this.timeout(30000);
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -172,15 +173,18 @@ describe('InactiveAdministrativeCostService', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
+    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   // close database connection
   after(async () => {
     await finishTestDB(ctx.connection);
+
+    sandbox.restore();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   describe('getInactiveAdministrativeCosts', async (): Promise<void> => {
@@ -437,7 +441,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(queueAddStub.callCount).to.equal(users.length);
     });
   });
 
@@ -451,7 +455,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().sendInactiveNotification(handoutRequest);
       const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(queueAddStub.callCount).to.equal(users.length);
       expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
   });

@@ -33,8 +33,7 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Mailer from '../../../src/mailer';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
-import nodemailer, { Transporter } from 'nodemailer';
+import sinon, { SinonSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import { SubTransactionRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
@@ -61,6 +60,7 @@ import {
   UserNotificationPreferenceUpdateParams,
 } from '../../../src/controller/request/user-notification-preference-request';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import { Queue } from 'bullmq';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -79,7 +79,7 @@ describe('TransactionSubscriber', () => {
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let queueAddStub: SinonStub;
 
   let env: string;
 
@@ -136,10 +136,7 @@ describe('TransactionSubscriber', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
+    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   after(async () => {
@@ -216,7 +213,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(queueAddStub).to.be.calledOnce;
     });
     it('should not send email if someone does not go into debt', async () => {
       const user = ctx.usersNotInDebt[2];
@@ -278,7 +275,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(queueAddStub).to.not.be.called;
     });
     it('should not send email if someone is already in debt', async () => {
       const user = ctx.usersInDebt[0];
@@ -339,7 +336,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(queueAddStub).to.not.be.called;
     });
 
     it('should send an email if someone goes in debt after a multi-item transaction', async () => {
@@ -435,7 +432,7 @@ describe('TransactionSubscriber', () => {
         const newBalance = await new BalanceService().getBalance(u.id);
 
         expect(newBalance.amount.amount).to.be.below(0);
-        expect(sendMailFake).to.be.called;
+        expect(queueAddStub).to.be.called;
       });
     });
     it('should send a notification email if the user wants from itself', async () => {
@@ -495,7 +492,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(queueAddStub).to.be.calledOnce;
     });
     it('should send a notification email when charged by others', async () => {
       const user = ctx.usersNotInDebt[4];
@@ -559,7 +556,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(queueAddStub).to.be.calledOnce;
     });
     it('should not send a notification email', async () => {
       const user = ctx.usersNotInDebt[5];
@@ -630,7 +627,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(queueAddStub).to.not.be.called;
     });
   });
 });

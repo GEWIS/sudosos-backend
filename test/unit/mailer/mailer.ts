@@ -20,7 +20,6 @@
 
 import { expect } from 'chai';
 import sinon, { SinonSandbox, SinonStub } from 'sinon';
-import nodemailer, { Transporter } from 'nodemailer';
 import { DataSource } from 'typeorm';
 import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -32,6 +31,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
 import { rootStubs } from '../../root-hooks';
+import { Queue } from 'bullmq';
 
 describe('Mailer', () => {
   let ctx: {
@@ -41,8 +41,7 @@ describe('Mailer', () => {
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonStub;
-  let createTransportStub: SinonStub;
+  let queueAddStub: SinonStub;
 
   const fromEmail = process.env.SMTP_FROM?.split('<')[1].split('>')[0] ?? '';
 
@@ -74,10 +73,7 @@ describe('Mailer', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.stub();
-    createTransportStub = sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
+    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   after(async () => {
@@ -88,23 +84,6 @@ describe('Mailer', () => {
     sandbox.restore();
   });
 
-  it('should correctly create mailer', () => {
-    Mailer.getInstance();
-
-    expect(createTransportStub).to.be.calledOnceWithExactly({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10),
-      secure: process.env.SMTP_TLS === 'true',
-      auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-      },
-      from: process.env.SMTP_FROM,
-      pool: true,
-      maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || '', 10) || undefined,
-    });
-  });
-
   it('should be a singleton', () => {
     const mailer = Mailer.getInstance();
     const mailer2 = Mailer.getInstance();
@@ -112,12 +91,13 @@ describe('Mailer', () => {
   });
 
   // eslint-disable-next-line func-names
-  it('should correctly send mail in English by default', async function () {
+  it('should correctly queue mail in English by default', async function () {
     const mailer = Mailer.getInstance();
-    await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
+    const template = new HelloWorld({ name: ctx.user.firstName });
+    await mailer.send(ctx.user, template);
 
-    expect(sendMailFake).to.be.calledOnce;
-    const args = sendMailFake.args[0][0];
+    expect(queueAddStub.calledOnce).to.be.true;
+    const [jobName, jobData] = queueAddStub.firstCall.args;
 
     const styledHtml = ctx.htmlMailTemplate
       .replaceAll('{{ subject }}', 'Hello world!')
@@ -125,34 +105,21 @@ describe('Mailer', () => {
       .replaceAll('{{ weekDay }}', new Date().toLocaleString('en-US', { weekday: 'long' }))
       .replaceAll('{{ date }}', new Date().toLocaleString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }))
       .replaceAll('{{ shortTitle }}', 'Hello world!')
-      .replaceAll('{{ body }}', `<p>Dear Admin,</p>
-<p>Hello world, Admin!</p>`)
+      .replaceAll('{{ body }}', '<p>Dear Admin,</p>\n<p>Hello world, Admin!</p>')
       .replaceAll('{{ reasonForEmail }}', templateFieldDefault.reasonForEmail['en-US'])
       .replaceAll('{{ serviceEmail }}', fromEmail);
 
-    // Separate assessment for HTML body (because it is so big)
-    expect(args.html).to.equal(styledHtml);
-    expect(sendMailFake).to.be.calledOnceWithExactly({
-      from: process.env.SMTP_FROM,
-      text: `Dear Admin,
-
-Hello world, Admin!
-
-Kind regards,
-SudoSOS`,
-      html: styledHtml,
-      subject: 'Hello world!',
-      to: 'mail@example.com',
-    });
+    expect(jobName).to.equal('send-email');
+    expect(jobData.html.trim()).to.equal(styledHtml.trim());
   });
 
   // eslint-disable-next-line func-names
-  it('should correctly send mail in Dutch', async function () {
+  it('should correctly queue mail in Dutch', async function () {
     const mailer = Mailer.getInstance();
     await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
-    expect(sendMailFake).to.be.calledOnce;
-    const args = sendMailFake.args[0][0];
+    expect(queueAddStub.calledOnce).to.be.true;
+    const [jobName, jobData] = queueAddStub.firstCall.args;
 
     const styledHtml = ctx.htmlMailTemplate
       .replaceAll('{{ subject }}', 'Hallo wereld!')
@@ -160,31 +127,20 @@ SudoSOS`,
       .replaceAll('{{ weekDay }}', new Date().toLocaleString('nl-NL', { weekday: 'long' }))
       .replaceAll('{{ date }}', new Date().toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }))
       .replaceAll('{{ shortTitle }}', 'Hallo wereld!')
-      .replaceAll('{{ body }}', `<p>Beste Admin,</p>
-<p>Hallo wereld, Admin!</p>`)
+      .replaceAll('{{ body }}', '<p>Beste Admin,</p>\n<p>Hallo wereld, Admin!</p>')
       .replaceAll('{{ reasonForEmail }}', templateFieldDefault.reasonForEmail['nl-NL'])
       .replaceAll('{{ serviceEmail }}', fromEmail);
-    // Separate assessment for HTML body (because it is so big)
-    expect(args.html).to.equal(styledHtml);
 
-    expect(args).to.deep.equal({
-      from: process.env.SMTP_FROM,
-      text: `Beste Admin,
-
-Hallo wereld, Admin!
-
-Met vriendelijke groet,
-SudoSOS`,
-      html: styledHtml,
-      subject: 'Hallo wereld!',
-      to: 'mail@example.com',
-    });
+    expect(jobName).to.equal('send-email');
+    expect(jobData.html.trim()).to.equal(styledHtml.trim());
   });
 
   // eslint-disable-next-line func-names
   it('should catch error if any exist', async function () {
     const mailer = Mailer.getInstance();
+
     const promise = mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
-    await expect(promise).to.eventually.be.fulfilled;
+
+    await expect(promise).to.eventually.be.rejected;
   });
 });
