@@ -54,7 +54,7 @@
     "ldapts": "^7.4.0",
     "log4js": "^6.9.1",
     "mime-types": "^2.1.35",
-    "mysql2": "^3.16.1",
+    "mysql2": "^3.16.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
     "pdf-generator-client": "github:GEWIS/pdf-generator#31a8c6914b12e284a88f18317c1808ce8a1c0229",
