@@ -24,23 +24,28 @@
  * @module internal/mailer
  */
 
-import { Transporter } from 'nodemailer';
 import log4js, { Logger } from 'log4js';
-import createSMTPTransporter from './transporter';
 import User from '../entity/user/user';
 import MailMessage, { Language } from './mail-message';
 import Mail from 'nodemailer/lib/mailer';
+import { Queue } from 'bullmq';
 
 export default class Mailer {
   private static instance: Mailer;
 
-  private transporter: Transporter;
+  private mailQueue: Queue;
 
   private logger: Logger = log4js.getLogger('Mailer');
 
   constructor() {
-    this.transporter = createSMTPTransporter();
     this.logger.level = process.env.LOG_LEVEL;
+
+    this.mailQueue = new Queue('mail-queue', {
+      connection: {
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT),
+      },
+    });
   }
 
   static getInstance(): Mailer {
@@ -51,18 +56,23 @@ export default class Mailer {
   }
 
   async send<T>(
-    to: User, template: MailMessage<T>, language: Language = Language.ENGLISH, extraOptions?: Mail.Options,
+    to: User,
+    template: MailMessage<T>,
+    language: Language = Language.ENGLISH,
+    extraOptions?: Mail.Options,
   ) {
-    this.logger.trace('Send email', template.constructor.name, 'to user');
-    try {
-      await this.transporter.sendMail({
-        ...template.getOptions(to, language),
-        to: to.email,
-        ...extraOptions,
-      });
-    } catch (error: any) {
-      this.logger.error('Could not send email:', error.message);
-    }
+    const mailOptions = {
+      ...template.getOptions(to, language),
+      ...extraOptions,
+      to: to.email,
+    };
+    
+    await this.mailQueue.add('send-email', mailOptions, {
+      attempts: 5,
+      backoff: { type: 'exponential', delay: 2000 },
+    });
+
+    this.logger.info(`Queued email: ${template.constructor.name} for ${to.email}`);
   }
 
   /**

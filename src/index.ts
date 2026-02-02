@@ -85,6 +85,7 @@ import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
+import { startMailWorker } from './workers/mail-worker';
 
 export class Application {
   app: express.Express;
@@ -300,6 +301,8 @@ export default async function createApp(): Promise<Application> {
   }
 
   webSocketService.initiateWebSocket();
+
+  startMailWorker();
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
