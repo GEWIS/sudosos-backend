@@ -101,9 +101,14 @@ export class Application {
 
   tasks: cron.ScheduledTask[];
 
+  webSocketService: WebSocketService;
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
+    if (this.webSocketService) {
+      await this.webSocketService.close();
+    }
     this.tasks.forEach((task) => task.stop());
     await this.connection.destroy();
     this.logger.info('Application stopped.');
@@ -236,6 +241,26 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
+  
+  // Initialize WebSocket service
+  // Close existing instance's server if it exists (e.g., in tests)
+  try {
+    const existingInstance = WebSocketService.getInstance();
+    if (existingInstance.server.listening) {
+      application.logger.info('Closing existing WebSocket server before creating new instance');
+      existingInstance.server.close(() => {
+        application.logger.info('Existing WebSocket server closed');
+      });
+    }
+  } catch {
+    // No existing instance, continue
+  }
+  
+  const webSocketService = new WebSocketService({
+    tokenHandler,
+    roleManager: application.roleManager,
+  });
+  application.webSocketService = webSocketService;
 
   application.tasks = [];
 
@@ -274,7 +299,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
 
-  WebSocketService.initiateWebSocket();
+  webSocketService.initiateWebSocket();
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

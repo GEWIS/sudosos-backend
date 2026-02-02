@@ -115,7 +115,6 @@ npm run watch
 ```
 
 The server will be available at `http://localhost:3000`
-
 ### 6. Access API Documentation
 
 Visit `http://localhost:3000/api-docs` to access the Swagger UI for API documentation.
