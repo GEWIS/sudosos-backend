@@ -45,14 +45,13 @@ import {
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { INVALID_USER_ID } from '../../../src/controller/request/validators/validation-errors';
 import Transfer from '../../../src/entity/transactions/transfer';
-import sinon, { SinonSandbox, SinonStub } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import VatGroup from '../../../src/entity/vat-group';
 import { InactiveAdministrativeCostReport } from '../../../src/entity/report/inactive-administrative-cost-report';
 import { PdfError } from '../../../src/errors';
-import { Queue } from 'bullmq';
 
 describe('InactiveAdministrativeCostController', async () => {
   let ctx: {
@@ -71,7 +70,6 @@ describe('InactiveAdministrativeCostController', async () => {
   };
 
   let sandbox: SinonSandbox;
-  let queueAddStub: SinonStub;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -188,7 +186,6 @@ describe('InactiveAdministrativeCostController', async () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   after(async () => {
@@ -427,7 +424,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(204);
 
-      expect(queueAddStub.called).to.be.true;
+      expect(rootStubs.queueAdd.called).to.be.true;
     });
     it('should return 403 if user is not an admin', async () => {
       const res = await request(ctx.app)
@@ -479,7 +476,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(200);
 
-      expect(queueAddStub.called).to.be.true;
+      expect(rootStubs.queueAdd.called).to.be.true;
       expect(await InactiveAdministrativeCost.count()).to.be.equal(count + (ctx.users.map((u) => u.id)).length);
     });
     it('should return 403 if user is not an admin', async () => {
