@@ -30,21 +30,38 @@ export const startMailWorker = () => {
     'mail-queue',
     async (job: Job<Mail.Options>) => {
       logger.info(`Processing job ${job.id} for ${job.data.to}`);
-            
-      await transporter.sendMail(job.data);
+
+      try {
+        const info = await transporter.sendMail(job.data);
+
+        return info;
+      } catch (error) {
+        logger.error(
+          { jobId: job.id, to: job.data.to, error: error.message },
+          'Failed to send email via transporter',
+        );
+
+        throw error;
+      }
     },
     {
       connection: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: Number(process.env.REDIS_PORT) || 6379,
       },
       concurrency: 5, 
     },
   );
+
+  worker.on('completed', (job) => {
+    logger.info(`Job ${job.id} completed successfully`);
+  });
 
   worker.on('failed', (job, err) => {
     logger.error(`Job ${job?.id} failed: ${err.message}`);
   });
 
   logger.info('Mail Worker is running and listening for jobs...');
+
+  return worker;
 };

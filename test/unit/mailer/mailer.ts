@@ -136,7 +136,7 @@ describe('Mailer', () => {
   });
 
   // eslint-disable-next-line func-names
-  it('should catch error if any exist', async function () {
+  it('should reject when invalid language is provided', async function () {
     const mailer = Mailer.getInstance();
 
     const promise = mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
