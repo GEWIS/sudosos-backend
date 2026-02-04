@@ -19,7 +19,7 @@
  */
 
 import { expect } from 'chai';
-import sinon, { SinonSandbox, SinonStub } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import { DataSource } from 'typeorm';
 import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -31,7 +31,6 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { templateFieldDefault } from '../../../src/mailer/mail-body-generator';
 import { rootStubs } from '../../root-hooks';
-import { Queue } from 'bullmq';
 
 describe('Mailer', () => {
   let ctx: {
@@ -41,7 +40,6 @@ describe('Mailer', () => {
   };
 
   let sandbox: SinonSandbox;
-  let queueAddStub: SinonStub;
 
   const fromEmail = process.env.SMTP_FROM?.split('<')[1].split('>')[0] ?? '';
 
@@ -73,7 +71,6 @@ describe('Mailer', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   after(async () => {
@@ -96,8 +93,8 @@ describe('Mailer', () => {
     const template = new HelloWorld({ name: ctx.user.firstName });
     await mailer.send(ctx.user, template);
 
-    expect(queueAddStub.calledOnce).to.be.true;
-    const [jobName, jobData] = queueAddStub.firstCall.args;
+    expect(rootStubs.queueAdd.calledOnce).to.be.true;
+    const [jobName, jobData] = rootStubs.queueAdd.firstCall.args;
 
     const styledHtml = ctx.htmlMailTemplate
       .replaceAll('{{ subject }}', 'Hello world!')
@@ -118,8 +115,8 @@ describe('Mailer', () => {
     const mailer = Mailer.getInstance();
     await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
-    expect(queueAddStub.calledOnce).to.be.true;
-    const [jobName, jobData] = queueAddStub.firstCall.args;
+    expect(rootStubs.queueAdd.calledOnce).to.be.true;
+    const [jobName, jobData] = rootStubs.queueAdd.firstCall.args;
 
     const styledHtml = ctx.htmlMailTemplate
       .replaceAll('{{ subject }}', 'Hallo wereld!')

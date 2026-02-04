@@ -57,7 +57,7 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import sinon, { SinonSandbox, SinonStub } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -65,7 +65,6 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
-import { Queue } from 'bullmq';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -100,7 +99,6 @@ describe('InactiveAdministrativeCostService', () => {
   };
 
   let sandbox: SinonSandbox;
-  let queueAddStub: SinonStub;
 
   before(async function test(): Promise<void> {
     this.timeout(30000);
@@ -173,7 +171,6 @@ describe('InactiveAdministrativeCostService', () => {
     Mailer.reset();
 
     sandbox = sinon.createSandbox();
-    queueAddStub = sandbox.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
   });
 
   // close database connection
@@ -441,7 +438,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
-      expect(queueAddStub.callCount).to.equal(users.length);
+      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
     });
   });
 
@@ -455,7 +452,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().sendInactiveNotification(handoutRequest);
       const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
-      expect(queueAddStub.callCount).to.equal(users.length);
+      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
       expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
   });
