@@ -40,10 +40,22 @@ export default class Mailer {
   constructor() {
     this.logger.level = process.env.LOG_LEVEL;
 
+    const redisHost = process.env.REDIS_HOST || '127.0.0.1';
+    const redisPortEnv = process.env.REDIS_PORT;
+    const redisPort = redisPortEnv ? Number(redisPortEnv) : 6379;
+    if (!redisHost || typeof redisHost !== 'string') {
+      throw new Error('Invalid Redis configuration: REDIS_HOST must be a non-empty string.');
+    }
+    if (!Number.isInteger(redisPort) || redisPort <= 0) {
+      throw new Error(
+        `Invalid Redis configuration: REDIS_PORT must be a positive integer (got "${redisPortEnv ?? redisPort}").`,
+      );
+    }
+
     this.mailQueue = new Queue('mail-queue', {
       connection: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
+        host: redisHost,
+        port: redisPort,
       },
     });
   }
@@ -66,11 +78,26 @@ export default class Mailer {
       ...extraOptions,
       to: to.email,
     };
-    
-    await this.mailQueue.add('send-email', mailOptions, {
-      attempts: 5,
-      backoff: { type: 'exponential', delay: 2000 },
-    });
+    try {
+      await this.mailQueue.add('send-email', mailOptions, {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
+      });
+
+      this.logger.info({
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Email successfully queued');
+    } catch (error) {
+      this.logger.error({
+        err: error.message,
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Failed to add email to queue');
+
+      throw error;
+    }
+
 
     this.logger.info(`Queued email: ${template.constructor.name} for ${to.email}`);
   }
