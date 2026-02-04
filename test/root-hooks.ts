@@ -56,7 +56,6 @@ export const mochaHooks: Mocha.RootHookObject = {
     } as any as Transporter);
 
     const queueAddStub = Queue.prototype.add as sinon.SinonStub;
-    queueAddStub.resetHistory();
 
     rootStubs = {
       mail: mailStub,
