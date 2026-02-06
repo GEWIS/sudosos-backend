@@ -182,6 +182,17 @@ export default class User extends BaseEntity {
   })
   public lastSeen: Date | null;
 
+  /**
+   * Date at which this account is scheduled to expire. When the date is in the past,
+   * the daily expiry CRON deactivates the user. Only set for local user types
+   * (see {@link LocalUserTypes}); `null` for all other user types.
+   */
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  public expiryDate: Date;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
