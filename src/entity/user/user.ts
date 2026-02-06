@@ -165,6 +165,12 @@ export default class User extends BaseEntity {
   })
   public lastSeen: Date | null;
 
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  public expiryDate: Date;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
