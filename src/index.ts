@@ -85,6 +85,8 @@ import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
+import { startMailWorker } from './workers/mail-worker';
+import { Worker } from 'bullmq';
 
 export class Application {
   app: express.Express;
@@ -97,6 +99,8 @@ export class Application {
 
   connection: DataSource;
 
+  workers: Worker[];
+
   logger: Logger;
 
   tasks: cron.ScheduledTask[];
@@ -105,6 +109,7 @@ export class Application {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
     this.tasks.forEach((task) => task.stop());
+    this.workers.forEach((worker) => worker.close());
     await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
@@ -275,6 +280,9 @@ export default async function createApp(): Promise<Application> {
   }
 
   WebSocketService.initiateWebSocket();
+
+  application.workers = [];
+  application.workers.push(startMailWorker());
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

@@ -24,23 +24,40 @@
  * @module internal/mailer
  */
 
-import { Transporter } from 'nodemailer';
 import log4js, { Logger } from 'log4js';
-import createSMTPTransporter from './transporter';
 import User from '../entity/user/user';
 import MailMessage, { Language } from './mail-message';
 import Mail from 'nodemailer/lib/mailer';
+import { Queue } from 'bullmq';
 
 export default class Mailer {
   private static instance: Mailer;
 
-  private transporter: Transporter;
+  private mailQueue: Queue;
 
   private logger: Logger = log4js.getLogger('Mailer');
 
   constructor() {
-    this.transporter = createSMTPTransporter();
     this.logger.level = process.env.LOG_LEVEL;
+
+    const redisHost = process.env.REDIS_HOST || '127.0.0.1';
+    const redisPortEnv = process.env.REDIS_PORT;
+    const redisPort = redisPortEnv ? Number(redisPortEnv) : 6379;
+    if (!redisHost || typeof redisHost !== 'string') {
+      throw new Error('Invalid Redis configuration: REDIS_HOST must be a non-empty string.');
+    }
+    if (!Number.isInteger(redisPort) || redisPort <= 0) {
+      throw new Error(
+        `Invalid Redis configuration: REDIS_PORT must be a positive integer (got "${redisPortEnv ?? redisPort}").`,
+      );
+    }
+
+    this.mailQueue = new Queue('mail-queue', {
+      connection: {
+        host: redisHost,
+        port: redisPort,
+      },
+    });
   }
 
   static getInstance(): Mailer {
@@ -51,18 +68,38 @@ export default class Mailer {
   }
 
   async send<T>(
-    to: User, template: MailMessage<T>, language: Language = Language.ENGLISH, extraOptions?: Mail.Options,
+    to: User,
+    template: MailMessage<T>,
+    language: Language = Language.ENGLISH,
+    extraOptions?: Mail.Options,
   ) {
-    this.logger.trace('Send email', template.constructor.name, 'to user');
+    const mailOptions = {
+      ...template.getOptions(to, language),
+      ...extraOptions,
+      to: to.email,
+    };
     try {
-      await this.transporter.sendMail({
-        ...template.getOptions(to, language),
-        to: to.email,
-        ...extraOptions,
+      await this.mailQueue.add('send-email', mailOptions, {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
       });
-    } catch (error: any) {
-      this.logger.error('Could not send email:', error.message);
+
+      this.logger.info({
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Email successfully queued');
+    } catch (error) {
+      this.logger.error({
+        err: error.message,
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Failed to add email to queue');
+
+      throw error;
     }
+
+
+    this.logger.info(`Queued email: ${template.constructor.name} for ${to.email}`);
   }
 
   /**
