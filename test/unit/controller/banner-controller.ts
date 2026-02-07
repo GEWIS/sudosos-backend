@@ -44,6 +44,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder } from '../../seed';
 import BannerSeeder from '../../seed/banner-seeder';
+import { IMAGE_REQUIREMENTS } from '../../../src/files/image-validation';
 
 export function bannerEq(a: Banner, b: BannerResponse): Boolean {
   const aEmpty = a === {} as Banner || a === undefined;
@@ -824,6 +825,39 @@ describe('BannerController', async (): Promise<void> => {
         .attach('file', fs.readFileSync(path.join(__dirname, '../../static/banner.png')), 'banner-image-duplicate.png');
 
       expect(res.status).to.equal(400);
+    });
+    it('should return 400 if banner image has invalid resolution', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/image.png')), 'product-image.png');
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`Image file is not valid: Image resolution must be at least ${IMAGE_REQUIREMENTS.banner.minWidth}x${IMAGE_REQUIREMENTS.banner.minHeight}px (received 32x32px).`);
+    });
+    it('should return 400 if banner image has invalid aspect ratio', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/product.png')), 'product-image.png');
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal(`Image file is not valid: Image aspect ratio must be ${IMAGE_REQUIREMENTS.banner.aspectRatioLabel} (+/- ${Math.round(IMAGE_REQUIREMENTS.banner.aspectRatioTolerance * 100)}%).`);
+    });
+    it('should return 400 if banner image is not a valid image file', async () => {
+      const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];
+
+      const res = await request(ctx.app)
+        .post(`/banners/${id}/image`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .attach('file', fs.readFileSync(path.join(__dirname, '../../static/not-image.txt')), 'not-image.txt');
+
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Image file is not valid: File is not a valid or supported image.');
     });
     it('should return 404 if banner does not exist', async () => {
       const id = ctx.banners[ctx.banners.length - 1].id + 100;
