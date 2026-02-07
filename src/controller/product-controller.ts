@@ -44,6 +44,8 @@ import { createProductRequestSpecFactory, updateProductRequestSpecFactory } from
 import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
+import { validateImageUpload } from '../files/image-validation';
+import { isFail } from '../helpers/specification-validation';
 
 /**
  * Controller for managing all routes related to the `product` entity.
@@ -308,10 +310,16 @@ export default class ProductController extends BaseController {
       const product = await Product.findOne({ where: { id: productId }, relations: {
         image: true,
       } });
+      const validation = await validateImageUpload(file, 'product');
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
       if (product) {
         await this.fileService.uploadEntityImage(
           product, file, req.token.user,
         );
+        
         res.status(204).send();
       } else {
         res.status(404).json('Product not found');

@@ -25,6 +25,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import bodyParser from 'body-parser';
 import { UploadedFile } from 'express-fileupload';
 import sinon from 'sinon';
+import fs from 'fs';
 import path from 'path';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
@@ -61,6 +62,20 @@ describe('FileService', async (): Promise<void> => {
     tempFilePath: '',
     truncated: false,
     size: 69,
+    md5: '',
+  };
+
+  const imageBuffer = fs.readFileSync(path.join(__dirname, '../../static/product.png'));
+  const uploadedImageFile: UploadedFile = {
+    name: 'product.png',
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-shadow
+    mv: (path: string) => (Promise.resolve()),
+    encoding: '',
+    mimetype: 'image/png',
+    data: imageBuffer,
+    tempFilePath: '',
+    truncated: false,
+    size: imageBuffer.length,
     md5: '',
   };
 
@@ -324,13 +339,13 @@ describe('FileService', async (): Promise<void> => {
 
       expect(ctx.products[3].image).to.be.undefined;
       const res: ProductImage = await ctx.fileService.uploadEntityImage(
-        ctx.products[3], uploadedFile, ctx.users[0],
+        ctx.products[3], uploadedImageFile, ctx.users[0],
       );
 
       expect(res).to.exist;
       expect(saveFileStub).to.have.been.calledWith(
-        'file.txt',
-        uploadedFile.data,
+        'product.png',
+        uploadedImageFile.data,
       );
       expect(res.location).to.equal('fileLocation');
       expect(ctx.products[3].image).to.not.be.undefined;
@@ -347,13 +362,13 @@ describe('FileService', async (): Promise<void> => {
       const oldImage = ctx.products[0].image;
 
       const res: ProductImage = await ctx.fileService.uploadEntityImage(
-        ctx.products[0], uploadedFile, ctx.users[0],
+        ctx.products[0], uploadedImageFile, ctx.users[0],
       );
 
       expect(res).to.exist;
       expect(saveFileStub).to.have.been.calledWith(
         'product-1.png',
-        uploadedFile.data,
+        uploadedImageFile.data,
       );
       expect(deleteFileStub).to.have.been.calledWith(
         oldImage,
