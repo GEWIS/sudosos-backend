@@ -294,8 +294,19 @@ describe('AuthenticationSecureController', () => {
         on: sinon.stub(),
       };
 
-      // Mock the WebSocketService.io property
-      sinon.stub(WebSocketService, 'io').value(mockSocketIO);
+      // Create a mock WebSocketService instance
+      const mockWebSocketService = {
+        io: mockSocketIO,
+        emitQRConfirmed: (qr: QRAuthenticator, token: AuthenticationResponse) => {
+          mockSocketIO.to(`qr-session-${qr.sessionId}`).emit('qr-confirmed', {
+            sessionId: qr.sessionId,
+            token,
+          });
+        },
+      } as any;
+
+      // Mock getInstance to return our mock instance
+      sinon.stub(WebSocketService, 'getInstance').returns(mockWebSocketService);
 
       // Setup service stubs
       qrServiceStub = sinon.createStubInstance(QRService);

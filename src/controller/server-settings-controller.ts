@@ -109,7 +109,7 @@ export default class ServerSettingsController extends BaseController {
       await store.setSetting('maintenanceMode', body.enabled);
 
       // Send websocket message to POS
-      WebSocketService.sendMaintenanceMode(body.enabled);
+      WebSocketService.emitMaintenanceMode(body.enabled);
 
       res.status(204).send();
     } catch (error) {
