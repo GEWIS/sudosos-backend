@@ -27,6 +27,9 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { expect, request } from 'chai';
 import sinon from 'sinon';
 import { RbacSeeder, UserSeeder } from '../../seed';
+import WebSocketService from '../../../src/service/websocket-service';
+import TokenHandler from '../../../src/authentication/token-handler';
+import RoleManager from '../../../src/rbac/role-manager';
 
 describe('ServerSettingsController', () => {
   let ctx: DefaultContext & {
@@ -69,6 +72,17 @@ describe('ServerSettingsController', () => {
 
     ServerSettingsStore.deleteInstance();
     await ServerSettingsStore.getInstance().initialize();
+
+    // Initialize WebSocketService for tests that need it
+    const mockTokenHandler = {} as TokenHandler;
+    const mockRoleManager = {} as RoleManager;
+    const webSocketService = new WebSocketService({
+      tokenHandler: mockTokenHandler,
+      roleManager: mockRoleManager,
+    });
+    // Mock emitMaintenanceMode to avoid actual WebSocket operations in tests
+    sinon.stub(webSocketService, 'emitMaintenanceMode').returns(undefined);
+    sinon.stub(WebSocketService, 'getInstance').returns(webSocketService);
 
     ctx = {
       ...c,

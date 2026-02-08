@@ -37,6 +37,9 @@ describe('Swagger', (): void => {
 
   after('stop app', async () => {
     await ctx.app.stop();
+    // Verify webSocketService was closed
+    expect(ctx.app.webSocketService).to.not.be.undefined;
+    expect(ctx.app.webSocketService.server.listening).to.be.false;
   });
 
   it('should be able to generate specification in development environment', async (): Promise<void> => {

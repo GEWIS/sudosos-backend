@@ -45,6 +45,8 @@ import {
   parseVatGroupToResponse,
 } from '../helpers/revision-to-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
+import WebSocketService from './websocket-service';
+import log4js from 'log4js';
 import {
   SubTransactionRequest,
   SubTransactionRowRequest,
@@ -944,7 +946,17 @@ export default class TransactionService extends WithManager {
     }
 
     // save transaction and return response using cached cost and context
-    return this.asTransactionResponse(savedTransaction, context.totalCost, context);
+    const transactionResponse = await this.asTransactionResponse(savedTransaction, context.totalCost, context);
+    
+    // Emit WebSocket event for transaction creation (fire-and-forget to not block transaction flow)
+    if (transactionResponse) {
+      void WebSocketService.emitTransactionCreated(transactionResponse).catch((error) => {
+        // Log error but don't fail transaction creation if WebSocket emission fails
+        log4js.getLogger('TransactionService').error('Failed to emit transaction created event:', error);
+      });
+    }
+    
+    return transactionResponse;
   }
 
   /**
