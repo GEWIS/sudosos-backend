@@ -171,6 +171,28 @@ describe('AuthenticationSecureController', () => {
         true,
       ).valid).to.be.true;
     });
+
+    it('should return a token with jwtExpiryPointOfSale for POINT_OF_SALE user without posId', async () => {
+      const pos = ctx.pointsOfSale[0];
+      const posUser = pos.user;
+
+      // Remove posId from the token
+      const tokenWithoutPosId = await ctx.tokenHandler.signToken({
+        ...await new RbacSeeder().getToken(posUser),
+        posId: undefined,
+      }, 'nonce');
+
+      const jwtExpiryPointOfSale = settingDefaults.jwtExpiryPointOfSale;
+
+      const res = await request(ctx.app)
+        .get('/authentication/refreshToken')
+        .set('Authorization', `Bearer ${tokenWithoutPosId}`);
+
+      expect(res.status).to.equal(200);
+
+      const refreshedToken = await ctx.tokenHandler.verifyToken(res.body.token);
+      expect(refreshedToken.exp - refreshedToken.iat).to.equal(jwtExpiryPointOfSale);
+    });
   });
 
   describe( 'GET /authentication/pointofsale/{id}', () => {

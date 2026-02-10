@@ -148,7 +148,7 @@ export default class AuthenticationSecureController extends BaseController {
 
       let expiry: number | undefined = undefined;
 
-      if (req.token.posId) {
+      if (user.type === UserType.POINT_OF_SALE) {
         expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
       }
 
