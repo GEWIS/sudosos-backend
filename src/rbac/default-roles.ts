@@ -247,6 +247,7 @@ export default class DefaultRoles {
           override: { all: star },
         },
         UserNotificationPreference: admin,
+        FinancialOverview: admin,
       },
     }, {
       name: SELLER_ROLE,
@@ -279,6 +280,9 @@ export default class DefaultRoles {
         },
         User: {
           get: { all: star, organ: star },
+        },
+        FinancialOverview: {
+          get: { organ: star },
         },
       },
     }];
