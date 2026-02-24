@@ -114,22 +114,6 @@ export default class DefaultRoles {
       name: 'Buyer',
       userTypes: [UserType.MEMBER, UserType.VOUCHER, UserType.LOCAL_USER, UserType.INVOICE],
       permissions: {
-        Container: {
-          // Deprecated in favour of new POS user and POS role
-          get: { all: star },
-        },
-        Product: {
-          // Deprecated in favour of new POS user and POS role
-          get: { all: star },
-        },
-        PointOfSale: {
-          // Deprecated in favour of new POS user and POS role
-          get: { all: star },
-        },
-        ProductCategory: {
-          // Deprecated in favour of new POS user and POS role
-          get: { all: star },
-        },
         Transaction: {
           create: { own: star },
         },
@@ -169,8 +153,6 @@ export default class DefaultRoles {
           create: { own: star, all: star },
         },
         User: {
-          // Deprecated in favour of new POS user and POS role
-          get: { all: star },
           acceptToS: { own: star },
           update: { own: new Set(['extensiveDataProcessing']) },
         },
