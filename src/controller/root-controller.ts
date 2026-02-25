@@ -32,6 +32,7 @@ import { parseRequestPagination } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ServerStatusResponse } from './response/server-status-response';
+import TermsOfServiceService from '../service/terms-of-service-service';
 
 export default class RootController extends BaseController {
   /**
@@ -64,6 +65,12 @@ export default class RootController extends BaseController {
         GET: {
           policy: async () => true,
           handler: this.returnAllBanners.bind(this),
+        },
+      },
+      '/terms-of-service/latest': {
+        GET: {
+          policy: async () => Promise.resolve(true),
+          handler: this.getLatestTOS.bind(this),
         },
       },
     };
@@ -121,6 +128,23 @@ export default class RootController extends BaseController {
         maintenanceMode,
       } as ServerStatusResponse);
     } catch (e) {
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /terms-of-service/latest
+   * @summary Get the latest terms of service version
+   * @operationId getLatestTermsOfService
+   * @tags terms-of-service - Operations of terms of service controller
+   * @return {TermsOfServiceResponse} 200 - The requested terms of service version
+   * @return {string} 500 - Internal server error
+   */
+  public async getLatestTOS(req: Request, res: Response): Promise<void> {
+    try {
+      res.json(await TermsOfServiceService.getLatestTermsOfService());
+    } catch (error) {
+      this.logger.error('Could not get latest Terms of Service', error);
       res.status(500).json('Internal server error.');
     }
   }
