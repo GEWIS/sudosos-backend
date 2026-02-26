@@ -475,6 +475,12 @@ export default class PointOfSaleController extends BaseController {
         index: om.index,
       }));
 
+      const canSeeEmail = await this.roleManager.can(req.token.roles, 'get', 'all', 'User', ['email']);
+      if (!canSeeEmail) {
+        ownerMembers.forEach((m) => { m.email = undefined; });
+        cashiers.records.forEach((u) => { u.email = undefined; });
+      }
+
       const response = {
         owner,
         ownerMembers,

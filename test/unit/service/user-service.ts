@@ -228,7 +228,7 @@ describe('UserService', async (): Promise<void> => {
       expect(result.nickname).to.equal('Johnny');
       expect(result.createdAt).to.be.undefined;
       expect(result.updatedAt).to.be.undefined;
-      expect(result.email).to.be.undefined; // MEMBER type doesn't show email
+      expect(result.email).to.equal('john@example.com');
     });
 
     it('should include email for LOCAL_USER type', () => {

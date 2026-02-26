@@ -165,7 +165,10 @@ export default class DefaultRoles {
       userTypes: [UserType.POINT_OF_SALE],
       permissions: {
         User: {
-          get: { all: star },
+          // Explicitly list allowed attributes to exclude sensitive fields such as email.
+          get: { all: new Set(['id', 'firstName', 'lastName', 'nickname', 'active',
+            'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing',
+            'ofAge', 'canGoIntoDebt']) },
         },
         Balance: {
           get: { all: star },

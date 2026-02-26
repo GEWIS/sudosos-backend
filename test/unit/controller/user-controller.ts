@@ -98,6 +98,7 @@ describe('UserController', (): void => {
     userToken: string,
     adminToken: string,
     organMemberToken: string,
+    posToken: string,
     deletedUser: User,
     user: CreateUserRequest,
     organ: User,
@@ -132,6 +133,7 @@ describe('UserController', (): void => {
       userToken: undefined,
       adminToken: undefined,
       organMemberToken: undefined,
+      posToken: undefined,
       deletedUser: undefined,
       organ: undefined,
       user: {
@@ -276,6 +278,26 @@ describe('UserController', (): void => {
     ctx.userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '1');
     ctx.adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '1');
     ctx.organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[7], roles, [ctx.organ]), '1');
+
+    // Create a POS user and a role that grants User get (all) with explicit attributes, excluding email.
+    const posUser = await User.save(Object.assign(new User(), {
+      firstName: 'POS',
+      lastName: 'Terminal',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      deleted: false,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    }));
+    const noEmailAttributes = new Set<string>(['id', 'firstName', 'lastName', 'nickname', 'active',
+      'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing', 'ofAge', 'canGoIntoDebt']);
+    const posRoles = await new RbacSeeder().seed([{
+      name: 'Point of Sale',
+      permissions: {
+        User: { get: { all: noEmailAttributes } },
+      },
+      assignmentCheck: async (u: User) => u.id === posUser.id,
+    }]);
+    ctx.posToken = await tokenHandler.signToken(await new RbacSeeder().getToken(posUser, posRoles), '1');
     ctx.roles = roles;
 
     ctx.specification = await Swagger.initialize(ctx.app);
@@ -356,6 +378,25 @@ describe('UserController', (): void => {
         .get('/users')
         .set('Authorization', `Bearer ${ctx.userToken}`);
       expect(res.status).to.equal(403);
+    });
+    it('should include email in response for tokens with email permission (admin)', async () => {
+      const res = await request(ctx.app)
+        .get('/users')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      const users = (res.body as PaginatedUserResponse).records as UserResponse[];
+      const usersWithEmail = users.filter((u) => u.email !== undefined && u.email !== null);
+      expect(usersWithEmail.length).to.be.greaterThan(0);
+    });
+    it('should omit email in response for tokens without email permission (POS)', async () => {
+      const res = await request(ctx.app)
+        .get('/users')
+        .set('Authorization', `Bearer ${ctx.posToken}`);
+      expect(res.status).to.equal(200);
+      const users = (res.body as PaginatedUserResponse).records as UserResponse[];
+      users.forEach((u) => {
+        expect(u.email).to.be.undefined;
+      });
     });
     it('should adhere to pagination', async () => {
       const take = 5;
@@ -659,6 +700,28 @@ describe('UserController', (): void => {
         .get(`/users/${ctx.deletedUser.id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(404);
+    });
+    it('should include email when admin requests a user (all relation)', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as UserResponse).email).to.not.be.undefined;
+    });
+    it('should omit email when POS token requests a user (all relation)', async () => {
+      const res = await request(ctx.app)
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.posToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as UserResponse).email).to.be.undefined;
+    });
+    it('should include email when user requests their own record (own relation)', async () => {
+      // ctx.users[0] maps to user id=1, and ctx.userToken is signed for that user.
+      const res = await request(ctx.app)
+        .get('/users/1')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as UserResponse).email).to.not.be.undefined;
     });
   });
 

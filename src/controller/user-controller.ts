@@ -409,6 +409,14 @@ export default class UserController extends BaseController {
   }
 
   /**
+   * Returns whether the token in the request is allowed to see the email field
+   * of a User with the given relation (own/organ/all).
+   */
+  private canSeeEmail(req: RequestWithToken, relation: string): Promise<boolean> {
+    return this.roleManager.can(req.token.roles, 'get', relation, 'User', ['email']);
+  }
+
+  /**
    * GET /users
    * @summary Get a list of all users
    * @operationId getAllUsers
@@ -441,6 +449,9 @@ export default class UserController extends BaseController {
 
     try {
       const users = await UserService.getUsers(filters, { take, skip });
+      if (!await this.canSeeEmail(req, 'all')) {
+        users.records.forEach((u) => { u.email = undefined; });
+      }
       res.status(200).json(users);
     } catch (error) {
       this.logger.error('Could not get users:', error);
@@ -789,6 +800,9 @@ export default class UserController extends BaseController {
         return;
       }
 
+      if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
+        user.email = undefined;
+      }
       res.status(200).json(user);
     } catch (error) {
       this.logger.error('Could not get individual user:', error);
@@ -945,7 +959,11 @@ export default class UserController extends BaseController {
         return;
       }
 
-      res.status(200).json(parseUserToResponse(nfc.user));
+      const nfcUserResponse = parseUserToResponse(nfc.user);
+      if (!await this.canSeeEmail(req, 'all')) {
+        nfcUserResponse.email = undefined;
+      }
+      res.status(200).json(nfcUserResponse);
     } catch (error) {
       this.logger.error('Could not find user using nfc:', error);
       res.status(500).json('Internal server error.');
