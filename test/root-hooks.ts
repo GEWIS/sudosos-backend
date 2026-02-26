@@ -39,7 +39,6 @@ export let rootStubs: {
 
 export const mochaHooks: Mocha.RootHookObject = {
   beforeAll() {
-    sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
     sinon.stub(Queue.prototype, 'on').returns({} as any);
     sinon.stub(Worker.prototype, 'on').returns({} as any);
 
@@ -55,7 +54,14 @@ export const mochaHooks: Mocha.RootHookObject = {
       sendMail: sendMailSpy,
     } as any as Transporter);
 
-    const queueAddStub = Queue.prototype.add as sinon.SinonStub;
+    let queueAddStub: sinon.SinonStub;
+    if ((Queue.prototype.add as any).restore) {
+      queueAddStub = Queue.prototype.add as sinon.SinonStub;
+    } else {
+      queueAddStub = sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
+    }
+
+    queueAddStub.resetHistory();
 
     rootStubs = {
       mail: mailStub,
