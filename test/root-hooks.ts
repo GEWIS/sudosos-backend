@@ -18,10 +18,10 @@
  *  @license
  */
 
-import * as mocha from 'mocha';
 import sinon from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { AppDataSource } from '../src/database/database';
+import { Queue, Worker } from 'bullmq';
 
 /**
  * Object containing all global stubs that are set before each test case.
@@ -34,18 +34,48 @@ export let rootStubs: {
    * Mail stub, which mocks a new SMTP connection.
    */
   mail: sinon.SinonStub;
+  queueAdd: sinon.SinonStub;
 } | undefined;
 
-export const mochaHooks: mocha.RootHookObject = {
-  beforeEach: () => {
-    const sendMailFake = sinon.spy();
-    const mail = sinon.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
-    rootStubs = { mail };
+export const mochaHooks: Mocha.RootHookObject = {
+  beforeAll() {
+    sinon.stub(Queue.prototype, 'on').returns({} as any);
+    sinon.stub(Worker.prototype, 'on').returns({} as any);
+
+    Object.defineProperty(Queue.prototype, 'client', {
+      get: () => Promise.resolve({}),
+      configurable: true,
+    });
   },
-  afterEach: () => {
+
+  beforeEach() {
+    const sendMailSpy = sinon.spy();
+    const mailStub = sinon.stub(nodemailer, 'createTransport').returns({
+      sendMail: sendMailSpy,
+    } as any as Transporter);
+
+    let queueAddStub: sinon.SinonStub;
+    if ((Queue.prototype.add as any).restore) {
+      queueAddStub = Queue.prototype.add as sinon.SinonStub;
+    } else {
+      queueAddStub = sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
+    }
+
+    queueAddStub.resetHistory();
+
+    rootStubs = {
+      mail: mailStub,
+      queueAdd: queueAddStub,
+    };
+  },
+
+  afterEach() {
     rootStubs?.mail.restore();
+    rootStubs = undefined;
+  },
+
+  afterAll() {
+    sinon.restore();
   },
 };
 
