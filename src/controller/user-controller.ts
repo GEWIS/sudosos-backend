@@ -111,7 +111,7 @@ export default class UserController extends BaseController {
       '/': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'User', ['*'],
+            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.getAllUsers.bind(this),
         },
@@ -126,7 +126,7 @@ export default class UserController extends BaseController {
       '/usertype/:userType': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'User', ['*'],
+            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.getAllUsersOfUserType.bind(this),
         },
@@ -144,7 +144,7 @@ export default class UserController extends BaseController {
       '/nfc/:nfcCode': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'User', ['*'],
+            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.findUserNfc.bind(this),
         },
@@ -200,7 +200,7 @@ export default class UserController extends BaseController {
       '/:id(\\d+)': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
+            req.token.roles, 'get', UserController.getRelation(req), 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.getIndividualUser.bind(this),
         },
@@ -221,7 +221,7 @@ export default class UserController extends BaseController {
       '/:id(\\d+)/members': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
+            req.token.roles, 'get', UserController.getRelation(req), 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.getOrganMembers.bind(this),
         },
@@ -406,6 +406,10 @@ export default class UserController extends BaseController {
       }
     }
     return attributes;
+  }
+
+  private async canSeeEmail(req: RequestWithToken, relation: string): Promise<boolean> {
+    return this.roleManager.can(req.token.roles, 'get', relation, 'User', ['email']);
   }
 
   /**
@@ -770,6 +774,9 @@ export default class UserController extends BaseController {
       }
 
       const members = await UserService.getUsers({ organId }, { take, skip });
+      if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
+        members.records.forEach((u) => { u.email = undefined; });
+      }
       res.status(200).json(members);
     } catch (error) {
       this.logger.error('Could not get organ members:', error);
@@ -959,11 +966,11 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const nfcUserResponse = parseUserToResponse(nfc.user);
+      const userResponse = parseUserToResponse(nfc.user);
       if (!await this.canSeeEmail(req, 'all')) {
-        nfcUserResponse.email = undefined;
+        userResponse.email = undefined;
       }
-      res.status(200).json(nfcUserResponse);
+      res.status(200).json(userResponse);
     } catch (error) {
       this.logger.error('Could not find user using nfc:', error);
       res.status(500).json('Internal server error.');

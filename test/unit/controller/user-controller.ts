@@ -268,8 +268,27 @@ describe('UserController', (): void => {
         },
       },
       assignmentCheck: async (user) => user.id === ctx.users[7].id,
+    }, {
+      name: 'Point of Sale',
+      permissions: {
+        User: {
+          get: { all: new Set<string>(['id', 'firstName', 'lastName', 'nickname', 'active',
+            'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing', 'ofAge', 'canGoIntoDebt']) },
+        },
+      },
+      assignmentCheck: async (user: User) => user.type === UserType.POINT_OF_SALE,
     }]);
     const roleManager = await new RoleManager().initialize();
+
+    const posUser = Object.assign(new User(), {
+      firstName: 'POS',
+      lastName: 'Terminal',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      deleted: false,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User);
+    await User.save(posUser);
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,

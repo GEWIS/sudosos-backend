@@ -457,16 +457,16 @@ export default class PointOfSaleController extends BaseController {
       }
 
       const { owner } = pos;
-      
+
       // Get organ memberships with indices
       const organMemberships = await OrganMembership.find({
         where: { organId: pos.owner.id },
         relations: ['user'],
       });
-      
+
       // Get cashiers (no indices needed)
-      const cashiers = await UserService.getUsers({ 
-        assignedRoleIds: pos.cashierRoles.map((r) => r.id), 
+      const cashiers = await UserService.getUsers({
+        assignedRoleIds: pos.cashierRoles.map((r) => r.id),
       });
 
       // Map organ members to response format with indices
@@ -476,13 +476,15 @@ export default class PointOfSaleController extends BaseController {
       }));
 
       const canSeeEmail = await this.roleManager.can(req.token.roles, 'get', 'all', 'User', ['email']);
+      const ownerResponse = parseUserToResponse(owner);
       if (!canSeeEmail) {
+        ownerResponse.email = undefined;
         ownerMembers.forEach((m) => { m.email = undefined; });
         cashiers.records.forEach((u) => { u.email = undefined; });
       }
 
       const response = {
-        owner,
+        owner: ownerResponse,
         ownerMembers,
         cashiers: cashiers.records,
       };
