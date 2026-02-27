@@ -166,7 +166,7 @@ export default class DefaultRoles {
       permissions: {
         User: {
           // Explicitly list allowed attributes to exclude sensitive fields such as email.
-          get: { all: new Set(['id', 'firstName', 'lastName', 'nickname', 'active',
+          get: { all: new Set(['id', 'memberId', 'firstName', 'lastName', 'nickname', 'active',
             'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing',
             'ofAge', 'canGoIntoDebt']) },
         },
