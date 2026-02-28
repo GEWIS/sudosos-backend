@@ -60,6 +60,7 @@
     "nodemailer": "^6.10.1",
     "pdf-generator-client": "github:GEWIS/pdf-generator#31a8c6914b12e284a88f18317c1808ce8a1c0229",
     "reflect-metadata": "^0.2.2",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "sqlite3": "^5.1.7",
