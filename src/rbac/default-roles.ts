@@ -94,6 +94,9 @@ export default class DefaultRoles {
           get: { own: star },
           update: { own: star },
         },
+        TermsOfService: {
+          get: { own: star },
+        },
       },
     }, {
       name: 'Local User',
@@ -230,6 +233,7 @@ export default class DefaultRoles {
         },
         UserNotificationPreference: admin,
         FinancialOverview: admin,
+        TermsOfService: admin,
       },
     }, {
       name: SELLER_ROLE,
