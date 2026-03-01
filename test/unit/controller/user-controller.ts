@@ -280,16 +280,6 @@ describe('UserController', (): void => {
     }]);
     const roleManager = await new RoleManager().initialize();
 
-    const posUser = Object.assign(new User(), {
-      firstName: 'POS',
-      lastName: 'Terminal',
-      type: UserType.POINT_OF_SALE,
-      active: true,
-      deleted: false,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    } as User);
-    await User.save(posUser);
-
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });

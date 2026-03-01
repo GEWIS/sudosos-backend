@@ -408,15 +408,11 @@ export default class UserController extends BaseController {
     return attributes;
   }
 
-  private async canSeeEmail(req: RequestWithToken, relation: string): Promise<boolean> {
-    return this.roleManager.can(req.token.roles, 'get', relation, 'User', ['email']);
-  }
-
   /**
    * Returns whether the token in the request is allowed to see the email field
    * of a User with the given relation (own/organ/all).
    */
-  private canSeeEmail(req: RequestWithToken, relation: string): Promise<boolean> {
+  private async canSeeEmail(req: RequestWithToken, relation: string): Promise<boolean> {
     return this.roleManager.can(req.token.roles, 'get', relation, 'User', ['email']);
   }
 
