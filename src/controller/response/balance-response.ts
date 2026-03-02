@@ -48,6 +48,7 @@ import { UserType } from '../../entity/user/user';
  * user has not made any transactions
  * @property {number} lastTransferId - The ID of the last transfer that was
  * present when the balance was cached. -1 if the user has not made any transfers
+ * @property {integer} memberId - The external member ID of the user (e.g., GEWIS member ID), if any
  */
 export default interface BalanceResponse extends BaseUserResponse {
   type: UserType;
@@ -60,6 +61,7 @@ export default interface BalanceResponse extends BaseUserResponse {
   lastTransactionId: number;
   lastTransactionDate?: string | null;
   lastTransferId: number;
+  memberId?: number | null;
 }
 
 /**

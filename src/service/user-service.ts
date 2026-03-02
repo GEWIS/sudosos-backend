@@ -118,7 +118,7 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     active: user.active,
     deleted: user.deleted,
     type: UserType[user.type],
-    email: user.type === UserType.LOCAL_USER ? user.email : undefined,
+    email: user.email,
     acceptedToS: user.acceptedToS,
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
