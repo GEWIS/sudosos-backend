@@ -44,6 +44,7 @@ import { verifyCreateProductRequest, verifyProductRequest } from './request/vali
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
+import { validateImageUpload } from '../files/image-validation';
 
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
@@ -288,10 +289,16 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       const product = await Product.findOne({ where: { id: productId }, relations: ['image'] });
+      const validation = await validateImageUpload(file, 'product');
+      if (isFail(validation)) {
+        res.status(400).json(validation.fail.value);
+        return;
+      }
       if (product) {
         await this.fileService.uploadEntityImage(
           product, file, req.token.user,
         );
+        
         res.status(204).send();
       } else {
         res.status(404).json('Product not found');
