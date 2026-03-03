@@ -89,6 +89,7 @@ import { startMailWorker } from './workers/mail-worker';
 import { Worker } from 'bullmq';
 import Mailer from './mailer';
 import Redis from 'ioredis';
+import TermsOfServiceController from './controller/terms-of-service-controller';
 
 export class Application {
   app: express.Express;
@@ -311,6 +312,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/seller-payouts', new SellerPayoutController(options).getRouter());
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   application.app.use('/v1/sync', new SyncController(options).getRouter());
+  application.app.use('/v1/terms-of-service', new TermsOfServiceController(options).getRouter());
   if (process.env.NODE_ENV === 'development') {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());

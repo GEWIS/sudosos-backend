@@ -94,6 +94,9 @@ export default class DefaultRoles {
           get: { own: star },
           update: { own: star },
         },
+        TermsOfService: {
+          get: { own: star },
+        },
       },
     }, {
       name: 'Local User',
@@ -165,7 +168,10 @@ export default class DefaultRoles {
       userTypes: [UserType.POINT_OF_SALE],
       permissions: {
         User: {
-          get: { all: star },
+          // Explicitly list allowed attributes to exclude sensitive fields such as email.
+          get: { all: new Set(['id', 'memberId', 'firstName', 'lastName', 'nickname', 'active',
+            'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing',
+            'ofAge', 'canGoIntoDebt']) },
         },
         Balance: {
           get: { all: star },
@@ -230,6 +236,7 @@ export default class DefaultRoles {
         },
         UserNotificationPreference: admin,
         FinancialOverview: admin,
+        TermsOfService: admin,
       },
     }, {
       name: SELLER_ROLE,

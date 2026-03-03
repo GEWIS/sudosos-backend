@@ -42,6 +42,7 @@ import BalanceResponse, { UserTypeTotalBalanceResponse } from '../../../src/cont
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import MemberUser from '../../../src/entity/user/member-user';
 
 describe('BalanceService', (): void => {
   let ctx: {
@@ -568,6 +569,21 @@ describe('BalanceService', (): void => {
       expect(balance.lastTransactionId).to.equal(-1);
       expect(balance.lastTransactionDate).to.be.null;
       expect(balance.lastTransferId).to.equal(-1);
+      expect(balance.memberId).to.be.null;
+    });
+    it('should return memberId for user with member entry', async () => {
+      const builder = await UserFactory();
+      const newUser = await builder.get();
+      const memberId = 4242;
+      try {
+        await MemberUser.save(Object.assign(new MemberUser(), { userId: newUser.id, memberId }));
+
+        const balance = await new BalanceService().getBalance(newUser.id);
+        expect(balance.memberId).to.equal(memberId);
+      } finally {
+        await MemberUser.delete(newUser.id);
+        await builder.delete();
+      }
     });
     it('should return correct balance for new user with single outgoing transaction', async () => {
       const newUser = await (await UserFactory()).get();

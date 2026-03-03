@@ -116,6 +116,7 @@ export default class BalanceService extends WithManager {
       fineWaived: rawBalance.fine && rawBalance.fineWaived
         ? DineroTransformer.Instance.from(rawBalance.fineWaived).toObject() : null,
       nrFines: Number(rawBalance.nrFines) ?? 0,
+      memberId: rawBalance.memberId ?? null,
     };
   }
 
@@ -267,7 +268,8 @@ export default class BalanceService extends WithManager {
       + 'f.fine as fine, '
       + 'f.fineSince as fineSince, '
       + 'f.fineWaived as fineWaived, '
-      + 'f.nrFines as nrFines '
+      + 'f.nrFines as nrFines, '
+      + 'mu.memberId as memberId '
       + 'from ( '
         + 'SELECT moneys2.id as id, '
         + 'moneys2.firstName as firstName, '
@@ -348,6 +350,7 @@ export default class BalanceService extends WithManager {
         + 'where user.currentFinesId = user_fine_group.id '
         + 'group by user.id '
       + ') as f on f.id = userBalance.id '
+      + 'left join `member_user` mu on mu.userId = userBalance.id '
       + `where u.type not in ("${UserType.POINT_OF_SALE}") `;
 
     if (minBalance !== undefined) query += `and userBalance.amount >= ${minBalance.getAmount()} `;

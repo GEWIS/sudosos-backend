@@ -31,6 +31,8 @@ import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
 import sinon from 'sinon';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import BannerSeeder from '../../seed/banner-seeder';
+import TermsOfServiceService from '../../../src/service/terms-of-service-service';
+import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
 
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
@@ -167,6 +169,64 @@ describe('RootController', async (): Promise<void> => {
       expect(res.body).to.equal('Internal server error.');
       // @ts-ignore
       stub.restore();
+    });
+  });
+
+  describe('GET /terms-of-service/latest', () => {
+    let tosStub: sinon.SinonStub;
+
+    afterEach(() => {
+      if (tosStub) tosStub.restore();
+    });
+
+    it('should return correct model', async () => {
+      const tosResponse: TermsOfServiceResponse = { versionNumber: '1.0', content: '# TOS v1.0' };
+      tosStub = sinon.stub(TermsOfServiceService, 'getLatestTermsOfService').resolves(tosResponse);
+
+      const res = await request(ctx.app)
+        .get('/terms-of-service/latest');
+
+      expect(res.status).to.equal(200);
+      expect(ctx.specification.validateModel(
+        'TermsOfServiceResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
+    it('should return 200 with the latest TOS content', async () => {
+      const tosResponse: TermsOfServiceResponse = { versionNumber: '2.0', content: '# Terms of Service v2.0' };
+      tosStub = sinon.stub(TermsOfServiceService, 'getLatestTermsOfService').resolves(tosResponse);
+
+      const res = await request(ctx.app)
+        .get('/terms-of-service/latest');
+
+      expect(res.status).to.equal(200);
+      const body = res.body as TermsOfServiceResponse;
+      expect(body.versionNumber).to.equal('2.0');
+      expect(body.content).to.equal('# Terms of Service v2.0');
+    });
+
+    it('should be publicly accessible without authentication', async () => {
+      const tosResponse: TermsOfServiceResponse = { versionNumber: '1.0', content: '# TOS' };
+      tosStub = sinon.stub(TermsOfServiceService, 'getLatestTermsOfService').resolves(tosResponse);
+
+      const res = await request(ctx.app)
+        .get('/terms-of-service/latest');
+
+      expect(res.status).to.equal(200);
+    });
+
+    it('should return 500 when the service throws an error', async () => {
+      tosStub = sinon.stub(TermsOfServiceService, 'getLatestTermsOfService')
+        .rejects(new Error('No terms of service versions found'));
+
+      const res = await request(ctx.app)
+        .get('/terms-of-service/latest');
+
+      expect(res.status).to.equal(500);
+      expect(res.body).to.equal('Internal server error.');
     });
   });
 });
