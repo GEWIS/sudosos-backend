@@ -60,6 +60,7 @@ import {
   UserNotificationPreferenceUpdateParams,
 } from '../../../src/controller/request/user-notification-preference-request';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import Redis from 'ioredis';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -75,9 +76,11 @@ describe('TransactionSubscriber', () => {
     subTransactions: SubTransaction[],
     transfers: Transfer[];
     notificationPreferences: UserNotificationPreference[];
+    mailer: Mailer,
   };
 
   let sandbox: SinonSandbox;
+  let redis: Redis;
 
   let env: string;
 
@@ -104,6 +107,14 @@ describe('TransactionSubscriber', () => {
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     ctx = {
       connection,
       adminUser,
@@ -117,6 +128,7 @@ describe('TransactionSubscriber', () => {
       subTransactions,
       transfers,
       notificationPreferences,
+      mailer,
     };
 
     env = process.env.NODE_ENV;
@@ -131,7 +143,11 @@ describe('TransactionSubscriber', () => {
     rootStubs?.mail.restore();
 
     // Reset the mailer, because it was created with an old, expired stub
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
 
     sandbox = sinon.createSandbox();
   });
@@ -139,6 +155,9 @@ describe('TransactionSubscriber', () => {
   after(async () => {
     await finishTestDB(ctx.connection);
     sandbox.restore();
+
+    Mailer.reset();
+    if (redis) await redis.quit();
 
     process.env.NODE_ENV = env;
   });

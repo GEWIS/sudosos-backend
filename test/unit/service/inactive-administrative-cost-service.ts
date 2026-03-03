@@ -65,6 +65,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
+import Redis from 'ioredis';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -96,9 +97,11 @@ describe('InactiveAdministrativeCostService', () => {
     pointsOfSale: PointOfSaleRevision[];
     containers: ContainerRevision[];
     products: ProductRevision[];
+    mailer: Mailer;
   };
 
   let sandbox: SinonSandbox;
+  let redis: Redis;
 
   before(async function test(): Promise<void> {
     this.timeout(30000);
@@ -146,6 +149,14 @@ describe('InactiveAdministrativeCostService', () => {
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
 
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     // initialize context
     ctx = {
       connection,
@@ -160,6 +171,7 @@ describe('InactiveAdministrativeCostService', () => {
       transfers: transfersUpdated,
       pointsOfSale: pointOfSaleRevisions,
       inactiveAdministrativeCosts,
+      mailer,
     };
   });
 
@@ -167,8 +179,11 @@ describe('InactiveAdministrativeCostService', () => {
     // Restore the default stub
     rootStubs?.mail.restore();
 
-    // Reset the mailer, because it was created with an old, expired stub
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
 
     sandbox = sinon.createSandbox();
   });
@@ -176,6 +191,9 @@ describe('InactiveAdministrativeCostService', () => {
   // close database connection
   after(async () => {
     await finishTestDB(ctx.connection);
+
+    Mailer.reset();
+    if (redis) await redis.quit();
 
     sandbox.restore();
   });

@@ -29,6 +29,7 @@ import MemberUser from '../../../src/entity/user/member-user';
 import User from '../../../src/entity/user/user';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import Redis from 'ioredis';
 
 async function createMemberUser(user: User, memberId: number): Promise<MemberUser> {
   expect(await MemberUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
@@ -72,15 +73,28 @@ async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number)
 }
 
 describe('GewisDBSyncService', () => {
-  let ctx: DefaultContext;
+  let ctx: DefaultContext & {
+    mailer: Mailer,
+  };
   let membersApiStub: sinon.SinonStubbedInstance<MembersApi>;
   let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
   let sandbox: SinonSandbox;
   let serverSettingsStore: ServerSettingsStore;
+  let redis: Redis;
 
   before(async () => {
+
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     ctx = {
       ...(await defaultBefore()),
+      mailer,
     } as any;
     ServerSettingsStore.deleteInstance();
     serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
@@ -90,11 +104,17 @@ describe('GewisDBSyncService', () => {
     // Restore the default stub
     rootStubs?.mail.restore();
     await serverSettingsStore.setSetting('allowGewisSyncDelete', false);
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
     sandbox = sinon.createSandbox();
   });
 
   after(async () => {
+    Mailer.reset();
+    if (redis) await redis.quit();
     await finishTestDB(ctx.connection);
   });
 

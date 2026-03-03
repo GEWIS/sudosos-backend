@@ -60,6 +60,7 @@ export default class Mailer {
     this.mailQueue = new Queue('mail-queue', {
       connection: redisConnection as unknown as ConnectionOptions,
     });
+    Mailer.instance = this;
   }
 
   static getInstance(): Mailer {
