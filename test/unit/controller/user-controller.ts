@@ -288,7 +288,7 @@ describe('UserController', (): void => {
     ctx.adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '1');
     ctx.organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[7], roles, [ctx.organ]), '1');
 
-    // Create a POS user and a role that grants User get (all) with explicit attributes, excluding email.
+    // Create a POS user that will match the 'Point of Sale' role's assignmentCheck above.
     const posUser = await User.save(Object.assign(new User(), {
       firstName: 'POS',
       lastName: 'Terminal',
@@ -297,16 +297,7 @@ describe('UserController', (): void => {
       deleted: false,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     }));
-    const noEmailAttributes = new Set<string>(['id', 'firstName', 'lastName', 'nickname', 'active',
-      'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing', 'ofAge', 'canGoIntoDebt']);
-    const posRoles = await new RbacSeeder().seed([{
-      name: 'Point of Sale',
-      permissions: {
-        User: { get: { all: noEmailAttributes } },
-      },
-      assignmentCheck: async (u: User) => u.id === posUser.id,
-    }]);
-    ctx.posToken = await tokenHandler.signToken(await new RbacSeeder().getToken(posUser, posRoles), '1');
+    ctx.posToken = await tokenHandler.signToken(await new RbacSeeder().getToken(posUser, roles), '1');
     ctx.roles = roles;
 
     ctx.specification = await Swagger.initialize(ctx.app);
