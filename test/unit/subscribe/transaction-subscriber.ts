@@ -33,8 +33,7 @@ import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import Mailer from '../../../src/mailer';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
-import nodemailer, { Transporter } from 'nodemailer';
+import sinon, { SinonSandbox } from 'sinon';
 import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import { SubTransactionRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
@@ -61,6 +60,7 @@ import {
   UserNotificationPreferenceUpdateParams,
 } from '../../../src/controller/request/user-notification-preference-request';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import Redis from 'ioredis';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -76,10 +76,11 @@ describe('TransactionSubscriber', () => {
     subTransactions: SubTransaction[],
     transfers: Transfer[];
     notificationPreferences: UserNotificationPreference[];
+    mailer: Mailer,
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let redis: Redis;
 
   let env: string;
 
@@ -106,6 +107,14 @@ describe('TransactionSubscriber', () => {
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     ctx = {
       connection,
       adminUser,
@@ -119,6 +128,7 @@ describe('TransactionSubscriber', () => {
       subTransactions,
       transfers,
       notificationPreferences,
+      mailer,
     };
 
     env = process.env.NODE_ENV;
@@ -133,18 +143,21 @@ describe('TransactionSubscriber', () => {
     rootStubs?.mail.restore();
 
     // Reset the mailer, because it was created with an old, expired stub
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
   });
 
   after(async () => {
     await finishTestDB(ctx.connection);
     sandbox.restore();
+
+    Mailer.reset();
+    if (redis) await redis.quit();
 
     process.env.NODE_ENV = env;
   });
@@ -216,7 +229,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(rootStubs.queueAdd).to.be.calledOnce;
     });
     it('should not send email if someone does not go into debt', async () => {
       const user = ctx.usersNotInDebt[2];
@@ -278,7 +291,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(rootStubs.queueAdd).to.not.be.called;
     });
     it('should not send email if someone is already in debt', async () => {
       const user = ctx.usersInDebt[0];
@@ -339,7 +352,7 @@ describe('TransactionSubscriber', () => {
       }
       await transactionService.createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(rootStubs.queueAdd).to.not.be.called;
     });
 
     it('should send an email if someone goes in debt after a multi-item transaction', async () => {
@@ -435,7 +448,7 @@ describe('TransactionSubscriber', () => {
         const newBalance = await new BalanceService().getBalance(u.id);
 
         expect(newBalance.amount.amount).to.be.below(0);
-        expect(sendMailFake).to.be.called;
+        expect(rootStubs.queueAdd).to.be.called;
       });
     });
     it('should send a notification email if the user wants from itself', async () => {
@@ -495,7 +508,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(rootStubs.queueAdd).to.be.calledOnce;
     });
     it('should send a notification email when charged by others', async () => {
       const user = ctx.usersNotInDebt[4];
@@ -559,7 +572,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.be.calledOnce;
+      expect(rootStubs.queueAdd).to.be.calledOnce;
     });
     it('should not send a notification email', async () => {
       const user = ctx.usersNotInDebt[5];
@@ -630,7 +643,7 @@ describe('TransactionSubscriber', () => {
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);
 
-      expect(sendMailFake).to.not.be.called;
+      expect(rootStubs.queueAdd).to.not.be.called;
     });
   });
 });

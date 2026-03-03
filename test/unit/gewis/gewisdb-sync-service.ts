@@ -18,10 +18,9 @@
  *  @license
  */
 
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import generateBalance, { defaultBefore, DefaultContext, finishTestDB } from '../../helpers/test-helpers';
 import Mailer from '../../../src/mailer';
-import nodemailer, { Transporter } from 'nodemailer';
 import { BasicApi, MemberAllAttributes, MembersApi } from 'gewisdb-ts-client';
 import GewisDBSyncService from '../../../src/gewis/service/gewisdb-sync-service';
 import { expect } from 'chai';
@@ -30,6 +29,7 @@ import MemberUser from '../../../src/entity/user/member-user';
 import User from '../../../src/entity/user/user';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import Redis from 'ioredis';
 
 async function createMemberUser(user: User, memberId: number): Promise<MemberUser> {
   expect(await MemberUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
@@ -73,16 +73,28 @@ async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number)
 }
 
 describe('GewisDBSyncService', () => {
-  let ctx: DefaultContext;
+  let ctx: DefaultContext & {
+    mailer: Mailer,
+  };
   let membersApiStub: sinon.SinonStubbedInstance<MembersApi>;
   let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
   let serverSettingsStore: ServerSettingsStore;
+  let redis: Redis;
 
   before(async () => {
+
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     ctx = {
       ...(await defaultBefore()),
+      mailer,
     } as any;
     ServerSettingsStore.deleteInstance();
     serverSettingsStore = await ServerSettingsStore.getInstance().initialize();
@@ -92,15 +104,17 @@ describe('GewisDBSyncService', () => {
     // Restore the default stub
     rootStubs?.mail.restore();
     await serverSettingsStore.setSetting('allowGewisSyncDelete', false);
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
   });
 
   after(async () => {
+    Mailer.reset();
+    if (redis) await redis.quit();
     await finishTestDB(ctx.connection);
   });
 
@@ -287,7 +301,7 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.active).to.be.true;
             expect(dbUser.deleted).to.be.false;
             expect(dbUser.canGoIntoDebt).to.be.true;
-            expect(sendMailFake).to.be.callCount(0);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(0);
           },
         );
       });
@@ -303,7 +317,7 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.false;
             expect(dbUser.canGoIntoDebt).to.be.false;
-            expect(sendMailFake).to.be.callCount(1);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(1);
           },
         );
       });
@@ -318,7 +332,7 @@ describe('GewisDBSyncService', () => {
 
             const dbUser = await User.findOne({ where: { id: memberUser.user.id } });
             await syncService.down(dbUser);
-            expect(sendMailFake).to.be.callCount(1);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(1);
           },
         );
       });
@@ -333,7 +347,7 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.active).to.be.false;
             expect(dbUser.deleted).to.be.true;
             expect(dbUser.canGoIntoDebt).to.be.false;
-            expect(sendMailFake).to.be.callCount(0);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(0);
           });
       });
 
@@ -353,7 +367,7 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.active).to.eq(originalActive);
             expect(dbUser.deleted).to.eq(originalDeleted);
             expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
-            expect(sendMailFake).to.be.callCount(0);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(0);
           },
         );
       });
@@ -376,7 +390,7 @@ describe('GewisDBSyncService', () => {
             expect(dbUser.active).to.eq(originalActive);
             expect(dbUser.deleted).to.eq(originalDeleted);
             expect(dbUser.canGoIntoDebt).to.eq(originalCanGoIntoDebt);
-            expect(sendMailFake).to.be.callCount(0);
+            expect(rootStubs.queueAdd.callCount).to.be.equal(0);
           },
         );
       });

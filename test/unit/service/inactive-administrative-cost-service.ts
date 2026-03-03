@@ -57,15 +57,15 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import { rootStubs } from '../../root-hooks';
 import Mailer from '../../../src/mailer';
-import nodemailer, { Transporter } from 'nodemailer';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
+import Redis from 'ioredis';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -97,12 +97,14 @@ describe('InactiveAdministrativeCostService', () => {
     pointsOfSale: PointOfSaleRevision[];
     containers: ContainerRevision[];
     products: ProductRevision[];
+    mailer: Mailer;
   };
 
   let sandbox: SinonSandbox;
-  let sendMailFake: SinonSpy;
+  let redis: Redis;
 
   before(async function test(): Promise<void> {
+    this.timeout(30000);
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -147,6 +149,14 @@ describe('InactiveAdministrativeCostService', () => {
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
 
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+    });
+
+    const mailer = new Mailer(redis);
+
     // initialize context
     ctx = {
       connection,
@@ -161,6 +171,7 @@ describe('InactiveAdministrativeCostService', () => {
       transfers: transfersUpdated,
       pointsOfSale: pointOfSaleRevisions,
       inactiveAdministrativeCosts,
+      mailer,
     };
   });
 
@@ -168,19 +179,27 @@ describe('InactiveAdministrativeCostService', () => {
     // Restore the default stub
     rootStubs?.mail.restore();
 
-    // Reset the mailer, because it was created with an old, expired stub
-    Mailer.reset();
+    try {
+      Mailer.getInstance();
+    } catch (e) {
+      new Mailer(redis);
+    }
 
     sandbox = sinon.createSandbox();
-    sendMailFake = sandbox.spy();
-    sandbox.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailFake,
-    } as any as Transporter);
   });
 
   // close database connection
   after(async () => {
     await finishTestDB(ctx.connection);
+
+    Mailer.reset();
+    if (redis) await redis.quit();
+
+    sandbox.restore();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   describe('getInactiveAdministrativeCosts', async (): Promise<void> => {
@@ -437,7 +456,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
     });
   });
 
@@ -451,7 +470,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().sendInactiveNotification(handoutRequest);
       const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
-      expect(sendMailFake.callCount).to.equal(users.length);
+      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
       expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
   });

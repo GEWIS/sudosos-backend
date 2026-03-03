@@ -85,6 +85,10 @@ import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
+import { startMailWorker } from './workers/mail-worker';
+import { Worker } from 'bullmq';
+import Mailer from './mailer';
+import Redis from 'ioredis';
 import TermsOfServiceController from './controller/terms-of-service-controller';
 
 export class Application {
@@ -98,11 +102,15 @@ export class Application {
 
   connection: DataSource;
 
+  workers: Worker[];
+
   logger: Logger;
 
   tasks: cron.ScheduledTask[];
 
   webSocketService: WebSocketService;
+
+  redisConnection: Redis;
 
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
@@ -111,6 +119,7 @@ export class Application {
       await this.webSocketService.close();
     }
     this.tasks.forEach((task) => task.stop());
+    this.workers.forEach((worker) => worker.close());
     await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
@@ -263,6 +272,14 @@ export default async function createApp(): Promise<Application> {
   });
   application.webSocketService = webSocketService;
 
+  application.redisConnection = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+    maxRetriesPerRequest: null,
+  });
+
+  new Mailer(application.redisConnection);
+
   application.tasks = [];
 
   // REMOVE LATER
@@ -302,6 +319,8 @@ export default async function createApp(): Promise<Application> {
   }
 
   webSocketService.initiateWebSocket();
+
+  application.workers = [startMailWorker(application.redisConnection)];
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
