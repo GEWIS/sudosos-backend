@@ -28,7 +28,12 @@ import log4js, { Logger } from 'log4js';
 import User from '../entity/user/user';
 import MailMessage, { Language } from './mail-message';
 import Mail from 'nodemailer/lib/mailer';
-import { Queue } from 'bullmq';
+import { ConnectionOptions, Queue } from 'bullmq';
+import Redis from 'ioredis';
+
+enum MailQueues {
+  SendEmail = 'send-email',
+}
 
 export default class Mailer {
   private static instance: Mailer;
@@ -37,32 +42,29 @@ export default class Mailer {
 
   private logger: Logger = log4js.getLogger('Mailer');
 
-  constructor() {
+  constructor(redisConnection: Redis) {
     this.logger.level = process.env.LOG_LEVEL;
 
     const redisHost = process.env.REDIS_HOST || '127.0.0.1';
-    const redisPortEnv = process.env.REDIS_PORT;
-    const redisPort = redisPortEnv ? Number(redisPortEnv) : 6379;
+    const redisPort = Number(process.env.REDIS_PORT) || 6379;
+
     if (!redisHost || typeof redisHost !== 'string') {
       throw new Error('Invalid Redis configuration: REDIS_HOST must be a non-empty string.');
     }
     if (!Number.isInteger(redisPort) || redisPort <= 0) {
       throw new Error(
-        `Invalid Redis configuration: REDIS_PORT must be a positive integer (got "${redisPortEnv ?? redisPort}").`,
+        `Invalid Redis configuration: REDIS_PORT must be a positive integer (got "${redisPort}").`,
       );
     }
 
     this.mailQueue = new Queue('mail-queue', {
-      connection: {
-        host: redisHost,
-        port: redisPort,
-      },
+      connection: redisConnection as unknown as ConnectionOptions,
     });
   }
 
   static getInstance(): Mailer {
     if (this.instance === undefined) {
-      this.instance = new Mailer();
+      throw new Error('Mailer has not been initialized. Create an instance first using: new Mailer(redisConnection)');
     }
     return this.instance;
   }
@@ -79,7 +81,7 @@ export default class Mailer {
       to: to.email,
     };
     try {
-      await this.mailQueue.add('send-email', mailOptions, {
+      await this.mailQueue.add(MailQueues.SendEmail, mailOptions, {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },
       });

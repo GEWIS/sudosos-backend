@@ -20,12 +20,13 @@
 import createSMTPTransporter from '../mailer/transporter';
 import Mail from 'nodemailer/lib/mailer';
 import log4js from 'log4js';
-import { Job, Worker } from 'bullmq';
+import { ConnectionOptions, Job, Worker } from 'bullmq';
+import Redis from 'ioredis';
 
 const logger = log4js.getLogger('MailWorker');
 const transporter = createSMTPTransporter();
 
-export const startMailWorker = () => {
+export const startMailWorker = (redisConnection: Redis) => {
   const worker = new Worker<Mail.Options>(
     'mail-queue',
     async (job: Job<Mail.Options>) => {
@@ -45,10 +46,7 @@ export const startMailWorker = () => {
       }
     },
     {
-      connection: {
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: Number(process.env.REDIS_PORT) || 6379,
-      },
+      connection: redisConnection as unknown as ConnectionOptions,
       concurrency: 5, 
     },
   );

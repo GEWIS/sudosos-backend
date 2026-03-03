@@ -87,6 +87,8 @@ import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
 import { startMailWorker } from './workers/mail-worker';
 import { Worker } from 'bullmq';
+import Mailer from './mailer';
+import Redis from 'ioredis';
 
 export class Application {
   app: express.Express;
@@ -106,6 +108,8 @@ export class Application {
   tasks: cron.ScheduledTask[];
 
   webSocketService: WebSocketService;
+
+  redisConnection: Redis;
 
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
@@ -267,6 +271,14 @@ export default async function createApp(): Promise<Application> {
   });
   application.webSocketService = webSocketService;
 
+  application.redisConnection = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+    maxRetriesPerRequest: null,
+  });
+
+  new Mailer(application.redisConnection);
+
   application.tasks = [];
 
   // REMOVE LATER
@@ -306,8 +318,7 @@ export default async function createApp(): Promise<Application> {
 
   webSocketService.initiateWebSocket();
 
-  application.workers = [];
-  application.workers.push(startMailWorker());
+  application.workers = [startMailWorker(application.redisConnection)];
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
