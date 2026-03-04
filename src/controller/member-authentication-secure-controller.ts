@@ -36,6 +36,7 @@ import { UserType } from '../entity/user/user';
 import AuthenticationController from './authentication-controller';
 import MemberAuthenticationSecurePinRequest from './request/member-authentication-secure-pin-request';
 import MemberUser from '../entity/user/member-user';
+import UserService from '../service/user-service';
 
 /**
  * Handles authenticated-only member authentication endpoints for secure PIN authentication.
@@ -94,7 +95,7 @@ export default class MemberAuthenticationSecureController extends BaseController
 
     try {
       // Verify the caller is a POS user
-      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
         res.status(403).json('Only POS users can use secure member PIN authentication.');
         return;
