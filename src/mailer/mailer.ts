@@ -30,6 +30,8 @@ import MailMessage, { Language } from './mail-message';
 import Mail from 'nodemailer/lib/mailer';
 import { ConnectionOptions, Queue } from 'bullmq';
 import Redis from 'ioredis';
+import createSMTPTransporter from './transporter';
+import { Transporter } from 'nodemailer';
 
 enum MailQueues {
   SendEmail = 'send-email',
@@ -38,28 +40,37 @@ enum MailQueues {
 export default class Mailer {
   private static instance: Mailer;
 
-  private mailQueue: Queue;
+  private mailQueue: Queue | undefined;
+
+  private transporter: Transporter | undefined;
 
   private logger: Logger = log4js.getLogger('Mailer');
 
-  constructor(redisConnection: Redis) {
+  /**
+   * Create a Mailer instance.
+   *
+   * When a Redis connection is provided, emails are queued via BullMQ (production
+   * behaviour). When no connection is provided the Mailer falls back to sending
+   * emails directly through the SMTP transporter – useful for local development
+   * where Redis may not be running.
+   */
+  constructor(redisConnection?: Redis) {
     this.logger.level = process.env.LOG_LEVEL;
 
-    const redisHost = process.env.REDIS_HOST || '127.0.0.1';
-    const redisPort = Number(process.env.REDIS_PORT) || 6379;
-
-    if (!redisHost || typeof redisHost !== 'string') {
-      throw new Error('Invalid Redis configuration: REDIS_HOST must be a non-empty string.');
-    }
-    if (!Number.isInteger(redisPort) || redisPort <= 0) {
-      throw new Error(
-        `Invalid Redis configuration: REDIS_PORT must be a positive integer (got "${redisPort}").`,
+    if (redisConnection) {
+      this.mailQueue = new Queue('mail-queue', {
+        connection: redisConnection as unknown as ConnectionOptions,
+      });
+      this.logger.info('Mailer initialised in queued mode (Redis).');
+    } else {
+      this.transporter = createSMTPTransporter();
+      this.logger.warn(
+        'Redis unavailable – Mailer running in direct-send mode. '
+        + 'Emails will be sent synchronously without retries. '
+        + 'Set REDIS_HOST / REDIS_PORT to enable queued sending.',
       );
     }
 
-    this.mailQueue = new Queue('mail-queue', {
-      connection: redisConnection as unknown as ConnectionOptions,
-    });
     Mailer.instance = this;
   }
 
@@ -81,28 +92,47 @@ export default class Mailer {
       ...extraOptions,
       to: to.email,
     };
-    try {
-      await this.mailQueue.add(MailQueues.SendEmail, mailOptions, {
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 2000 },
-      });
 
-      this.logger.info({
-        template: template.constructor.name,
-        to: to.email,
-      }, 'Email successfully queued');
-    } catch (error) {
-      this.logger.error({
-        err: error.message,
-        template: template.constructor.name,
-        to: to.email,
-      }, 'Failed to add email to queue');
+    if (this.mailQueue) {
+      // Queued path – normal production behaviour.
+      try {
+        await this.mailQueue.add(MailQueues.SendEmail, mailOptions, {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 2000 },
+        });
 
-      throw error;
+        this.logger.info({
+          template: template.constructor.name,
+          to: to.email,
+        }, 'Email successfully queued');
+      } catch (error) {
+        this.logger.error({
+          err: error.message,
+          template: template.constructor.name,
+          to: to.email,
+        }, 'Failed to add email to queue');
+
+        throw error;
+      }
+    } else {
+      // Direct-send fallback – no Redis available (e.g. local dev).
+      try {
+        await this.transporter.sendMail(mailOptions);
+
+        this.logger.info({
+          template: template.constructor.name,
+          to: to.email,
+        }, 'Email sent directly (no-Redis fallback)');
+      } catch (error) {
+        this.logger.error({
+          err: error.message,
+          template: template.constructor.name,
+          to: to.email,
+        }, 'Failed to send email directly');
+
+        throw error;
+      }
     }
-
-
-    this.logger.info(`Queued email: ${template.constructor.name} for ${to.email}`);
   }
 
   /**
