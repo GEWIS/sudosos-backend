@@ -69,7 +69,8 @@ import RootController from './controller/root-controller';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
-import GewisAuthenticationSecureController from './gewis/controller/gewis-authentication-secure-controller';
+import MemberAuthenticationController from './controller/member-authentication-controller';
+import MemberAuthenticationSecureController from './controller/member-authentication-secure-controller';
 import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
@@ -175,6 +176,16 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     process.env.GEWISWEB_JWT_SECRET,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
+
+  // Define member authentication controller and bind before middleware.
+  const memberController = new MemberAuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
+  application.app.use('/v1/authentication', memberController.getRouter());
 
   // Define QR authentication controller and bind before middleware.
   const qrController = new AuthenticationQRController(
@@ -361,7 +372,7 @@ export default async function createApp(): Promise<Application> {
   // REMOVE LATER
   application.app.use('/v1/rbac', new RbacController(options).getRouter());
   application.app.use('/v1/authentication', new AuthenticationSecureController(options, tokenHandler).getRouter());
-  application.app.use('/v1/authentication', new GewisAuthenticationSecureController(options, tokenHandler).getRouter());
+  application.app.use('/v1/authentication', new MemberAuthenticationSecureController(options, tokenHandler).getRouter());
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());

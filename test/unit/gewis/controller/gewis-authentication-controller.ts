@@ -39,7 +39,6 @@ import MemberUser from '../../../../src/entity/user/member-user';
 import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../../service/authentication-service';
 import AuthenticationService from '../../../../src/service/authentication-service';
-import GEWISAuthenticationPinRequest from '../../../../src/gewis/controller/request/gewis-authentication-pin-request';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
@@ -288,31 +287,6 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
         .send(validLDAPRequest);
       expect(res.status).to.equal(403);
       expect(res.body.message).to.equal('Invalid credentials.');
-    });
-  });
-  describe('POST /authentication/GEWIS/pin', () => {
-    const validPinRequest: GEWISAuthenticationPinRequest = {
-      gewisId: 11,
-      pin: '1000',
-    };
-    it('should return an HTTP 200 and User if correct pin code', async () => {
-      const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin')
-        .send(validPinRequest);
-      expect((res.body as AuthenticationResponse).user.id).to.be.equal(1);
-      expect(res.status).to.equal(200);
-    });
-    it('should return an HTTP 403 if incorrect pin code', async () => {
-      const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin')
-        .send({ ...validPinRequest, pin: '1' });
-      expect(res.status).to.equal(403);
-    });
-    it('should return an HTTP 403 if user is not registered', async () => {
-      const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin')
-        .send({ ...validPinRequest, gewisId: 99999 } as GEWISAuthenticationPinRequest);
-      expect(res.status).to.equal(403);
     });
   });
 });
