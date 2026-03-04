@@ -80,15 +80,22 @@ export const EligibleInactiveUsers: UserType[] = [
 ];
 
 /**
+ * **Inactive** (`active: false`): the user can only log in and top up their balance.
+ * Intended for e.g. alumni who have graduated but still have an outstanding debt.
+ *
+ * **Soft-deleted** (`deleted: true`): the account is archived but the database record
+ * is preserved for transaction history. A user can only be soft-deleted once their
+ * balance is exactly €0.00; otherwise the account should first be set to inactive.
+ *
  * @typedef {BaseEntity} User
  * @property {string} firstName.required - First name of the user.
  * @property {string} lastName - Last name of the user.
  * @property {string} nickname - Nickname of the user.
- * @property {boolean} active - Whether the user has accepted the TOS. Defaults to false.
+ * @property {boolean} active - Whether the user is active. Defaults to false.
  * @property {boolean} canGoIntoDebt - Whether the user can have a negative balance. Defaults to false
  * @property {boolean} ofAge - Whether the user is 18+ or not.
  * @property {string} email - The email of the user.
- * @property {boolean} deleted - Whether the user was deleted. Defaults to false.
+ * @property {boolean} deleted - Whether the user was soft-deleted. Defaults to false.
  * @property {string} type.required - The type of user.
  */
 @Entity()
@@ -110,6 +117,10 @@ export default class User extends BaseEntity {
   })
   public nickname: string;
 
+  /**
+   * Whether this user is active. Inactive users (`active: false`) can only log in
+   * and top up their balance — e.g. alumni who still have an outstanding debt.
+   */
   @Column({
     default: false,
   })
@@ -134,6 +145,10 @@ export default class User extends BaseEntity {
   })
   public email: string;
 
+  /**
+   * Whether this user has been soft-deleted. Only allowed when the balance is exactly
+   * €0.00; the record is preserved to maintain transaction history integrity.
+   */
   @Column({
     default: false,
   })
