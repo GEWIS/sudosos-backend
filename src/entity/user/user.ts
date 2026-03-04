@@ -80,31 +80,23 @@ export const EligibleInactiveUsers: UserType[] = [
 ];
 
 /**
- * Represents a user account in the SudoSOS system.
+ * **Inactive** (`active: false`): the user can only log in and top up their balance.
+ * Intended for e.g. alumni who have graduated but still have an outstanding debt.
  *
- * ### `active`
- * A user is considered **inactive** (`active: false`) when they are restricted to
- * only logging in and topping up their balance. This typically applies to e.g.
- * alumni who have graduated but still have an outstanding debt and need to be able
- * to settle it. Inactive users cannot make purchases.
+ * **Soft-deleted** (`deleted: true`): the account is archived but the database record
+ * is preserved for transaction history. A user can only be soft-deleted once their
+ * balance is exactly €0.00; otherwise the account should first be set to inactive.
  *
- * ### `deleted`
- * A user is **soft-deleted** (`deleted: true`) when their account has been removed
- * from the system but their balance is exactly €0.00 at the time of deletion.
- * Soft-deletion preserves the database record (and any associated transaction
- * history) while preventing the account from being used. A user can only be
- * soft-deleted once their balance is exactly zero; if a balance remains, the
- * account should first be set to inactive until the balance is settled.
- *
- * @example
- * // Inactive user — still owes money, can only top up:
- * user.active = false;
- * user.deleted = false;
- *
- * @example
- * // Soft-deleted user — balance settled, account archived:
- * user.active = false;
- * user.deleted = true; // only valid when balance === 0
+ * @typedef {BaseEntity} User
+ * @property {string} firstName.required - First name of the user.
+ * @property {string} lastName - Last name of the user.
+ * @property {string} nickname - Nickname of the user.
+ * @property {boolean} active - Whether the user is active. Defaults to false.
+ * @property {boolean} canGoIntoDebt - Whether the user can have a negative balance. Defaults to false
+ * @property {boolean} ofAge - Whether the user is 18+ or not.
+ * @property {string} email - The email of the user.
+ * @property {boolean} deleted - Whether the user was soft-deleted. Defaults to false.
+ * @property {string} type.required - The type of user.
  */
 @Entity()
 export default class User extends BaseEntity {
@@ -126,13 +118,8 @@ export default class User extends BaseEntity {
   public nickname: string;
 
   /**
-   * Whether this user is active.
-   *
-   * An **inactive** user (`active: false`) can only log in and top up their balance.
-   * They cannot make purchases. This is used for e.g. alumni who have graduated but
-   * still have an outstanding debt that they need to settle.
-   *
-   * @default false
+   * Whether this user is active. Inactive users (`active: false`) can only log in
+   * and top up their balance — e.g. alumni who still have an outstanding debt.
    */
   @Column({
     default: false,
@@ -159,15 +146,8 @@ export default class User extends BaseEntity {
   public email: string;
 
   /**
-   * Whether this user has been soft-deleted.
-   *
-   * A **soft-deleted** user (`deleted: true`) has been removed from the system
-   * but their database record is preserved to maintain transaction history integrity.
-   * A user may only be soft-deleted once their balance is exactly €0.00. If a balance
-   * remains, the account should first be set to inactive (`active: false`) and left
-   * until the balance is settled before deletion.
-   *
-   * @default false
+   * Whether this user has been soft-deleted. Only allowed when the balance is exactly
+   * €0.00; the record is preserved to maintain transaction history integrity.
    */
   @Column({
     default: false,
