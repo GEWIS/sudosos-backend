@@ -24,7 +24,7 @@ import sinon from 'sinon';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TermsOfServiceController from '../../../src/controller/terms-of-service-controller';
-import TermsOfServiceService from '../../../src/service/terms-of-service-service';
+import TermsOfServiceService, { TermsOfService } from '../../../src/service/terms-of-service-service';
 import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
@@ -91,7 +91,7 @@ describe('TermsOfServiceController', () => {
 
   describe('GET /terms-of-service', () => {
     it('should return correct model', async () => {
-      const tosResponse: TermsOfServiceResponse = { versionNumber: '1.0', content: '# TOS v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# TOS v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 
@@ -110,7 +110,7 @@ describe('TermsOfServiceController', () => {
     });
 
     it('should return 200 with the correct TOS content when a valid version is requested', async () => {
-      const tosResponse: TermsOfServiceResponse = { versionNumber: '1.0', content: '# Terms of Service v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# Terms of Service v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 
@@ -192,7 +192,7 @@ describe('TermsOfServiceController', () => {
     });
 
     it('should return 200 for a regular user with own TOS permissions', async () => {
-      const tosResponse: TermsOfServiceResponse = { versionNumber: '1.0', content: '# TOS v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# TOS v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 

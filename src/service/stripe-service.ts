@@ -34,7 +34,6 @@ import StripePaymentIntentStatus, { StripePaymentIntentState } from '../entity/s
 import {
   StripeDepositResponse,
   StripePaymentIntentStatusResponse,
-  StripePaymentIntentResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
 import { EntityManager, IsNull } from 'typeorm';
@@ -113,7 +112,7 @@ export default class StripeService extends WithManager {
     };
   }
 
-  public static async getProcessingStripeDepositsFromUser(userId: number): Promise<StripeDepositResponse[]> {
+  public static async getProcessingStripeDepositsFromUser(userId: number): Promise<StripeDeposit[]> {
     const deposits = await StripeDeposit.find({
       where: {
         to: {
@@ -131,8 +130,7 @@ export default class StripeService extends WithManager {
 
     return deposits.filter((d) => !d.stripePaymentIntent.paymentIntentStatuses.some(
       (s) => s.state === StripePaymentIntentState.SUCCEEDED
-        || s.state === StripePaymentIntentState.FAILED))
-      .map((d) => this.asStripeDepositResponse(d));
+        || s.state === StripePaymentIntentState.FAILED));
   }
 
   public static async getStripeDeposit(id: number, relations: string[] = []): Promise<StripeDeposit> {
@@ -154,10 +152,11 @@ export default class StripeService extends WithManager {
    * Create a payment intent and save it to the database
    * @param user User that wants to deposit some money into their account
    * @param amount The amount to be deposited
+   * @returns The created deposit entity and the Stripe client secret
    */
   public async createStripePaymentIntent(
     user: User, amount: Dinero,
-  ): Promise<StripePaymentIntentResponse> {
+  ): Promise<{ deposit: StripeDeposit, clientSecret: string }> {
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: DineroTransformer.Instance.to(amount),
       currency: amount.getCurrency(),
@@ -174,16 +173,13 @@ export default class StripeService extends WithManager {
       amount,
       paymentIntentStatuses: [],
     });
-    const stripeDeposit = await this.manager.getRepository(StripeDeposit).save({
+    const deposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
     });
 
     return {
-      id: stripeDeposit.id,
-      createdAt: stripeDeposit.createdAt.toISOString(),
-      updatedAt: stripeDeposit.updatedAt.toISOString(),
-      stripeId: stripePaymentIntent.stripeId,
+      deposit,
       clientSecret: paymentIntent.client_secret,
     };
   }

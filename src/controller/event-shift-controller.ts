@@ -33,7 +33,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import EventService, { ShiftSelectedCountParams } from '../service/event-service';
 import { EventShiftRequest } from './request/event-request';
 import EventShift from '../entity/event/event-shift';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { asDate, asEventType } from '../helpers/validators';
 
 /**
@@ -116,8 +116,8 @@ export default class EventShiftController extends BaseController {
     }
 
     try {
-      const shifts = await EventService.getEventShifts({ take, skip });
-      res.json(shifts);
+      const [shifts, count] = await EventService.getEventShifts({ take, skip });
+      res.json(toResponse(shifts.map((s) => EventService.asEventShiftResponse(s)), count, { take, skip }));
     } catch (e) {
       this.logger.error('Could not return all shifts:', e);
       res.status(500).json('Internal server error.');

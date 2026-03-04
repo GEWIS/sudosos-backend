@@ -96,8 +96,14 @@ export default class StripeController extends BaseController {
         return;
       }
 
-      const result = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
-      res.status(200).json(result);
+      const { deposit, clientSecret } = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
+      res.status(200).json({
+        id: deposit.id,
+        createdAt: deposit.createdAt.toISOString(),
+        updatedAt: deposit.updatedAt.toISOString(),
+        stripeId: deposit.stripePaymentIntent.stripeId,
+        clientSecret,
+      });
     } catch (error) {
       this.logger.error('Could not create Stripe payment intent:', error);
       res.status(500).send('Internal server error.');

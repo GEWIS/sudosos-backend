@@ -150,7 +150,8 @@ describe('ReportService', () => {
           tillDate: new Date(2050, 0, 0),
           forId: creditor.id,
         };
-        const t = await new TransactionService().getSingleTransaction(transaction.tId);
+        const transactionService = new TransactionService();
+        const t = await transactionService.asTransactionResponse(await transactionService.getSingleTransaction(transaction.tId));
 
         const report = await new SalesReportService().getReport(parameters);
         expect(report.totalInclVat.getAmount()).to.eq(t.totalPriceInclVat.amount);
@@ -365,7 +366,8 @@ describe('ReportService', () => {
           tillDate: new Date(2050, 0, 0),
           forId: debtor.id,
         };
-        const t = await new TransactionService().getSingleTransaction(transaction.tId);
+        const transactionService = new TransactionService();
+        const t = await transactionService.asTransactionResponse(await transactionService.getSingleTransaction(transaction.tId));
 
         const report = await new BuyerReportService().getReport(parameters);
         expect(report.totalInclVat.getAmount()).to.eq(t.totalPriceInclVat.amount);

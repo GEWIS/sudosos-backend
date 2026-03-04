@@ -48,7 +48,6 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import sinon from 'sinon';
-import { ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';
 
 chai.use(deepEqualInAnyOrder);
@@ -192,8 +191,8 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('getProducts function', () => {
     it('should return all products with no input specification', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService.getProducts({ returnContainers: true });
+      const [revisions, count] = await ProductService.getProducts({ returnContainers: true });
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.products.filter((prod) => prod.currentRevision !== null);
 
@@ -213,14 +212,13 @@ describe('ProductService', async (): Promise<void> => {
         }
       }
 
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(products.length);
+      expect(count).to.equal(products.length);
     });
     it('should return product with the ownerId specified', async () => {
       const owner = ctx.products[0].owner.id;
       const params: ProductFilterParameters = { ownerId: ctx.products[0].owner.id };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.products.filter((prod) => (
         prod.currentRevision !== null && prod.owner.id === owner));
@@ -233,7 +231,8 @@ describe('ProductService', async (): Promise<void> => {
       expect(productRevision).to.be.greaterThan(0);
 
       const params: ProductFilterParameters = { productId, productRevision };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const product: ProductWithRevision[] = [productRevisionToProductWithRevision(
         ctx.productRevisions.find((prod) => (
@@ -244,7 +243,8 @@ describe('ProductService', async (): Promise<void> => {
     });
     it('should return a single product if productId is specified', async () => {
       const params: ProductFilterParameters = { productId: ctx.products[0].id };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       returnsAll(records, [ctx.products[0]]);
     });
@@ -253,15 +253,16 @@ describe('ProductService', async (): Promise<void> => {
         ownerId: ctx.products[0].owner.id + 1,
         productId: ctx.products[0].id,
       };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
 
-      expect(records).to.be.empty;
+      expect(revisions).to.be.empty;
     });
     it('should return the products belonging to a VAT group', async () => {
       const params: ProductFilterParameters = {
         vatGroupId: 1,
       };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.productRevisions
         .filter((rev) => rev.vat.id === params.vatGroupId)
@@ -273,14 +274,11 @@ describe('ProductService', async (): Promise<void> => {
       const take = 5;
       const skip = 3;
 
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductService
+      const [revisions, count] = await ProductService
         .getProducts({  }, { take, skip });
 
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(ctx.products.length);
-      expect(records.length).to.be.at.most(take);
+      expect(count).to.equal(ctx.products.length);
+      expect(revisions.length).to.be.at.most(take);
     });
     it('should return all products involving a single user and its memberAuthenticator users', async () => {
       const usersOwningAProd = [...new Set(ctx.products.map((prod) => prod.owner))];
@@ -292,18 +290,20 @@ describe('ProductService', async (): Promise<void> => {
       });
       expect(memberAuthenticators.length).to.equal(0);
 
-      let products = await ProductService.getProducts({}, {}, owner);
-      const originalLength = products.records.length;
-      products.records.forEach((prod) => {
+      let [revisions] = await ProductService.getProducts({}, {}, owner);
+      let records = revisions.map((r) => ProductService.revisionToResponse(r));
+      const originalLength = records.length;
+      records.forEach((prod) => {
         expect(prod.owner.id).to.equal(owner.id);
       });
 
       await new AuthenticationService().setMemberAuthenticator([owner], usersOwningAProd[1]);
 
       const ownerIds = [owner, usersOwningAProd[1]].map((o) => o.id);
-      products = await ProductService.getProducts({}, {}, owner);
-      expect(products.records.length).to.be.greaterThan(originalLength);
-      products.records.forEach((prod) => {
+      [revisions] = await ProductService.getProducts({}, {}, owner);
+      records = revisions.map((r) => ProductService.revisionToResponse(r));
+      expect(records.length).to.be.greaterThan(originalLength);
+      records.forEach((prod) => {
         expect(ownerIds).to.include(prod.owner.id);
       });
 
@@ -314,7 +314,8 @@ describe('ProductService', async (): Promise<void> => {
       const params: ProductFilterParameters = {
         featured: true,
       };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.productRevisions
         .filter((rev) => {
@@ -328,7 +329,8 @@ describe('ProductService', async (): Promise<void> => {
       const params: ProductFilterParameters = {
         preferred: true,
       };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.productRevisions
         .filter((rev) => {
@@ -342,7 +344,8 @@ describe('ProductService', async (): Promise<void> => {
       const params: ProductFilterParameters = {
         priceList: true,
       };
-      const { records } = await ProductService.getProducts(params);
+      const [revisions] = await ProductService.getProducts(params);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
 
       const products = ctx.productRevisions
         .filter((rev) => {
@@ -372,7 +375,8 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const response = await ProductService.createProduct(creation);
+      const revision = await ProductService.createProduct(creation);
+      const response = ProductService.revisionToResponse(revision);
       validateProductProperties(response, creation);
       const entity = await Product.findOne({ where: { id: response.id } });
       expect(entity.currentRevision).to.eq(1);
@@ -406,14 +410,16 @@ describe('ProductService', async (): Promise<void> => {
           currency: 'EUR',
         },
       };
-      let response = await ProductService.updateProduct(update);
+      let revision = await ProductService.updateProduct(update);
+      let response = ProductService.revisionToResponse(revision);
       validateProductProperties(response, update);
 
       const update2: UpdateProductParams = {
         ...update,
         alcoholPercentage: 20,
       };
-      response = await ProductService.updateProduct(update2);
+      revision = await ProductService.updateProduct(update2);
+      response = ProductService.revisionToResponse(revision);
       validateProductProperties(response, update2);
 
       // Cleanup
@@ -441,7 +447,8 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const product = await ProductService.createProduct(createProduct);
+      const productRevision = await ProductService.createProduct(createProduct);
+      const product = ProductService.revisionToResponse(productRevision);
 
       const createContainer: CreateContainerParams = {
         name: 'Container Name',
@@ -450,7 +457,7 @@ describe('ProductService', async (): Promise<void> => {
         public: true,
       };
 
-      const container = await ContainerService.createContainer(createContainer);
+      const containerRev = await ContainerService.createContainer(createContainer);
 
       const update: UpdateProductParams = {
         id: product.id,
@@ -468,13 +475,14 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const updatedProduct = await ProductService.updateProduct(update);
+      const updatedRevision = await ProductService.updateProduct(update);
+      const updatedProduct = ProductService.revisionToResponse(updatedRevision);
       validateProductProperties(updatedProduct, update);
 
-      const containerEntity = await Container.findOne({ where: { id: container.id } });
+      const containerEntity = await Container.findOne({ where: { id: containerRev.containerId } });
       expect(containerEntity.currentRevision).to.be.eq(2);
 
-      const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: container.id } }, relations: ['container', 'products', 'products.category'] })).products[0];
+      const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: containerRev.containerId } }, relations: ['container', 'products', 'products.category'] })).products[0];
       expect(productInContainer.name).to.eq(update.name);
       expect(typeof productInContainer.alcoholPercentage === 'string'
         ? parseInt(productInContainer.alcoholPercentage, 10)
@@ -483,8 +491,8 @@ describe('ProductService', async (): Promise<void> => {
       expect(productInContainer.category.id).to.eq(update.category);
 
       // Cleanup
-      await ContainerRevision.delete({ containerId: container.id });
-      await Container.delete({ id: container.id });
+      await ContainerRevision.delete({ containerId: containerRev.containerId });
+      await Container.delete({ id: containerRev.containerId });
       await ProductRevision.delete({ productId: product.id });
       await Product.delete({ id: product.id });
     });
@@ -506,7 +514,8 @@ describe('ProductService', async (): Promise<void> => {
         },
       };
 
-      const product = await ProductService.createProduct(createProduct);
+      const productRevision = await ProductService.createProduct(createProduct);
+      const product = ProductService.revisionToResponse(productRevision);
 
       const createContainer: CreateContainerParams = {
         name: 'Container Name',
@@ -515,10 +524,10 @@ describe('ProductService', async (): Promise<void> => {
         public: true,
       };
 
-      const container = await ContainerService.createContainer(createContainer);
+      const containerRev = await ContainerService.createContainer(createContainer);
 
       const createPOS: CreatePointOfSaleParams = {
-        containers: [container.id],
+        containers: [containerRev.containerId],
         name: 'POS Name',
         useAuthentication: true,
         ownerId,
@@ -543,7 +552,7 @@ describe('ProductService', async (): Promise<void> => {
       };
 
       await ProductService.updateProduct(productUpdate);
-      const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
+      const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
 
       expect(productFromPos.name).to.eq(productUpdate.name);
       expect(productFromPos.category.id).to.eq(productUpdate.category);
@@ -551,10 +560,10 @@ describe('ProductService', async (): Promise<void> => {
       expect(productFromPos.priceInclVat.getAmount()).to.eq(productUpdate.priceInclVat.amount);
 
       // Cleanup
-      await PointOfSaleRevision.delete({ pointOfSaleId: pos.id });
-      await PointOfSale.delete({ id: pos.id });
-      await ContainerRevision.delete({ containerId: container.id });
-      await Container.delete({ id: container.id });
+      await PointOfSaleRevision.delete({ pointOfSaleId: pos.pointOfSaleId });
+      await PointOfSale.delete({ id: pos.pointOfSaleId });
+      await ContainerRevision.delete({ containerId: containerRev.containerId });
+      await Container.delete({ id: containerRev.containerId });
       await ProductRevision.delete({ productId: product.id });
       await Product.delete({ id: product.id });
     });
@@ -562,9 +571,9 @@ describe('ProductService', async (): Promise<void> => {
 
   describe('deleteProduct function', () => {
     it('should soft delete product and propagate to containers', async () => {
-      const stub = sinon.stub(ContainerService, 'updateContainer').callsFake(async (params): Promise<ContainerWithProductsResponse> => {
-        const container = await ContainerService.getContainers({ containerId: params.id, returnProducts: true });
-        return container.records[0] as ContainerWithProductsResponse;
+      const stub = sinon.stub(ContainerService, 'updateContainer').callsFake(async (params): Promise<ContainerRevision> => {
+        const [revisions] = await ContainerService.getContainers({ containerId: params.id, returnProducts: true });
+        return revisions[0];
       });
 
       const start = Math.floor(new Date().getTime() / 1000) * 1000;

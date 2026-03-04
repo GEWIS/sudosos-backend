@@ -30,7 +30,22 @@ import { TermsOfServiceResponse } from '../controller/response/terms-of-service-
 
 const TOS_DIR = path.join(__dirname, '../../static/terms-of-service');
 
+export interface TermsOfService {
+  versionNumber: string;
+  content: string;
+}
+
 export default class TermsOfServiceService {
+
+  /**
+   * Convert a TermsOfService data object to a TermsOfServiceResponse.
+   */
+  public static asTermsOfServiceResponse(tos: TermsOfService): TermsOfServiceResponse {
+    return {
+      versionNumber: tos.versionNumber,
+      content: tos.content,
+    };
+  }
 
   /**
    * List all available TOS versions, sorted ascending by version number.
@@ -59,7 +74,7 @@ export default class TermsOfServiceService {
    * Get a specific TOS revision by version string (e.g. "1.0").
    * Throws an error if the version does not exist.
    */
-  public static async getTermsOfService(version: string): Promise<TermsOfServiceResponse> {
+  public static async getTermsOfService(version: string): Promise<TermsOfService> {
     // Check whether the version string is safe (no path traversal)
     if (/[/\\]|\.\./.test(version)) {
       throw new Error(`Terms of service version v'${version}' not found`);
@@ -78,7 +93,7 @@ export default class TermsOfServiceService {
    * Get the latest TOS revision (highest version number).
    * Throws an error if no TOS files exist.
    */
-  public static async getLatestTermsOfService(): Promise<TermsOfServiceResponse> {
+  public static async getLatestTermsOfService(): Promise<TermsOfService> {
     const versions = await TermsOfServiceService.listVersions();
     if (versions.length === 0) {
       throw new Error('No terms of service versions found');

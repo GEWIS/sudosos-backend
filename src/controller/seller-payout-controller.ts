@@ -29,9 +29,8 @@ import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import SellerPayoutService, { parseSellerPayoutFilters } from '../service/seller-payout-service';
-import { PaginatedSellerPayoutResponse } from './response/seller-payout-response';
 import { CreateSellerPayoutRequest, UpdateSellerPayoutRequest } from './request/seller-payout-request';
 import User from '../entity/user/user';
 import ReportService, { SalesReportService } from '../service/report-service';
@@ -121,11 +120,7 @@ export default class SellerPayoutController extends BaseController {
       const service = new SellerPayoutService();
       const [records, count] = await service.getSellerPayouts(filters, { take, skip });
 
-      const response: PaginatedSellerPayoutResponse = {
-        records: records.map(SellerPayoutService.asSellerPayoutResponse),
-        _pagination: { take, skip, count },
-      };
-      res.json(response);
+      res.json(toResponse(records.map(SellerPayoutService.asSellerPayoutResponse), count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all seller payouts:', error);
       res.status(500).json('Internal server error.');

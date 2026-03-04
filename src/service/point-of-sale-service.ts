@@ -28,7 +28,6 @@ import { FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, IsNull, Ra
 import {
   BasePointOfSaleInfoResponse,
   BasePointOfSaleResponse,
-  PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
 } from '../controller/response/point-of-sale-response';
@@ -46,6 +45,7 @@ import AuthenticationService from './authentication-service';
 import { ContainerWithProductsResponse } from '../controller/response/container-response';
 import Role from '../entity/rbac/role';
 import RBACService from './rbac-service';
+import UserService from './user-service';
 
 /**
  * Define point of sale filtering parameters used to filter query results.
@@ -144,25 +144,17 @@ export default class PointOfSaleService {
    */
   public static async getPointsOfSale(
     filters: PointOfSaleParameters = {}, pagination: PaginationParameters = {}, user?: User,
-  ): Promise<PaginatedPointOfSaleResponse> {
+  ): Promise<[PointOfSaleRevision[], number]> {
     const { take, skip } = pagination;
 
-    const [data, count] = await PointOfSaleRevision.findAndCount({ ...(await this.getOptions(filters, user)), take, skip });
-
-    const records = data.map((revision: PointOfSaleRevision) => this.revisionToResponse(revision));
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return PointOfSaleRevision.findAndCount({ ...(await this.getOptions(filters, user)), take, skip });
   }
 
   /**
    * Updates a PointOfSale
    * @param update - The update to apply
    */
-  public static async updatePointOfSale(update: UpdatePointOfSaleParams): Promise<PointOfSaleWithContainersResponse> {
+  public static async updatePointOfSale(update: UpdatePointOfSaleParams): Promise<PointOfSaleRevision> {
     const base = await PointOfSale.findOne({ where: { id: update.id } });
     const containers = await Container.findByIds(update.containers);
 
@@ -192,7 +184,7 @@ export default class PointOfSaleService {
     await PointOfSale.save(base);
 
     const options = await this.getOptions({ pointOfSaleId: base.id, returnContainers: true, returnProducts: true });
-    return (this.revisionToResponse(await PointOfSaleRevision.findOne({ ...options }))) as PointOfSaleWithContainersResponse;
+    return PointOfSaleRevision.findOne({ ...options });
   }
 
   /**
@@ -200,8 +192,8 @@ export default class PointOfSaleService {
    *
    * @param posRequest - The POS to be created.
    */
-  public static async createPointOfSale(posRequest: CreatePointOfSaleParams) {
-    const owner = await User.findOne({ where: { id: posRequest.ownerId } });
+  public static async createPointOfSale(posRequest: CreatePointOfSaleParams): Promise<PointOfSaleRevision | undefined> {
+    const owner = await User.findOne(UserService.getOptions({ id: posRequest.ownerId }));
 
     if (!owner) return undefined;
 

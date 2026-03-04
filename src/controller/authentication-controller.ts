@@ -167,7 +167,7 @@ export default class AuthenticationController extends BaseController {
     if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return false;
 
     // Check the existence of the user
-    const user = await User.findOne({ where: { id: body.userId } });
+    const user = await User.findOne(UserService.getOptions({ id: body.userId }));
     if (!user) return false;
 
     return true;
@@ -229,9 +229,7 @@ export default class AuthenticationController extends BaseController {
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
     pin: string, userId: number, posId?: number) {
     return async (req: Request, res: Response) => {
-      const user = await User.findOne({
-        where: { id: userId, deleted: false },
-      });
+      const user = await User.findOne(UserService.getOptions({ id: userId }));
 
       if (!user) {
         res.status(403).json({
@@ -259,9 +257,10 @@ export default class AuthenticationController extends BaseController {
         res.status(403).json({
           message: 'Invalid credentials.',
         });
+        return;
       }
 
-      res.json(result);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     };
   }
 
@@ -318,8 +317,8 @@ export default class AuthenticationController extends BaseController {
       };
 
       // AD login gives full access.
-      const token = await service.getSaltedToken({ user, context });
-      res.json(token);
+      const result = await service.getSaltedToken({ user, context });
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     };
   }
 
@@ -338,6 +337,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('Local authentication for user', body.accountMail);
 
     try {
+      // Email-based lookup is specific to local auth; UserService.getOptions does not support email filter
       const user = await User.findOne({
         where: { email: body.accountMail, deleted: false },
       });
@@ -369,9 +369,10 @@ export default class AuthenticationController extends BaseController {
         res.status(403).json({
           message: 'Invalid credentials.',
         });
+        return;
       }
 
-      res.json(result);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using Local:', error);
       res.status(500).json('Internal server error.');
@@ -429,6 +430,7 @@ export default class AuthenticationController extends BaseController {
     const body = req.body as ResetLocalRequest;
     this.logger.trace('Reset request for user', body.accountMail);
     try {
+      // Email-based lookup is specific to local auth; UserService.getOptions does not support email filter
       const user = await User.findOne({
         where: { email: body.accountMail, deleted: false, type: UserType.LOCAL_USER },
       });
@@ -489,11 +491,11 @@ export default class AuthenticationController extends BaseController {
 
       this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
         context,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
       res.status(500).json('Internal server error.');
@@ -532,11 +534,11 @@ export default class AuthenticationController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
         context,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
       res.status(500).json('Internal server error.');
@@ -559,9 +561,7 @@ export default class AuthenticationController extends BaseController {
     this.logger.trace('key authentication for user', body.userId);
 
     try {
-      const user = await User.findOne({
-        where: { id: body.userId, deleted: false },
-      });
+      const user = await User.findOne(UserService.getOptions({ id: body.userId, allowPos: true }));
 
       if (!user) {
         res.status(403).json({
@@ -593,9 +593,10 @@ export default class AuthenticationController extends BaseController {
         res.status(403).json({
           message: 'Invalid credentials.',
         });
+        return;
       }
 
-      res.json(result);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using key:', error);
       res.status(500).json('Internal server error.');
@@ -622,12 +623,12 @@ export default class AuthenticationController extends BaseController {
         res.status(404).json('User not found.');
         return;
       }
-      const response = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user,
         context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
         salt: body.nonce,
       });
-      res.json(response);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');

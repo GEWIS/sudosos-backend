@@ -29,7 +29,6 @@ import dinero from 'dinero.js';
 import { RequestWithToken } from '../middleware/token-middleware';
 import {
   BaseTransactionResponse,
-  PaginatedBaseTransactionResponse,
   SubTransactionResponse,
   SubTransactionRowResponse,
   TransactionResponse,
@@ -694,7 +693,7 @@ export default class TransactionService extends WithManager {
    * Invalidates user balance cache
    * @param {TransactionResponse.model} transaction - transaction holding users to invalidate
    */
-  public static async invalidateBalanceCache(transaction: TransactionResponse):
+  public static async invalidateBalanceCache(transaction: Transaction):
   Promise<void> {
     // get user ids to invalidate
     const userIds = [...new Set(transaction.subTransactions.map((sub) => sub.to.id))];
@@ -831,7 +830,7 @@ export default class TransactionService extends WithManager {
     params: TransactionFilterParameters,
     pagination: PaginationParameters,
     user: User,
-  ): Promise<PaginatedBaseTransactionResponse> {
+  ): Promise<[BaseTransactionResponse[], number]> {
     const { take, skip } = pagination;
 
     // For the "from" side
@@ -883,14 +882,7 @@ export default class TransactionService extends WithManager {
     const [{ total }] = await this.manager.query(countSql, countParams);
     const records = recordsRaw.map(this.mapRawTransactionToResponse);
 
-    return {
-      records,
-      _pagination: {
-        take,
-        skip,
-        count: Number(total),
-      },
-    };
+    return [records, Number(total)];
   }
 
   /**
@@ -898,11 +890,11 @@ export default class TransactionService extends WithManager {
    * @param {TransactionFilterParameters.model} params - the filter parameters
    * @param {PaginationParameters} pagination
    * @param {User.model} user - A user that is involved in all transactions
-   * @returns {BaseTransactionResponse[]} - the transactions without sub transactions
+   * @returns {Promise<[BaseTransactionResponse[], number]>} - the transactions without sub transactions and total count
    */
   public async getTransactions(
     params: TransactionFilterParameters, pagination: PaginationParameters = {}, user?: User,
-  ): Promise<PaginatedBaseTransactionResponse> {
+  ): Promise<[BaseTransactionResponse[], number]> {
     const { take, skip } = pagination;
 
     if (user) {
@@ -917,12 +909,7 @@ export default class TransactionService extends WithManager {
 
     const records = results[0].map(this.mapRawTransactionToResponse);
 
-    return {
-      _pagination: {
-        take, skip, count: results[1],
-      },
-      records,
-    };
+    return [records, results[1]];
   }
 
   /**
@@ -934,29 +921,27 @@ export default class TransactionService extends WithManager {
   public async createTransaction(
     req: TransactionRequest,
     context: TransactionContext,
-  ): Promise<TransactionResponse | undefined> {
+  ): Promise<Transaction> {
     const transaction = await this.asTransaction(req, context);
 
     // Use manager.save() instead of entity.save() for better batch performance
     // TypeORM will handle cascade saves more efficiently with manager.save()
     const savedTransaction = await this.manager.save(Transaction, transaction);
-    
+
     if (savedTransaction.from.inactiveNotificationSend === true) {
       await UserService.updateUser(savedTransaction.from.id, { inactiveNotificationSend: false });
     }
 
-    // save transaction and return response using cached cost and context
-    const transactionResponse = await this.asTransactionResponse(savedTransaction, context.totalCost, context);
-    
     // Emit WebSocket event for transaction creation (fire-and-forget to not block transaction flow)
+    const transactionResponse = await this.asTransactionResponse(savedTransaction, context.totalCost, context);
     if (transactionResponse) {
       void WebSocketService.emitTransactionCreated(transactionResponse).catch((error) => {
         // Log error but don't fail transaction creation if WebSocket emission fails
         log4js.getLogger('TransactionService').error('Failed to emit transaction created event:', error);
       });
     }
-    
-    return transactionResponse;
+
+    return savedTransaction;
   }
 
   /**
@@ -964,7 +949,7 @@ export default class TransactionService extends WithManager {
    * @param {integer} id - the id of the requested transaction
    * @returns {Transaction.model} - the requested transaction transaction
    */
-  public async getSingleTransaction(id: number): Promise<TransactionResponse | undefined> {
+  public async getSingleTransaction(id: number): Promise<Transaction | undefined> {
     const transaction = await this.manager.findOne(Transaction, {
       where: { id },
       relations: [
@@ -978,7 +963,7 @@ export default class TransactionService extends WithManager {
       withDeleted: true,
     });
 
-    return this.asTransactionResponse(transaction);
+    return transaction ?? undefined;
   }
 
   /**
@@ -989,7 +974,7 @@ export default class TransactionService extends WithManager {
    * @returns {undefined} undefined when transaction not found
    */
   public async updateTransaction(id: number, req: TransactionRequest):
-  Promise<TransactionResponse | undefined> {
+  Promise<Transaction | undefined> {
     // Verify and get context
     const verification = await this.verifyTransaction(req, true);
     if (!verification.valid || !verification.context) {
@@ -1007,9 +992,10 @@ export default class TransactionService extends WithManager {
 
     // invalidate updated transaction user balance cache
     const updatedTransaction = await this.getSingleTransaction(id);
-    await TransactionService.invalidateBalanceCache(updatedTransaction);
+    if (updatedTransaction) {
+      await TransactionService.invalidateBalanceCache(updatedTransaction);
+    }
 
-    // return updatedTransaction;
     return updatedTransaction;
   }
 
@@ -1019,7 +1005,7 @@ export default class TransactionService extends WithManager {
    * @returns {TransactionResponse.model} - the deleted transaction
    */
   public async deleteTransaction(id: number):
-  Promise<TransactionResponse | undefined> {
+  Promise<Transaction | undefined> {
     // get the transaction we should delete
     const transaction = await this.getSingleTransaction(id);
     await this.manager.delete(Transaction, id);
@@ -1095,7 +1081,7 @@ export default class TransactionService extends WithManager {
    * @param parameters - Parameters describing what should be included in the report
    */
   public async getTransactionReport(parameters: TransactionFilterParameters): Promise<TransactionReport> {
-    let baseTransactions = (await this.getTransactions(parameters)).records;
+    const [baseTransactions] = await this.getTransactions(parameters);
 
     const transactionReportData = await this.getTransactionReportData(baseTransactions, parameters.exclusiveToId ? parameters.toId : undefined);
     return {

@@ -34,7 +34,7 @@ import BalanceService, { asBalanceOrderColumn, GetBalanceParameters } from '../s
 import UserController from './user-controller';
 import { asArrayOfUserTypes, asBoolean, asDate, asDinero } from '../helpers/validators';
 import { asOrderingDirection } from '../helpers/ordering';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BalanceController');
@@ -153,8 +153,8 @@ export default class BalanceController extends BaseController {
     }
 
     try {
-      const result = await new BalanceService().getBalances(params, { take, skip });
-      res.json(result);
+      const [records, count] = await new BalanceService().getBalances(params, { take, skip });
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not get balances', error);
       res.status(500).json('Internal server error.');

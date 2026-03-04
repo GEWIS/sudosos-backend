@@ -27,9 +27,7 @@
 import { FindManyOptions } from 'typeorm';
 import DineroFactory from 'dinero.js';
 import { VoucherGroupParams, VoucherGroupRequest } from '../controller/request/voucher-group-request';
-import VoucherGroupResponse, {
-  PaginatedVoucherGroupResponse,
-} from '../controller/response/voucher-group-response';
+import VoucherGroupResponse from '../controller/response/voucher-group-response';
 import { UserResponse } from '../controller/response/user-response';
 import Transfer from '../entity/transactions/transfer';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
@@ -139,14 +137,14 @@ export default class VoucherGroupService {
   }
 
   /**
-   * Returns all voucher groups without users
+   * Returns all voucher groups with their users loaded
    * @param filters
    * @param {PaginationParameters.model} params - find options
-   * @returns {PaginatedVoucherGroupResponse} voucher groups without users
+   * @returns {[VoucherGroup[], number]} voucher groups with users and total count
    */
   public static async getVoucherGroups(
     filters: VoucherGroupFilterParameters, params: PaginationParameters = {},
-  ): Promise<PaginatedVoucherGroupResponse> {
+  ): Promise<[VoucherGroup[], number]> {
     const { take, skip } = params;
 
     const mapping: FilterMapping = {
@@ -158,41 +156,33 @@ export default class VoucherGroupService {
       relations: ['vouchers.user'],
     };
     const bkgs: VoucherGroup[] = await VoucherGroup.find({ ...options, take, skip });
-    const records = bkgs.map((bkg) => this.asVoucherGroupResponse(bkg, bkg.vouchers.map((voucher) => voucher.user)));
+    const count = await VoucherGroup.count({ where: options.where });
 
-    return {
-      _pagination: {
-        take,
-        skip,
-        count: await VoucherGroup.count(),
-      },
-      records,
-    };
+    return [bkgs, count];
   }
 
   /**
    * Saves a voucher group and its user relations to the database
-   * @param {VoucherGroupRequest.model} bkgReq - voucher group request
-   * @returns {VoucherGroupResponse.model} saved voucher group
+   * @param {VoucherGroupParams.model} bkgReq - voucher group parameters
+   * @returns {{ voucherGroup: VoucherGroup, users: User[] }} the saved voucher group and its users
    */
   public static async createVoucherGroup(
     bkgReq: VoucherGroupParams,
-  ): Promise<VoucherGroupResponse> {
+  ): Promise<{ voucherGroup: VoucherGroup, users: User[] }> {
     const users = await VoucherGroupService.createVoucherUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount);
 
     // save the voucher group
-    const bkg = await VoucherGroup.save(this.asVoucherGroup(bkgReq));
+    const voucherGroup = await VoucherGroup.save(this.asVoucherGroup(bkgReq));
 
     // create and save user voucher group links
     const userLinks = users.map(
-      (user) => ({ user, voucherGroup: bkg } as UserVoucherGroup),
+      (user) => ({ user, voucherGroup } as UserVoucherGroup),
     );
     await UserVoucherGroup.save(userLinks);
 
     await this.updateBalance(users, bkgReq.balance);
 
-    // return voucher group response with posted voucher group
-    return this.asVoucherGroupResponse(bkg, users);
+    return { voucherGroup, users };
   }
 
   public static async createVoucherUsers(namePrefix: string, active: Boolean, amount: number, offset: number = 0): Promise<User[]> {
@@ -215,15 +205,14 @@ export default class VoucherGroupService {
 
   /**
    * Updates a voucher group and its user relations in the database
-   * @param {string} id - requested voucher group id
-   * @param {VoucherGroupRequest.model} bkgReq - new voucher group request
-   * @returns {VoucherGroupResponse.model} updated voucher group
-   * @returns {undefined} undefined when voucher group not found
+   * @param {number} id - requested voucher group id
+   * @param {VoucherGroupParams.model} bkgReq - new voucher group parameters
+   * @returns {{ voucherGroup: VoucherGroup, users: User[] } | undefined} updated voucher group with users, or undefined when not found
    */
   public static async updateVoucherGroup(
     id: number,
     bkgReq: VoucherGroupParams,
-  ): Promise<VoucherGroupResponse | undefined> {
+  ): Promise<{ voucherGroup: VoucherGroup, users: User[] } | undefined> {
     // current voucher group
     const bkgCurrent = await VoucherGroup.findOne({ where: { id } });
     if (!bkgCurrent) {
@@ -232,7 +221,7 @@ export default class VoucherGroupService {
 
     // create new voucher group and update database
     await VoucherGroup.update(id, this.asVoucherGroup(bkgReq));
-    const bkg = await VoucherGroup.findOne({ where: { id } });
+    const voucherGroup = await VoucherGroup.findOne({ where: { id } });
 
     let usersCurrent = (
       await UserVoucherGroup.find({
@@ -259,7 +248,7 @@ export default class VoucherGroupService {
       const users = await this.createVoucherUsers(bkgReq.name, bkgReq.activeStartDate <= new Date(), bkgReq.amount, bkgCurrent.amount);
       // save new user relations
       const userLinks = users.map(
-        (user) => ({ user, voucherGroup: bkg } as UserVoucherGroup),
+        (user) => ({ user, voucherGroup } as UserVoucherGroup),
       );
       await UserVoucherGroup.save(userLinks);
 
@@ -267,7 +256,6 @@ export default class VoucherGroupService {
       usersCurrent.push(...users);
     }
 
-    // return created voucher group with users
-    return this.asVoucherGroupResponse(bkg, usersCurrent);
+    return { voucherGroup, users: usersCurrent };
   }
 }

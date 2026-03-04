@@ -36,7 +36,7 @@ import BaseUserRequest, {
   PatchUserTypeRequest,
   UpdateUserRequest,
 } from './request/user-request';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
@@ -49,6 +49,7 @@ import { isFail } from '../helpers/specification-validation';
 import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
 import UserService, {
+  asUserResponse,
   parseGetFinancialMutationsFilters,
   parseGetUsersFilters,
   UserFilterParameters,
@@ -448,11 +449,15 @@ export default class UserController extends BaseController {
     }
 
     try {
-      const users = await UserService.getUsers(filters, { take, skip });
+      const [users, count] = await UserService.getUsers(filters, { take, skip });
+      const records = users.map((u) => asUserResponse(u, true));
       if (!await this.canSeeEmail(req, 'all')) {
-        users.records.forEach((u) => { u.email = undefined; });
+        records.forEach((u) => { u.email = undefined; });
       }
-      res.status(200).json(users);
+      res.status(200).json({
+        _pagination: { take, skip, count },
+        records,
+      });
     } catch (error) {
       this.logger.error('Could not get users:', error);
       res.status(500).json('Internal server error.');
@@ -769,11 +774,15 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const members = await UserService.getUsers({ organId }, { take, skip });
+      const [members, count] = await UserService.getUsers({ organId }, { take, skip });
+      const records = members.map((u) => asUserResponse(u, true));
       if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
-        members.records.forEach((u) => { u.email = undefined; });
+        records.forEach((u) => { u.email = undefined; });
       }
-      res.status(200).json(members);
+      res.status(200).json({
+        _pagination: { take, skip, count },
+        records,
+      });
     } catch (error) {
       this.logger.error('Could not get organ members:', error);
       res.status(500).json('Internal server error.');
@@ -803,10 +812,11 @@ export default class UserController extends BaseController {
         return;
       }
 
+      const response = asUserResponse(user, true);
       if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
-        user.email = undefined;
+        response.email = undefined;
       }
-      res.status(200).json(user);
+      res.status(200).json(response);
     } catch (error) {
       this.logger.error('Could not get individual user:', error);
       res.status(500).json('Internal server error.');
@@ -837,7 +847,7 @@ export default class UserController extends BaseController {
       }
 
       const user = await UserService.createUser(body);
-      res.status(201).json(user);
+      res.status(201).json(asUserResponse(user, true));
     } catch (error) {
       this.logger.error('Could not create user:', error);
       res.status(500).json('Internal server error.');
@@ -892,9 +902,8 @@ export default class UserController extends BaseController {
         ...body,
       } as User;
       await User.update(parameters.id, user);
-      res.status(200).json(
-        await UserService.getSingleUser(asNumber(parameters.id)),
-      );
+      const updatedUser = await UserService.getSingleUser(asNumber(parameters.id));
+      res.status(200).json(asUserResponse(updatedUser, true));
     } catch (error) {
       this.logger.error('Could not update user:', error);
       res.status(500).json('Internal server error.');
@@ -1045,8 +1054,9 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const products = await ProductService.getProducts({}, { take, skip }, owner);
-      res.json(products);
+      const [revisions, count] = await ProductService.getProducts({}, { take, skip }, owner);
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all products:', error);
       res.status(500).json('Internal server error.');
@@ -1091,9 +1101,10 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const containers = (await ContainerService
-        .getContainers({}, { take, skip }, user));
-      res.json(containers);
+      const [revisions, count] = await ContainerService
+        .getContainers({}, { take, skip }, user);
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return containers:', error);
       res.status(500).json('Internal server error.');
@@ -1138,9 +1149,10 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const pointsOfSale = (await PointOfSaleService
-        .getPointsOfSale({}, { take, skip }, user));
-      res.json(pointsOfSale);
+      const [revisions, count] = await PointOfSaleService
+        .getPointsOfSale({}, { take, skip }, user);
+      const records = revisions.map((r) => PointOfSaleService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -1199,9 +1211,9 @@ export default class UserController extends BaseController {
         res.status(404).json({});
         return;
       }
-      const transactions = await new TransactionService().getTransactions(filters, { take, skip }, user);
+      const [records, count] = await new TransactionService().getTransactions(filters, { take, skip }, user);
 
-      res.status(200).json(transactions);
+      res.status(200).json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all transactions:', error);
       res.status(500).json('Internal server error.');
@@ -1439,10 +1451,11 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const transfers = (await new TransferService().getTransfers(
+      const [transfers, count] = await new TransferService().getTransfers(
         { ...filters }, { take, skip }, user,
-      ));
-      res.json(transfers);
+      );
+      const records = transfers.map((t) => TransferService.asTransferResponse(t));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return user transfers', error);
       res.status(500).json('Internal server error.');
@@ -1555,7 +1568,7 @@ export default class UserController extends BaseController {
       }
 
       const deposits = await StripeService.getProcessingStripeDepositsFromUser(id);
-      res.status(200).json(deposits);
+      res.status(200).json(deposits.map((d) => StripeService.asStripeDepositResponse(d)));
     } catch (error) {
       this.logger.error('Could not get processing deposits of user:', error);
       res.status(500).json('Internal server error.');
@@ -1901,9 +1914,8 @@ export default class UserController extends BaseController {
       }
 
       await UserService.updateUserType(user, body.userType);
-      res.status(200).json(
-        await UserService.getSingleUser(userId),
-      );
+      const updatedUser = await UserService.getSingleUser(userId);
+      res.status(200).json(asUserResponse(updatedUser, true));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);

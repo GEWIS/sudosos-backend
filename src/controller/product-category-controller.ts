@@ -31,7 +31,7 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 
 export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');
@@ -103,14 +103,18 @@ export default class ProductCategoryController extends BaseController {
       return;
     }
 
-    // Handle requestd
+    // Handle request
     try {
-      const productCategories = await ProductCategoryService
+      const [categories, count] = await ProductCategoryService
         .getProductCategories({
           onlyRoot: req.query.onlyRoot === 'true',
           onlyLeaf: req.query.onlyLeaf === 'true',
         }, { take, skip });
-      res.json(productCategories);
+      res.json(toResponse(
+        categories.map(ProductCategoryService.asProductCategoryResponse),
+        count,
+        { take, skip },
+      ));
     } catch (error) {
       this.logger.error('Could not return all product-categories:', error);
       res.status(500).json('Internal server error.');
@@ -134,7 +138,8 @@ export default class ProductCategoryController extends BaseController {
     this.logger.trace('Create productcategory', body, 'by user', req.token.user);
     try {
       if (await ProductCategoryService.verifyProductCategory(body)) {
-        res.json(await ProductCategoryService.postProductCategory(body));
+        const category = await ProductCategoryService.postProductCategory(body);
+        res.json(ProductCategoryService.asProductCategoryResponse(category));
       } else {
         res.status(400).json('Invalid productcategory.');
       }
@@ -163,10 +168,9 @@ export default class ProductCategoryController extends BaseController {
     try {
       // check if product in database
       const parsedId = parseInt(id, 10);
-      const productCategory = (
-        (await ProductCategoryService.getProductCategories({ id: parsedId })).records[0]);
-      if (productCategory) {
-        res.json(productCategory);
+      const [categories] = await ProductCategoryService.getProductCategories({ id: parsedId });
+      if (categories.length > 0) {
+        res.json(ProductCategoryService.asProductCategoryResponse(categories[0]));
       } else {
         res.status(404).json('Productcategory not found.');
       }
@@ -199,9 +203,9 @@ export default class ProductCategoryController extends BaseController {
     try {
       if (await ProductCategoryService.verifyProductCategory(body)) {
         const parsedId = Number.parseInt(id, 10);
-        const update = await ProductCategoryService.patchProductCategory(parsedId, body);
-        if (update) {
-          res.json(update);
+        const category = await ProductCategoryService.patchProductCategory(parsedId, body);
+        if (category) {
+          res.json(ProductCategoryService.asProductCategoryResponse(category));
         } else {
           res.status(404).json('Productcategory not found.');
         }

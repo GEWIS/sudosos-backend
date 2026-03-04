@@ -27,7 +27,7 @@
 import dinero from 'dinero.js';
 import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
 import Transfer from '../entity/transactions/transfer';
-import { PaginatedTransferResponse, TransferResponse } from '../controller/response/transfer-response';
+import { TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
 import User from '../entity/user/user';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -105,7 +105,7 @@ export default class TransferService extends WithManager {
    */
   public async getTransfers(filters: TransferFilterParameters = {},
     pagination: PaginationParameters = {}, user?: User)
-    : Promise<PaginatedTransferResponse> {
+    : Promise<[Transfer[], number]> {
     const { take, skip } = pagination;
 
     const filterMapping: FilterMapping = {
@@ -174,26 +174,18 @@ export default class TransferService extends WithManager {
       order: { createdAt: 'DESC' },
     };
 
-    const results = await Promise.all([
+    return Promise.all([
       this.manager.find(Transfer, options),
       this.manager.count(Transfer, options),
     ]);
-
-    const records = results[0].map((rawTransfer) => TransferService.asTransferResponse(rawTransfer));
-    return {
-      _pagination: {
-        take, skip, count: results[1],
-      },
-      records,
-    };
   }
 
-  public async postTransfer(request: TransferRequest) : Promise<TransferResponse> {
+  public async postTransfer(request: TransferRequest) : Promise<Transfer> {
     const transfer = await this.createTransfer(request);
     if (transfer.from != undefined && transfer.from.inactiveNotificationSend == true) {
       await UserService.updateUser(transfer.fromId, { inactiveNotificationSend: false });
     }
-    return TransferService.asTransferResponse(transfer);
+    return transfer;
   }
 
   public async verifyTransferRequest(request: TransferRequest) : Promise<boolean> {

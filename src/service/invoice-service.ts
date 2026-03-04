@@ -49,7 +49,6 @@ import TransferService from './transfer-service';
 import TransferRequest from '../controller/request/transfer-request';
 import TransactionService from './transaction-service';
 import { DineroObjectRequest } from '../controller/request/dinero-request';
-import { TransferResponse } from '../controller/response/transfer-response';
 import { TransactionResponse } from '../controller/response/transaction-response';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
@@ -196,9 +195,9 @@ export default class InvoiceService extends WithManager {
    * @param amount - The amount to transfer
    */
   public async createTransfer(forId: number,
-    transactions: Transaction[], amount: DineroObjectRequest): Promise<TransferResponse> {
+    transactions: Transaction[], amount: DineroObjectRequest): Promise<Transfer> {
     const transactionId = transactions.length > 0 ? transactions.map((t) => t.id) : null;
-    const baseTransactions = (await new TransactionService(this.manager).getTransactions({ transactionId })).records;
+    const [baseTransactions] = await new TransactionService(this.manager).getTransactions({ transactionId });
 
     baseTransactions.forEach((t) => {
       if (t.from.id !== forId) throw new Error(`Transaction from ${t.from.id} not from user ${forId}`);
@@ -393,8 +392,8 @@ export default class InvoiceService extends WithManager {
     const { forId, fromDate, tillDate } = params;
     const transactionService = new TransactionService(this.manager);
 
-    const tIds = (await transactionService.getTransactions({ fromId: forId, fromDate, tillDate }, {}))
-      .records.map((t) => t.id);
+    const [tRecords] = await transactionService.getTransactions({ fromId: forId, fromDate, tillDate }, {});
+    const tIds = tRecords.map((t) => t.id);
 
 
     // TODO: Remove after TransactionService migration to `getOptions`
@@ -498,29 +497,18 @@ export default class InvoiceService extends WithManager {
 
   /**
    * Function that returns all the invoices based on the given params.
-   * Returns either BaseInvoiceResponse, that is without InvoiceEntries, or InvoiceResponse
-   * based on if returnInvoiceEntries is set to true.
    * @param params - The filter params to apply
    * @param pagination - The pagination params to apply
    */
   public async getPaginatedInvoices(params: InvoiceFilterParameters = {},
-    pagination: PaginationParameters = {}) {
+    pagination: PaginationParameters = {}): Promise<[Invoice[], number]> {
     const { take, skip } = pagination;
     const options = { ...InvoiceService.getOptions(params), skip, take };
 
     const invoices = await this.manager.find(Invoice, { ...options, take });
-
-    const records = params.returnInvoiceEntries
-      ? InvoiceService.toArrayResponse(invoices)
-      : InvoiceService.toArrayWithoutEntriesResponse(invoices);
-
     const count = await this.manager.count(Invoice, options);
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+
+    return [invoices, count];
   }
 
   public static stateSubQuery(): string {
@@ -582,9 +570,9 @@ export default class InvoiceService extends WithManager {
   /**
    * Get all invoices that contain any subtransaction rows from the given transaction
    * @param transactionId - The transaction ID
-   * @returns Array of invoice responses
+   * @returns Array of invoices
    */
-  public async getTransactionInvoices(transactionId: number): Promise<BaseInvoiceResponse[]> {
+  public async getTransactionInvoices(transactionId: number): Promise<Invoice[]> {
     // Load transaction with all relations needed
     const transaction = await this.manager.findOne(Transaction, {
       where: { id: transactionId },
@@ -614,8 +602,6 @@ export default class InvoiceService extends WithManager {
       });
     });
 
-    // Convert to responses
-    return Array.from(invoiceMap.values())
-      .map((invoice) => InvoiceService.asBaseInvoiceResponse(invoice));
+    return Array.from(invoiceMap.values());
   }
 }

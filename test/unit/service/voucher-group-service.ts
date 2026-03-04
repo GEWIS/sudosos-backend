@@ -22,21 +22,21 @@ import { expect } from 'chai';
 import Sinon from 'sinon';
 import { DataSource } from 'typeorm';
 import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
-import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
-import { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import VoucherGroup from '../../../src/entity/user/voucher-group';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 
-export function bkgEq(req: VoucherGroupParams, res: VoucherGroupResponse): void {
+export function bkgEq(req: VoucherGroupParams, voucherGroup: VoucherGroup, users: User[]): void {
   // check if non user fields are equal
-  expect(res.name).to.equal(req.name);
-  expect(res.activeStartDate).to.equal(req.activeStartDate.toISOString());
-  expect(res.activeEndDate).to.equal(req.activeEndDate.toISOString());
-  expect(res.users).to.be.of.length(req.amount);
-  expect(res.balance.amount).to.equal(req.balance.getAmount());
+  expect(voucherGroup.name).to.equal(req.name);
+  expect(voucherGroup.activeStartDate.toISOString()).to.equal(req.activeStartDate.toISOString());
+  expect(voucherGroup.activeEndDate.toISOString()).to.equal(req.activeEndDate.toISOString());
+  expect(users).to.be.of.length(req.amount);
+  expect(voucherGroup.balance.getAmount()).to.equal(req.balance.getAmount());
 }
 
 export async function seedVoucherGroups(): Promise<{ paramss: VoucherGroupParams[], bkgIds: number[] }> {
@@ -55,10 +55,9 @@ export async function seedVoucherGroups(): Promise<{ paramss: VoucherGroupParams
       amount: 4,
     };
     const params = VoucherGroupService.asVoucherGroupParams(bkgReq);
-    const bkgRes = await VoucherGroupService.createVoucherGroup(params);
-    // paramss.push(params);
-    bkgIds[bkgRes.id - 1] = bkgRes.id;
-    paramss[bkgRes.id - 1] = params;
+    const { voucherGroup } = await VoucherGroupService.createVoucherGroup(params);
+    bkgIds[voucherGroup.id - 1] = voucherGroup.id;
+    paramss[voucherGroup.id - 1] = params;
   }));
   return { paramss, bkgIds };
 }
@@ -226,9 +225,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.createVoucherGroup(params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
         const transfers = await Transfer.find({ where: { toId: user.id } });
@@ -250,9 +249,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.createVoucherGroup(params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -277,8 +276,8 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.createVoucherGroup(params);
-      bkgId = bkgRes.id;
+      const { voucherGroup } = await VoucherGroupService.createVoucherGroup(params);
+      bkgId = voucherGroup.id;
     });
 
     it('should update an existing voucher groups name', async () => {
@@ -294,9 +293,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -318,9 +317,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -342,9 +341,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -366,9 +365,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user active').to.equal(true);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -390,9 +389,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 5,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -414,9 +413,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -438,9 +437,9 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId, params);
-      bkgEq(params, bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const { voucherGroup, users } = await VoucherGroupService.updateVoucherGroup(bkgId, params);
+      bkgEq(params, voucherGroup, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user active').to.equal(false);
         const transfersPos = await Transfer.find({ where: { toId: user.id } });
         const transfersNeg = await Transfer.find({ where: { fromId: user.id } });
@@ -466,8 +465,8 @@ describe('VoucherGroupService', async (): Promise<void> => {
         amount: 4,
       };
       const params = VoucherGroupService.asVoucherGroupParams(req);
-      const bkgRes = await VoucherGroupService.updateVoucherGroup(bkgId + 1, params);
-      expect(bkgRes).to.be.undefined;
+      const result = await VoucherGroupService.updateVoucherGroup(bkgId + 1, params);
+      expect(result).to.be.undefined;
     });
   });
 
@@ -481,10 +480,11 @@ describe('VoucherGroupService', async (): Promise<void> => {
     });
 
     it('should get an voucher group by id', async () => {
-      const bkgRes = (await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds[0] }))
-        .records[0];
-      bkgEq(paramss[0], bkgRes);
-      await Promise.all(bkgRes.users.map(async (user) => {
+      const [bkgs] = await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds[0] });
+      const bkg = bkgs[0];
+      const users = bkg.vouchers.map((v) => v.user);
+      bkgEq(paramss[0], bkg, users);
+      await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
@@ -494,21 +494,21 @@ describe('VoucherGroupService', async (): Promise<void> => {
     });
 
     it('should return undefined when given a wrong id', async () => {
-      const bkgRes = (await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds.length + 1 }))
-        .records[0];
-      expect(bkgRes).to.be.undefined;
+      const [bkgs] = await VoucherGroupService.getVoucherGroups({ bkgId: bkgIds.length + 1 });
+      expect(bkgs[0]).to.be.undefined;
     });
 
     it('should get all voucher groups', async () => {
-      const bkgRes = (await VoucherGroupService.getVoucherGroups({})).records;
-      await Promise.all(bkgRes.map(async (res) => {
-        bkgEq(paramss[res.id - 1], res);
-        await Promise.all(res.users.map(async (user) => {
+      const [bkgs] = await VoucherGroupService.getVoucherGroups({});
+      await Promise.all(bkgs.map(async (bkg) => {
+        const users = bkg.vouchers.map((v) => v.user);
+        bkgEq(paramss[bkg.id - 1], bkg, users);
+        await Promise.all(users.map(async (user) => {
           expect(user.active, 'user inactive').to.equal(false);
           const transfers = await Transfer.find({ where: { toId: user.id } });
           const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
           const balance = balanceAmounts.reduce((a, b) => a + b);
-          expect(balance, 'correct transfers').to.equal(paramss[res.id - 1].balance.getAmount());
+          expect(balance, 'correct transfers').to.equal(paramss[bkg.id - 1].balance.getAmount());
         }));
       }));
     });

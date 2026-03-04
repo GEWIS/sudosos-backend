@@ -39,7 +39,7 @@ import CreateProductParams, {
 import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { verifyCreateProductRequest, verifyProductRequest } from './request/validators/product-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import { asNumber } from '../helpers/validators';
@@ -128,8 +128,9 @@ export default class ProductController extends BaseController {
 
     // Handle request
     try {
-      const products = await ProductService.getProducts({}, { take, skip });
-      res.status(200).json(products);
+      const [revisions, count] = await ProductService.getProducts({}, { take, skip });
+      const records = revisions.map((r) => ProductService.revisionToResponse(r));
+      res.status(200).json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all products:', error);
       res.status(500).json('Internal server error.');
@@ -164,7 +165,12 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.createProduct(request));
+      const revision = await ProductService.createProduct(request);
+      if (!revision) {
+        res.status(404).json('Product owner not found.');
+        return;
+      }
+      res.json(ProductService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not create product:', error);
       res.status(500).json('Internal server error.');
@@ -209,7 +215,12 @@ export default class ProductController extends BaseController {
         return;
       }
 
-      res.json(await ProductService.updateProduct(params));
+      const revision = await ProductService.updateProduct(params);
+      if (!revision) {
+        res.status(500).json('Could not update product.');
+        return;
+      }
+      res.json(ProductService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not update product:', error);
       res.status(500).json('Internal server error.');
@@ -234,10 +245,10 @@ export default class ProductController extends BaseController {
     // handle request
     try {
       // check if product in database
-      const product = (await ProductService
-        .getProducts({ productId: parseInt(id, 10) })).records[0];
-      if (product) {
-        res.json(product);
+      const [revisions] = await ProductService
+        .getProducts({ productId: parseInt(id, 10) });
+      if (revisions.length > 0) {
+        res.json(ProductService.revisionToResponse(revisions[0]));
       } else {
         res.status(404).json('Product not found.');
       }

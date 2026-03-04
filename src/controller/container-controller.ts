@@ -30,11 +30,10 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import ContainerService from '../service/container-service';
-import { PaginatedContainerResponse } from './response/container-response';
 import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { verifyContainerRequest, verifyCreateContainerRequest } from './request/validators/container-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import {
@@ -122,10 +121,11 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      const containers: PaginatedContainerResponse = await ContainerService.getContainers(
+      const [revisions, count] = await ContainerService.getContainers(
         {}, { take, skip },
       );
-      res.json(containers);
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all containers:', error);
       res.status(500).json('Internal server error.');
@@ -152,13 +152,13 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      const container = (await ContainerService
-        .getContainers({ containerId, returnProducts: true })).records[0];
-      if (!container) {
+      const [revisions] = await ContainerService
+        .getContainers({ containerId, returnProducts: true });
+      if (!revisions.length) {
         res.status(404).json('Container not found.');
         return;
       }
-      res.json(container);
+      res.json(ContainerService.revisionToResponse(revisions[0]));
     } catch (error) {
       this.logger.error('Could not return single container:', error);
       res.status(500).json('Internal server error.');
@@ -190,8 +190,10 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      const products = (await ContainerService.getSingleContainer({ containerId, returnProducts: true })).products;
-      res.json(products ? products : []);
+      const revision = await ContainerService.getSingleContainer({ containerId, returnProducts: true });
+      const response = revision ? ContainerService.revisionToResponse(revision) : undefined;
+      const products = response && 'products' in response ? response.products : [];
+      res.json(products);
     } catch (error) {
       this.logger.error('Could not return all products in container:', error);
       res.status(500).json('Internal server error.');
@@ -227,7 +229,8 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ContainerService.createContainer(request));
+      const revision = await ContainerService.createContainer(request);
+      res.json(ContainerService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not create container:', error);
       res.status(500).json('Internal server error.');
@@ -253,10 +256,11 @@ export default class ContainerController extends BaseController {
 
     // Handle request
     try {
-      const containers: PaginatedContainerResponse = await ContainerService.getContainers(
+      const [revisions, count] = await ContainerService.getContainers(
         { public: true }, { take, skip },
       );
-      res.json(containers);
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all public containers:', error);
       res.status(500).json('Internal server error.');
@@ -302,7 +306,8 @@ export default class ContainerController extends BaseController {
         return;
       }
 
-      res.json(await ContainerService.updateContainer(request));
+      const revision = await ContainerService.updateContainer(request);
+      res.json(ContainerService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not update container:', error);
       res.status(500).json('Internal server error.');

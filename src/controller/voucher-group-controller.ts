@@ -32,7 +32,7 @@ import { VoucherGroupRequest } from './request/voucher-group-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import VoucherGroup from '../entity/user/voucher-group';
 import VoucherGroupService from '../service/voucher-group-service';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 
 export default class VoucherGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('VoucherGroupController');
@@ -101,7 +101,9 @@ export default class VoucherGroupController extends BaseController {
 
     // handle request
     try {
-      res.json(await VoucherGroupService.getVoucherGroups({}, { take, skip }));
+      const [bkgs, count] = await VoucherGroupService.getVoucherGroups({}, { take, skip });
+      const records = bkgs.map((bkg) => VoucherGroupService.asVoucherGroupResponse(bkg, bkg.vouchers.map((v) => v.user)));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all voucher groups:', error);
       res.status(500).json('Internal server error.');
@@ -132,7 +134,8 @@ export default class VoucherGroupController extends BaseController {
         res.status(400).json('Invalid voucher group.');
         return;
       }
-      res.json(await VoucherGroupService.createVoucherGroup(voucherGroupParams));
+      const { voucherGroup, users } = await VoucherGroupService.createVoucherGroup(voucherGroupParams);
+      res.json(VoucherGroupService.asVoucherGroupResponse(voucherGroup, users));
     } catch (error) {
       this.logger.error('Could not create voucher group:', error);
       res.status(500).json('Internal server error.');
@@ -157,9 +160,10 @@ export default class VoucherGroupController extends BaseController {
 
     // handle request
     try {
-      const bkg = await VoucherGroupService.getVoucherGroups({ bkgId });
-      if (bkg.records[0]) {
-        res.json(bkg.records[0]);
+      const [bkgs] = await VoucherGroupService.getVoucherGroups({ bkgId });
+      if (bkgs[0]) {
+        const bkg = bkgs[0];
+        res.json(VoucherGroupService.asVoucherGroupResponse(bkg, bkg.vouchers.map((v) => v.user)));
       } else {
         res.status(404).json('Voucher group not found.');
       }
@@ -210,8 +214,9 @@ export default class VoucherGroupController extends BaseController {
         res.status(400).json('Cannot decrease number of VoucherGroupUsers');
         return;
       }
+      const result = await VoucherGroupService.updateVoucherGroup(bkgId, voucherGroupParams);
       res.status(200).json(
-        await VoucherGroupService.updateVoucherGroup(bkgId, voucherGroupParams),
+        VoucherGroupService.asVoucherGroupResponse(result.voucherGroup, result.users),
       );
     } catch (error) {
       this.logger.error('Could not update voucher group:', error);

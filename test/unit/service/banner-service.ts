@@ -63,19 +63,19 @@ describe('BannerService', () => {
 
   describe('getBanners', () => {
     it('should return all banners when no filters are applied', async () => {
-      const result = await BannerService.getBanners({});
-      expect(result.records.length).to.equal(ctx.banners.length);
-      expect(result._pagination.count).to.equal(ctx.banners.length);
+      const [banners, count] = await BannerService.getBanners({});
+      expect(banners.length).to.equal(ctx.banners.length);
+      expect(count).to.equal(ctx.banners.length);
     });
 
     it('should filter by active=true', async () => {
       const filters: BannerFilterParameters = { active: true };
-      const result = await BannerService.getBanners(filters);
+      const [banners, count] = await BannerService.getBanners(filters);
       const activeBanners = ctx.banners.filter((b) => b.active);
 
-      expect(result.records.length).to.equal(activeBanners.length);
-      expect(result._pagination.count).to.equal(activeBanners.length);
-      result.records.forEach((banner) => {
+      expect(banners.length).to.equal(activeBanners.length);
+      expect(count).to.equal(activeBanners.length);
+      banners.forEach((banner) => {
         const originalBanner = ctx.banners.find((b) => b.id === banner.id);
         expect(originalBanner.active).to.be.true;
       });
@@ -83,12 +83,12 @@ describe('BannerService', () => {
 
     it('should filter by active=false', async () => {
       const filters: BannerFilterParameters = { active: false };
-      const result = await BannerService.getBanners(filters);
+      const [banners, count] = await BannerService.getBanners(filters);
       const inactiveBanners = ctx.banners.filter((b) => !b.active);
 
-      expect(result.records.length).to.equal(inactiveBanners.length);
-      expect(result._pagination.count).to.equal(inactiveBanners.length);
-      result.records.forEach((banner) => {
+      expect(banners.length).to.equal(inactiveBanners.length);
+      expect(count).to.equal(inactiveBanners.length);
+      banners.forEach((banner) => {
         const originalBanner = ctx.banners.find((b) => b.id === banner.id);
         expect(originalBanner.active).to.be.false;
       });
@@ -106,9 +106,9 @@ describe('BannerService', () => {
       await Banner.save(expiredBanner);
 
       const filters: BannerFilterParameters = { expired: true };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      for (const banner of result.records) {
+      for (const banner of banners) {
         const dbBanner = await Banner.findOne({ where: { id: banner.id } });
         expect(dbBanner.endDate.getTime()).to.be.at.most(new Date().getTime());
       }
@@ -129,9 +129,9 @@ describe('BannerService', () => {
       await Banner.save(futureBanner);
 
       const filters: BannerFilterParameters = { expired: false };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      for (const banner of result.records) {
+      for (const banner of banners) {
         const dbBanner = await Banner.findOne({ where: { id: banner.id } });
         expect(dbBanner.endDate.getTime()).to.be.greaterThan(new Date().getTime());
       }
@@ -142,32 +142,32 @@ describe('BannerService', () => {
 
     it('should order by startDate ASC', async () => {
       const filters: BannerFilterParameters = { order: 'ASC' };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      for (let i = 1; i < result.records.length; i += 1) {
-        const prevDate = new Date(result.records[i - 1].startDate).getTime();
-        const currDate = new Date(result.records[i].startDate).getTime();
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = banners[i - 1].startDate.getTime();
+        const currDate = banners[i].startDate.getTime();
         expect(currDate).to.be.at.least(prevDate);
       }
     });
 
     it('should order by startDate DESC', async () => {
       const filters: BannerFilterParameters = { order: 'DESC' };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      for (let i = 1; i < result.records.length; i += 1) {
-        const prevDate = new Date(result.records[i - 1].startDate).getTime();
-        const currDate = new Date(result.records[i].startDate).getTime();
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = banners[i - 1].startDate.getTime();
+        const currDate = banners[i].startDate.getTime();
         expect(currDate).to.be.at.most(prevDate);
       }
     });
 
     it('should default to DESC order when order is not specified', async () => {
-      const result = await BannerService.getBanners({});
+      const [banners] = await BannerService.getBanners({});
 
-      for (let i = 1; i < result.records.length; i += 1) {
-        const prevDate = new Date(result.records[i - 1].startDate).getTime();
-        const currDate = new Date(result.records[i].startDate).getTime();
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = banners[i - 1].startDate.getTime();
+        const currDate = banners[i].startDate.getTime();
         expect(currDate).to.be.at.most(prevDate);
       }
     });
@@ -184,9 +184,9 @@ describe('BannerService', () => {
       await Banner.save(activeFutureBanner);
 
       const filters: BannerFilterParameters = { active: true, expired: false };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      for (const banner of result.records) {
+      for (const banner of banners) {
         const dbBanner = await Banner.findOne({ where: { id: banner.id } });
         expect(dbBanner.active).to.be.true;
         expect(dbBanner.endDate.getTime()).to.be.greaterThan(new Date().getTime());
@@ -198,16 +198,16 @@ describe('BannerService', () => {
 
     it('should combine all filters with order', async () => {
       const filters: BannerFilterParameters = { active: true, order: 'ASC' };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      result.records.forEach((banner) => {
+      banners.forEach((banner) => {
         const originalBanner = ctx.banners.find((b) => b.id === banner.id);
         expect(originalBanner.active).to.be.true;
       });
 
-      for (let i = 1; i < result.records.length; i += 1) {
-        const prevDate = new Date(result.records[i - 1].startDate).getTime();
-        const currDate = new Date(result.records[i].startDate).getTime();
+      for (let i = 1; i < banners.length; i += 1) {
+        const prevDate = banners[i - 1].startDate.getTime();
+        const currDate = banners[i].startDate.getTime();
         expect(currDate).to.be.at.least(prevDate);
       }
     });
@@ -215,20 +215,18 @@ describe('BannerService', () => {
     it('should respect pagination parameters', async () => {
       const take = 2;
       const skip = 1;
-      const result = await BannerService.getBanners({}, { take, skip });
+      const [banners] = await BannerService.getBanners({}, { take, skip });
 
-      expect(result.records.length).to.be.at.most(take);
-      expect(result._pagination.take).to.equal(take);
-      expect(result._pagination.skip).to.equal(skip);
+      expect(banners.length).to.be.at.most(take);
     });
 
     it('should filter by bannerId', async () => {
       const targetBanner = ctx.banners[0];
       const filters: BannerFilterParameters = { bannerId: targetBanner.id };
-      const result = await BannerService.getBanners(filters);
+      const [banners] = await BannerService.getBanners(filters);
 
-      expect(result.records.length).to.equal(1);
-      expect(result.records[0].id).to.equal(targetBanner.id);
+      expect(banners.length).to.equal(1);
+      expect(banners[0].id).to.equal(targetBanner.id);
     });
   });
 });

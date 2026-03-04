@@ -32,7 +32,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import userTokenInOrgan from '../helpers/token-helper';
 import { PdfError } from '../errors';
 
@@ -133,8 +133,9 @@ export default class TransferController extends BaseController {
     }
 
     try {
-      const transfers = await new TransferService().getTransfers(filters, { take, skip });
-      res.json(transfers);
+      const [transfers, count] = await new TransferService().getTransfers(filters, { take, skip });
+      const records = transfers.map((t) => TransferService.asTransferResponse(t));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all transfers:', error);
       res.status(500).json('Internal server error.');
@@ -157,10 +158,9 @@ export default class TransferController extends BaseController {
     this.logger.trace('Get single transfer', id, 'by user', req.token.user);
     try {
       const parsedId = parseInt(id, 10);
-      const transfer = (
-        (await new TransferService().getTransfers({ id: parsedId }, {})).records[0]);
-      if (transfer) {
-        res.json(transfer);
+      const [transfers] = await new TransferService().getTransfers({ id: parsedId }, {});
+      if (transfers.length > 0) {
+        res.json(TransferService.asTransferResponse(transfers[0]));
       } else {
         res.status(404).json('Transfer not found.');
       }
@@ -194,7 +194,8 @@ export default class TransferController extends BaseController {
         return;
       }
 
-      res.json(await transferService.postTransfer(request));
+      const transfer = await transferService.postTransfer(request);
+      res.json(TransferService.asTransferResponse(transfer));
     } catch (error) {
       this.logger.error('Could not create transfer:', error);
       res.status(500).json('Internal server error.');

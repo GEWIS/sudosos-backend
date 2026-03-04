@@ -35,7 +35,7 @@ import EventService, {
   EventFilterParameters,
   parseEventFilterParameters, parseUpdateEventRequestParameters, UpdateEventAnswerParams, UpdateEventParams,
 } from '../service/event-service';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { EventAnswerAssignmentRequest, EventAnswerAvailabilityRequest, EventRequest } from './request/event-request';
 import Event from '../entity/event/event';
 import EventShiftAnswer from '../entity/event/event-shift-answer';
@@ -159,8 +159,8 @@ export default class EventController extends BaseController {
 
     // Handle request
     try {
-      const events = await EventService.getEvents(filters, { take, skip });
-      res.json(events);
+      const [events, count] = await EventService.getEvents(filters, { take, skip });
+      res.json(toResponse(events.map((e) => EventService.asBaseEventResponse(e)), count, { take, skip }));
     } catch (e) {
       this.logger.error('Could not return all events:', e);
       res.status(500).json('Internal server error.');
@@ -190,7 +190,7 @@ export default class EventController extends BaseController {
         res.status(404).send();
         return;
       }
-      res.json(event);
+      res.json(EventService.asEventResponse(event));
     } catch (error) {
       this.logger.error('Could not return single event:', error);
       res.status(500).json('Internal server error.');
@@ -226,7 +226,8 @@ export default class EventController extends BaseController {
 
     // handle request
     try {
-      res.json(await EventService.createEvent(params));
+      const event = await EventService.createEvent(params);
+      res.json(EventService.asEventResponse(event));
     } catch (error) {
       this.logger.error('Could not create event:', error);
       res.status(500).json('Internal server error.');
@@ -275,7 +276,8 @@ export default class EventController extends BaseController {
 
     // handle request
     try {
-      res.json(await EventService.updateEvent(parsedId, params));
+      const event = await EventService.updateEvent(parsedId, params);
+      res.json(EventService.asEventResponse(event));
     } catch (error) {
       this.logger.error('Could not update event:', error);
       res.status(500).json('Internal server error.');
@@ -340,7 +342,8 @@ export default class EventController extends BaseController {
       }
 
       await EventService.syncEventShiftAnswers(event);
-      res.status(200).json(await EventService.getSingleEvent(parsedId));
+      const updatedEvent = await EventService.getSingleEvent(parsedId);
+      res.status(200).json(EventService.asEventResponse(updatedEvent));
     } catch (error) {
       this.logger.error('Could not synchronize event answers:', error);
       res.status(500).json('Internal server error.');

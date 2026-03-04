@@ -79,7 +79,8 @@ export default class TermsOfServiceController extends BaseController {
     }
 
     try {
-      res.json(await TermsOfServiceService.getTermsOfService(String(version)));
+      const tos = await TermsOfServiceService.getTermsOfService(String(version));
+      res.json(TermsOfServiceService.asTermsOfServiceResponse(tos));
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {
         res.status(404).json({ error: error.message });

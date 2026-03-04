@@ -29,7 +29,6 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import TransferService from './transfer-service';
 import {
   BaseWriteOffResponse,
-  PaginatedWriteOffResponse,
   WriteOffResponse,
 } from '../controller/response/write-off-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -100,7 +99,7 @@ export default class WriteOffService extends WithManager {
    */
   public static asWriteOffResponse(writeOff: WriteOff): WriteOffResponse {
     return {
-      ...this.asBaseWriteOffResponse(writeOff),
+      ...WriteOffService.asBaseWriteOffResponse(writeOff),
       transfer: writeOff.transfer ? TransferService.asTransferResponse(writeOff.transfer) : undefined,
     };
   }
@@ -109,22 +108,13 @@ export default class WriteOffService extends WithManager {
    * Returns all write-offs with options.
    * @param filters - The filtering parameters.
    * @param pagination - The pagination options.
-   * @returns {Array.<WriteOffResponse>} - all write-offs
+   * @returns {Promise<[WriteOff[], number]>} - all write-offs and total count
    */
-  public static async getWriteOffs(filters: WriteOffFilterParameters = {}, pagination: PaginationParameters = {}): Promise<PaginatedWriteOffResponse> {
+  public static async getWriteOffs(filters: WriteOffFilterParameters = {}, pagination: PaginationParameters = {}): Promise<[WriteOff[], number]> {
     const { take, skip } = pagination;
 
     const options = this.getOptions(filters);
-    const [data, count] = await WriteOff.findAndCount({ ...options, take, skip });
-
-    const records = data.map((writeOff) => this.asWriteOffResponse(writeOff));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return WriteOff.findAndCount({ ...options, take, skip });
   }
 
   private static async getHighVATGroup(): Promise<VatGroup> {
@@ -139,7 +129,7 @@ export default class WriteOffService extends WithManager {
    * @param manager - The entity manager to use
    * @param user - The user to create the write-off for
    */
-  public async createWriteOff(user: User): Promise<WriteOffResponse> {
+  public async createWriteOff(user: User): Promise<WriteOff> {
     const balance = await new BalanceService().getBalance(user.id);
     if (balance.amount.amount > 0) {
       throw new Error('User has balance, cannot create write off');
@@ -167,12 +157,12 @@ export default class WriteOffService extends WithManager {
 
     await this.manager.getRepository(Transfer).save(transfer);
     await this.manager.getRepository(WriteOff).save(writeOff);
-    return WriteOffService.asWriteOffResponse(writeOff);
+    return writeOff;
   }
 
   // TODO: This should be a transaction
   //   wait for BalanceService to be refactored
-  public async createWriteOffAndCloseUser(user: User): Promise<WriteOffResponse> {
+  public async createWriteOffAndCloseUser(user: User): Promise<WriteOff> {
     const writeOff = await this.createWriteOff(user);
     await UserService.closeUser(user.id, true);
     return writeOff;
@@ -189,6 +179,7 @@ export default class WriteOffService extends WithManager {
     };
 
     const relations: FindOptionsRelations<WriteOff> = {
+      to: true,
       transfer: {
         vat: true,
       },

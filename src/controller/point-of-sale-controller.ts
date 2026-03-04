@@ -33,7 +33,7 @@ import PointOfSaleService from '../service/point-of-sale-service';
 import ContainerService from '../service/container-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { asNumber } from '../helpers/validators';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { isFail } from '../helpers/specification-validation';
 import {
   CreatePointOfSaleParams, CreatePointOfSaleRequest,
@@ -47,7 +47,7 @@ import {
 import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
 import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
-import UserService from '../service/user-service';
+import UserService, { asUserResponse } from '../service/user-service';
 import OrganMembership from '../entity/organ/organ-membership';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 
@@ -157,7 +157,8 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json(await PointOfSaleService.createPointOfSale(params));
+      const revision = await PointOfSaleService.createPointOfSale(params);
+      res.json(PointOfSaleService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not create point of sale:', error);
       res.status(500).json('Internal server error.');
@@ -192,8 +193,9 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const pointsOfSale = await PointOfSaleService.getPointsOfSale({}, { take, skip });
-      res.json(pointsOfSale);
+      const [revisions, count] = await PointOfSaleService.getPointsOfSale({}, { take, skip });
+      const records = revisions.map((r) => PointOfSaleService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all point of sales:', error);
       res.status(500).json('Internal server error.');
@@ -224,10 +226,10 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      const pointOfSale = (await PointOfSaleService
-        .getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true })).records[0];
-      if (pointOfSale) {
-        res.json(pointOfSale);
+      const [revisions] = await PointOfSaleService
+        .getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true });
+      if (revisions[0]) {
+        res.json(PointOfSaleService.revisionToResponse(revisions[0]));
       }
     } catch (error) {
       this.logger.error('Could not return point of sale:', error);
@@ -261,19 +263,19 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      const result = await PointOfSaleService.getPointsOfSale({
+      const [revisions] = await PointOfSaleService.getPointsOfSale({
         pointOfSaleId,
         pointOfSaleRevision,
         returnContainers: true,
         returnProducts: true,
       });
 
-      if (!result.records[0]) {
+      if (!revisions[0]) {
         res.status(404).json('Point of Sale revision not found.');
         return;
       }
 
-      res.json(result.records[0]);
+      res.json(PointOfSaleService.revisionToResponse(revisions[0]));
     } catch (error) {
       this.logger.error('Could not return point of sale revision:', error);
       res.status(500).json('Internal server error.');
@@ -319,7 +321,8 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      res.json(await PointOfSaleService.updatePointOfSale(params));
+      const revision = await PointOfSaleService.updatePointOfSale(params);
+      res.json(PointOfSaleService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not update Point of Sale:', error);
       res.status(500).json('Internal server error.');
@@ -346,10 +349,11 @@ export default class PointOfSaleController extends BaseController {
 
     // Handle request
     try {
-      const containers = await ContainerService.getContainers({
+      const [revisions, count] = await ContainerService.getContainers({
         posId: parseInt(id, 10),
       }, { take, skip });
-      res.json(containers);
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all point of sale containers:', error);
       res.status(500).json('Internal server error.');
@@ -373,8 +377,11 @@ export default class PointOfSaleController extends BaseController {
     // Handle request
     try {
       const pointOfSaleId = parseInt(id, 10);
-      const products = (await PointOfSaleService.getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true }))
-        .records.flatMap((p: PointOfSaleWithContainersResponse) => p.containers).flatMap((c) => c.products);
+      const [revisions] = await PointOfSaleService.getPointsOfSale({ pointOfSaleId, returnContainers: true, returnProducts: true });
+      const products = revisions
+        .map((r) => PointOfSaleService.revisionToResponse(r) as PointOfSaleWithContainersResponse)
+        .flatMap((p) => p.containers)
+        .flatMap((c) => c.products);
       res.json(products);
     } catch (error) {
       this.logger.error('Could not return all point of sale products:', error);
@@ -419,10 +426,10 @@ export default class PointOfSaleController extends BaseController {
         return;
       }
 
-      const transactions = await new TransactionService().getTransactions(
+      const [records, count] = await new TransactionService().getTransactions(
         { pointOfSaleId }, { take, skip },
       );
-      res.status(200).json(transactions);
+      res.status(200).json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return point of sale transactions:', error);
       res.status(500).json('Internal server error.');
@@ -465,9 +472,10 @@ export default class PointOfSaleController extends BaseController {
       });
 
       // Get cashiers (no indices needed)
-      const cashiers = await UserService.getUsers({
+      const [cashierUsers] = await UserService.getUsers({
         assignedRoleIds: pos.cashierRoles.map((r) => r.id),
       });
+      const cashierRecords = cashierUsers.map((u) => asUserResponse(u, true));
 
       // Map organ members to response format with indices
       const ownerMembers = organMemberships.map(om => ({
@@ -480,13 +488,13 @@ export default class PointOfSaleController extends BaseController {
       if (!canSeeEmail) {
         ownerResponse.email = undefined;
         ownerMembers.forEach((m) => { m.email = undefined; });
-        cashiers.records.forEach((u) => { u.email = undefined; });
+        cashierRecords.forEach((u) => { u.email = undefined; });
       }
 
       const response = {
         owner: ownerResponse,
         ownerMembers,
-        cashiers: cashiers.records,
+        cashiers: cashierRecords,
       };
       res.json(response);
     } catch (error) {

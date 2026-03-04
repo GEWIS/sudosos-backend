@@ -19,6 +19,7 @@
  */
 
 import WithManager from '../database/with-manager';
+import UserService from './user-service';
 import { FindManyOptions, FindOptionsRelations, In } from 'typeorm';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -157,8 +158,8 @@ export default class InactiveAdministrativeCostService extends WithManager {
       return [];
     }
 
-    const balances = await new BalanceService(this.manager).getBalances({ ids: eligibleUserIds });
-    const eligibleUsersWithPositiveBalance = balances.records
+    const [balanceRecords] = await new BalanceService(this.manager).getBalances({ ids: eligibleUserIds });
+    const eligibleUsersWithPositiveBalance = balanceRecords
       .filter(balance => balance.amount.amount > 0)
       .map(balance => balance.id);
 
@@ -166,7 +167,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       return [];
     }
 
-    const mapped = await User.find({ where: { id: In(eligibleUsersWithPositiveBalance) } });
+    const mapped = await User.find(UserService.getOptions({ id: eligibleUsersWithPositiveBalance }));
     return mapped.map(user => parseUserToBaseResponse(user, false));
   }
 
@@ -255,7 +256,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
       const inactiveAdministrativeCost = await this.createInactiveAdministrativeCost(req);
 
-      const user = await User.findOne({ where: { id: u } });
+      const user = await this.manager.findOne(User, { where: { id: u } });
 
       await Notifier.getInstance().notify({
         type: NotificationTypes.UserGotInactiveAdministrativeCost,
@@ -278,7 +279,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
     : Promise<void> {
 
     await Promise.all(users.userIds.map(async (u) => {
-      const user = await User.findOne({ where: { id: u } });
+      const user = await this.manager.findOne(User, { where: { id: u } });
 
       const value = ServerSettingsStore.getInstance().getSetting('administrativeCostValue');
       if (typeof value !== 'number') {
@@ -316,21 +317,14 @@ export default class InactiveAdministrativeCostService extends WithManager {
    * @param pagination - The pagination params to apply
    */
   public async getPaginatedInactiveAdministrativeCosts(params: InactiveAdministrativeCostFilterParameters = {},
-    pagination: PaginationParameters = {}) {
+    pagination: PaginationParameters = {}): Promise<[InactiveAdministrativeCost[], number]> {
     const { take, skip } = pagination;
     const options = { ...InactiveAdministrativeCostService.getOptions(params), skip, take };
 
-    const inactiveAdministrativeCost = await this.manager.find(InactiveAdministrativeCost, { ...options, take });
-
-    const records = InactiveAdministrativeCostService.toArrayResponse(inactiveAdministrativeCost);
-
+    const inactiveAdministrativeCosts = await this.manager.find(InactiveAdministrativeCost, { ...options, take });
     const count = await this.manager.count(InactiveAdministrativeCost, options);
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+
+    return [inactiveAdministrativeCosts, count];
   }
 
   public static getOptions(params: InactiveAdministrativeCostFilterParameters): FindManyOptions<InactiveAdministrativeCost> {

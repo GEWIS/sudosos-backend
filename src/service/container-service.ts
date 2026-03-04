@@ -29,8 +29,6 @@ import {
   BaseContainerResponse,
   ContainerResponse,
   ContainerWithProductsResponse,
-  PaginatedContainerResponse,
-  PaginatedContainerWithProductResponse,
 } from '../controller/response/container-response';
 import Container from '../entity/container/container';
 import ContainerRevision from '../entity/container/container-revision';
@@ -138,26 +136,16 @@ export default class ContainerService {
    */
   public static async getContainers(
     filters: ContainerFilterParameters = {}, pagination: PaginationParameters = {}, user?: User,
-  ): Promise<PaginatedContainerResponse | PaginatedContainerWithProductResponse> {
+  ): Promise<[ContainerRevision[], number]> {
     const { take, skip } = pagination;
 
     const options = await this.getOptions(filters, user);
-    const [data, count] = await ContainerRevision.findAndCount({ ...options, take, skip });
-
-    const records = data.map((revision) => this.revisionToResponse(revision));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return ContainerRevision.findAndCount({ ...options, take, skip });
   }
 
-  public static async getSingleContainer(filters: ContainerFilterParameters = {}): Promise<ContainerWithProductsResponse> {
+  public static async getSingleContainer(filters: ContainerFilterParameters = {}): Promise<ContainerRevision | undefined> {
     const options = await this.getOptions(filters);
-    const container = await ContainerRevision.findOne({ ...options });
-    return this.revisionToResponse(container) as ContainerWithProductsResponse;
+    return ContainerRevision.findOne({ ...options });
   }
 
   /**
@@ -165,7 +153,7 @@ export default class ContainerService {
    * @param container - The params that describe the container to be created.
    */
   public static async createContainer(container: CreateContainerParams)
-    : Promise<ContainerWithProductsResponse> {
+    : Promise<ContainerRevision> {
     const base = Object.assign(new Container(), {
       public: container.public,
       owner: container.ownerId,
@@ -186,7 +174,7 @@ export default class ContainerService {
    * Updates a container by directly creating a revision.
    * @param update - The container update
    */
-  public static async updateContainer(update: UpdateContainerParams): Promise<ContainerWithProductsResponse> {
+  public static async updateContainer(update: UpdateContainerParams): Promise<ContainerRevision> {
     const base = await Container.findOne({ where: { id: update.id } });
 
     if (base == null) throw new Error('Container not found.');
@@ -217,7 +205,7 @@ export default class ContainerService {
     await this.propagateContainerUpdate(base.id);
 
     const options = await this.getOptions({ containerId: base.id, returnProducts: true });
-    return (this.revisionToResponse(await ContainerRevision.findOne({ ...options }))) as ContainerWithProductsResponse;
+    return ContainerRevision.findOne({ ...options });
   }
 
   /**

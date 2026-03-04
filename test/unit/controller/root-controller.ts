@@ -24,7 +24,7 @@ import RootController from '../../../src/controller/root-controller';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import Banner from '../../../src/entity/banner';
-import { bannerEq } from './banner-controller';
+import { bannerEq } from '../../helpers/banner-helpers';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';

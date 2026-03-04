@@ -64,9 +64,10 @@ describe('WriteOffService', () => {
 
   describe('getWriteOffs function', () => {
     it('should return all write-offs with no input specification', async () => {
-      const res = await WriteOffService.getWriteOffs();
-      expect(res.records.length).to.equal(ctx.writeOffs.length);
-      expect(res.records.map(writeOff => writeOff.id)).to.deep.equalInAnyOrder(ctx.writeOffs.map(writeOff => writeOff.id));
+      const [records, count] = await WriteOffService.getWriteOffs();
+      expect(records.length).to.equal(ctx.writeOffs.length);
+      expect(count).to.equal(ctx.writeOffs.length);
+      expect(records.map(writeOff => writeOff.id)).to.deep.equalInAnyOrder(ctx.writeOffs.map(writeOff => writeOff.id));
     });
   });
   describe('getOptions function', () => {
@@ -99,10 +100,10 @@ describe('WriteOffService', () => {
       const builder = await (await UserFactory()).addBalance(-amount);
       await inUserContext([await builder.get()], async (user: User) => {
         const writeOff = await (new WriteOffService()).createWriteOffAndCloseUser(user);
-        expect(writeOff.amount.amount).to.equal(100);
+        expect(writeOff.amount.getAmount()).to.equal(100);
         expect(writeOff.to.id).to.equal(user.id);
         expect(writeOff.transfer).to.not.be.undefined;
-        expect(writeOff.transfer.amountInclVat.amount).to.equal(100);
+        expect(writeOff.transfer.amountInclVat.getAmount()).to.equal(100);
         expect(writeOff.transfer.to.id).to.equal(user.id);
         const u = await User.findOne({ where: { id: user.id } });
         expect(u.deleted).to.be.true;

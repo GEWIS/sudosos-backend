@@ -28,9 +28,8 @@ import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import InactiveAdministrativeCostService, { parseInactiveAdministrativeCostFilterParameters, InactiveAdministrativeCostFilterParameters } from '../service/inactive-administrative-cost-service';
-import { PaginatedInactiveAdministrativeCostResponse } from './response/inactive-administrative-cost-response';
 import { isFail } from '../helpers/specification-validation';
 import {
   CreateInactiveAdministrativeCostRequest,
@@ -154,10 +153,11 @@ export default class InactiveAdministrativeCostController extends BaseController
 
     // Handle request
     try {
-      const inactiveAdministrativeCosts: PaginatedInactiveAdministrativeCostResponse = await new InactiveAdministrativeCostService().getPaginatedInactiveAdministrativeCosts(
+      const [costs, count] = await new InactiveAdministrativeCostService().getPaginatedInactiveAdministrativeCosts(
         filter, { take, skip },
       );
-      res.json(inactiveAdministrativeCosts);
+      const records = InactiveAdministrativeCostService.toArrayResponse(costs);
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all inactive administrative costs', error);
       res.status(500).json('Internal server error.');

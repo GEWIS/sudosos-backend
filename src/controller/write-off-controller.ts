@@ -29,8 +29,7 @@ import BaseController, { BaseControllerOptions } from './base-controller';
 import log4js, { Logger } from 'log4js';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
-import { PaginatedWriteOffResponse } from './response/write-off-response';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import WriteOffService, { parseWriteOffFilterParameters } from '../service/write-off-service';
 import WriteOff from '../entity/transactions/write-off';
 import WriteOffRequest from './request/write-off-request';
@@ -109,10 +108,10 @@ export default class WriteOffController extends BaseController {
 
     try {
       const filters = parseWriteOffFilterParameters(req);
-      const writeOffs: PaginatedWriteOffResponse = await WriteOffService.getWriteOffs(
+      const [writeOffs, count] = await WriteOffService.getWriteOffs(
         filters, { take, skip },
       );
-      res.json(writeOffs);
+      res.json(toResponse(writeOffs.map(WriteOffService.asWriteOffResponse), count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all write offs:', error);
       res.status(500).json('Internal server error.');
@@ -178,7 +177,7 @@ export default class WriteOffController extends BaseController {
       }
 
       const writeOff = await new WriteOffService().createWriteOffAndCloseUser(user);
-      res.status(200).json(writeOff);
+      res.status(200).json(WriteOffService.asWriteOffResponse(writeOff));
     } catch (error) {
       this.logger.error('Could not create write off:', error);
       res.status(500).json('Internal server error.');

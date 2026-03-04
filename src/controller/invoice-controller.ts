@@ -29,9 +29,8 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { PaginatedInvoiceResponse } from './response/invoice-response';
 import InvoiceService, { InvoiceFilterParameters, parseInvoiceFilterParameters } from '../service/invoice-service';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import {
   CreateInvoiceParams,
   CreateInvoiceRequest,
@@ -161,10 +160,15 @@ export default class InvoiceController extends BaseController {
 
     // Handle request
     try {
-      const invoices: PaginatedInvoiceResponse = await new InvoiceService().getPaginatedInvoices(
+      const [invoices, count] = await new InvoiceService().getPaginatedInvoices(
         filters, { take, skip },
       );
-      res.json(invoices);
+
+      const records = filters.returnInvoiceEntries
+        ? InvoiceService.toArrayResponse(invoices)
+        : InvoiceService.toArrayWithoutEntriesResponse(invoices);
+
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all invoices:', error);
       res.status(500).json('Internal server error.');

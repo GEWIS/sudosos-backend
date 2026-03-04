@@ -34,6 +34,8 @@ import { CreatePermissionParams, UpdateRoleRequest } from './request/rbac-reques
 import { verifyCreatePermissionRequest, verifyUpdateRoleRequest } from './request/validators/rbac-request-spec';
 import { isFail } from '../helpers/specification-validation';
 import Permission from '../entity/rbac/permission';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
+import { asUserResponse } from '../service/user-service';
 
 export default class RbacController extends BaseController {
   private logger: Logger = log4js.getLogger('RbacController');
@@ -179,8 +181,10 @@ export default class RbacController extends BaseController {
         return;
       }
 
-      const users = await RBACService.getRoleUsers(roleId);
-      res.json(users);
+      const pagination = parseRequestPagination(req);
+      const [users, count] = await RBACService.getRoleUsers(roleId, pagination);
+      const records = users.map((u) => asUserResponse(u, true));
+      res.json(toResponse(records, count, pagination));
     } catch (error) {
       this.logger.error('Could not get users of role:', error);
       res.status(500).json('Internal server error.');
