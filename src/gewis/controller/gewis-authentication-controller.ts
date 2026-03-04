@@ -178,12 +178,12 @@ export default class GewisAuthenticationController extends BaseController {
         await UserService.updateUserType(memberUser.user, UserType.MEMBER);
       }
 
-      const response = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: memberUser.user,
         context: { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
         salt: body.nonce,
       });
-      res.json(response);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');

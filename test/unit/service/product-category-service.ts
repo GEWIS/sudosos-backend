@@ -25,7 +25,6 @@ import { expect } from 'chai';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ProductCategory from '../../../src/entity/product/product-category';
-import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
 import ProductCategoryService from '../../../src/service/product-category-service';
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
 import { truncateAllTables } from '../../setup';
@@ -33,25 +32,25 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { ProductCategorySeeder } from '../../seed';
 
 /**
- * Test if the set of productCategory responses is equal to the full set of productCategories.
- * @param response
+ * Test if the set of productCategories is equal to the full set of productCategories.
+ * @param result
  * @param equalset
  */
 function productCategoryEqualset(
-  response: ProductCategoryResponse[],
+  result: ProductCategory[],
   equalset: ProductCategory[],
 ): Boolean {
-  const responseIsSuperSet = response.every((pc1: ProductCategoryResponse) => (
+  const resultIsSuperSet = result.every((pc1: ProductCategory) => (
     equalset.some((pc2: ProductCategory) => (
       pc2.id === pc1.id && pc2.name === pc1.name
     ))
   ));
   const equalsetIsSuperSet = equalset.every((pc1: ProductCategory) => (
-    response.some((pc2: ProductCategoryResponse) => (
+    result.some((pc2: ProductCategory) => (
       pc2.id === pc1.id && pc2.name === pc1.name
     ))
   ));
-  return (responseIsSuperSet && equalsetIsSuperSet);
+  return (resultIsSuperSet && equalsetIsSuperSet);
 }
 
 describe('ProductCategoryService', async (): Promise<void> => {
@@ -85,12 +84,13 @@ describe('ProductCategoryService', async (): Promise<void> => {
 
   describe('getProductCategories function', async (): Promise<void> => {
     it('should return all productCategories', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductCategoryService.getProductCategories();
+      const [categories, count] = await ProductCategoryService.getProductCategories();
 
-      expect(productCategoryEqualset(records, ctx.categories)).to.be.true;
-      expect(records.every(
-        (c: ProductCategoryResponse) => ctx.specification.validateModel(
+      expect(productCategoryEqualset(categories, ctx.categories)).to.be.true;
+
+      const responses = categories.map(ProductCategoryService.asProductCategoryResponse);
+      expect(responses.every(
+        (c) => ctx.specification.validateModel(
           'ProductCategoryResponse',
           c,
           false,
@@ -98,59 +98,57 @@ describe('ProductCategoryService', async (): Promise<void> => {
         ).valid,
       )).to.be.true;
 
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(ctx.categories.length);
+      expect(count).to.equal(ctx.categories.length);
     });
     it('should return a single productCategory if id is specified', async () => {
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ id: ctx.categories[0].id });
 
-      expect(records.length).to.equal(1);
-      expect(records[0].id).to.equal(ctx.categories[0].id);
-      expect(records[0].name).to.equal(ctx.categories[0].name);
+      expect(categories.length).to.equal(1);
+      expect(categories[0].id).to.equal(ctx.categories[0].id);
+      expect(categories[0].name).to.equal(ctx.categories[0].name);
     });
     it('should return nothing if a wrong id is specified', async () => {
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ id: ctx.categories.length + 1 });
 
-      expect(records).to.be.empty;
+      expect(categories).to.be.empty;
     });
     it('should return a single productCategory if name is specified', async () => {
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ name: ctx.categories[0].name });
 
-      expect(records.length).to.equal(1);
-      expect(records[0].id).to.equal(ctx.categories[0].id);
-      expect(records[0].name).to.equal(ctx.categories[0].name);
+      expect(categories.length).to.equal(1);
+      expect(categories[0].id).to.equal(ctx.categories[0].id);
+      expect(categories[0].name).to.equal(ctx.categories[0].name);
     });
     it('should return nothing if a wrong name is specified', async () => {
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ name: 'non-existing' });
 
-      expect(records).to.be.empty;
+      expect(categories).to.be.empty;
     });
     it('should return only root categories', async () => {
       const rootCategories = ctx.categories.filter((c) => c.parent == null);
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ onlyRoot: true });
 
-      expect(records.length).to.equal(rootCategories.length);
-      expect(records.map((r) => r.id)).to.deep.equalInAnyOrder(rootCategories.map((c) => c.id));
-      records.forEach((c) => {
-        expect(c.parent).to.be.undefined;
+      expect(categories.length).to.equal(rootCategories.length);
+      expect(categories.map((r) => r.id)).to.deep.equalInAnyOrder(rootCategories.map((c) => c.id));
+      categories.forEach((c) => {
+        expect(c.parent).to.satisfy((p: any) => p == null);
       });
     });
     it('should return only leaf categories', async () => {
       // Find all categories that are not a parent, i.e. have no children
       const leafCategories = ctx.categories.filter((c) => !ctx.categories
         .some((c2) => c2.parent?.id === c.id));
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ onlyLeaf: true });
 
-      expect(records.length).to.equal(leafCategories.length);
-      expect(records.map((r) => r.id)).to.deep.equalInAnyOrder(leafCategories.map((c) => c.id));
-      records.forEach((c) => {
+      expect(categories.length).to.equal(leafCategories.length);
+      expect(categories.map((r) => r.id)).to.deep.equalInAnyOrder(leafCategories.map((c) => c.id));
+      categories.forEach((c) => {
         const children = ctx.categories.filter((c2) => c2.parent?.id === c.id);
         expect(children).to.be.lengthOf(0);
       });
@@ -158,14 +156,11 @@ describe('ProductCategoryService', async (): Promise<void> => {
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ProductCategoryService
+      const [categories, count] = await ProductCategoryService
         .getProductCategories({}, { take, skip });
 
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(ctx.categories.length);
-      expect(records.length).to.be.at.most(take);
+      expect(count).to.equal(ctx.categories.length);
+      expect(categories.length).to.be.at.most(take);
     });
   });
   describe('postProductCategory function', () => {
@@ -175,11 +170,11 @@ describe('ProductCategoryService', async (): Promise<void> => {
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ id: c2.id });
 
-      expect(records.length).to.equal(1);
-      expect(records[0].name).to.equal(c1.name);
+      expect(categories.length).to.equal(1);
+      expect(categories[0].name).to.equal(c1.name);
 
       // Cleanup
       await ctx.connection.manager.getRepository(ProductCategory).delete(c2.id);
@@ -194,13 +189,13 @@ describe('ProductCategoryService', async (): Promise<void> => {
       expect(c2.parent.id).to.equal(parent.id);
       expect(c2.parent.name).to.equal(parent.name);
 
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ id: c2.id });
 
-      expect(records.length).to.equal(1);
-      expect(records[0].name).to.equal(c1.name);
-      expect(records[0].parent).to.not.be.undefined;
-      expect(records[0].parent.id).to.equal(parent.id);
+      expect(categories.length).to.equal(1);
+      expect(categories[0].name).to.equal(c1.name);
+      expect(categories[0].parent).to.not.be.undefined;
+      expect(categories[0].parent.id).to.equal(parent.id);
 
       // Cleanup
       await ctx.connection.manager.getRepository(ProductCategory).delete(c2.id);
@@ -210,32 +205,32 @@ describe('ProductCategoryService', async (): Promise<void> => {
       const promise = ProductCategoryService.postProductCategory(c1);
       await expect(promise).to.eventually.be.rejected;
 
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories();
-      expect(records).to.be.lengthOf(ctx.categories.length);
+      expect(categories).to.be.lengthOf(ctx.categories.length);
     });
   });
   describe('patchProductCategory function', async (): Promise<void> => {
     it('should be able to patch a productCategory', async () => {
       const category = ctx.categories[0];
       const c1: ProductCategoryRequest = { name: 'test' };
-      const c2: ProductCategoryResponse = await ProductCategoryService
+      const c2: ProductCategory = await ProductCategoryService
         .patchProductCategory(category.id, c1);
       expect(c2).to.not.be.null;
       expect(c2.name).to.equal(c1.name);
 
-      const { records } = await ProductCategoryService
+      const [categories] = await ProductCategoryService
         .getProductCategories({ id: category.id });
 
-      expect(records).to.not.be.null;
-      expect(records[0].name).to.equal(c1.name);
+      expect(categories).to.not.be.null;
+      expect(categories[0].name).to.equal(c1.name);
 
       // Cleanup
       await ctx.connection.manager.save(ProductCategory, category);
     });
     it('should not be able to patch an invalid productCategory id', async () => {
       const c1: ProductCategoryRequest = { name: 'test' };
-      const c2: ProductCategoryResponse = await ProductCategoryService
+      const c2: ProductCategory = await ProductCategoryService
         .patchProductCategory(ctx.categories.length + 1, c1);
       expect(c2).to.be.null;
     });
@@ -243,7 +238,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
   describe('deleteProductCategory function', async (): Promise<void> => {
     it('should be able to delete a productCategory', async () => {
       const category = ctx.categories.find((c) => c.parent != null);
-      const res: ProductCategoryResponse = await ProductCategoryService
+      const res: ProductCategory = await ProductCategoryService
         .deleteProductCategory(category.id);
 
       expect(res).to.not.be.null;
@@ -255,13 +250,13 @@ describe('ProductCategoryService', async (): Promise<void> => {
     });
     it('should not be able to delete a productCategory with children', async () => {
       const category = ctx.categories.find((c) => c.parent == null);
-      const res: ProductCategoryResponse = await ProductCategoryService
+      const res: ProductCategory = await ProductCategoryService
         .deleteProductCategory(category.id);
 
       expect(res).to.be.null;
     });
     it('should not be able to delete an invalid productCategory id', async () => {
-      const res: ProductCategoryResponse = await ProductCategoryService
+      const res: ProductCategory = await ProductCategoryService
         .deleteProductCategory(ctx.categories.length + 1);
 
       expect(res).to.be.null;

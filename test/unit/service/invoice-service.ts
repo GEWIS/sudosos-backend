@@ -34,7 +34,6 @@ import {
 } from '../../../src/controller/response/invoice-response';
 import InvoiceService from '../../../src/service/invoice-service';
 import { CreateInvoiceParams, UpdateInvoiceParams } from '../../../src/controller/request/invoice-request';
-import { TransferResponse } from '../../../src/controller/response/transfer-response';
 import TransactionService from '../../../src/service/transaction-service';
 import { BaseTransactionResponse, TransactionResponse } from '../../../src/controller/response/transaction-response';
 import BalanceService from '../../../src/service/balance-service';
@@ -191,20 +190,18 @@ describe('InvoiceService', () => {
   describe('createTransfer function', () => {
     it('should return a correct Transfer', async () => {
       const toId = (await User.findOne({ where: {} })).id;
-      const transactions: BaseTransactionResponse[] = (
-        await new TransactionService().getTransactions({ fromId: toId })
-      ).records;
+      const [transactions]: [BaseTransactionResponse[], number] = await new TransactionService().getTransactions({ fromId: toId });
       let value = 0;
       transactions.forEach((t) => {
         value += t.value.amount;
       });
 
       expect(transactions).to.not.be.empty;
-      const transfer: TransferResponse = (
+      const transfer: Transfer = (
         await new InvoiceService().createTransfer(toId,
           await AppDataSource.manager.find(Transaction, { where: { id: In(transactions.map((t) => t.id)) } }),
           { amount: value, currency: 'EUR', precision: 2 }));
-      expect(transfer.amountInclVat.amount).to.be.equal(value);
+      expect(transfer.amountInclVat.getAmount()).to.be.equal(value);
       expect(transfer.to.id).to.be.equal(toId);
     });
   });
@@ -845,7 +842,7 @@ describe('InvoiceService', () => {
       expect(invoices.length).to.equal(0);
     });
 
-    it('should return all relations needed for BaseInvoiceResponse', async () => {
+    it('should return all relations needed for BaseInvoiceResponse conversion', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
 
@@ -860,13 +857,19 @@ describe('InvoiceService', () => {
         expect(invoices).to.be.an('array');
         expect(invoices.length).to.equal(1);
 
-        // Verify all required fields for BaseInvoiceResponse are present
+        // Verify all required relations are loaded on the Invoice entity
         const returnedInvoice = invoices[0];
         expect(returnedInvoice.id).to.be.a('number');
         expect(returnedInvoice.to).to.not.be.undefined;
         expect(returnedInvoice.to.id).to.equal(debtor.id);
-        expect(returnedInvoice.currentState).to.not.be.undefined;
+        expect(returnedInvoice.invoiceStatus).to.not.be.undefined;
+        expect(returnedInvoice.invoiceStatus.length).to.be.greaterThan(0);
         expect(returnedInvoice.transfer).to.not.be.undefined;
+
+        // Verify the entity can be successfully converted to BaseInvoiceResponse
+        const response = InvoiceService.asBaseInvoiceResponse(returnedInvoice);
+        expect(response.currentState).to.not.be.undefined;
+        expect(response.to.id).to.equal(debtor.id);
       });
     });
   });

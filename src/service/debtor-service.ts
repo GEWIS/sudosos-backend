@@ -32,7 +32,6 @@ import {
   BaseFineHandoutEventResponse,
   FineHandoutEventResponse,
   FineResponse,
-  PaginatedFineHandoutEventResponse,
   UserFineGroupResponse,
   UserToFineResponse,
 } from '../controller/response/debtor-response';
@@ -121,7 +120,7 @@ export default class DebtorService extends WithManager {
   /**
    * Get a list of all fine handout events in chronological order
    */
-  public async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<PaginatedFineHandoutEventResponse> {
+  public async getFineHandoutEvents(pagination: PaginationParameters = {}): Promise<[FineHandoutEvent[], number]> {
     const { take, skip } = pagination;
 
     const events = await this.manager.find(FineHandoutEvent, { take, skip,
@@ -130,27 +129,18 @@ export default class DebtorService extends WithManager {
     });
     const count = await this.manager.count(FineHandoutEvent);
 
-    const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return [events, count];
   }
 
   /**
    * Return the fine handout event with the given id. Includes all its fines with the corresponding user
    */
-  public async getSingleFineHandoutEvent(id: number): Promise<FineHandoutEventResponse> {
-    const fineHandoutEvent = await this.manager.findOne(FineHandoutEvent, {
+  public async getSingleFineHandoutEvent(id: number): Promise<FineHandoutEvent | undefined> {
+    return this.manager.findOne(FineHandoutEvent, {
       where: { id },
       relations: { fines: { userFineGroup: { user: true } } },
       order: { createdAt: 'DESC' },
     });
-
-    return DebtorService.asFineHandoutEventResponse(fineHandoutEvent);
   }
 
   /**
@@ -172,8 +162,8 @@ export default class DebtorService extends WithManager {
     })));
 
     const [debtorsOnReferenceDate, ...debtors] = balances;
-    const userBalancesToFine = debtorsOnReferenceDate.records
-      .filter((d1) => debtors.every((b) => b.records
+    const userBalancesToFine = debtorsOnReferenceDate[0]
+      .filter((d1) => debtors.every((b) => b[0]
         .some((d2) => d1.id === d2.id)));
 
     return userBalancesToFine.map((u) => {
@@ -181,7 +171,7 @@ export default class DebtorService extends WithManager {
       return {
         id: u.id,
         fineAmount: fine.toObject(),
-        balances: balances.map((balance) => balance.records.find((b) => b.id === u.id)),
+        balances: balances.map((balance) => balance[0].find((b) => b.id === u.id)),
       };
     });
   }
@@ -194,14 +184,14 @@ export default class DebtorService extends WithManager {
    */
   public async handOutFines({
     referenceDate, userIds,
-  }: HandOutFinesParams, createdBy: User): Promise<FineHandoutEventResponse> {
+  }: HandOutFinesParams, createdBy: User): Promise<FineHandoutEvent> {
     const previousFineGroup = (await this.manager.find(FineHandoutEvent, {
       order: { id: 'desc' },
       relations: ['fines', 'fines.userFineGroup'],
       take: 1,
     }))[0];
 
-    const balances = await new BalanceService(this.manager).getBalances({
+    const [balanceRecords] = await new BalanceService(this.manager).getBalances({
       date: referenceDate,
       ids: userIds,
     });
@@ -218,7 +208,7 @@ export default class DebtorService extends WithManager {
       const notifications: { user: User, notificationOption: UserGotFinedOptions }[] = [];
 
       // Create and save the fine information
-      let fines: Fine[] = await Promise.all(balances.records.map(async (b) => {
+      let fines: Fine[] = await Promise.all(balanceRecords.map(async (b) => {
         const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
         const user = await manager.findOne(User, { where: { id: b.id }, relations: ['currentFines', 'currentFines.user', 'currentFines.fines'] });
         const amount = calculateFine(b.amount);
@@ -272,15 +262,8 @@ export default class DebtorService extends WithManager {
       ),
     );
 
-    return {
-      id: fineHandoutEvent1.id,
-      createdAt: fineHandoutEvent1.createdAt.toISOString(),
-      updatedAt: fineHandoutEvent1.updatedAt.toISOString(),
-      referenceDate: fineHandoutEvent1.referenceDate.toISOString(),
-      createdBy: parseUserToBaseResponse(fineHandoutEvent1.createdBy, false),
-      fines: fines1.map((f) => DebtorService.asFineResponse(f)),
-      count: fines1.length,
-    };
+    fineHandoutEvent1.fines = fines1;
+    return fineHandoutEvent1;
   }
 
   /**

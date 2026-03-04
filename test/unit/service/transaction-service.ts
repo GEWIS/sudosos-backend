@@ -531,32 +531,28 @@ describe('TransactionService', (): void => {
 
   describe('Get all transactions', () => {
     it('should return all transactions', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await new TransactionService().getTransactions({});
+      const [records, count] = await new TransactionService().getTransactions({});
 
       expect(records.length).to.equal(ctx.transactions.length);
       records.map((t) => verifyBaseTransactionEntity(ctx.spec, t));
 
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(ctx.transactions.length);
+      expect(count).to.equal(ctx.transactions.length);
     });
 
     it('should return a paginated list when take is set', async () => {
       const take = 69;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await new TransactionService().getTransactions({}, { take });
+      const [records, count] = await new TransactionService().getTransactions({}, { take });
 
       const total = await Transaction.count();
 
       expect(records.length).to.equal(take);
-      expect(_pagination.count).to.equal(total);
+      expect(count).to.equal(total);
     });
 
     it('should not return a paginated list when skip is set', async () => {
       const skip = 69;
       const take = 999999999999;
-      const { records } = await new TransactionService().getTransactions({}, { take, skip });
+      const [records] = await new TransactionService().getTransactions({}, { take, skip });
 
       expect(records.length).to.equal(ctx.transactions.length - 69);
     });
@@ -564,12 +560,11 @@ describe('TransactionService', (): void => {
     it('should return a paginated list when take and skip are set', async () => {
       const skip = 120;
       const take = 50;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await new TransactionService().getTransactions({}, { take, skip });
+      const [records, count] = await new TransactionService().getTransactions({}, { take, skip });
 
       const total = await Transaction.count();
 
-      expect(_pagination.count).to.equal(total);
+      expect(count).to.equal(total);
       expect(records.length).to.equal(
         Math.min(take, ctx.transactions.length - skip),
       );
@@ -577,7 +572,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on fromId', async () => {
       const fromId = 1;
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         fromId,
       });
 
@@ -592,7 +587,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on createdById', async () => {
       const createdById = 1;
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         createdById,
       });
 
@@ -607,7 +602,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on toId', async () => {
       const toId = 7;
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         toId,
       });
       const transactionIds = ctx.transactions.map((t) => {
@@ -628,7 +623,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on point of sale', async () => {
       const pointOfSale = { id: 14 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         pointOfSaleId: pointOfSale.id,
       });
 
@@ -642,7 +637,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on point of sale with revision', async () => {
       const pointOfSale = { id: 14, revision: 2 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         pointOfSaleId: pointOfSale.id,
         pointOfSaleRevision: pointOfSale.revision,
       });
@@ -658,7 +653,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on container', async () => {
       const container = { id: 11 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         containerId: container.id,
       });
 
@@ -673,7 +668,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on container with revision', async () => {
       const container = { id: 11, revision: 2 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         containerId: container.id,
         containerRevision: container.revision,
       });
@@ -690,7 +685,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on product', async () => {
       const product = { id: 44 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         productId: product.id,
       });
 
@@ -706,7 +701,7 @@ describe('TransactionService', (): void => {
 
     it('should filter on product with revision', async () => {
       const product = { id: 44, revision: 2 };
-      const { records } = await new TransactionService().getTransactions({
+      const [records] = await new TransactionService().getTransactions({
         productId: product.id,
         productRevision: product.revision,
       });
@@ -724,7 +719,7 @@ describe('TransactionService', (): void => {
 
     it('should return transactions newer than date', async () => {
       let fromDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      let { records } = await new TransactionService().getTransactions({
+      let [records] = await new TransactionService().getTransactions({
         fromDate,
       });
 
@@ -741,16 +736,16 @@ describe('TransactionService', (): void => {
       });
 
       fromDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
-      records = (await new TransactionService().getTransactions({
+      [records] = await new TransactionService().getTransactions({
         fromDate,
-      })).records;
+      });
 
       expect(records.length).to.equal(0);
     });
 
     it('should return transactions older than date', async () => {
       let tillDate = new Date(ctx.transactions[0].createdAt.getTime() + 1000 * 60 * 60 * 24);
-      let { records } = await new TransactionService().getTransactions({
+      let [records] = await new TransactionService().getTransactions({
         tillDate,
       });
 
@@ -767,9 +762,9 @@ describe('TransactionService', (): void => {
       });
 
       tillDate = new Date(ctx.transactions[0].createdAt.getTime() - 1000 * 60 * 60 * 24);
-      records = (await new TransactionService().getTransactions({
+      [records] = await new TransactionService().getTransactions({
         tillDate,
-      })).records;
+      });
 
       expect(records.length).to.equal(0);
     });
@@ -777,7 +772,7 @@ describe('TransactionService', (): void => {
     it('should not return transactions createdBy given user', async () => {
       const transaction = ctx.transactions[0];
 
-      const records = (await new TransactionService().getTransactions({ excludeById: transaction.createdBy.id })).records;
+      const [records] = await new TransactionService().getTransactions({ excludeById: transaction.createdBy.id });
       records.forEach((r) => {
         expect(r.createdBy).to.not.eq(transaction.createdBy.id);
       });
@@ -787,7 +782,7 @@ describe('TransactionService', (): void => {
   describe('Get all transactions involving a user', () => {
     it('should return a paginated list', async () => {
       const user = ctx.users[0];
-      const { records } = await new TransactionService().getTransactions({}, {}, user);
+      const [records] = await new TransactionService().getTransactions({}, {}, user);
 
       const actualTransactions = await AppDataSource.createQueryBuilder(Transaction, 'transaction')
         .leftJoinAndSelect('transaction.from', 'from')
@@ -808,7 +803,7 @@ describe('TransactionService', (): void => {
   });
 
   describe('Create a transaction', () => {
-    it('should return a transaction response corresponding to the saved transaction', async () => {
+    it('should return a transaction entity corresponding to the saved transaction', async () => {
       // check response without prices
       const transactionService = new TransactionService();
       const verification = await transactionService.verifyTransaction(ctx.validTransReq);
@@ -816,8 +811,11 @@ describe('TransactionService', (): void => {
         throw new Error('Invalid transaction in test');
       }
       const savedTransaction = await transactionService.createTransaction(ctx.validTransReq, verification.context);
-      const correctResponse = await new TransactionService().getSingleTransaction(savedTransaction.id);
-      expect(savedTransaction, 'request not saved correctly').to.eql(correctResponse);
+      const fetchedTransaction = await new TransactionService().getSingleTransaction(savedTransaction.id);
+      expect(savedTransaction.id, 'request not saved correctly').to.equal(fetchedTransaction.id);
+
+      // Convert to response to check prices
+      const correctResponse = await new TransactionService().asTransactionResponse(fetchedTransaction);
 
       // check transaction response prices
       expect(correctResponse.totalPriceInclVat, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
@@ -852,7 +850,7 @@ describe('TransactionService', (): void => {
   });
 
   describe('Delete a transaction', () => {
-    it('should return a transaction response corresponding to the deleted transaction', async () => {
+    it('should return a transaction entity corresponding to the deleted transaction', async () => {
       const transactionService = new TransactionService();
       const verification = await transactionService.verifyTransaction(ctx.validTransReq);
       if (!verification.valid || !verification.context) {
@@ -860,7 +858,7 @@ describe('TransactionService', (): void => {
       }
       const savedTransaction = await transactionService.createTransaction(ctx.validTransReq, verification.context);
       const deletedTransaction = await new TransactionService().deleteTransaction(savedTransaction.id);
-      expect(deletedTransaction, 'return value incorrect').to.eql(savedTransaction);
+      expect(deletedTransaction.id, 'return value incorrect').to.equal(savedTransaction.id);
 
       // check deletion of transaction
       expect(await Transaction.findOne({ where: { id: deletedTransaction.id } }), 'transaction not deleted').to.be.null;
@@ -875,19 +873,22 @@ describe('TransactionService', (): void => {
         }));
       }));
 
+      // Convert to response to check prices
+      const deletedResponse = await new TransactionService().asTransactionResponse(deletedTransaction);
+
       // check transaction response prices
-      expect(deletedTransaction.totalPriceInclVat, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
+      expect(deletedResponse.totalPriceInclVat, 'top level price incorrect').to.eql(ctx.validTransReq.totalPriceInclVat);
 
       // check sub transaction response prices
-      for (let i = 0; i < deletedTransaction.subTransactions.length; i += 1) {
-        expect(deletedTransaction.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
+      for (let i = 0; i < deletedResponse.subTransactions.length; i += 1) {
+        expect(deletedResponse.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
           .to.eql(ctx.validTransReq.subTransactions[i].totalPriceInclVat);
 
         // check sub transaction row response prices
         for (let j = 0;
-          j < deletedTransaction.subTransactions[i].subTransactionRows.length;
+          j < deletedResponse.subTransactions[i].subTransactionRows.length;
           j += 1) {
-          expect(deletedTransaction.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
+          expect(deletedResponse.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
             .to.eql(ctx.validTransReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }
@@ -895,7 +896,7 @@ describe('TransactionService', (): void => {
   });
 
   describe('Update a transaction', () => {
-    it('should return a transaction response corresponding to the updated transaction', async () => {
+    it('should return a transaction entity corresponding to the updated transaction', async () => {
       // create a transaction
       const transactionService = new TransactionService();
       const verification = await transactionService.verifyTransaction(ctx.validTransReq);
@@ -916,14 +917,11 @@ describe('TransactionService', (): void => {
       );
 
       // check if currently saved transaction is updated
-      expect(savedTransaction, 'transaction not updated').to.not.eql(await new TransactionService().getSingleTransaction(
-        savedTransaction.id,
-      ));
-      expect(updatedTransaction, 'transaction updated incorrectly').to.eql(await new TransactionService().getSingleTransaction(
-        savedTransaction.id,
-      ));
+      const currentTransaction = await new TransactionService().getSingleTransaction(savedTransaction.id);
+      expect(savedTransaction.id, 'transaction not updated').to.equal(currentTransaction.id);
+      expect(updatedTransaction.id, 'transaction updated incorrectly').to.equal(currentTransaction.id);
 
-      // check deletion of sub transactions
+      // check deletion of sub transactions (old ones from saved)
       await Promise.all(savedTransaction.subTransactions.map(async (sub) => {
         expect(await SubTransaction.findOne({ where: { id: sub.id } }), 'sub transaction not deleted').to.be.null;
 
@@ -933,16 +931,19 @@ describe('TransactionService', (): void => {
         }));
       }));
 
+      // Convert to response to check prices
+      const updatedResponse = await new TransactionService().asTransactionResponse(updatedTransaction);
+
       // check transaction response prices
-      expect(updatedTransaction.totalPriceInclVat, 'top level price incorrect').to.eql(updateReq.totalPriceInclVat);
+      expect(updatedResponse.totalPriceInclVat, 'top level price incorrect').to.eql(updateReq.totalPriceInclVat);
 
       // check sub transaction response prices
-      for (let i = 0; i < updatedTransaction.subTransactions.length; i += 1) {
-        expect(updatedTransaction.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
+      for (let i = 0; i < updatedResponse.subTransactions.length; i += 1) {
+        expect(updatedResponse.subTransactions[i].totalPriceInclVat, 'sub transaction price incorrect')
           .to.eql(updateReq.subTransactions[i].totalPriceInclVat);
 
         // sort on subtransactionrow id for comparing
-        updatedTransaction.subTransactions[i].subTransactionRows.sort((a, b) => {
+        updatedResponse.subTransactions[i].subTransactionRows.sort((a, b) => {
           if (a.id < b.id) return -1;
           if (a.id > b.id) return 1;
           return 0;
@@ -950,9 +951,9 @@ describe('TransactionService', (): void => {
 
         // check sub transaction row response prices
         for (let j = 0;
-          j < updatedTransaction.subTransactions[i].subTransactionRows.length;
+          j < updatedResponse.subTransactions[i].subTransactionRows.length;
           j += 1) {
-          expect(updatedTransaction.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
+          expect(updatedResponse.subTransactions[i].subTransactionRows[j].totalPriceInclVat, 'sub transaction row price incorrect')
             .to.eql(updateReq.subTransactions[i].subTransactionRows[j].totalPriceInclVat);
         }
       }

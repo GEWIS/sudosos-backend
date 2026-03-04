@@ -35,6 +35,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
+import { AuthenticationResult } from '../../../src/service/authentication-service';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
@@ -43,8 +44,6 @@ import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/auth
 import WebSocketService from '../../../src/service/websocket-service';
 import QRService from '../../../src/service/qr-service';
 import AuthenticationService from '../../../src/service/authentication-service';
-import { UserResponse } from '../../../src/controller/response/user-response';
-import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import sinon from 'sinon';
 import AuthenticationSecurePinRequest from '../../../src/controller/request/authentication-secure-pin-request';
 import AuthenticationSecureNfcRequest from '../../../src/controller/request/authentication-secure-nfc-request';
@@ -348,24 +347,11 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockUserResponse: UserResponse = {
-        id: ctx.memberUser.id,
-        firstName: ctx.memberUser.firstName,
-        lastName: ctx.memberUser.lastName,
-        active: ctx.memberUser.active,
-        deleted: ctx.memberUser.deleted,
-        type: ctx.memberUser.type,
-        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
-        acceptedToS: ctx.memberUser.acceptedToS,
-      };
-
-      const mockToken: AuthenticationResponse = {
+      const mockToken: AuthenticationResult = {
         token: 'mock-jwt-token',
-        user: mockUserResponse,
+        user: ctx.memberUser,
         roles: [],
         organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
       };
 
       // Setup stubs
@@ -386,10 +372,13 @@ describe('AuthenticationSecureController', () => {
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
 
       // Verify WebSocket emission through mocked Socket.IO
+      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(
+        mockToken.user, mockToken.roles, mockToken.organs, mockToken.token,
+      );
       expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
       expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
         sessionId: pendingQr.sessionId,
-        token: mockToken,
+        token: expectedAuthResponse,
       })).to.be.true;
     });
 
@@ -498,24 +487,12 @@ describe('AuthenticationSecureController', () => {
 
     it('should return 500 on QR confirm service error', async () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
-      const mockUserResponse: UserResponse = {
-        id: ctx.memberUser.id,
-        firstName: ctx.memberUser.firstName,
-        lastName: ctx.memberUser.lastName,
-        active: ctx.memberUser.active,
-        deleted: ctx.memberUser.deleted,
-        type: ctx.memberUser.type,
-        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
-        acceptedToS: ctx.memberUser.acceptedToS,
-      };
 
-      const mockToken: AuthenticationResponse = {
+      const mockToken: AuthenticationResult = {
         token: 'mock-jwt-token',
-        user: mockUserResponse,
+        user: ctx.memberUser,
         roles: [],
         organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -538,24 +515,11 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockUserResponse: UserResponse = {
-        id: ctx.adminUser.id,
-        firstName: ctx.adminUser.firstName,
-        lastName: ctx.adminUser.lastName,
-        active: ctx.adminUser.active,
-        deleted: ctx.adminUser.deleted,
-        type: ctx.adminUser.type,
-        canGoIntoDebt: ctx.adminUser.canGoIntoDebt,
-        acceptedToS: ctx.adminUser.acceptedToS,
-      };
-
-      const mockToken: AuthenticationResponse = {
+      const mockToken: AuthenticationResult = {
         token: 'mock-jwt-token',
-        user: mockUserResponse,
+        user: ctx.adminUser,
         roles: [],
         organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -570,10 +534,13 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.deep.equal({ message: 'QR code confirmed successfully.' });
 
       // Verify WebSocket emission with admin user
+      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(
+        mockToken.user, mockToken.roles, mockToken.organs, mockToken.token,
+      );
       expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
       expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
         sessionId: pendingQr.sessionId,
-        token: mockToken,
+        token: expectedAuthResponse,
       })).to.be.true;
     });
 
@@ -581,24 +548,11 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockUserResponse: UserResponse = {
-        id: ctx.memberUser.id,
-        firstName: ctx.memberUser.firstName,
-        lastName: ctx.memberUser.lastName,
-        active: ctx.memberUser.active,
-        deleted: ctx.memberUser.deleted,
-        type: ctx.memberUser.type,
-        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
-        acceptedToS: ctx.memberUser.acceptedToS,
-      };
-
-      const mockToken: AuthenticationResponse = {
+      const mockToken: AuthenticationResult = {
         token: 'mock-jwt-token',
-        user: mockUserResponse,
+        user: ctx.memberUser,
         roles: [],
         organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -620,24 +574,11 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockUserResponse: UserResponse = {
-        id: ctx.memberUser.id,
-        firstName: ctx.memberUser.firstName,
-        lastName: ctx.memberUser.lastName,
-        active: ctx.memberUser.active,
-        deleted: ctx.memberUser.deleted,
-        type: ctx.memberUser.type,
-        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
-        acceptedToS: ctx.memberUser.acceptedToS,
-      };
-
-      const mockToken: AuthenticationResponse = {
+      const mockToken: AuthenticationResult = {
         token: 'mock-jwt-token',
-        user: mockUserResponse,
+        user: ctx.memberUser,
         roles: [],
         organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -662,25 +603,9 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockUserResponse: UserResponse = {
-        id: ctx.memberUser.id,
-        firstName: ctx.memberUser.firstName,
-        lastName: ctx.memberUser.lastName,
-        active: ctx.memberUser.active,
-        deleted: ctx.memberUser.deleted,
-        type: ctx.memberUser.type,
-        canGoIntoDebt: ctx.memberUser.canGoIntoDebt,
-        acceptedToS: ctx.memberUser.acceptedToS,
-      };
-
-      const mockToken: AuthenticationResponse = {
-        token: 'mock-jwt-token',
-        user: mockUserResponse,
-        roles: [],
-        organs: [],
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
-        rolesWithPermissions: [],
-      };
+      const mockToken: AuthenticationResponse = AuthenticationService.asAuthenticationResponse(
+        ctx.memberUser, [], [], 'mock-jwt-token',
+      );
 
       // Call WebSocketService.emitQRConfirmed directly
       WebSocketService.emitQRConfirmed(pendingQr, mockToken);

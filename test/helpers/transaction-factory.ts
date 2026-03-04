@@ -88,14 +88,15 @@ export async function getAPOSWithProducts(index? : number):
 Promise<PointOfSaleWithContainersResponse> {
   const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] })).filter((p) => p.containers.length > 0);
   const pointOfSale = wrapGet(posList, index ?? 0);
-  return (await PointOfSaleService.getPointsOfSale(
+  const [revisions] = await PointOfSaleService.getPointsOfSale(
     {
       pointOfSaleId: pointOfSale.pointOfSale.id,
       pointOfSaleRevision: pointOfSale.revision,
       returnContainers: true,
       returnProducts: true,
     },
-  )).records[0] as PointOfSaleWithContainersResponse;
+  );
+  return PointOfSaleService.revisionToResponse(revisions[0]) as PointOfSaleWithContainersResponse;
 }
 
 /**
@@ -159,12 +160,12 @@ export async function requestToTransaction(
       if (!verification.valid || !verification.context) {
         throw new Error('Invalid transaction in factory');
       }
-      const transactionResponse = await transactionService.createTransaction(t, verification.context);
+      const savedTransaction = await transactionService.createTransaction(t, verification.context);
       transactions.push({
-        tId: transactionResponse.id,
-        amount: transactionResponse.totalPriceInclVat.amount,
+        tId: savedTransaction.id,
+        amount: t.totalPriceInclVat.amount,
       });
-      total += transactionResponse.totalPriceInclVat.amount;
+      total += t.totalPriceInclVat.amount;
     }),
   );
   return { transactions, total };

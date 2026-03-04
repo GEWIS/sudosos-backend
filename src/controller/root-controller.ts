@@ -28,7 +28,7 @@ import { Request, Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import BannerService from '../service/banner-service';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ServerStatusResponse } from './response/server-status-response';
@@ -103,7 +103,12 @@ export default class RootController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getBanners({}, { take, skip }));
+      const [banners, count] = await BannerService.getBanners({}, { take, skip });
+      res.json(toResponse(
+        banners.map(BannerService.asBannerResponse),
+        count,
+        { take, skip },
+      ));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -142,7 +147,8 @@ export default class RootController extends BaseController {
    */
   public async getLatestTOS(req: Request, res: Response): Promise<void> {
     try {
-      res.json(await TermsOfServiceService.getLatestTermsOfService());
+      const tos = await TermsOfServiceService.getLatestTermsOfService();
+      res.json(TermsOfServiceService.asTermsOfServiceResponse(tos));
     } catch (error) {
       this.logger.error('Could not get latest Terms of Service', error);
       res.status(500).json('Internal server error.');

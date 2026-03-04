@@ -25,7 +25,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import TokenHandler from '../../../src/authentication/token-handler';
 import VoucherGroupController from '../../../src/controller/voucher-group-controller';
-import { VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
+import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
 import VoucherGroupResponse from '../../../src/controller/response/voucher-group-response';
 import Database from '../../../src/database/database';
 import VoucherGroup from '../../../src/entity/user/voucher-group';
@@ -42,12 +42,22 @@ import {
   defaultPagination,
   PaginationResult,
 } from '../../../src/helpers/pagination';
-import { bkgEq } from '../service/voucher-group-service';
 import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder } from '../../seed';
+
+/**
+ * Compares VoucherGroupParams against a VoucherGroupResponse (HTTP response format).
+ */
+function bkgResponseEq(req: VoucherGroupParams, res: VoucherGroupResponse): void {
+  expect(res.name).to.equal(req.name);
+  expect(res.activeStartDate).to.equal(req.activeStartDate.toISOString());
+  expect(res.activeEndDate).to.equal(req.activeEndDate.toISOString());
+  expect(res.users).to.be.of.length(req.amount);
+  expect(res.balance.amount).to.equal(req.balance.getAmount());
+}
 
 async function saveBKG(
   bkgReq: VoucherGroupRequest,
@@ -294,7 +304,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
 
       // success code
       expect(res.status, 'status incorrect on valid post').to.equal(200);
-      bkgEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), res.body);
+      bkgResponseEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), res.body);
     });
     it('should return an HTTP 400 if the given voucher group is invalid', async () => {
       // post invalid voucher group
@@ -360,7 +370,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
       const bkgRes = res.body as VoucherGroupResponse;
 
       expect(bkgRes, 'voucher group not found').to.not.be.empty;
-      bkgEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), bkgRes);
+      bkgResponseEq(VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq), bkgRes);
     });
     it('should return an HTTP 404 if the voucher group with given id does not exist', async () => {
       // get voucher group by id
@@ -417,7 +427,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
       ).to.be.true;
 
       // check returned voucher group
-      bkgEq(
+      bkgResponseEq(
         VoucherGroupService.asVoucherGroupParams(ctx.validVoucherGroupReq),
         res.body as VoucherGroupResponse,
       );

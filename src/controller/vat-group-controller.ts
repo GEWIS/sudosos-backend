@@ -29,7 +29,7 @@ import { Response } from 'express';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import VatGroupService, {
   canSetVatGroupToDeleted,
   parseGetVatCalculationValuesParams,
@@ -128,8 +128,8 @@ export default class VatGroupController extends BaseController {
     }
 
     try {
-      const vatGroups = await VatGroupService.getVatGroups(filters, { take, skip });
-      res.status(200).json(vatGroups);
+      const [vatGroups, count] = await VatGroupService.getVatGroups(filters, { take, skip });
+      res.status(200).json(toResponse(vatGroups.map((v) => VatGroupService.toResponse(v)), count, { take, skip }));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);
@@ -152,11 +152,11 @@ export default class VatGroupController extends BaseController {
     this.logger.trace('Get single VAT group', id, ' by user', req.token.user);
 
     try {
-      const { records } = await VatGroupService.getVatGroups({
+      const [vatGroups] = await VatGroupService.getVatGroups({
         vatGroupId: Number.parseInt(id, 10),
       });
-      if (records.length > 0) {
-        res.json(records[0]);
+      if (vatGroups.length > 0) {
+        res.json(VatGroupService.toResponse(vatGroups[0]));
       } else {
         res.status(404).json('VAT group not found.');
       }
@@ -192,7 +192,8 @@ export default class VatGroupController extends BaseController {
     }
 
     try {
-      res.json(await VatGroupService.createVatGroup(body));
+      const vatGroup = await VatGroupService.createVatGroup(body);
+      res.json(VatGroupService.toResponse(vatGroup));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);
@@ -224,9 +225,8 @@ export default class VatGroupController extends BaseController {
     }
 
     try {
-      let vatGroup = (await VatGroupService
-        .getVatGroups({ vatGroupId: id })).records[0];
-      if (!vatGroup) {
+      const [vatGroups] = await VatGroupService.getVatGroups({ vatGroupId: id });
+      if (vatGroups.length === 0) {
         res.status(404).json('VAT group not found.');
         return;
       }
@@ -239,8 +239,8 @@ export default class VatGroupController extends BaseController {
         }
       }
 
-      vatGroup = await VatGroupService.updateVatGroup(id, body);
-      res.status(200).json(vatGroup);
+      const vatGroup = await VatGroupService.updateVatGroup(id, body);
+      res.status(200).json(VatGroupService.toResponse(vatGroup));
     } catch (error) {
       this.logger.error('Could not update VAT group:', error);
       res.status(500).json('Internal server error.');

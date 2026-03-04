@@ -33,7 +33,7 @@ import BannerService, { BannerFilterParameters } from '../service/banner-service
 import Banner from '../entity/banner';
 import FileService from '../service/file-service';
 import { BANNER_IMAGE_LOCATION } from '../files/storage';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { asBoolean } from '../helpers/validators';
 
 /**
@@ -152,7 +152,8 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getBanners(filters, { take, skip }));
+      const [banners, count] = await BannerService.getBanners(filters, { take, skip });
+      res.json(toResponse(banners.map(BannerService.asBannerResponse), count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all banners:', error);
       res.status(500).json('Internal server error.');
@@ -177,7 +178,8 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       if (BannerService.verifyBanner(body)) {
-        res.json(await BannerService.createBanner(body));
+        const banner = await BannerService.createBanner(body);
+        res.json(BannerService.asBannerResponse(banner));
       } else {
         res.status(400).json('Invalid banner.');
       }
@@ -259,9 +261,9 @@ export default class BannerController extends BaseController {
     // handle request
     try {
       // check if banner in database
-      const { records } = await BannerService.getBanners({ bannerId: Number.parseInt(id, 10) });
-      if (records.length > 0) {
-        res.json(records[0]);
+      const [banners] = await BannerService.getBanners({ bannerId: Number.parseInt(id, 10) });
+      if (banners.length > 0) {
+        res.json(BannerService.asBannerResponse(banners[0]));
       } else {
         res.status(404).json('Banner not found.');
       }
@@ -295,7 +297,7 @@ export default class BannerController extends BaseController {
         // try patching the banner
         const banner = await BannerService.updateBanner(Number.parseInt(id, 10), body);
         if (banner) {
-          res.json(banner);
+          res.json(BannerService.asBannerResponse(banner));
         } else {
           res.status(404).json('Banner not found.');
         }
@@ -356,7 +358,8 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      res.json(await BannerService.getBanners({ active: true }, { take, skip }));
+      const [banners, count] = await BannerService.getBanners({ active: true }, { take, skip });
+      res.json(toResponse(banners.map(BannerService.asBannerResponse), count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return active banners:', error);
       res.status(500).json('Internal server error.');

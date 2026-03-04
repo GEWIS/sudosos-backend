@@ -29,7 +29,6 @@ import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import {
-  PaginatedPointOfSaleResponse,
   PointOfSaleResponse,
   PointOfSaleWithContainersResponse,
 } from '../../../src/controller/response/point-of-sale-response';
@@ -157,9 +156,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
   describe('getPointsOfSale function', () => {
     it('should return all point of sales with no input specification', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = (await PointOfSaleService
-        .getPointsOfSale()) as PaginatedPointOfSaleResponse;
+      const [revisions, count] = await PointOfSaleService.getPointsOfSale();
+      const records = revisions.map((r) => PointOfSaleService.revisionToResponse(r));
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(records).to.be.length(withRevisions.length);
@@ -168,14 +166,13 @@ describe('PointOfSaleService', async (): Promise<void> => {
         (c: PointOfSaleResponse) => ctx.specification.validateModel('PointOfSaleResponse', c, false, true).valid,
       )).to.be.true;
 
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(withRevisions.length);
+      expect(count).to.equal(withRevisions.length);
     });
     it('should return points of sale with ownerId specified', async () => {
-      const { records } = (await PointOfSaleService.getPointsOfSale({
+      const [revisions] = await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[0].owner.id,
-      }) as PaginatedPointOfSaleResponse);
+      });
+      const records = revisions.map((r) => PointOfSaleService.revisionToResponse(r));
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
       expect(pointOfSaleSuperset(records, ctx.pointsOfSale)).to.be.true;
@@ -188,34 +185,31 @@ describe('PointOfSaleService', async (): Promise<void> => {
       expect(records).to.be.length(length);
     });
     it('should return single point of sale if pointOfSaleId is specified', async () => {
-      const { records } = (await PointOfSaleService.getPointsOfSale({
+      const [revisions] = await PointOfSaleService.getPointsOfSale({
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      }) as PaginatedPointOfSaleResponse);
+      });
 
-      expect(records).to.be.length(1);
-      expect(records[0].id).to.be.equal(ctx.pointsOfSale[0].id);
+      expect(revisions).to.be.length(1);
+      expect(revisions[0].pointOfSaleId).to.be.equal(ctx.pointsOfSale[0].id);
     });
     it('should return no points of sale if userId and containerId do not match', async () => {
-      const { records } = (await PointOfSaleService.getPointsOfSale({
+      const [revisions] = await PointOfSaleService.getPointsOfSale({
         ownerId: ctx.pointsOfSale[10].owner.id,
         pointOfSaleId: ctx.pointsOfSale[0].id,
-      }) as PaginatedPointOfSaleResponse);
+      });
 
-      expect(records).to.be.length(0);
+      expect(revisions).to.be.length(0);
     });
     it('should adhere to pagination', async () => {
       const take = 3;
       const skip = 2;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = (await PointOfSaleService.getPointsOfSale({}, {
+      const [revisions, count] = await PointOfSaleService.getPointsOfSale({}, {
         take, skip,
-      }) as PaginatedPointOfSaleResponse);
+      });
 
       const withRevisions = ctx.pointsOfSale.filter((c) => c.currentRevision > 0);
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(withRevisions.length);
-      expect(records.length).to.be.at.most(take);
+      expect(count).to.equal(withRevisions.length);
+      expect(revisions.length).to.be.at.most(take);
     });
     it('should return all points of sale involving a single user and its memberAuthenticator users', async () => {
       const usersOwningAPos = [...new Set(ctx.pointsOfSale.map((pos) => pos.owner))];
@@ -227,19 +221,19 @@ describe('PointOfSaleService', async (): Promise<void> => {
       });
       expect(memberAuthenticators.length).to.equal(0);
 
-      let pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);
-      const originalLength = pointsOfSale.records.length;
-      pointsOfSale.records.forEach((pos) => {
-        expect(pos.owner.id).to.equal(owner.id);
+      let [revisions] = await PointOfSaleService.getPointsOfSale({}, {}, owner);
+      const originalLength = revisions.length;
+      revisions.forEach((rev) => {
+        expect(rev.pointOfSale.owner.id).to.equal(owner.id);
       });
 
       await new AuthenticationService().setMemberAuthenticator([owner], usersOwningAPos[1]);
 
       const ownerIds = [owner, usersOwningAPos[1]].map((o) => o.id);
-      pointsOfSale = await PointOfSaleService.getPointsOfSale({}, {}, owner);
-      expect(pointsOfSale.records.length).to.be.greaterThan(originalLength);
-      pointsOfSale.records.forEach((pos) => {
-        expect(ownerIds).to.include(pos.owner.id);
+      [revisions] = await PointOfSaleService.getPointsOfSale({}, {}, owner);
+      expect(revisions.length).to.be.greaterThan(originalLength);
+      revisions.forEach((rev) => {
+        expect(ownerIds).to.include(rev.pointOfSale.owner.id);
       });
 
       // Cleanup
@@ -249,8 +243,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
   describe('createPointOfSale function', () => {
     it('should create a new PointOfSale', async () => {
       const count = await PointOfSale.count();
-      const res = (
-        await PointOfSaleService.createPointOfSale(ctx.validPOSParams));
+      const revision = await PointOfSaleService.createPointOfSale(ctx.validPOSParams);
+      const res = PointOfSaleService.revisionToResponse(revision) as PointOfSaleWithContainersResponse;
 
       expect(await PointOfSale.count()).to.equal(count + 1);
 
@@ -260,7 +254,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(updatedPointOfSale.name).to.equal(ctx.validPOSParams.name);
 
-      requestUpdatedResponseEqual(ctx.validPOSParams, res as PointOfSaleWithContainersResponse);
+      requestUpdatedResponseEqual(ctx.validPOSParams, res);
     });
   });
   describe('directPointOfSaleUpdate function', () => {
@@ -274,7 +268,8 @@ describe('PointOfSaleService', async (): Promise<void> => {
         cashierRoleIds: [ctx.roles[1].role.id],
       };
 
-      const response = (await PointOfSaleService.updatePointOfSale(update)) as PointOfSaleWithContainersResponse;
+      const revision = await PointOfSaleService.updatePointOfSale(update);
+      const response = PointOfSaleService.revisionToResponse(revision) as PointOfSaleWithContainersResponse;
       updateResponseEqual(update, response);
     });
   });

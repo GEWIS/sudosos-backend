@@ -32,8 +32,7 @@ import { RequestWithToken } from '../middleware/token-middleware';
 import TransactionService, {
   parseGetTransactionsFilters,
 } from '../service/transaction-service';
-import { TransactionResponse } from './response/transaction-response';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { TransactionRequest } from './request/transaction-request';
 import Transaction from '../entity/transactions/transaction';
 import { asNumber } from '../helpers/validators';
@@ -148,8 +147,8 @@ export default class TransactionController extends BaseController {
     }
 
     try {
-      const transactions = await new TransactionService().getTransactions(filters, { take, skip });
-      res.status(200).json(transactions);
+      const [records, count] = await new TransactionService().getTransactions(filters, { take, skip });
+      res.status(200).json(toResponse(records, count, { take, skip }));
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
@@ -203,9 +202,9 @@ export default class TransactionController extends BaseController {
       }
 
       // create the transaction using context
-      const result = await transactionService.createTransaction(body, context);
-      
-      res.json(result);
+      const transaction = await transactionService.createTransaction(body, context);
+
+      res.json(await transactionService.asTransactionResponse(transaction));
     } catch (error) {
       this.logger.error('Could not create transaction:', error);
       res.status(500).json('Internal server error.');
@@ -222,26 +221,26 @@ export default class TransactionController extends BaseController {
    * @return {TransactionResponse} 200 - Single transaction with given id
    * @return {string} 404 - Nonexistent transaction id
    */
-  public async getTransaction(req: RequestWithToken, res: Response): Promise<TransactionResponse> {
+  public async getTransaction(req: RequestWithToken, res: Response): Promise<void> {
     const parameters = req.params;
     this.logger.trace('Get single transaction', parameters, 'by user', req.token.user);
 
     let transaction;
     try {
-      transaction = await new TransactionService().getSingleTransaction(parseInt(parameters.id, 10));
+      const transactionService = new TransactionService();
+      transaction = await transactionService.getSingleTransaction(parseInt(parameters.id, 10));
+
+      // If the transaction is undefined, there does not exist a transaction with the given ID
+      if (transaction === undefined) {
+        res.status(404).json('Unknown transaction ID.');
+        return;
+      }
+
+      res.status(200).json(await transactionService.asTransactionResponse(transaction));
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
-      return;
     }
-
-    // If the transaction is undefined, there does not exist a transaction with the given ID
-    if (transaction === undefined) {
-      res.status(404).json('Unknown transaction ID.');
-      return;
-    }
-
-    res.status(200).json(transaction);
   }
 
   /**
@@ -273,9 +272,14 @@ export default class TransactionController extends BaseController {
           res.status(400).json('Invalid transaction.');
           return;
         }
-        res.status(200).json(await transactionService.updateTransaction(
+        const transaction = await transactionService.updateTransaction(
           parseInt(id, 10), body,
-        ));
+        );
+        if (!transaction) {
+          res.status(400).json('Could not update transaction.');
+          return;
+        }
+        res.status(200).json(await transactionService.asTransactionResponse(transaction));
       } else {
         res.status(404).json('Transaction not found.');
       }
@@ -338,7 +342,7 @@ export default class TransactionController extends BaseController {
       }
 
       const invoices = await new InvoiceService().getTransactionInvoices(transactionId);
-      res.status(200).json(invoices);
+      res.status(200).json(InvoiceService.toArrayWithoutEntriesResponse(invoices));
     } catch (error) {
       this.logger.error('Could not return transaction invoices:', error);
       res.status(500).json('Internal server error.');

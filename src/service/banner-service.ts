@@ -24,7 +24,7 @@
 
 import { FindManyOptions, LessThanOrEqual, Raw } from 'typeorm';
 import BannerRequest from '../controller/request/banner-request';
-import { BannerResponse, PaginatedBannerResponse } from '../controller/response/banner-response';
+import { BannerResponse } from '../controller/response/banner-response';
 import Banner from '../entity/banner';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import FileService from './file-service';
@@ -132,11 +132,11 @@ export default class BannerService {
    * Returns all banners with options.
    * @param filters - The filtering parameters.
    * @param pagination - The pagination options.
-   * @returns {Array.<BannerResponse>} - all banners
+   * @returns {[Banner[], number]} - tuple of banners and total count
    */
   public static async getBanners(
     filters: BannerFilterParameters, pagination: PaginationParameters = {},
-  ): Promise<PaginatedBannerResponse> {
+  ): Promise<[Banner[], number]> {
     const { take, skip } = pagination;
 
     const mapping: FilterMapping = {
@@ -174,37 +174,30 @@ export default class BannerService {
       take,
       skip,
     });
-    const records = banners.map((banner) => this.asBannerResponse(banner));
+    const count = await Banner.count(options);
 
-    return {
-      _pagination: {
-        take,
-        skip,
-        count: await Banner.count(options),
-      },
-      records,
-    };
+    return [banners, count];
   }
 
   /**
    * Saves a banner to the database.
    * @param bannerReq
-   * @returns {BannerResponse.model} - saved banner
+   * @returns {Banner.model} - saved banner
    */
-  public static async createBanner(bannerReq: BannerRequest): Promise<BannerResponse> {
+  public static async createBanner(bannerReq: BannerRequest): Promise<Banner> {
     // save and return banner
     const banner = this.asBanner(bannerReq);
     await Banner.save(banner);
-    return this.asBannerResponse(banner);
+    return banner;
   }
 
   /**
    * Updates and returns banner with given id.
    * @param id - requested banner id
    * @param bannerReq
-   * @returns {BannerResponse.model} - updated banner
+   * @returns {Banner.model} - updated banner
    */
-  public static async updateBanner(id: number, bannerReq: BannerRequest): Promise<BannerResponse> {
+  public static async updateBanner(id: number, bannerReq: BannerRequest): Promise<Banner> {
     // check if banner in database
     const bannerFound = await Banner.findOne({ where: { id } });
 
@@ -216,16 +209,16 @@ export default class BannerService {
     // patch banner if found
     const banner = this.asBanner(bannerReq);
     await Banner.update(id, banner);
-    return this.asBannerResponse(await Banner.findOne({ where: { id }, relations: ['image'] }));
+    return Banner.findOne({ where: { id }, relations: ['image'] });
   }
 
   /**
    * Deletes the requested banner from the database
    * @param id - requested banner id
    * @param fileService
-   * @returns {BannerResponse.model} - deleted banner
+   * @returns {Banner.model} - deleted banner
    */
-  public static async deleteBanner(id: number, fileService: FileService): Promise<BannerResponse> {
+  public static async deleteBanner(id: number, fileService: FileService): Promise<Banner> {
     // check if banner in database
     const banner = await Banner.findOne({ where: { id }, relations: ['image'] });
 
@@ -246,6 +239,6 @@ export default class BannerService {
 
     // Restore the banner image so the response will be correct
     banner.image = bannerImage;
-    return this.asBannerResponse(banner);
+    return banner;
   }
 }

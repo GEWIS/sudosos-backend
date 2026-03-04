@@ -25,7 +25,6 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import TransferRequest from '../../../src/controller/request/transfer-request';
-import { PaginatedTransferResponse } from '../../../src/controller/response/transfer-response';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
@@ -96,35 +95,35 @@ describe('TransferService', async (): Promise<void> => {
   });
   describe('getTransfers function', async (): Promise<void> => {
     it('should return all transfers', async () => {
-      const res: PaginatedTransferResponse = await new TransferService().getTransfers();
-      expect(res.records.length).to.equal(ctx.transfers.length);
+      const [records] = await new TransferService().getTransfers();
+      expect(records.length).to.equal(ctx.transfers.length);
       const ids = new Set(ctx.transfers.map((obj) => obj.id));
-      res.records.forEach((element) => ids.delete(element.id));
+      records.forEach((element) => ids.delete(element.id));
       expect(ids.size).to.equal(0);
     });
 
     it('should return all transfers involving a single user', async () => {
       const user = ctx.users[0];
-      const res: PaginatedTransferResponse = await new TransferService().getTransfers({}, {}, user);
+      const [records] = await new TransferService().getTransfers({}, {}, user);
       const actualTransfers = ctx.transfers
         .filter((t) => (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id));
-      expect(res.records.length).to.equal(actualTransfers.length);
-      res.records.forEach((t) => expect(
+      expect(records.length).to.equal(actualTransfers.length);
+      records.forEach((t) => expect(
         (t.from && t.from.id === user.id) || (t.to && t.to.id === user.id),
       ).to.be.true);
     });
 
     it('should return a single transfer if id is specified', async () => {
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: ctx.transfers[0].id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].id).to.equal(ctx.transfers[0].id);
+      expect(records.length).to.equal(1);
+      expect(records[0].id).to.equal(ctx.transfers[0].id);
     });
 
     it('should return nothing if a wrong id is specified', async () => {
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: ctx.transfers.length + 1 });
-      expect(res.records).to.be.empty;
+      expect(records).to.be.empty;
     });
 
     it('should return all transfer after a given date', async () => {
@@ -136,10 +135,10 @@ describe('TransferService', async (): Promise<void> => {
       expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
       expect(actualTransfers.length).to.be.at.least(1);
 
-      const res = await new TransferService().getTransfers({ fromDate });
-      expect(res.records).to.be.lengthOf(actualTransfers.length);
-      res.records.forEach((t) => {
-        expect(new Date(t.createdAt)).to.be.greaterThanOrEqual(fromDate);
+      const [records] = await new TransferService().getTransfers({ fromDate });
+      expect(records).to.be.lengthOf(actualTransfers.length);
+      records.forEach((t) => {
+        expect(t.createdAt).to.be.greaterThanOrEqual(fromDate);
       });
     });
 
@@ -152,10 +151,10 @@ describe('TransferService', async (): Promise<void> => {
       expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
       expect(actualTransfers.length).to.be.at.least(1);
 
-      const res = await new TransferService().getTransfers({ tillDate });
-      expect(res.records).to.be.lengthOf(actualTransfers.length);
-      res.records.forEach((t) => {
-        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
+      const [records] = await new TransferService().getTransfers({ tillDate });
+      expect(records).to.be.lengthOf(actualTransfers.length);
+      records.forEach((t) => {
+        expect(t.createdAt).to.be.lessThan(tillDate);
       });
     });
 
@@ -172,48 +171,48 @@ describe('TransferService', async (): Promise<void> => {
       expect(actualTransfers.length).to.be.at.most(ctx.transfers.length - 2);
       expect(actualTransfers.length).to.be.at.least(1);
 
-      const res = await new TransferService().getTransfers({ fromDate, tillDate });
-      expect(res.records).to.be.lengthOf(actualTransfers.length);
-      res.records.forEach((t) => {
-        expect(new Date(t.createdAt)).to.be.greaterThanOrEqual(fromDate);
-        expect(new Date(t.createdAt)).to.be.lessThan(tillDate);
+      const [records] = await new TransferService().getTransfers({ fromDate, tillDate });
+      expect(records).to.be.lengthOf(actualTransfers.length);
+      records.forEach((t) => {
+        expect(t.createdAt).to.be.greaterThanOrEqual(fromDate);
+        expect(t.createdAt).to.be.lessThan(tillDate);
       });
     });
 
     it('should return corresponding invoice if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.invoice != null)[0];
       expect(transfer).to.not.be.undefined;
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: transfer.id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].invoice).to.not.be.null;
+      expect(records.length).to.equal(1);
+      expect(records[0].invoice).to.not.be.null;
     });
 
     it('should return corresponding deposit if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.deposit != null)[0];
       expect(transfer).to.not.be.undefined;
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: transfer.id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].deposit).to.not.be.null;
+      expect(records.length).to.equal(1);
+      expect(records[0].deposit).to.not.be.null;
     });
 
     it('should return corresponding payoutRequest if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.payoutRequest != null)[0];
       expect(transfer).to.not.be.undefined;
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: transfer.id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].payoutRequest).to.not.be.null;
+      expect(records.length).to.equal(1);
+      expect(records[0].payoutRequest).to.not.be.null;
     });
 
     it('should return corresponding fine if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.fine != null)[0];
       expect(transfer).to.not.be.undefined;
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: transfer.id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].fine).to.not.be.null;
+      expect(records.length).to.equal(1);
+      expect(records[0].fine).to.not.be.null;
     });
 
     it('should return corresponding waived fines if transfer has any', async () => {
@@ -229,10 +228,10 @@ describe('TransferService', async (): Promise<void> => {
         waivedFines: userFineGroup,
       } as Transfer);
 
-      const res: PaginatedTransferResponse = await new TransferService()
+      const [records] = await new TransferService()
         .getTransfers({ id: t.id });
-      expect(res.records.length).to.equal(1);
-      expect(res.records[0].waivedFines).to.not.be.null;
+      expect(records.length).to.equal(1);
+      expect(records[0].waivedFines).to.not.be.null;
 
       // Cleanup
       await Transfer.delete(t.id);
@@ -253,9 +252,9 @@ describe('TransferService', async (): Promise<void> => {
       const resPost = await new TransferService().postTransfer(req);
       expect(resPost).to.not.be.null;
 
-      const res: PaginatedTransferResponse = await new TransferService().getTransfers();
-      const transfers = res.records;
-      const lastEntry = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      const [transfers] = await new TransferService().getTransfers();
+      const records = transfers.map((t) => TransferService.asTransferResponse(t));
+      const lastEntry = records.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
       expect(lastEntry.amountInclVat.amount).to.equal(req.amount.amount);
       expect(lastEntry.amountInclVat.currency).to.equal(req.amount.currency);
       expect(lastEntry.amountInclVat.precision).to.equal(req.amount.precision);
@@ -300,9 +299,9 @@ describe('TransferService', async (): Promise<void> => {
       const resPost = await new TransferService().createTransfer(req);
       expect(resPost).to.not.be.null;
 
-      const res: PaginatedTransferResponse = await new TransferService().getTransfers();
-      const transfers = res.records;
-      const lastEntry = transfers.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
+      const [transfers] = await new TransferService().getTransfers();
+      const records = transfers.map((t) => TransferService.asTransferResponse(t));
+      const lastEntry = records.reduce((prev, curr) => (prev.id < curr.id ? curr : prev));
       expect(lastEntry.amountInclVat.amount).to.equal(req.amount.amount);
       expect(lastEntry.amountInclVat.currency).to.equal(req.amount.currency);
       expect(lastEntry.amountInclVat.precision).to.equal(req.amount.precision);

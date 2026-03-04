@@ -279,23 +279,27 @@ describe('RBACService', () => {
       const assignments = ctx.assignments.filter((asg) => asg.roleId == roleId);
       const userIds = assignments.map((asg) => asg.userId);
 
-      const users = await UserService.getUsers({ id: userIds });
+      const [expectedUsers] = await UserService.getUsers({ id: userIds });
 
-      const userResult = await RBACService.getRoleUsers(roleId);
-      expect(userResult.records).to.deep.equal(users.records);
+      const [users, count] = await RBACService.getRoleUsers(roleId);
+      expect(users.map((u) => u.id)).to.deep.equal(expectedUsers.map((u) => u.id));
+      expect(count).to.equal(assignments.length);
     });
 
     it('should adhere to pagination', async () => {
       const roleId = ctx.roles[0].role.id;
+      const totalAssignments = ctx.assignments.filter((asg) => asg.roleId == roleId).length;
 
       let take = 2;
-      let userResponse = await RBACService.getRoleUsers(roleId, { take });
-      expect(userResponse.records.length).to.be.equal(take);
+      let [users, count] = await RBACService.getRoleUsers(roleId, { take });
+      expect(users.length).to.be.equal(take);
+      expect(count).to.equal(totalAssignments);
 
-      const skip = ctx.assignments.filter((asg) => asg.roleId == roleId).length - 1;
+      const skip = totalAssignments - 1;
       take = 2;
-      userResponse = await RBACService.getRoleUsers(roleId, { skip, take });
-      expect(userResponse.records.length).to.be.equal(1);
+      [users, count] = await RBACService.getRoleUsers(roleId, { skip, take });
+      expect(users.length).to.be.equal(1);
+      expect(count).to.equal(totalAssignments);
     });
   });
 

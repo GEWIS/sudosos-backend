@@ -59,6 +59,13 @@ export interface ResetTokenInfo {
   password: string,
 }
 
+export interface AuthenticationResult {
+  user: User,
+  roles: Role[],
+  organs: User[],
+  token: string,
+}
+
 /**
  * The authentication service is responsible for verifying user authentications and handing out json web tokens.
  */
@@ -309,7 +316,7 @@ export default class AuthenticationService extends WithManager {
    */
   public async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
     authenticator: T, context: AuthenticationContext, posId?: number)
-    : Promise<AuthenticationResponse | undefined> {
+    : Promise<AuthenticationResult | undefined> {
     const valid = await this.compareHash(pass, authenticator.hash);
     if (!valid) return undefined;
 
@@ -531,19 +538,19 @@ export default class AuthenticationService extends WithManager {
     salt?: string;
     expiry?: number;
     posId?: number;
-  }): Promise<AuthenticationResponse> {
+  }): Promise<AuthenticationResult> {
     const { user, context, salt, expiry, posId } = params;
-    
+
     // Update lastSeen locally
     user.lastSeen = new Date();
-    
+
     // Save in background without awaiting
     this.manager.save(User, user).catch((error) => {
       // Log error but don't block
       const logger: Logger = log4js.getLogger('AuthenticationService');
       logger.error('Failed to save lastSeen timestamp:', error);
     });
-    
+
     const [froles, organs] = await Promise.all([
       context.roleManager.getRoles(user, true),
       context.roleManager.getUserOrgans(user),
@@ -555,7 +562,7 @@ export default class AuthenticationService extends WithManager {
     const finalSalt = salt || await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
     const token = await context.tokenHandler.signToken(contents, finalSalt, expiry);
 
-    return AuthenticationService.asAuthenticationResponse(contents.user, roles, contents.organs, token);
+    return { user: contents.user, roles, organs: contents.organs, token };
   }
 
   public async compareHash(password: string, hash: string): Promise<boolean> {

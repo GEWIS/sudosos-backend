@@ -88,7 +88,7 @@ describe('StripeService', async (): Promise<void> => {
       expect(depositsFromUser.length).to.equal(deposits.length);
       deposits.forEach((d) => {
         expect(d.to.id).to.equal(user.id);
-        const states = d.depositStatus
+        const states = d.stripePaymentIntent.paymentIntentStatuses
           .map((s) => s.state);
         expect(states[states.length - 1]).to.equal(StripePaymentIntentState.PROCESSING);
       });
@@ -99,20 +99,21 @@ describe('StripeService', async (): Promise<void> => {
     it('should correctly create a payment intent', async () => {
       const countBefore = await StripeDeposit.count();
 
-      const intent = await ctx.stripeService.createStripePaymentIntent(
+      const { deposit, clientSecret } = await ctx.stripeService.createStripePaymentIntent(
         ctx.users[0], ctx.dineroTransformer.from(1500),
       );
 
-      expect(intent).to.not.be.undefined;
+      expect(deposit).to.not.be.undefined;
+      expect(clientSecret).to.be.a('string');
 
       const countAfter = await StripeDeposit.count();
-      const stripeDeposit = await StripeService.getStripeDeposit(intent.id);
+      const stripeDeposit = await StripeService.getStripeDeposit(deposit.id);
 
       expect(stripeDeposit).to.not.be.undefined;
-      expect(stripeDeposit.id).to.equal(intent.id);
+      expect(stripeDeposit.id).to.equal(deposit.id);
       expect(countAfter).to.equal(countBefore + 1);
 
-      expect(intent.stripeId).to.equal(stripeDeposit.stripePaymentIntent.stripeId);
+      expect(deposit.stripePaymentIntent.stripeId).to.equal(stripeDeposit.stripePaymentIntent.stripeId);
       expect(stripeDeposit.stripePaymentIntent.paymentIntentStatuses.length).to.equal(0);
     });
   });

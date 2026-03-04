@@ -34,7 +34,6 @@ import {
 import { DineroObject } from 'dinero.js';
 import {
   BaseProductResponse,
-  PaginatedProductResponse,
   ProductResponse,
 } from '../controller/response/product-response';
 import Product from '../entity/product/product';
@@ -51,6 +50,7 @@ import ContainerService from './container-service';
 import { UpdateContainerParams } from '../controller/request/container-request';
 import AuthenticationService from './authentication-service';
 import ContainerRevision from '../entity/container/container-revision';
+import UserService from './user-service';
 
 /**
  * Define product filtering parameters used to filter query results.
@@ -215,20 +215,12 @@ export default class ProductService {
   }
 
   public static async getProducts(filters: ProductFilterParameters = {},
-    pagination: PaginationParameters = {}, user?: User): Promise<PaginatedProductResponse> {
+    pagination: PaginationParameters = {}, user?: User): Promise<[ProductRevision[], number]> {
     const { take, skip } = pagination;
 
     const options = await this.getOptions(filters, user);
 
-    const [data, count] = await ProductRevision.findAndCount({ ...options, take, skip });
-    const records = data.map((revision: ProductRevision) => this.revisionToResponse(revision));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return ProductRevision.findAndCount({ ...options, take, skip });
   }
 
   /**
@@ -241,8 +233,8 @@ export default class ProductService {
    * @param product - The product to be created.
    */
   public static async createProduct(product: CreateProductParams)
-    : Promise<ProductResponse> {
-    const owner = await User.findOne({ where: { id: product.ownerId } });
+    : Promise<ProductRevision | undefined> {
+    const owner = await User.findOne(UserService.getOptions({ id: product.ownerId }));
 
     if (!owner) return undefined;
 
@@ -265,13 +257,10 @@ export default class ProductService {
       priceList: product.priceList,
     };
 
-    let createdProduct: ProductResponse;
-    createdProduct = await this.updateProduct(update);
-
-    return createdProduct;
+    return this.updateProduct(update);
   }
 
-  public static async updateProduct(update: UpdateProductParams) {
+  public static async updateProduct(update: UpdateProductParams): Promise<ProductRevision | undefined> {
     const base = await Product.findOne({ where: { id: update.id } });
     const product = { ...base };
 
@@ -296,7 +285,7 @@ export default class ProductService {
     await this.propagateProductUpdate(base.id);
 
     const options = await this.getOptions({ productId: base.id });
-    return (this.revisionToResponse(await ProductRevision.findOne({ ...options })));
+    return ProductRevision.findOne({ ...options });
   }
 
   /**
