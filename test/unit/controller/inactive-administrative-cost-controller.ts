@@ -29,7 +29,8 @@ import {
 import InactiveAdministrativeCost from '../../../src/entity/transactions/inactive-administrative-cost';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
-import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { TransferSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import InactiveAdministrativeCostSeeder from '../../seed/ledger/inactive-administrative-cost-seeder';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -111,30 +112,7 @@ describe('InactiveAdministrativeCostController', async () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        InactiveAdministrativeCost: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          notify: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        InactiveAdministrativeCost: {
-          get: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    }]);
-
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
@@ -142,8 +120,8 @@ describe('InactiveAdministrativeCostController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
 
     const controller = new InactiveAdministrativeCostController({ specification, roleManager });
     app.use(json());
