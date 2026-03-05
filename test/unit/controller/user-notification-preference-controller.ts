@@ -27,7 +27,8 @@ import UserNotificationPreference, {
 } from '../../../src/entity/notifications/user-notification-preference';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import UserNotificationSeeder from '../../seed/ledger/user-notification-seeder';
 import Swagger from '../../../src/start/swagger';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -93,38 +94,15 @@ describe('user-notification-preference-controller',  async (): Promise<void> => 
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        UserNotificationPreference: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        UserNotificationPreference: {
-          get: own,
-          update: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER
-                || user.type === UserType.INVOICE,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
 
     const controller = new UserNotificationController({ specification, roleManager });
     app.use(json());

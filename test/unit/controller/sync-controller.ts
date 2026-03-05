@@ -26,7 +26,7 @@ import { expect, request } from 'chai';
 import SyncController from '../../../src/controller/sync-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
-import { RbacSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('SyncController', () => {
   let ctx: DefaultContext & {
@@ -41,29 +41,10 @@ describe('SyncController', () => {
     const admin = await (await UserFactory(await ADMIN_USER())).get();
     const regularUser = await (await UserFactory()).get();
 
-    const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        User: {
-          get: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
-    const userRole = await new RbacSeeder().seed([{
-      name: 'User',
-      permissions: {
-        User: {
-          get: { all: new Set<string>([]) }, // No permissions
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
-    }]);
-
-    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(regularUser, userRole), 'nonce user');
+    const adminToken = await signTokenFor(admin, c.tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(regularUser, c.tokenHandler, 'nonce user');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());
