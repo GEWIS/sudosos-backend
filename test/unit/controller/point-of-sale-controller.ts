@@ -479,10 +479,11 @@ describe('PointOfSaleController', async () => {
     let pointOfSale: PointOfSaleWithContainersResponse;
 
     before(async () => {
-      pointOfSale = await PointOfSaleService.createPointOfSale({
+      const revision = await PointOfSaleService.createPointOfSale({
         ...ctx.validPOSRequest,
         ownerId: ctx.organUser.id,
       });
+      pointOfSale = PointOfSaleService.revisionToResponse(revision) as PointOfSaleWithContainersResponse;
     });
 
     after(async () => {

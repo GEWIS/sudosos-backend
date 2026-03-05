@@ -29,7 +29,7 @@ import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import DebtorService from '../service/debtor-service';
 import User from '../entity/user/user';
 import { asArrayOfDates, asArrayOfUserTypes, asDate, asFromAndTillDate, asReturnFileType } from '../helpers/validators';
@@ -136,7 +136,9 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      res.json(await new DebtorService().getFineHandoutEvents({ take, skip }));
+      const [events, count] = await new DebtorService().getFineHandoutEvents({ take, skip });
+      const records = events.map((e) => DebtorService.asBaseFineHandoutEventResponse(e));
+      res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return all fine handout event:', error);
       res.status(500).json('Internal server error.');
@@ -159,7 +161,12 @@ export default class DebtorController extends BaseController {
     this.logger.trace('Get fine handout event', id, 'by', req.token.user);
 
     try {
-      res.json(await new DebtorService().getSingleFineHandoutEvent(Number.parseInt(id, 10)));
+      const event = await new DebtorService().getSingleFineHandoutEvent(Number.parseInt(id, 10));
+      if (!event) {
+        res.status(404).json('Fine handout event not found.');
+        return;
+      }
+      res.json(DebtorService.asFineHandoutEventResponse(event));
     } catch (error) {
       this.logger.error('Could not return fine handout event:', error);
       res.status(500).json('Internal server error.');
@@ -268,8 +275,8 @@ export default class DebtorController extends BaseController {
     }
 
     try {
-      const result = await new DebtorService().handOutFines({ referenceDate, userIds: body.userIds }, req.token.user);
-      res.json(result);
+      const event = await new DebtorService().handOutFines({ referenceDate, userIds: body.userIds }, req.token.user);
+      res.json(DebtorService.asFineHandoutEventResponse(event));
     } catch (error) {
       this.logger.error('Could not handout fines:', error);
       res.status(500).json('Internal server error.');

@@ -268,17 +268,15 @@ describe('EventController', () => {
     it('should adhere to pagination', async () => {
       const take = 3;
       const skip = 1;
-      const events = await EventService.getEvents({}, { take, skip });
-      expect(events.records.length).to.equal(take);
-      expect(events._pagination.take).to.equal(take);
-      expect(events._pagination.skip).to.equal(skip);
-      expect(events._pagination.count).to.equal(ctx.events.length);
+      const [events, count] = await EventService.getEvents({}, { take, skip });
+      expect(events.length).to.equal(take);
+      expect(count).to.equal(ctx.events.length);
 
       const ids = ctx.events
         .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
         .slice(skip, skip + take)
         .map((e) => e.id);
-      events.records.forEach((event, i) => {
+      events.forEach((event, i) => {
         expect(event.id).to.equal(ids[i]);
       });
     });

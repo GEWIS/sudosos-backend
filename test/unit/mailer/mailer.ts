@@ -31,6 +31,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { rootStubs } from '../../root-hooks';
 import Redis from 'ioredis';
+import nodemailer from 'nodemailer';
 
 describe('Mailer', () => {
   let ctx: {
@@ -149,5 +150,29 @@ describe('Mailer', () => {
     const promise = mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
 
     await expect(promise).to.eventually.be.rejected;
+  });
+
+  // eslint-disable-next-line func-names
+  it('should send mail directly via SMTP when initialised without Redis', async function () {
+    // The test's beforeEach restores the global nodemailer stub, so we
+    // create our own for this test via the sandbox.
+    const sendMailStub = sandbox.stub().resolves({ messageId: 'direct-test-id' });
+    sandbox.stub(nodemailer, 'createTransport').returns({ sendMail: sendMailStub } as any);
+
+    Mailer.reset();
+    const noRedisMailer = new Mailer(/* no redis connection */);
+
+    await noRedisMailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
+
+    // sendMail should have been called once with the correct recipient.
+    expect(sendMailStub.calledOnce).to.be.true;
+    expect(sendMailStub.firstCall.args[0]).to.have.property('to', ctx.user.email);
+
+    // The BullMQ queue should not have been touched.
+    expect(rootStubs.queueAdd.called).to.be.false;
+
+    // Restore the singleton to the Redis-backed instance for subsequent tests.
+    Mailer.reset();
+    new Mailer(redis);
   });
 });

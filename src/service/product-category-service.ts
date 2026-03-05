@@ -27,7 +27,6 @@
 import { FindManyOptions, IsNull, Raw } from 'typeorm';
 import ProductCategory from '../entity/product/product-category';
 import {
-  PaginatedProductCategoryResponse,
   ProductCategoryResponse,
 } from '../controller/response/product-category-response';
 import ProductCategoryRequest from '../controller/request/product-category-request';
@@ -74,7 +73,7 @@ export default class ProductCategoryService extends WithManager {
       name: productCategory.name,
       createdAt: productCategory.createdAt.toISOString(),
       updatedAt: productCategory.updatedAt.toISOString(),
-      parent: productCategory.parent ? this.asProductCategoryResponse(productCategory.parent) : undefined,
+      parent: productCategory.parent ? ProductCategoryService.asProductCategoryResponse(productCategory.parent) : undefined,
     };
   }
 
@@ -83,7 +82,7 @@ export default class ProductCategoryService extends WithManager {
    */
   public static async getProductCategories(
     filters: ProductCategoryFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedProductCategoryResponse> {
+  ): Promise<[ProductCategory[], number]> {
     const { take, skip } = pagination;
 
     const filterMapping: FilterMapping = {
@@ -106,16 +105,7 @@ export default class ProductCategoryService extends WithManager {
       ProductCategory.count(options),
     ]);
 
-    const records = results[0].map(
-      (productCategory) => (this.asProductCategoryResponse(productCategory)),
-    );
-
-    return {
-      _pagination: {
-        take, skip, count: results[1],
-      },
-      records,
-    };
+    return [results[0], results[1]];
   }
 
   /**
@@ -124,7 +114,7 @@ export default class ProductCategoryService extends WithManager {
    */
   public static async postProductCategory(
     request: ProductCategoryRequest,
-  ): Promise<ProductCategoryResponse> {
+  ): Promise<ProductCategory> {
     const parentCategory = request.parentCategoryId
       ? await ProductCategory.findOne({ where: { id: request.parentCategoryId } })
       : undefined;
@@ -132,8 +122,8 @@ export default class ProductCategoryService extends WithManager {
     const category = new ProductCategory();
     category.name = request.name;
     category.parent = parentCategory;
-    return ProductCategory.save(category)
-      .then(() => this.asProductCategoryResponse(category));
+    await ProductCategory.save(category);
+    return category;
   }
 
   /**
@@ -143,24 +133,25 @@ export default class ProductCategoryService extends WithManager {
    */
   public static async patchProductCategory(
     id: number, request: ProductCategoryRequest,
-  ): Promise<ProductCategoryResponse> {
+  ): Promise<ProductCategory> {
     const category = await ProductCategory.findOne({ where: { id } });
     if (!category) return null;
     const productCategory = Object.assign(category, request);
     await ProductCategory.save(productCategory);
-    return this.asProductCategoryResponse(productCategory);
+    return productCategory;
   }
 
   /**
    * Deletes a ProductCategory from the database.
    * @param id - The id of the productCategory that needs to be deleted.
    */
-  public static async deleteProductCategory(id: number): Promise<ProductCategoryResponse> {
+  public static async deleteProductCategory(id: number): Promise<ProductCategory> {
     const productCategory = await ProductCategory.findOne({ where: { id }, relations: { children: true } });
     if (!productCategory || productCategory.children.length > 0) {
       return null;
     }
-    return ProductCategory.delete(id).then(() => this.asProductCategoryResponse(productCategory));
+    await ProductCategory.delete(id);
+    return productCategory;
   }
 
   /**

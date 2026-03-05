@@ -32,8 +32,6 @@ import {
   EventInShiftResponse, EventPlanningSelectedCount,
   EventResponse,
   EventShiftResponse,
-  PaginatedBaseEventResponse,
-  PaginatedEventShiftResponse,
 } from '../controller/response/event-response';
 import {
   EventAnswerAssignmentRequest,
@@ -54,6 +52,7 @@ import Role from '../entity/rbac/role';
 import { AppDataSource } from '../database/database';
 import Notifier, { ForgotEventPlanningOptions } from '../notifications';
 import { NotificationTypes } from '../notifications/notification-types';
+import UserService from './user-service';
 
 export interface EventFilterParameters {
   name?: string;
@@ -152,7 +151,7 @@ export async function parseUpdateEventRequestParameters(
  * @deprecated Events are out of scope for SudoSOS. Delete from 01/11/2026.
  */
 export default class EventService {
-  private static asBaseEventResponse(entity: Event): BaseEventResponse {
+  public static asBaseEventResponse(entity: Event): BaseEventResponse {
     return {
       id: entity.id,
       createdAt: entity.createdAt.toISOString(),
@@ -166,14 +165,14 @@ export default class EventService {
     };
   }
 
-  private static asEventResponse(entity: Event): EventResponse {
+  public static asEventResponse(entity: Event): EventResponse {
     return {
       ...this.asBaseEventResponse(entity),
       shifts: entity.shifts.map((s) => this.asShiftInEventResponse(entity, s, entity.answers)),
     };
   }
 
-  private static asBaseEventShiftResponse(entity: EventShift):
+  public static asBaseEventShiftResponse(entity: EventShift):
   BaseEventShiftResponse {
     return {
       createdAt: entity.createdAt.toISOString(),
@@ -184,7 +183,7 @@ export default class EventService {
     };
   }
 
-  private static asEventShiftResponse(entity: EventShift):
+  public static asEventShiftResponse(entity: EventShift):
   EventShiftResponse {
     return {
       ...this.asBaseEventShiftResponse(entity),
@@ -192,7 +191,7 @@ export default class EventService {
     };
   }
 
-  private static asShiftInEventResponse(
+  public static asShiftInEventResponse(
     event: Event, shift: EventShift, answers: EventShiftAnswer[],
   ): EventInShiftResponse {
     return {
@@ -203,7 +202,7 @@ export default class EventService {
     };
   }
 
-  private static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswerResponse {
+  public static asBaseEventAnswerResponse(entity: EventShiftAnswer): BaseEventAnswerResponse {
     return {
       availability: entity.availability,
       selected: entity.selected,
@@ -215,7 +214,7 @@ export default class EventService {
    * Get all borrel schemas.
    */
   public static async getEvents(params: EventFilterParameters = {}, { take, skip }: PaginationParameters = {})
-    :Promise<PaginatedBaseEventResponse> {
+    :Promise<[Event[], number]> {
     const filterMapping: FilterMapping = {
       name: '%name',
       id: 'id',
@@ -250,24 +249,21 @@ export default class EventService {
 
     const events = await Event.find({ ...options, take, skip });
     const count = await Event.count(options);
-    return {
-      _pagination: { take, skip, count },
-      records: events.map((e) => this.asBaseEventResponse(e)),
-    };
+    return [events, count];
   }
 
   /**
    * Get a single event with its corresponding shifts and answers
    * @param id
    */
-  public static async getSingleEvent(id: number): Promise<EventResponse | undefined> {
+  public static async getSingleEvent(id: number): Promise<Event | undefined> {
     const event = await Event.findOne({
       where: { id },
       relations: { createdBy: true, shifts: { roles: true }, answers: { user: true } },
       withDeleted: true,
     });
 
-    return event ? this.asEventResponse(event) : undefined;
+    return event ?? undefined;
   }
 
   /**
@@ -330,8 +326,8 @@ export default class EventService {
      * Create a new event.
      */
   public static async createEvent(params: CreateEventParams)
-    : Promise<EventResponse> {
-    const createdBy = await User.findOne({ where: { id: params.createdById } });
+    : Promise<Event> {
+    const createdBy = await User.findOne(UserService.getOptions({ id: params.createdById }));
     const shifts = await EventShift.find({ where: { id: In(params.shiftIds) } });
 
     if (shifts.length !== params.shiftIds.length) throw new Error('Invalid list of shiftIds provided.');
@@ -347,13 +343,13 @@ export default class EventService {
     await Event.save(event);
 
     event.answers = await this.syncEventShiftAnswers(event, params.shiftIds);
-    return this.asEventResponse(event);
+    return event;
   }
 
   /**
    * Update an existing event.
    */
-  public static async updateEvent(id: number, params: Partial<UpdateEventParams>) {
+  public static async updateEvent(id: number, params: Partial<UpdateEventParams>): Promise<Event | undefined> {
     const event = await Event.findOne({
       where: { id },
     });
@@ -392,13 +388,10 @@ export default class EventService {
   /**
    * Get all event shifts
    */
-  public static async getEventShifts({ take, skip }: PaginationParameters): Promise<PaginatedEventShiftResponse> {
+  public static async getEventShifts({ take, skip }: PaginationParameters): Promise<[EventShift[], number]> {
     const shifts = await EventShift.find({ take, skip });
     const count = await EventShift.count();
-    return {
-      _pagination: { take, skip, count },
-      records: shifts.map((s) => this.asEventShiftResponse(s)),
-    };
+    return [shifts, count];
   }
 
   /**
@@ -474,9 +467,9 @@ export default class EventService {
   public static async sendEventPlanningReminders(date = new Date()) {
     const inTwoDays = new Date(date.getTime() + 1000 * 3600 * 24 * 2);
     const inThreeDays = new Date(date.getTime() + 1000 * 3600 * 24 * 3);
-    const events = await EventService.getEvents({ beforeDate: inThreeDays, afterDate: inTwoDays });
+    const [events] = await EventService.getEvents({ beforeDate: inThreeDays, afterDate: inTwoDays });
 
-    await Promise.all(events.records.map(async (event) => {
+    await Promise.all(events.map(async (event) => {
       const answers = await EventShiftAnswer.find({ where: { eventId: event.id, availability: IsNull() }, relations: ['user'] });
       // Get all users and remove duplicates
       const users = answers

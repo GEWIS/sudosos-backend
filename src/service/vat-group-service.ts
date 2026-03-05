@@ -31,7 +31,6 @@ import VatGroup, { VatDeclarationPeriod } from '../entity/vat-group';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
   BaseVatGroupResponse,
-  PaginatedVatGroupResponse,
   VatDeclarationResponse,
   VatDeclarationRow, VatGroupResponse,
 } from '../controller/response/vat-group-response';
@@ -68,10 +67,10 @@ interface VatDeclarationParams {
 }
 
 export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boolean> {
-  const products = await ProductService.getProducts({
+  const [products] = await ProductService.getProducts({
     vatGroupId,
   });
-  return products.records.length === 0;
+  return products.length === 0;
 }
 
 export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterParameters {
@@ -111,15 +110,10 @@ export default class VatGroupService {
   }
 
   /**
-   * Returns all VAT groups with options.
-   * @param filters - The filtering parameters.
-   * @param pagination - The pagination options.
+   * Build FindManyOptions for VatGroup queries based on the given filter parameters.
+   * @param params - The filtering parameters.
    */
-  public static async getVatGroups(
-    filters: VatGroupFilterParameters, pagination: PaginationParameters = {},
-  ): Promise<PaginatedVatGroupResponse> {
-    const { take, skip } = pagination;
-
+  public static getOptions(params: VatGroupFilterParameters = {}): FindManyOptions<VatGroup> {
     const mapping: FilterMapping = {
       vatGroupId: 'id',
       name: 'name',
@@ -127,25 +121,32 @@ export default class VatGroupService {
       deleted: 'deleted',
     };
 
-    const options: FindManyOptions = {
-      where: QueryFilter.createFilterWhereClause(mapping, filters),
+    return {
+      where: QueryFilter.createFilterWhereClause(mapping, params),
       order: { id: 'ASC' },
     };
+  }
 
-    const records = await VatGroup.find({
+  /**
+   * Returns all VAT groups with options.
+   * @param filters - The filtering parameters.
+   * @param pagination - The pagination options.
+   */
+  public static async getVatGroups(
+    filters: VatGroupFilterParameters, pagination: PaginationParameters = {},
+  ): Promise<[VatGroup[], number]> {
+    const { take, skip } = pagination;
+    const options = this.getOptions(filters);
+
+    const vatGroups = await VatGroup.find({
       ...options,
       take,
       skip,
     }) as VatGroup[];
 
-    return {
-      _pagination: {
-        take,
-        skip,
-        count: await VatGroup.count(options),
-      },
-      records,
-    };
+    const count = await VatGroup.count(options);
+
+    return [vatGroups, count];
   }
 
   /**

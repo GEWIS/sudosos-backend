@@ -79,49 +79,42 @@ describe('VatGroupService', () => {
 
   describe('Get VAT groups', () => {
     it('should return all VAT groups', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await VatGroupService.getVatGroups({});
+      const [records, count] = await VatGroupService.getVatGroups({});
 
       expect(records.length).to.equal(ctx.vatGroups.length);
-
-      expect(_pagination.take).to.be.undefined;
-      expect(_pagination.skip).to.be.undefined;
-      expect(_pagination.count).to.equal(ctx.vatGroups.length);
+      expect(count).to.equal(ctx.vatGroups.length);
     });
     it('should adhere to pagination', async () => {
       const take = 3;
       const skip = 2;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await VatGroupService.getVatGroups({}, {
-        take: 3,
-        skip: 2,
+      const [records, count] = await VatGroupService.getVatGroups({}, {
+        take,
+        skip,
       });
 
       expect(records.length).to.equal(Math.min(ctx.vatGroups.length - skip, take));
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(ctx.vatGroups.length);
+      expect(count).to.equal(ctx.vatGroups.length);
     });
     it('should filter on id', async () => {
       const vatGroupId = ctx.vatGroups[0].id;
-      const { records } = await VatGroupService.getVatGroups({ vatGroupId });
+      const [records] = await VatGroupService.getVatGroups({ vatGroupId });
 
       expect(records.length).to.equal(1);
       expect(records[0].id).to.equal(vatGroupId);
     });
     it('should filter on name', async () => {
       const { name } = ctx.vatGroups[0];
-      const { records } = await VatGroupService.getVatGroups({ name });
+      const [records] = await VatGroupService.getVatGroups({ name });
       records.map((r) => expect(r.name).to.equal(name));
     });
     it('should filter on percentage', async () => {
       const { percentage } = ctx.vatGroups[1];
-      const { records } = await VatGroupService.getVatGroups({ percentage });
+      const [records] = await VatGroupService.getVatGroups({ percentage });
       records.map((r) => expect(r.percentage).to.equal(percentage));
     });
     it('should filter on deleted', async () => {
       const deleted = false;
-      const { records } = await VatGroupService.getVatGroups({ deleted });
+      const [records] = await VatGroupService.getVatGroups({ deleted });
       records.map((r) => expect(r.deleted).to.equal(deleted));
     });
   });

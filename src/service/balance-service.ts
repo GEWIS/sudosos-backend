@@ -26,7 +26,6 @@
 
 import Balance from '../entity/transactions/balance';
 import BalanceResponse, {
-  PaginatedBalanceResponse,
   TotalBalanceResponse,
   UserTypeTotalBalanceResponse,
 } from '../controller/response/balance-response';
@@ -219,18 +218,14 @@ export default class BalanceService extends WithManager {
    * @param allowDeleted allow balances of deleted users to be returned
    * @param inactive only return inactive users
    * @param pagination pagination options
-   * @returns the current balance of a user
+   * @returns {Promise<[BalanceResponse[], number]>} the balances and total count
    */
   public async getBalances({
     ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted, inactive,
-  }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<PaginatedBalanceResponse> {
+  }: GetBalanceParameters, pagination: PaginationParameters = {}): Promise<[BalanceResponse[], number]> {
     // Return the empty response if request has no ids.
     if (ids?.length === 0) {
-      const { take, skip } = pagination;
-      return {
-        _pagination: { take, skip, count: 0 },
-        records: [],
-      };
+      return [[], 0];
     }
 
     const connection = this.manager.connection;
@@ -379,10 +374,10 @@ export default class BalanceService extends WithManager {
     const count = (await connection.query(query, parameters)).length;
 
 
-    return {
-      _pagination: { take, skip, count },
-      records: balances.map((b: object) => BalanceService.asBalanceResponse(b, date ?? new Date())),
-    };
+    return [
+      balances.map((b: object) => BalanceService.asBalanceResponse(b, date ?? new Date())),
+      count,
+    ];
   }
 
   /**
@@ -391,7 +386,7 @@ export default class BalanceService extends WithManager {
    * @param date Date to calculate balance for
    */
   public async getBalance(id: number, date?: Date): Promise<BalanceResponse> {
-    return (await this.getBalances({ ids: [id], allowDeleted: true, date })).records[0];
+    return (await this.getBalances({ ids: [id], allowDeleted: true, date }))[0][0];
   }
 
   /**
@@ -401,9 +396,9 @@ export default class BalanceService extends WithManager {
    */
   public async calculateTotalBalances(date: Date, allowDeleted?: boolean): Promise<TotalBalanceResponse> {
     const posBalanceRes = (await this.getBalances(
-      { date, minBalance: DineroTransformer.Instance.from(0), allowDeleted })).records;
+      { date, minBalance: DineroTransformer.Instance.from(0), allowDeleted }))[0];
     const negBalanceRes = (await this.getBalances(
-      { date, maxBalance: DineroTransformer.Instance.from(0), allowDeleted })).records;
+      { date, maxBalance: DineroTransformer.Instance.from(0), allowDeleted }))[0];
 
     const totalPos =  BalanceService.calculateTotal(posBalanceRes);
     const totalNeg = BalanceService.calculateTotal(negBalanceRes);
@@ -418,9 +413,9 @@ export default class BalanceService extends WithManager {
     for (const [index, type] of userTypes.entries()) {
       promises.push(this.getBalances(
         { userTypes: [type], date, minBalance: DineroTransformer.Instance.from(0), allowDeleted })
-        .then((r) => typedPosBalance[index] = r.records));
+        .then((r) => typedPosBalance[index] = r[0]));
       promises.push(this.getBalances({ userTypes: [type], date, maxBalance: DineroTransformer.Instance.from(0), allowDeleted })
-        .then((r) => typedNegBalance[index] = r.records));
+        .then((r) => typedNegBalance[index] = r[0]));
     }
 
     await Promise.all(promises);

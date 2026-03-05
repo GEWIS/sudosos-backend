@@ -27,7 +27,6 @@ import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-
 import Database from '../../../src/database/database';
 import EventService, { CreateEventParams } from '../../../src/service/event-service';
 import { expect } from 'chai';
-import { BaseEventResponse, BaseEventShiftResponse } from '../../../src/controller/response/event-response';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
@@ -70,21 +69,21 @@ describe('eventService', () => {
     };
   });
 
-  const checkEvent = (actual: BaseEventResponse, expected: Event) => {
+  const checkEvent = (actual: Event, expected: Event) => {
     expect(actual.id).to.equal(expected.id);
-    expect(actual.createdAt).to.equal(expected.createdAt.toISOString());
-    expect(actual.updatedAt).to.equal(expected.updatedAt.toISOString());
-    expect(actual.startDate).to.equal(expected.startDate.toISOString());
-    expect(actual.endDate).to.equal(expected.endDate.toISOString());
+    expect(actual.createdAt.toISOString()).to.equal(expected.createdAt.toISOString());
+    expect(actual.updatedAt.toISOString()).to.equal(expected.updatedAt.toISOString());
+    expect(actual.startDate.toISOString()).to.equal(expected.startDate.toISOString());
+    expect(actual.endDate.toISOString()).to.equal(expected.endDate.toISOString());
     expect(actual.name).to.equal(expected.name);
     expect(actual.type).to.equal(expected.type);
     expect(actual.createdBy.id).to.equal(expected.createdBy.id);
   };
 
-  const checkEventShift = (actual: BaseEventShiftResponse, expected: EventShift) => {
+  const checkEventShift = (actual: EventShift, expected: EventShift) => {
     expect(actual.id).to.equal(expected.id);
-    expect(actual.createdAt).to.equal(expected.createdAt.toISOString());
-    expect(actual.updatedAt).to.equal(expected.updatedAt.toISOString());
+    expect(actual.createdAt.toISOString()).to.equal(expected.createdAt.toISOString());
+    expect(actual.updatedAt.toISOString()).to.equal(expected.updatedAt.toISOString());
     expect(actual.name).to.equal(expected.name);
   };
 
@@ -94,7 +93,7 @@ describe('eventService', () => {
 
   describe('getEvents', () => {
     it('should return all events ordered by startDate descending', async () => {
-      const { records: events } = await EventService.getEvents();
+      const [events] = await EventService.getEvents();
       expect(events.length).be.greaterThan(0);
       expect(events.length).to.equal(ctx.events.length);
 
@@ -104,12 +103,12 @@ describe('eventService', () => {
         checkEvent(e, dbEvent);
       });
 
-      const dates = events.map((e) =>  new Date(e.startDate).getTime());
+      const dates = events.map((e) => e.startDate.getTime());
       expect(dates, 'Expected startDate to be sorted in descending order').to.be.descending;
     });
     it('should filter on id', async () => {
       const id = ctx.events[0].id;
-      const { records: events } = await EventService.getEvents({ id });
+      const [events] = await EventService.getEvents({ id });
 
       expect(events.length).to.equal(1);
       expect(events[0].id).to.equal(id);
@@ -117,7 +116,7 @@ describe('eventService', () => {
     it('should filter on exact name', async () => {
       const name = ctx.events[0].name;
       const actualEvents = ctx.events.filter((e) => e.name === name);
-      const { records: events } = await EventService.getEvents({ name });
+      const [events] = await EventService.getEvents({ name });
 
       expect(actualEvents.length).to.equal(events.length);
       events.forEach((e) => {
@@ -127,7 +126,7 @@ describe('eventService', () => {
     it('should filter on like name', async () => {
       const name = ctx.events[0].name.substring(0, 6);
       const actualEvents = ctx.events.filter((e) => e.name.substring(0, 6) === name);
-      const { records: events } = await EventService.getEvents({ name });
+      const [events] = await EventService.getEvents({ name });
 
       expect(actualEvents.length).to.equal(events.length);
       events.forEach((e) => {
@@ -136,7 +135,7 @@ describe('eventService', () => {
     });
     it('should filter on created by ID', async () => {
       const createdById = ctx.events[0].createdBy.id;
-      const { records: events } = await EventService.getEvents({ createdById });
+      const [events] = await EventService.getEvents({ createdById });
 
       expect(events.length).to.equal(1);
       expect(events[0].createdBy.id).to.equal(createdById);
@@ -144,44 +143,44 @@ describe('eventService', () => {
     it('should filter on date (before)', async () => {
       const beforeDate = ctx.events[0].startDate;
       const actualEvents = ctx.events.filter((e) => e.startDate.getTime() <= beforeDate.getTime());
-      const { records: events } = await EventService.getEvents({ beforeDate });
+      const [events] = await EventService.getEvents({ beforeDate });
 
       expect(actualEvents.length).to.equal(events.length);
       const ids = actualEvents.map((e) => e.id);
       events.forEach((e) => {
         expect(ids).to.include(e.id);
-        expect(new Date(e.startDate)).to.be.lessThanOrEqual(beforeDate);
+        expect(e.startDate).to.be.lessThanOrEqual(beforeDate);
       });
     });
     it('should filter on date (after)', async () => {
       const afterDate = ctx.events[0].startDate;
       const actualEvents = ctx.events.filter((e) => e.startDate.getTime() >= afterDate.getTime());
-      const { records: events } = await EventService.getEvents({ afterDate });
+      const [events] = await EventService.getEvents({ afterDate });
 
       expect(actualEvents.length).to.equal(events.length);
       const ids = actualEvents.map((e) => e.id);
       events.forEach((e) => {
         expect(ids).to.include(e.id);
-        expect(new Date(e.startDate)).to.be.greaterThanOrEqual(afterDate);
+        expect(e.startDate).to.be.greaterThanOrEqual(afterDate);
       });
     });
     it('should filter based on date range', async () => {
       const afterDate = ctx.events[0].startDate;
       const beforeDate = ctx.events[1].startDate;
       const actualEvents = ctx.events.filter((e) => e.startDate.getTime() >= afterDate.getTime() && e.startDate.getTime() <= beforeDate.getTime());
-      const { records: events } = await EventService.getEvents({ beforeDate, afterDate });
+      const [events] = await EventService.getEvents({ beforeDate, afterDate });
 
       expect(actualEvents.length).to.equal(events.length);
       const ids = actualEvents.map((e) => e.id);
       events.forEach((e) => {
         expect(ids).to.include(e.id);
-        expect(new Date(e.startDate)).to.be.greaterThanOrEqual(afterDate);
+        expect(e.startDate).to.be.greaterThanOrEqual(afterDate);
       });
     });
     it('should filter on createdById', async () => {
       const createdById = ctx.events[0].createdBy.id;
       const actualEvents = ctx.events.filter((e) => e.createdBy.id === createdById);
-      const { records: events } = await EventService.getEvents({ createdById });
+      const [events] = await EventService.getEvents({ createdById });
 
       expect(events.length).to.equal(actualEvents.length);
       const ids = actualEvents.map((e) => e.id);
@@ -193,17 +192,15 @@ describe('eventService', () => {
     it('should adhere to pagination', async () => {
       const take = 3;
       const skip = 1;
-      const events = await EventService.getEvents({}, { take, skip });
-      expect(events.records.length).to.equal(take);
-      expect(events._pagination.take).to.equal(take);
-      expect(events._pagination.skip).to.equal(skip);
-      expect(events._pagination.count).to.equal(ctx.events.length);
+      const [events, count] = await EventService.getEvents({}, { take, skip });
+      expect(events.length).to.equal(take);
+      expect(count).to.equal(ctx.events.length);
 
       const ids = ctx.events
         .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
         .slice(skip, skip + take)
         .map((e) => e.id);
-      events.records.forEach((event, i) => {
+      events.forEach((event, i) => {
         expect(event.id).to.equal(ids[i]);
       });
     });
@@ -347,9 +344,9 @@ describe('eventService', () => {
       expect(roleWithUsers.length).to.equal(1);
       expect(await EventShiftAnswer.findOne({ where: { eventId: event.id, shiftId: answer.shiftId, userId: answer.userId } })).to.not.be.null;
 
-      const eventResponse1 = await EventService.getSingleEvent(event.id);
+      const eventEntity1 = await EventService.getSingleEvent(event.id);
       const answers1 = await EventService.syncEventShiftAnswers(event);
-      expect(eventResponse1.shifts.reduce((t, e) => t + e.answers.length, 0)).to.equal(answers1.length);
+      expect(eventEntity1.answers.length).to.equal(answers1.length);
 
       await AssignedRole.delete({ userId: roleWithUser.userId, roleId: roleWithUser.roleId });
 
@@ -427,8 +424,8 @@ describe('eventService', () => {
       expect(event).to.not.be.undefined;
       expect(event.name).to.equal(params.name);
       expect(event.createdBy.id).to.equal(params.createdById);
-      expect(event.startDate).to.equal(params.startDate.toISOString());
-      expect(event.endDate).to.equal(params.endDate.toISOString());
+      expect(event.startDate.toISOString()).to.equal(params.startDate.toISOString());
+      expect(event.endDate.toISOString()).to.equal(params.endDate.toISOString());
       expect(event.shifts.length).to.equal(params.shiftIds.length);
 
       const users = ctx.roles
@@ -436,7 +433,7 @@ describe('eventService', () => {
         .map((r) => r.user);
       const userIds = users.map((u) => u.id);
       const actualUserIds = Array.from(new Set(
-        event.shifts.map((s) => s.answers.map((a) => a.user.id)).flat(),
+        event.answers.map((a) => a.user.id),
       ));
       expect(actualUserIds.length).to.be.greaterThan(0);
       expect(actualUserIds).to.deep.equalInAnyOrder(userIds);
@@ -510,7 +507,7 @@ describe('eventService', () => {
       const event = await EventService.updateEvent(originalEvent.id, {
         startDate: startDate,
       });
-      expect(event.startDate).to.equal(startDate.toISOString());
+      expect(event.startDate.toISOString()).to.equal(startDate.toISOString());
       expect((await Event.findOne({ where: { id: originalEvent.id } })).startDate.getTime()).to.equal(startDate.getTime());
     });
     it('should correctly update endDate', async () => {
@@ -518,7 +515,7 @@ describe('eventService', () => {
       const event = await EventService.updateEvent(originalEvent.id, {
         endDate: endDate,
       });
-      expect(event.endDate).to.equal(endDate.toISOString());
+      expect(event.endDate.toISOString()).to.equal(endDate.toISOString());
       expect((await Event.findOne({ where: { id: originalEvent.id } })).endDate.getTime()).to.equal(endDate.getTime());
     });
     it('should correctly update shiftIds by adding a shift', async () => {
@@ -540,7 +537,8 @@ describe('eventService', () => {
       // Answer sheets should include new shift
       expect(event.shifts.map((s) => s.id)).to.deep.equalInAnyOrder(shiftIds);
       event.shifts.forEach((s) => {
-        expect(s.answers.length).to.be.greaterThan(0);
+        const shiftAnswers = event.answers.filter((a) => a.shiftId === s.id);
+        expect(shiftAnswers.length).to.be.greaterThan(0);
       });
 
     });
@@ -580,8 +578,7 @@ describe('eventService', () => {
 
   describe('getShifts', () => {
     it('should return all shifts', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records: shifts, _pagination } = await EventService.getEventShifts({});
+      const [shifts, count] = await EventService.getEventShifts({});
       expect(shifts.length).to.equal(ctx.eventShifts.filter((s) => s.deletedAt == null).length);
 
       shifts.forEach((s) => {
@@ -590,8 +587,7 @@ describe('eventService', () => {
         checkEventShift(s, actualShift);
       });
 
-      expect(_pagination.count).to.equal(shifts.length);
-      expect(_pagination.take).to.be.undefined;
+      expect(count).to.equal(shifts.length);
     });
   });
 

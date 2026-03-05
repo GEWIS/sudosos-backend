@@ -268,8 +268,8 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().deleteInactiveAdministrativeCost(lastId + 1);
     });
     it('should restore the user\'s balance when an inactive administrative cost is deleted', async () => {
-      const balances = await new BalanceService().getBalances({});
-      const user = balances.records.find(x => x.amount.amount > 100);
+      const [balanceRecords] = await new BalanceService().getBalances({});
+      const user = balanceRecords.find(x => x.amount.amount > 100);
 
       const before = (await new BalanceService().getBalance(user.id)).amount.amount;
 
@@ -476,14 +476,11 @@ describe('InactiveAdministrativeCostService', () => {
   });
   describe('getPaginatedInactiveAdministrativeCosts', async (): Promise<void> => {
     it('should paginate inactive administrative costs correctly', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await new InactiveAdministrativeCostService()
+      const [costs, count] = await new InactiveAdministrativeCostService()
         .getPaginatedInactiveAdministrativeCosts({}, { take: 2, skip: 1 });
 
-      expect(records).to.have.lengthOf.at.most(2);
-      expect(_pagination).to.include.keys(['count', 'take', 'skip']);
-      expect(_pagination.take).to.equal(2);
-      expect(_pagination.skip).to.equal(1);
+      expect(costs).to.have.lengthOf.at.most(2);
+      expect(count).to.be.a('number');
     });
 
   });

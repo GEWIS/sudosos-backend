@@ -152,7 +152,7 @@ export default class AuthenticationSecureController extends BaseController {
         expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
       }
 
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user,
         context: {
           roleManager: this.roleManager,
@@ -161,7 +161,7 @@ export default class AuthenticationSecureController extends BaseController {
         expiry,
         posId: req.token.posId,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
@@ -192,7 +192,7 @@ export default class AuthenticationSecureController extends BaseController {
       }
 
       const expiry = ServerSettingsStore.getInstance().getSetting('jwtExpiryPointOfSale') as ISettings['jwtExpiryPointOfSale'];
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user,
         context: {
           roleManager: this.roleManager,
@@ -200,7 +200,7 @@ export default class AuthenticationSecureController extends BaseController {
         },
         expiry,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
@@ -247,7 +247,7 @@ export default class AuthenticationSecureController extends BaseController {
         res.status(404).json('User not found.');
         return;
       }
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user,
         context: {
           roleManager: this.roleManager,
@@ -255,12 +255,13 @@ export default class AuthenticationSecureController extends BaseController {
         },
         posId: req.token.posId,
       });
+      const authResponse = AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token);
 
       // Let the service handle all business logic validation
       await (new QRService()).confirm(qrAuthenticator, user);
 
       // Notify WebSocket clients about the confirmation
-      WebSocketService.emitQRConfirmed(qrAuthenticator, token);
+      WebSocketService.emitQRConfirmed(qrAuthenticator, authResponse);
       res.status(200).json({ message: 'QR code confirmed successfully.' });
     } catch (error) {
       this.logger.error('Could not confirm QR code:', error);
@@ -285,7 +286,7 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       // Verify the caller is a POS user
-      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
         res.status(403).json('Only POS users can use secure PIN authentication.');
         return;
@@ -324,7 +325,7 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       // Verify the caller is a POS user
-      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
         res.status(403).json('Only POS users can use secure NFC authentication.');
         return;
@@ -356,12 +357,12 @@ export default class AuthenticationSecureController extends BaseController {
 
       this.logger.trace('Successful secure NFC authentication for user', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
         context,
         posId: body.posId,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using secure NFC:', error);
       res.status(500).json('Internal server error.');
@@ -385,7 +386,7 @@ export default class AuthenticationSecureController extends BaseController {
 
     try {
       // Verify the caller is a POS user
-      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
         res.status(403).json('Only POS users can use secure EAN authentication.');
         return;
@@ -417,12 +418,12 @@ export default class AuthenticationSecureController extends BaseController {
 
       this.logger.trace('Successful secure EAN authentication for user', authenticator.user);
 
-      const token = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
         context,
         posId: body.posId,
       });
-      res.json(token);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not authenticate using secure EAN:', error);
       res.status(500).json('Internal server error.');

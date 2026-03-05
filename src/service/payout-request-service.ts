@@ -37,7 +37,6 @@ import PayoutRequestStatus, { PayoutRequestState } from '../entity/transactions/
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import {
   BasePayoutRequestResponse,
-  PaginatedBasePayoutRequestResponse,
   PayoutRequestResponse,
   PayoutRequestStatusResponse,
 } from '../controller/response/payout-request-response';
@@ -122,52 +121,46 @@ export default class PayoutRequestService {
 
 
   /**
-   * Get all transactions with the given filters
+   * Get all payout requests with the given filters
    * @param filters
    * @param pagination
+   * @returns {[PayoutRequest[], number]} payout requests and total count
    */
   public static async getPayoutRequests(
     filters: PayoutRequestFilters, pagination: PaginationParameters = {},
-  ): Promise<PaginatedBasePayoutRequestResponse> {
+  ): Promise<[PayoutRequest[], number]> {
     const { take, skip } = pagination;
 
-    const [data, count]  = await PayoutRequest.findAndCount({
+    return PayoutRequest.findAndCount({
       ...(await this.getOptions(filters)),
       take,
       skip,
     });
-
-    const records = data.map((o) => this.asBasePayoutRequestResponse(o));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
   }
 
   /**
    * Get single payout request
    * @param id
+   * @returns {PayoutRequest | undefined} the payout request entity or undefined if not found
    */
   public static async getSinglePayoutRequest(id: number)
-    : Promise<PayoutRequestResponse | undefined> {
+    : Promise<PayoutRequest | undefined> {
     const payoutRequest = await PayoutRequest.findOne(await this.getOptions({ id }));
 
     if (payoutRequest == null) return undefined;
 
-    return PayoutRequestService.asPayoutRequestResponse(payoutRequest);
+    return payoutRequest;
   }
 
   /**
    * Create a new payout request
    * @param payoutRequestRequest
    * @param requestedBy
+   * @returns {PayoutRequest} the created payout request entity
    */
   public static async createPayoutRequest(
     payoutRequestRequest: PayoutRequestRequest, requestedBy: User,
-  ): Promise<PayoutRequestResponse> {
+  ): Promise<PayoutRequest> {
     const payoutRequest = Object.assign(new PayoutRequest(), {
       requestedBy,
       amount: Dinero(payoutRequestRequest.amount),
@@ -195,7 +188,7 @@ export default class PayoutRequestService {
     id: number, state: PayoutRequestState,
   ) {
     const payoutRequest = await PayoutRequestService.getSinglePayoutRequest(id);
-    const currentStates = payoutRequest.statuses.map((s) => s.state as PayoutRequestState);
+    const currentStates = payoutRequest.payoutRequestStatus.map((s) => s.state as PayoutRequestState);
     const allStatuses = Object.values(PayoutRequestState);
 
     if (!allStatuses.includes(state)) throw Error(`unknown status: ${state}.`);
@@ -235,13 +228,11 @@ export default class PayoutRequestService {
    * @param id ID of payout request
    * @param state State to change payout request to
    * @param user User who performs the update
-   * @return {Promise<PayoutRequestResponse>|undefined}
-   *  - Resolves to the updated payout request response if successful,
-   *  - or `undefined` if the payout request does not exist.
+   * @returns {PayoutRequest | undefined} the updated payout request entity, or undefined if not found
    */
   public static async updateStatus(
     id: number, state: PayoutRequestState, user: User,
-  ): Promise<PayoutRequestResponse | undefined> {
+  ): Promise<PayoutRequest | undefined> {
     const payoutRequest = await PayoutRequest.findOne({
       where: { id },
       relations: ['requestedBy'],

@@ -36,8 +36,8 @@ import { PaginationParameters } from '../helpers/pagination';
 import { DeepPartial, FindManyOptions, FindOptionsRelations } from 'typeorm';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import { UpdateRoleRequest } from '../controller/request/rbac-request';
-import { PaginatedUserResponse } from '../controller/response/user-response';
 import AssignedRole from '../entity/rbac/assigned-role';
+import User from '../entity/user/user';
 import UserService from './user-service';
 
 interface RoleFilterParameters {
@@ -177,19 +177,15 @@ export default class RBACService {
    * @param take
    * @param skip
    */
-  public static async getRoleUsers(roleId: number, { take, skip }: PaginationParameters = {}): Promise<PaginatedUserResponse> {
+  public static async getRoleUsers(roleId: number, { take, skip }: PaginationParameters = {}): Promise<[User[], number]> {
     const assignedRoles = await AssignedRole.find({ where: { roleId }, take, skip });
     const userIds = assignedRoles.map((role) => role.userId);
 
-    const users = await UserService.getUsers({ id: userIds });
-    return {
-      _pagination: {
-        take,
-        skip,
-        count: users.records.length,
-      },
-      records: users.records,
-    };
+    const count = await AssignedRole.count({ where: { roleId } });
+
+    if (userIds.length === 0) return [[], count];
+    const [users] = await UserService.getUsers({ id: userIds });
+    return [users, count];
   }
 
   /**

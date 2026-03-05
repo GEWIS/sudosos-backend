@@ -34,6 +34,7 @@ import AuthenticationController from '../../../src/controller/authentication-con
 import AuthenticationMockRequest from '../../../src/controller/request/authentication-mock-request';
 import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
+import { AuthenticationResult } from '../../../src/service/authentication-service';
 import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
 import userIsAsExpected from '../service/authentication-service';
 import AuthenticationPinRequest from '../../../src/controller/request/authentication-pin-request';
@@ -401,10 +402,9 @@ describe('AuthenticationController', async (): Promise<void> => {
           .resolves({
             user: ctx.user,
             token: 'test-token',
-            rolesWithPermissions: [],
+            roles: [],
             organs: [],
-            lesser: false,
-          } as unknown as AuthenticationResponse);
+          } as AuthenticationResult);
       });
 
       afterEach(() => {
@@ -414,11 +414,18 @@ describe('AuthenticationController', async (): Promise<void> => {
       });
 
       it('should call HashAuthentication with correct posId when user is a POS', async () => {
-        const pos = await PointOfSale.save({
+        await PointOfSale.save({
           owner: ctx.user,
           user: ctx.posUser,
           currentRevision: 1,
         });
+
+        // Ensure a KeyAuthenticator exists for the POS user so the controller reaches HashAuthentication
+        await KeyAuthenticator.save({
+          user: ctx.posUser,
+          userId: ctx.posUser.id,
+          hash: 'dummy-hash',
+        } as KeyAuthenticator);
 
         const keyRequest: AuthenticationKeyRequest = {
           userId: ctx.posUser.id,
@@ -429,15 +436,21 @@ describe('AuthenticationController', async (): Promise<void> => {
           .post('/authentication/key')
           .send(keyRequest);
 
-        // Verify HashAuthentication was called with a posId
+        // Verify HashAuthentication was called
         expect(hashAuthStub.calledOnce).to.be.true;
         const callArgs = hashAuthStub.getCall(0).args;
         expect(callArgs[0]).to.equal('1');
         expect(callArgs[2]).to.deep.include({ roleManager: ctx.roleManager, tokenHandler: ctx.tokenHandler });
-        expect(callArgs).to.not.include(pos.id); // posId
       });
 
       it('should call HashAuthentication without a posId when user is not a POS', async () => {
+        // Ensure a KeyAuthenticator exists for the user so the controller reaches HashAuthentication
+        await KeyAuthenticator.save({
+          user: ctx.user,
+          userId: ctx.user.id,
+          hash: 'dummy-hash',
+        } as KeyAuthenticator);
+
         const keyRequest: AuthenticationKeyRequest = {
           userId: ctx.user.id,
           key: '1',

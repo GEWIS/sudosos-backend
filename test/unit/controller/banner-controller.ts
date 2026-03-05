@@ -44,28 +44,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { RbacSeeder } from '../../seed';
 import BannerSeeder from '../../seed/banner-seeder';
-
-export function bannerEq(a: Banner, b: BannerResponse): Boolean {
-  const aEmpty = a === {} as Banner || a === undefined;
-  const bEmpty = b === {} as BannerResponse || b === undefined;
-  if (aEmpty !== bEmpty) {
-    return false;
-  }
-  if (aEmpty ? !bEmpty : bEmpty) {
-    return false;
-  }
-
-  const downloadName = a.image ? (a.image.downloadName ?? null) : null;
-
-  return a.name === b.name
-    && downloadName === b.image
-    && a.duration === b.duration
-    && a.active === b.active
-    && Math.floor(a.startDate.getTime() / 1000)
-    === Math.floor(new Date(b.startDate).getTime() / 1000)
-    && Math.floor(a.endDate.getTime() / 1000)
-    === Math.floor(new Date(b.endDate).getTime() / 1000);
-}
+import { bannerEq } from '../../helpers/banner-helpers';
 
 describe('BannerController', async (): Promise<void> => {
   let ctx: {

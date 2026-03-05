@@ -27,7 +27,7 @@
 import { RequestWithToken } from '../middleware/token-middleware';
 import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
-import { PaginatedUserResponse, UserResponse } from '../controller/response/user-response';
+import { UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
 import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
 import OrganMembership from '../entity/organ/organ-membership';
@@ -233,7 +233,7 @@ export default class UserService {
    */
   public static async getUsers(
     filters: UserFilterParameters = {}, pagination: PaginationParameters = {},
-  ): Promise<PaginatedUserResponse> {
+  ): Promise<[User[], number]> {
     const { take, skip } = pagination;
 
     // Pre-process organId and assignedRoleIds to get user IDs
@@ -316,14 +316,7 @@ export default class UserService {
     const users = await User.find({ ...options, take, skip });
     const count = await User.count(options);
 
-    const records = users.map((u) => asUserResponse(u, true));
-
-    return {
-      _pagination: {
-        take, skip, count,
-      },
-      records,
-    };
+    return [users, count];
   }
 
   /**
@@ -332,13 +325,13 @@ export default class UserService {
    * @returns User if exists
    * @returns undefined if user does not exits
    */
-  public static async getSingleUser(id: number) {
+  public static async getSingleUser(id: number): Promise<User | undefined> {
     const options = this.getOptions({ id });
     const user = await User.findOne(options);
     if (!user) {
       return undefined;
     }
-    return asUserResponse(user, true);
+    return user;
   }
 
   /**
@@ -346,7 +339,7 @@ export default class UserService {
    * @param createUserRequest - The user to create
    * @returns The created user
    */
-  public static async createUser(createUserRequest: CreateUserRequest) {
+  public static async createUser(createUserRequest: CreateUserRequest): Promise<User | undefined> {
     // Check if user needs to accept TOS.
     const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
     const user = await User.save({
@@ -385,7 +378,7 @@ export default class UserService {
    * @throws Error if the user has a non-zero balance and is being deleted.
    * @returns {Promise<void>} - A promise that resolves when the user account has been closed.
    */
-  public static async closeUser(userId: number, deleted = false): Promise<UserResponse> {
+  public static async closeUser(userId: number, deleted = false): Promise<User | undefined> {
     const options = this.getOptions({ id: userId, allowDeleted: true });
     const user = await User.findOne(options);
     if (!user) return undefined;
@@ -401,7 +394,7 @@ export default class UserService {
     user.canGoIntoDebt = false;
 
     await user.save();
-    return asUserResponse(user, true);
+    return user;
   }
 
   /**
@@ -410,13 +403,13 @@ export default class UserService {
    * @param updateUserRequest - The update object.
    */
   public static async updateUser(userId: number, updateUserRequest: UpdateUserRequest):
-  Promise<UserResponse> {
+  Promise<User | undefined> {
     const options = this.getOptions({ id: userId, allowDeleted: true });
     const user = await User.findOne(options);
     if (!user) return undefined;
     Object.assign(user, updateUserRequest);
     await user.save();
-    return asUserResponse(user, true);
+    return user;
   }
 
   /**
@@ -454,15 +447,15 @@ export default class UserService {
       skip: 0,
     };
 
-    const transactions = await (new TransactionService()).getTransactions(filters, pagination, user);
-    const transfers = await (new TransferService()).getTransfers(filters, pagination, user);
+    const [transactionRecords, transactionCount] = await (new TransactionService()).getTransactions(filters, pagination, user);
+    const [transferRecords, transferCount] = await (new TransferService()).getTransfers(filters, pagination, user);
     const financialMutations: FinancialMutationResponse[] = [];
 
-    transactions.records.forEach((mutation) => {
+    transactionRecords.forEach((mutation) => {
       financialMutations.push({ type: 'transaction', mutation });
     });
 
-    transfers.records.forEach((mutation) => {
+    transferRecords.map((t) => TransferService.asTransferResponse(t)).forEach((mutation) => {
       financialMutations.push({ type: 'transfer', mutation });
     });
 
@@ -476,8 +469,7 @@ export default class UserService {
       _pagination: {
         take: paginationParameters.take ?? 0,
         skip: paginationParameters.skip ?? 0,
-        // eslint-disable-next-line no-underscore-dangle
-        count: transactions._pagination.count + transfers._pagination.count,
+        count: transactionCount + transferCount,
       },
       records: mutationRecords,
     };

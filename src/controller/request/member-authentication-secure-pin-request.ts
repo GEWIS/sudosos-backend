@@ -19,17 +19,19 @@
  */
 
 /**
- * This is the module page of the gewis-authentication-pin-request.
+ * This is the module page of the member-authentication-secure-pin-request.
  *
- * @module GEWIS
+ * @module authentication
  */
 
 /**
- * @typedef {object} GEWISAuthenticationPinRequest
- * @property {number} gewisId.required
+ * @typedef {object} MemberAuthenticationSecurePinRequest
+ * @property {number} memberId.required
  * @property {string} pin.required
+ * @property {number} posId.required - POS identifier
  */
-export default interface GEWISAuthenticationPinRequest {
-  gewisId: number,
+export default interface MemberAuthenticationSecurePinRequest {
+  memberId: number,
   pin: string,
+  posId: number,
 }

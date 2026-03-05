@@ -24,34 +24,34 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import log4js from 'log4js';
-import User, { UserType } from '../../../../src/entity/user/user';
-import TokenHandler from '../../../../src/authentication/token-handler';
-import Database from '../../../../src/database/database';
-import Swagger from '../../../../src/start/swagger';
-import RoleManager from '../../../../src/rbac/role-manager';
-import AuthenticationResponse from '../../../../src/controller/response/authentication-response';
-import GewisAuthenticationSecureController from '../../../../src/gewis/controller/gewis-authentication-secure-controller';
-import MemberUser from '../../../../src/entity/user/member-user';
-import AuthenticationService from '../../../../src/service/authentication-service';
-import GEWISAuthenticationSecurePinRequest from '../../../../src/gewis/controller/request/gewis-authentication-secure-pin-request';
-import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
-import PointOfSale from '../../../../src/entity/point-of-sale/point-of-sale';
-import { truncateAllTables } from '../../../setup';
-import { finishTestDB } from '../../../helpers/test-helpers';
-import { RbacSeeder, PointOfSaleSeeder } from '../../../seed';
-import TokenMiddleware from '../../../../src/middleware/token-middleware';
-import DefaultRoles from '../../../../src/rbac/default-roles';
-import ServerSettingsStore from '../../../../src/server-settings/server-settings-store';
-import { TermsOfServiceStatus } from '../../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
+import TokenHandler from '../../../src/authentication/token-handler';
+import Database from '../../../src/database/database';
+import Swagger from '../../../src/start/swagger';
+import RoleManager from '../../../src/rbac/role-manager';
+import AuthenticationResponse from '../../../src/controller/response/authentication-response';
+import MemberAuthenticationSecureController from '../../../src/controller/member-authentication-secure-controller';
+import MemberUser from '../../../src/entity/user/member-user';
+import AuthenticationService from '../../../src/service/authentication-service';
+import MemberAuthenticationSecurePinRequest from '../../../src/controller/request/member-authentication-secure-pin-request';
+import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
+import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
+import { truncateAllTables } from '../../setup';
+import { finishTestDB } from '../../helpers/test-helpers';
+import { RbacSeeder, PointOfSaleSeeder } from '../../seed';
+import TokenMiddleware from '../../../src/middleware/token-middleware';
+import DefaultRoles from '../../../src/rbac/default-roles';
+import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 
-describe('GewisAuthenticationSecureController', async (): Promise<void> => {
+describe('MemberAuthenticationSecureController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     app: Application,
     tokenHandler: TokenHandler,
     roleManager: RoleManager,
     specification: SwaggerSpecification,
-    controller: GewisAuthenticationSecureController,
+    controller: MemberAuthenticationSecureController,
     memberUser: User,
     posUser: User,
     memberUserEntity: MemberUser,
@@ -109,7 +109,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
     // Initialize app
     const app = express();
     const specification = await Swagger.initialize(app);
-    const controller = new GewisAuthenticationSecureController(
+    const controller = new MemberAuthenticationSecureController(
       { specification, roleManager },
       tokenHandler,
     );
@@ -143,9 +143,9 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 
-  describe('POST /authentication/GEWIS/pin-secure', () => {
-    const validSecurePinRequest: GEWISAuthenticationSecurePinRequest = {
-      gewisId: 12345,
+  describe('POST /authentication/member/pin-secure', () => {
+    const validSecurePinRequest: MemberAuthenticationSecurePinRequest = {
+      memberId: 12345,
       pin: '1234',
       posId: 0, // Will be set to actual POS ID in tests
     };
@@ -157,7 +157,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -185,12 +185,12 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.memberUserToken}`)
         .send(requestBody);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.equal('Only POS users can use secure GEWIS PIN authentication.');
+      expect(res.body).to.equal('Only POS users can use secure member PIN authentication.');
     });
 
     it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
@@ -200,7 +200,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -208,15 +208,15 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       expect(res.body).to.equal('POS user ID does not match the requested posId.');
     });
 
-    it('should return HTTP 403 when GEWIS user does not exist', async () => {
+    it('should return HTTP 403 when member user does not exist', async () => {
       const requestBody = {
         ...validSecurePinRequest,
-        gewisId: 99999, // Non-existent GEWIS ID
+        memberId: 99999, // Non-existent member ID
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -232,7 +232,7 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -255,13 +255,13 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
       } as MemberUser);
 
       const requestBody = {
-        gewisId: memberUserWithoutPin.memberId,
+        memberId: memberUserWithoutPin.memberId,
         pin: '1234',
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/GEWIS/pin-secure')
+        .post('/authentication/member/pin-secure')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -270,4 +270,3 @@ describe('GewisAuthenticationSecureController', async (): Promise<void> => {
     });
   });
 });
-

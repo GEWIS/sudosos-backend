@@ -107,3 +107,20 @@ export function parseRequestPagination(req: Request): { take: number, skip: numb
 
   return { take, skip };
 }
+
+/**
+ * Build a paginated response from a [records, count] tuple.
+ * Use this in controllers to wrap service results into the standard paginated response format.
+ *
+ * @param records - The records to include in the response
+ * @param count - The total number of matching records (before pagination)
+ * @param pagination - The pagination parameters used for the query
+ */
+export function toResponse<R>(
+  records: R[], count: number, pagination: PaginationParameters,
+): { _pagination: PaginationResult; records: R[] } {
+  return {
+    _pagination: { take: pagination.take, skip: pagination.skip, count },
+    records,
+  };
+}

@@ -31,7 +31,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ContainerService from '../../../src/service/container-service';
 import Container from '../../../src/entity/container/container';
-import { ContainerResponse, ContainerWithProductsResponse } from '../../../src/controller/response/container-response';
+import { ContainerResponse } from '../../../src/controller/response/container-response';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import {
@@ -46,7 +46,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import sinon from 'sinon';
-import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
+
 import { ContainerSeeder, PointOfSaleSeeder, UserSeeder } from '../../seed';
 
 /**
@@ -61,20 +61,6 @@ function containerSuperset(response: ContainerResponse[], superset: Container[])
           && supersetContainer.owner.id === searchContainer.owner.id
     )) !== undefined
   ));
-}
-
-function responseAsUpdate(update: UpdateContainerParams, response: ContainerWithProductsResponse) {
-  expect(update.id).to.be.eq(response.id);
-  expect(update.name).to.be.eq(response.name);
-  expect(update.products).to.be.deep.equalInAnyOrder(response.products.map((p) => p.id));
-}
-
-function responseAsCreation(creation: CreateContainerParams,
-  response: ContainerWithProductsResponse) {
-  expect(creation.ownerId).to.be.eq(response.owner.id);
-  expect(creation.name).to.be.eq(response.name);
-  expect(creation.public).to.be.eq(response.public);
-  expect(creation.products).to.be.deep.equalInAnyOrder(response.products.map((p) => p.id));
 }
 
 function entityAsUpdate(update: UpdateContainerParams, container: ContainerRevision) {
@@ -142,10 +128,10 @@ describe('ContainerService', async (): Promise<void> => {
 
   describe('getContainers function', () => {
     it('should return all containers with no input specification', async () => {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ContainerService.getContainers();
+      const [revisions, count] = await ContainerService.getContainers();
 
       const withRevisions = ctx.containers.filter((c) => c.currentRevision > 0);
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
       expect(records).to.be.length(withRevisions.length);
       expect(containerSuperset(records, ctx.containers)).to.be.true;
       records.forEach((c) => {
@@ -153,15 +139,14 @@ describe('ContainerService', async (): Promise<void> => {
         expect(validator.valid).to.be.true;
       });
 
-      expect(_pagination.take).to.equal(undefined);
-      expect(_pagination.skip).to.equal(undefined);
-      expect(_pagination.count).to.equal(withRevisions.length);
+      expect(count).to.equal(withRevisions.length);
     });
     it('should return containers with the ownerId specified', async () => {
-      const { records } = await ContainerService.getContainers({
+      const [revisions] = await ContainerService.getContainers({
         ownerId: ctx.containers[0].owner.id,
       });
 
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
       expect(containerSuperset(records, ctx.containers)).to.be.true;
 
       const belongsToOwner = records.every((container: ContainerResponse) => (
@@ -172,11 +157,12 @@ describe('ContainerService', async (): Promise<void> => {
     it('should return containers of the point of sale specified', async () => {
       const pos = ctx.pointsOfSale[0];
       const posRevision = ctx.pointOfSaleRevisions.find((r) => r.pointOfSaleId === pos.id && r.revision === pos.currentRevision);
-      const { records } = await ContainerService.getContainers({
+      const [revisions] = await ContainerService.getContainers({
         posId: pos.id,
         posRevision: posRevision.revision,
       });
 
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
       expect(containerSuperset(records, ctx.containers)).to.be.true;
 
       const belongsToPos = records.every(
@@ -188,34 +174,31 @@ describe('ContainerService', async (): Promise<void> => {
       expect(posRevision.containers.filter((c) => c.container.deletedAt == null)).to.be.length(records.length);
     });
     it('should return a single container if containerId is specified', async () => {
-      const { records } = await ContainerService.getContainers({
+      const [revisions] = await ContainerService.getContainers({
         containerId: ctx.containers[0].id,
       });
 
-      expect(records).to.be.length(1);
-      expect(records[0].id).to.be.equal(ctx.containers[0].id);
+      expect(revisions).to.be.length(1);
+      expect(revisions[0].containerId).to.be.equal(ctx.containers[0].id);
     });
     it('should return no containers if the userId and containerId dont match', async () => {
-      const { records } = await ContainerService.getContainers({
+      const [revisions] = await ContainerService.getContainers({
         ownerId: ctx.containers[10].owner.id,
         containerId: ctx.containers[0].id,
       });
 
-      expect(records).to.be.length(0);
+      expect(revisions).to.be.length(0);
     });
     it('should adhere to pagination', async () => {
       const take = 5;
       const skip = 3;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const { records, _pagination } = await ContainerService.getContainers({}, {
+      const [revisions, count] = await ContainerService.getContainers({}, {
         take, skip,
       });
 
       const withRevisions = ctx.containers.filter((c) => c.currentRevision > 0);
-      expect(_pagination.take).to.equal(take);
-      expect(_pagination.skip).to.equal(skip);
-      expect(_pagination.count).to.equal(withRevisions.length);
-      expect(records.length).to.equal(take);
+      expect(count).to.equal(withRevisions.length);
+      expect(revisions.length).to.equal(take);
     });
     it('should return products if specified', async () => {
       const createContainerParams: CreateContainerParams = {
@@ -225,9 +208,10 @@ describe('ContainerService', async (): Promise<void> => {
         public: true,
       };
       await ContainerService.createContainer(createContainerParams);
-      const { records } = await ContainerService.getContainers(
+      const [revisions] = await ContainerService.getContainers(
         { returnProducts: true }, {},
       );
+      const records = revisions.map((r) => ContainerService.revisionToResponse(r));
       expect(ctx.specification.validateModel('Array.<ContainerWithProductsResponse.model>', records, false, true).valid).to.be.true;
       const withRevisions = await Container.find({ where: { currentRevision: Not(IsNull()) } });
       expect(records.map((containerResponse) => containerResponse.id))
@@ -244,24 +228,24 @@ describe('ContainerService', async (): Promise<void> => {
       });
       expect(memberAuthenticators.length).to.equal(0);
 
-      let containers = await ContainerService.getContainers({}, {}, owner1);
-      const containersOwnedBy1 = containers.records.length;
-      containers.records.forEach((cont) => {
-        expect(cont.owner.id).to.equal(owner1.id);
+      let [revisions] = await ContainerService.getContainers({}, {}, owner1);
+      const containersOwnedBy1 = revisions.length;
+      revisions.forEach((cont) => {
+        expect(cont.container.owner.id).to.equal(owner1.id);
       });
-      containers = await ContainerService.getContainers({}, {}, owner2);
-      const containersOwnedBy2 = containers.records.length;
-      containers.records.forEach((cont) => {
-        expect(cont.owner.id).to.equal(owner2.id);
+      [revisions] = await ContainerService.getContainers({}, {}, owner2);
+      const containersOwnedBy2 = revisions.length;
+      revisions.forEach((cont) => {
+        expect(cont.container.owner.id).to.equal(owner2.id);
       });
 
       await new AuthenticationService().setMemberAuthenticator([owner1], owner2);
 
       const ownerIds = [owner1, owner2].map((o) => o.id);
-      containers = await ContainerService.getContainers({}, {}, owner1);
-      expect(containers.records.length).to.equal(containersOwnedBy1 + containersOwnedBy2);
-      containers.records.forEach((cont) => {
-        expect(ownerIds).to.include(cont.owner.id);
+      [revisions] = await ContainerService.getContainers({}, {}, owner1);
+      expect(revisions.length).to.equal(containersOwnedBy1 + containersOwnedBy2);
+      revisions.forEach((cont) => {
+        expect(ownerIds).to.include(cont.container.owner.id);
       });
 
       // Cleanup
@@ -304,10 +288,7 @@ describe('ContainerService', async (): Promise<void> => {
         products: [1, 2, 3],
         public: true,
       };
-      const response = await ContainerService.updateContainer(update);
-      responseAsUpdate(update, response);
-      const entity = await Container.findOne({ where: { id: container.id } });
-      const revision = await ContainerRevision.findOne({ where: { container: { id: container.id }, revision: entity.currentRevision }, relations: ['container', 'products', 'products.product'] });
+      const revision = await ContainerService.updateContainer(update);
       entityAsUpdate(update, revision);
     });
   });
@@ -322,20 +303,11 @@ describe('ContainerService', async (): Promise<void> => {
       };
 
       const container = await ContainerService.createContainer(creation);
-      responseAsCreation(creation, container);
-      const entity = await Container.findOne({ where: { id: container.id } });
-      const revision = await ContainerRevision.findOne({
-        where: {
-          container: { id: container.id },
-          revision: entity.currentRevision,
-        },
-        relations: ['container', 'products', 'products.product', 'container.owner'],
-      });
-      await entityAsCreation(creation, revision);
+      await entityAsCreation(creation, container);
 
       // Cleanup
-      await ContainerRevision.delete({ containerId: container.id });
-      await Container.delete({ id: container.id });
+      await ContainerRevision.delete({ containerId: container.containerId });
+      await Container.delete({ id: container.containerId });
     });
   });
 
@@ -359,7 +331,7 @@ describe('ContainerService', async (): Promise<void> => {
       const container2 = await ContainerService.createContainer(createContainerParams);
 
       const createPointOfSaleParams: CreatePointOfSaleParams = {
-        containers: [container.id, container2.id],
+        containers: [container.containerId, container2.containerId],
         name: 'New POS',
         useAuthentication: true,
         ownerId,
@@ -370,33 +342,33 @@ describe('ContainerService', async (): Promise<void> => {
         products: [1, 2],
         public: true,
         name: 'New name',
-        id: container.id,
+        id: container.containerId,
       };
 
       await ContainerService.updateContainer(update);
 
       const updatedPos = await PointOfSaleRevision
-        .findOne({ where: { revision: 2, pointOfSale: { id: pos.id } }, relations: ['containers', 'containers.products'] });
+        .findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: ['containers', 'containers.products'] });
       expect(updatedPos).to.not.be.null;
       expect(updatedPos.containers).length(2);
 
-      const newContainer = updatedPos.containers.find((c) => c.container.id === container.id);
+      const newContainer = updatedPos.containers.find((c) => c.container.id === container.containerId);
       expect(newContainer.name).to.eq(update.name);
 
       // Cleanup
-      await PointOfSaleRevision.delete({ pointOfSaleId: pos.id });
-      await PointOfSale.delete({ id: pos.id });
-      await ContainerRevision.delete({ containerId: container2.id });
-      await ContainerRevision.delete({ containerId: container.id });
-      await Container.delete({ id: container2.id });
-      await Container.delete({ id: container.id });
+      await PointOfSaleRevision.delete({ pointOfSaleId: pos.pointOfSaleId });
+      await PointOfSale.delete({ id: pos.pointOfSaleId });
+      await ContainerRevision.delete({ containerId: container2.containerId });
+      await ContainerRevision.delete({ containerId: container.containerId });
+      await Container.delete({ id: container2.containerId });
+      await Container.delete({ id: container.containerId });
     });
   });
   describe('deleteContainer function', () => {
     it('should soft delete container and propagate update after deletion', async () => {
-      const stub = sinon.stub(PointOfSaleService, 'updatePointOfSale').callsFake(async (params): Promise<PointOfSaleWithContainersResponse> => {
-        const pointOfSale = await PointOfSaleService.getPointsOfSale({ pointOfSaleId: params.id, returnContainers: true, returnProducts: true });
-        return pointOfSale.records[0] as PointOfSaleWithContainersResponse;
+      const stub = sinon.stub(PointOfSaleService, 'updatePointOfSale').callsFake(async (params): Promise<PointOfSaleRevision> => {
+        const [revisions] = await PointOfSaleService.getPointsOfSale({ pointOfSaleId: params.id, returnContainers: true, returnProducts: true });
+        return revisions[0];
       });
 
       const start = Math.floor(new Date().getTime() / 1000) * 1000;

@@ -69,7 +69,8 @@ import RootController from './controller/root-controller';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
-import GewisAuthenticationSecureController from './gewis/controller/gewis-authentication-secure-controller';
+import MemberAuthenticationController from './controller/member-authentication-controller';
+import MemberAuthenticationSecureController from './controller/member-authentication-secure-controller';
 import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
 import EventShiftController from './controller/event-shift-controller';
@@ -110,7 +111,7 @@ export class Application {
 
   webSocketService: WebSocketService;
 
-  redisConnection: Redis;
+  redisConnection: Redis | undefined;
 
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
@@ -120,6 +121,9 @@ export class Application {
     }
     this.tasks.forEach((task) => task.stop());
     this.workers.forEach((worker) => worker.close());
+    if (this.redisConnection) {
+      await this.redisConnection.quit();
+    }
     await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
@@ -172,6 +176,16 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     process.env.GEWISWEB_JWT_SECRET,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
+
+  // Define member authentication controller and bind before middleware.
+  const memberController = new MemberAuthenticationController(
+    {
+      specification: application.specification,
+      roleManager: application.roleManager,
+    },
+    tokenHandler,
+  );
+  application.app.use('/v1/authentication', memberController.getRouter());
 
   // Define QR authentication controller and bind before middleware.
   const qrController = new AuthenticationQRController(
@@ -272,11 +286,84 @@ export default async function createApp(): Promise<Application> {
   });
   application.webSocketService = webSocketService;
 
-  application.redisConnection = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number(process.env.REDIS_PORT) || 6379,
-    maxRetriesPerRequest: null,
-  });
+  // Try to connect to Redis. If it is unreachable (common in local dev
+  // environments) we fall back to direct SMTP sending instead of crashing.
+  // In production we always require Redis and re-throw to prevent silent
+  // degradation of email delivery semantics.
+  //
+  // The connect timeout defaults to 100 ms in test environments (to avoid
+  // slowing down suites that run without Redis) and 3 s otherwise.
+  // Override via REDIS_CONNECT_TIMEOUT_MS if needed.
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const connectTimeout = Number(
+    process.env.REDIS_CONNECT_TIMEOUT_MS ?? (isTestEnv ? '100' : '3000'),
+  );
+
+  let redisClient: Redis | undefined;
+  try {
+    redisClient = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+      // Give up quickly so startup is not delayed when Redis is absent.
+      // We intentionally omit retryStrategy so that once the connection is
+      // established, ioredis uses its default reconnection behaviour on drop.
+      connectTimeout,
+    });
+
+    // Wait for the connection to be established (or fail).
+    // Named handlers are used so each one can remove the other, preventing
+    // a stale listener from hiding subsequent errors or firing unexpectedly.
+    await new Promise<void>((resolve, reject) => {
+      // Declare first so each handler can reference the other without
+      // triggering the no-use-before-define lint rule.
+      let handleReady: () => void;
+      let handleError: (err: Error) => void;
+
+      handleReady = () => {
+        redisClient.removeListener('error', handleError);
+        resolve();
+      };
+      handleError = (err: Error) => {
+        redisClient.removeListener('ready', handleReady);
+        reject(err);
+      };
+
+      redisClient.once('ready', handleReady);
+      redisClient.once('error', handleError);
+    });
+
+    // Attach a persistent error handler so any post-startup Redis errors are
+    // logged rather than crashing the process with an unhandled error event.
+    redisClient.on('error', (err: Error) => {
+      logger.error(`Redis client error: ${err.message}`);
+    });
+
+    application.redisConnection = redisClient;
+    logger.info('Redis connection established.');
+  } catch (err) {
+    // Clean up any lingering sockets / timers on the failed client so the
+    // event loop is not kept alive unnecessarily.
+    if (redisClient) {
+      redisClient.removeAllListeners();
+      redisClient.disconnect();
+    }
+    application.redisConnection = undefined;
+
+    if (process.env.NODE_ENV === 'production') {
+      // In production a Redis outage must be an explicit, loud failure rather
+      // than a silent fallback that changes email delivery semantics.
+      throw new Error(
+        `Redis is required in production but could not be reached: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    logger.warn(
+      `Could not connect to Redis (${err instanceof Error ? err.message : String(err)}). `
+      + 'Email queueing will be disabled – emails will be sent directly via SMTP. '
+      + 'Start Redis or set REDIS_HOST / REDIS_PORT to enable queued sending.',
+    );
+  }
 
   new Mailer(application.redisConnection);
 
@@ -285,7 +372,7 @@ export default async function createApp(): Promise<Application> {
   // REMOVE LATER
   application.app.use('/v1/rbac', new RbacController(options).getRouter());
   application.app.use('/v1/authentication', new AuthenticationSecureController(options, tokenHandler).getRouter());
-  application.app.use('/v1/authentication', new GewisAuthenticationSecureController(options, tokenHandler).getRouter());
+  application.app.use('/v1/authentication', new MemberAuthenticationSecureController(options, tokenHandler).getRouter());
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());
@@ -320,7 +407,9 @@ export default async function createApp(): Promise<Application> {
 
   webSocketService.initiateWebSocket();
 
-  application.workers = [startMailWorker(application.redisConnection)];
+  application.workers = application.redisConnection
+    ? [startMailWorker(application.redisConnection)]
+    : [];
 
   // Start express application.
   logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);

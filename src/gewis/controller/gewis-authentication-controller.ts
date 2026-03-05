@@ -35,7 +35,6 @@ import MemberUser from '../../entity/user/member-user';
 import GewiswebToken from '../gewisweb-token';
 import GewiswebAuthenticationRequest from './request/gewisweb-authentication-request';
 import AuthenticationService from '../../service/authentication-service';
-import GEWISAuthenticationPinRequest from './request/gewis-authentication-pin-request';
 import AuthenticationLDAPRequest from '../../controller/request/authentication-ldap-request';
 import AuthenticationController from '../../controller/authentication-controller';
 import Gewis from '../gewis';
@@ -95,13 +94,6 @@ export default class GewisAuthenticationController extends BaseController {
           body: { modelName: 'GewiswebAuthenticationRequest' },
           policy: async () => true,
           handler: this.gewiswebLogin.bind(this),
-        },
-      },
-      '/GEWIS/pin': {
-        POST: {
-          body: { modelName: 'GEWISAuthenticationPinRequest' },
-          policy: async () => true,
-          handler: this.gewisPINLogin.bind(this),
         },
       },
       '/GEWIS/LDAP': {
@@ -178,12 +170,12 @@ export default class GewisAuthenticationController extends BaseController {
         await UserService.updateUserType(memberUser.user, UserType.MEMBER);
       }
 
-      const response = await new AuthenticationService().getSaltedToken({
+      const result = await new AuthenticationService().getSaltedToken({
         user: memberUser.user,
         context: { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
         salt: body.nonce,
       });
-      res.json(response);
+      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
@@ -214,38 +206,4 @@ export default class GewisAuthenticationController extends BaseController {
     }
   }
 
-  /**
-   * POST /authentication/GEWIS/pin
-   * @deprecated Use /authentication/GEWIS/pin-secure instead
-   * @summary PIN login and hand out token.
-   * @operationId gewisPinAuthentication
-   * @tags authenticate - Operations of authentication controller
-   * @param {GEWISAuthenticationPinRequest} request.body.required - The PIN login.
-   * @return {AuthenticationResponse} 200 - The created json web token.
-   * @return {string} 400 - Validation error.
-   * @return {string} 403 - Authentication error.
-   */
-  public async gewisPINLogin(req: Request, res: Response): Promise<void> {
-    const { pin, gewisId } = req.body as GEWISAuthenticationPinRequest;
-    this.logger.trace('GEWIS PIN authentication for user', gewisId);
-
-    try {
-      const memberUser = await MemberUser.findOne({
-        where: { memberId: gewisId },
-        relations: ['user'],
-      });
-
-      if (!memberUser) {
-        res.status(403).json({
-          message: `User ${gewisId} not registered`,
-        });
-        return;
-      }
-      await (AuthenticationController.PINLoginConstructor(this.roleManager, this.tokenHandler,
-        pin, memberUser.user.id))(req, res);
-    } catch (error) {
-      this.logger.error('Could not authenticate using PIN:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
 }

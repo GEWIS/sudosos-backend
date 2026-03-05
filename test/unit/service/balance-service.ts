@@ -34,7 +34,7 @@ import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { OrderingDirection } from '../../../src/helpers/ordering';
-import { defaultPagination } from '../../../src/helpers/pagination';
+
 import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 import { calculateBalance } from '../../helpers/balance';
 import Fine from '../../../src/entity/fine/fine';
@@ -114,11 +114,11 @@ describe('BalanceService', (): void => {
 
   describe('getBalances', () => {
     it('should return balances from all users', async () => {
-      const balanceResponses = await new BalanceService().getBalances({});
+      const [records] = await new BalanceService().getBalances({});
       const now = new Date();
-      expect(balanceResponses.records.length).to.equal(ctx.users.length);
+      expect(records.length).to.equal(ctx.users.length);
 
-      balanceResponses.records.forEach((balance) => {
+      records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
@@ -127,13 +127,13 @@ describe('BalanceService', (): void => {
         checkFine(balance, user);
       });
 
-      expect(balanceResponses.records.some((b) => b.fine), 'At least one user has a fine').to.be.true;
+      expect(records.some((b) => b.fine), 'At least one user has a fine').to.be.true;
     });
     it('should return balances on certain date', async () => {
       const date = new Date('2021-01-01');
-      const balances = await new BalanceService().getBalances({ date });
+      const [records] = await new BalanceService().getBalances({ date });
 
-      balances.records.forEach((balance) => {
+      records.forEach((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         expect(user).to.not.be.undefined;
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers, date);
@@ -144,10 +144,10 @@ describe('BalanceService', (): void => {
     });
     it('should return balance from subset of users', async () => {
       const users = [ctx.users[10], ctx.users[11], ctx.users[12]];
-      const balanceResponses = await new BalanceService().getBalances({ ids: users.map((u) => u.id) });
-      expect(balanceResponses.records.length).to.equal(users.length);
+      const [records] = await new BalanceService().getBalances({ ids: users.map((u) => u.id) });
+      expect(records.length).to.equal(users.length);
 
-      balanceResponses.records.map((balance) => {
+      records.map((balance) => {
         const user = ctx.users.find((u) => u.id === balance.id);
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
         expect(balance.amount.amount).to.equal(actualBalance.amount.getAmount());
@@ -156,60 +156,60 @@ describe('BalanceService', (): void => {
     });
     it('should only return balances more than or equal a certain amount', async () => {
       const amount = 1039;
-      const allResponses = await new BalanceService().getBalances({});
-      const filteredResponses = await new BalanceService().getBalances({
+      const [allRecords] = await new BalanceService().getBalances({});
+      const [filteredRecords] = await new BalanceService().getBalances({
         minBalance: DineroTransformer.Instance.from(amount),
       });
 
-      expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount >= amount).length);
-      filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.greaterThanOrEqual(amount));
+      expect(filteredRecords.length).to.equal(allRecords.filter((res) => res.amount.amount >= amount).length);
+      filteredRecords.forEach((res) => expect(res.amount.amount).to.be.greaterThanOrEqual(amount));
     });
     it('should only return balances less than or equal a certain amount', async () => {
       const amount = 1039;
-      const allResponses = await new BalanceService().getBalances({});
-      const filteredResponses = await new BalanceService().getBalances({
+      const [allRecords] = await new BalanceService().getBalances({});
+      const [filteredRecords] = await new BalanceService().getBalances({
         maxBalance: DineroTransformer.Instance.from(amount),
       });
 
-      expect(filteredResponses.records.length).to.equal(allResponses.records.filter((res) => res.amount.amount <= amount).length);
-      filteredResponses.records.forEach((res) => expect(res.amount.amount).to.be.lessThanOrEqual(amount));
+      expect(filteredRecords.length).to.equal(allRecords.filter((res) => res.amount.amount <= amount).length);
+      filteredRecords.forEach((res) => expect(res.amount.amount).to.be.lessThanOrEqual(amount));
     });
     it('should only return balances without a fine', async () => {
       const users = ctx.users.filter((u) => u.currentFines == null);
-      const balances = await new BalanceService().getBalances({ hasFine: false });
+      const [records] = await new BalanceService().getBalances({ hasFine: false });
 
-      expect(balances.records.length).to.equal(users.length);
-      balances.records.forEach((b) => b.fine == null && b.fineSince == null);
+      expect(records.length).to.equal(users.length);
+      records.forEach((b) => b.fine == null && b.fineSince == null);
     });
     it('should only return balances with a fine', async () => {
       const users = ctx.users.filter((u) => u.currentFines != null);
-      const balances = await new BalanceService().getBalances({ hasFine: true });
+      const [records] = await new BalanceService().getBalances({ hasFine: true });
 
-      expect(balances.records.length).to.equal(users.length);
-      balances.records.forEach((b) => b.fine != null && b.fineSince != null);
+      expect(records.length).to.equal(users.length);
+      records.forEach((b) => b.fine != null && b.fineSince != null);
     });
     it('should only return balances starting with a certain fine amount', async () => {
       const amount = 600;
       const users = ctx.users.filter((u) => u.currentFines != null)
         .filter((u) => u.currentFines.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) >= amount);
-      const balances = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         minFine: DineroTransformer.Instance.from(amount),
       });
 
-      expect(balances.records.length).to.equal(users.length);
-      balances.records.forEach((b) => b.fine != null && b.fine.amount >= amount);
+      expect(records.length).to.equal(users.length);
+      records.forEach((b) => b.fine != null && b.fine.amount >= amount);
     });
     /**
      * See https://github.com/GEWIS/sudosos-backend/issues/167
      */
     it('should not return deleted users', async () => {
       const user = ctx.users[0];
-      const balance = await new BalanceService().getBalances({ ids: [user.id] });
-      expect(balance.records).to.not.be.empty;
+      const [records] = await new BalanceService().getBalances({ ids: [user.id] });
+      expect(records).to.not.be.empty;
 
       await User.update(user.id, { deleted: true });
-      const balance2 = await new BalanceService().getBalances({ ids: [user.id] });
-      expect(balance2.records).to.be.empty;
+      const [records2] = await new BalanceService().getBalances({ ids: [user.id] });
+      expect(records2).to.be.empty;
     });
     it('should include transactions from deleted POS', async () => {
       const builder = await UserFactory();
@@ -317,128 +317,122 @@ describe('BalanceService', (): void => {
       const amount = 600;
       const users = ctx.users.filter((u) => u.currentFines != null)
         .filter((u) => u.currentFines.fines.reduce((sum, f) => sum + f.amount.getAmount(), 0) <= amount);
-      const balances = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         maxFine: DineroTransformer.Instance.from(amount),
       });
 
-      expect(balances.records.length).to.equal(users.length);
-      balances.records.forEach((b) => b.fine != null && b.fine.amount <= amount);
+      expect(records.length).to.equal(users.length);
+      records.forEach((b) => b.fine != null && b.fine.amount <= amount);
     });
     it('should return all users with certain user type', async () => {
       const type = UserType.LOCAL_USER;
       const users = ctx.users.filter((u) => u.type === type);
-      const balances = await new BalanceService().getBalances({ userTypes: [type], allowDeleted: true });
+      const [records] = await new BalanceService().getBalances({ userTypes: [type], allowDeleted: true });
 
-      expect(balances.records.length).to.equal(users.length);
+      expect(records.length).to.equal(users.length);
 
       const userIds = users.map((u) => u.id);
-      balances.records.forEach((bal) => {
+      records.forEach((bal) => {
         expect(userIds).to.include(bal.id);
       });
 
-      const balanceIds = balances.records.map((b) => b.id);
+      const balanceIds = records.map((b) => b.id);
       users.forEach((u) => {
         expect(balanceIds).to.include(u.id);
       });
     });
     it('should return all inactive users', async () => {
       const users = ctx.users.filter((u) => u.active === false);
-      const balances = await new BalanceService().getBalances({ inactive: true });
-      expect(balances.records.length).to.be.greaterThan(0);
-      expect(balances.records.length).to.equal(users.length);
+      const [records] = await new BalanceService().getBalances({ inactive: true });
+      expect(records.length).to.be.greaterThan(0);
+      expect(records.length).to.equal(users.length);
 
       const userIds = users.map((u) => u.id);
-      balances.records.forEach((bal) => {
+      records.forEach((bal) => {
         expect(userIds).to.include(bal.id);
       });
     });
     it('should return all users with certain user type from set of types', async () => {
       const userTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN];
       const users = ctx.users.filter((u) => userTypes.includes(u.type));
-      const balances = await new BalanceService().getBalances({ userTypes, allowDeleted: true });
+      const [records] = await new BalanceService().getBalances({ userTypes, allowDeleted: true });
 
-      expect(balances.records.length).to.equal(users.length);
+      expect(records.length).to.equal(users.length);
 
       const userIds = users.map((u) => u.id);
-      balances.records.forEach((bal) => {
+      records.forEach((bal) => {
         expect(userIds).to.include(bal.id);
       });
 
-      const balanceIds = balances.records.map((b) => b.id);
+      const balanceIds = records.map((b) => b.id);
       users.forEach((u) => {
         expect(balanceIds).to.include(u.id);
       });
     });
     it('should return balances ordered by ID desc', async () => {
-      const balanceResponses = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         orderBy: BalanceOrderColumn.ID, orderDirection: OrderingDirection.DESC,
       });
 
-      balanceResponses.records.forEach((response, index, responses) => {
+      records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(response.id).to.be.lessThan(responses[index - 1].id);
       });
     });
     it('should return balances ordered by amount asc', async () => {
-      const balanceResponses = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         orderBy: BalanceOrderColumn.AMOUNT, orderDirection: OrderingDirection.ASC,
       });
 
-      balanceResponses.records.forEach((response, index, responses) => {
+      records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(response.amount.amount).to.be.greaterThanOrEqual(responses[index - 1].amount.amount);
       });
     });
     it('should return balances ordered by fine amount asc', async () => {
-      const balanceResponses = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         orderBy: BalanceOrderColumn.FINEAMOUNT, orderDirection: OrderingDirection.ASC, hasFine: true,
       });
-      balanceResponses.records.forEach((response, index, responses) => {
+      records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(response.fine.amount).to.be.greaterThanOrEqual(responses[index - 1].fine.amount);
       });
     });
     it('should return balances ordered by fine date asc', async () => {
-      const balanceResponses = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         orderBy: BalanceOrderColumn.FINESINCE, orderDirection: OrderingDirection.ASC,
       });
-      balanceResponses.records.forEach((response, index, responses) => {
+      records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(new Date(response.fineSince).getTime()).to.be.greaterThanOrEqual(new Date(responses[index - 1].fineSince).getTime());
       });
     });
     it('should return balances ordered ascending by default', async () => {
-      const balanceResponses = await new BalanceService().getBalances({
+      const [records] = await new BalanceService().getBalances({
         orderBy: BalanceOrderColumn.AMOUNT,
       });
 
-      balanceResponses.records.forEach((response, index, responses) => {
+      records.forEach((response, index, responses) => {
         if (index === 0) return;
         expect(response.amount.amount).to.be.greaterThanOrEqual(responses[index - 1].amount.amount);
       });
     });
     it('should set pagination metadata correctly when pagination parameters are undefined', async () => {
-      const balanceResponses = await new BalanceService().getBalances({}, {});
-      expect(balanceResponses._pagination.take).to.be.undefined;
-      expect(balanceResponses._pagination.skip).to.be.undefined;
-      expect(balanceResponses._pagination.count).to.equal(balanceResponses.records.length);
+      const [records, count] = await new BalanceService().getBalances({}, {});
+      expect(count).to.equal(records.length);
     });
     it('should adhere to pagination take', async () => {
       const take = 10;
-      const balanceResponses = await new BalanceService().getBalances({ allowDeleted: true }, { take });
-      expect(balanceResponses.records.length).to.equal(take);
-      expect(balanceResponses._pagination.take).to.equal(take);
-      expect(balanceResponses._pagination.skip).to.be.undefined;
-      expect(balanceResponses._pagination.count).to.equal(ctx.users.length);
+      const [records, count] = await new BalanceService().getBalances({ allowDeleted: true }, { take });
+      expect(records.length).to.equal(take);
+      expect(count).to.equal(ctx.users.length);
     });
     it('should adhere to pagination skip', async () => {
       const take = 4;
       const skip = ctx.users.length - take;
-      const balanceResponses = await new BalanceService().getBalances({ allowDeleted: true }, { skip });
-      expect(balanceResponses.records.length).to.equal(take);
-      expect(balanceResponses._pagination.take).to.equal(defaultPagination());
-      expect(balanceResponses._pagination.skip).to.equal(skip);
-      expect(balanceResponses._pagination.count).to.equal(ctx.users.length);
+      const [records, count] = await new BalanceService().getBalances({ allowDeleted: true }, { skip });
+      expect(records.length).to.equal(take);
+      expect(count).to.equal(ctx.users.length);
     });
   });
 
@@ -823,11 +817,11 @@ describe('BalanceService', (): void => {
       const date = new Date('2021-01-01');
       await new BalanceService().clearBalanceCache();
 
-      const allBalances = await new BalanceService().getBalances({
+      const [allRecords] = await new BalanceService().getBalances({
         date,
       });
 
-      const { positiveBalances, negativeBalances } = allBalances.records
+      const { positiveBalances, negativeBalances } = allRecords
         .reduce((acc, balance) => {
           const amount = balance.amount.amount;
           if (amount > 0) {
@@ -846,14 +840,14 @@ describe('BalanceService', (): void => {
       const date = new Date('2021-01-01');
       await new BalanceService().clearBalanceCache();
 
-      const allBalances = await new BalanceService().getBalances({
+      const [allRecords] = await new BalanceService().getBalances({
         date,
       });
 
       const userTypeBalances: UserTypeTotalBalanceResponse[] = [];
 
       for (const type of Object.values(UserType)) {
-        const { positiveBalances, negativeBalances } = allBalances.records
+        const { positiveBalances, negativeBalances } = allRecords
           .filter((r) => r.type == type)
           .reduce((acc, balance) => {
             const amount = balance.amount.amount;
@@ -884,12 +878,12 @@ describe('BalanceService', (): void => {
     const date = new Date('2021-01-01');
     await new BalanceService().clearBalanceCache();
 
-    const allBalances = await new BalanceService().getBalances({
+    const [allRecords] = await new BalanceService().getBalances({
       date,
       allowDeleted: true,
     });
 
-    const { positiveBalances, negativeBalances } = allBalances.records
+    const { positiveBalances, negativeBalances } = allRecords
       .reduce((acc, balance) => {
         const amount = balance.amount.amount;
         if (amount > 0) {

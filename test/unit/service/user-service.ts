@@ -302,52 +302,52 @@ describe('UserService', async (): Promise<void> => {
   });
 
   describe('getUsers', () => {
-    it('should return paginated users', async () => {
-      const result = await UserService.getUsers({}, { take: 10, skip: 0 });
+    it('should return users and count as tuple', async () => {
+      const [records, count] = await UserService.getUsers({}, { take: 10, skip: 0 });
 
-      expect(result).to.have.property('records');
-      expect(result).to.have.property('_pagination');
-      expect(result.records.length).to.be.greaterThan(0);
+      expect(records).to.be.an('array');
+      expect(count).to.be.a('number');
+      expect(records.length).to.be.greaterThan(0);
     });
 
     it('should filter by active status', async () => {
-      const result = await UserService.getUsers({ active: true }, { take: 100 });
+      const [records] = await UserService.getUsers({ active: true }, { take: 100 });
 
-      result.records.forEach((user) => {
+      records.forEach((user) => {
         expect(user.active).to.be.true;
       });
     });
 
     it('should filter by user type', async () => {
-      const result = await UserService.getUsers({ type: UserType.MEMBER }, { take: 100 });
+      const [records] = await UserService.getUsers({ type: UserType.MEMBER }, { take: 100 });
 
-      result.records.forEach((user) => {
+      records.forEach((user) => {
         expect(user.type).to.equal(UserType.MEMBER);
       });
     });
 
     it('should filter by id', async () => {
       const userId = ctx.users[0].id;
-      const result = await UserService.getUsers({ id: userId }, { take: 100 });
+      const [records] = await UserService.getUsers({ id: userId }, { take: 100 });
 
-      expect(result.records.length).to.equal(1);
-      expect(result.records[0].id).to.equal(userId);
+      expect(records.length).to.equal(1);
+      expect(records[0].id).to.equal(userId);
     });
 
     it('should filter by multiple ids', async () => {
       const userIds = [ctx.users[0].id, ctx.users[1].id];
-      const result = await UserService.getUsers({ id: userIds }, { take: 100 });
+      const [records] = await UserService.getUsers({ id: userIds }, { take: 100 });
 
-      expect(result.records.length).to.equal(2);
-      expect(result.records.map((u) => u.id)).to.include.members(userIds);
+      expect(records.length).to.equal(2);
+      expect(records.map((u) => u.id)).to.include.members(userIds);
     });
 
     it('should filter by organId', async () => {
       if (ctx.organs.length > 0) {
         const organId = ctx.organs[0].id;
-        const result = await UserService.getUsers({ organId }, { take: 100 });
+        const [records] = await UserService.getUsers({ organId }, { take: 100 });
 
-        expect(result.records.length).to.be.greaterThan(0);
+        expect(records.length).to.be.greaterThan(0);
       }
     });
 
@@ -356,24 +356,24 @@ describe('UserService', async (): Promise<void> => {
       const user = ctx.users[0];
       await UserService.addUserRole(user, ctx.roles[0]);
 
-      const result = await UserService.getUsers({ assignedRoleIds: [ctx.roles[0].id] }, { take: 100 });
+      const [records] = await UserService.getUsers({ assignedRoleIds: [ctx.roles[0].id] }, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.true;
+      expect(records.some((u) => u.id === user.id)).to.be.true;
     });
 
     it('should search by name', async () => {
       const user = ctx.users[0];
-      const result = await UserService.getUsers({ search: user.firstName }, { take: 100 });
+      const [records] = await UserService.getUsers({ search: user.firstName }, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.true;
+      expect(records.some((u) => u.id === user.id)).to.be.true;
     });
 
     it('should search by email for local users', async () => {
       const localUser = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
       if (localUser && localUser.email) {
-        const result = await UserService.getUsers({ search: localUser.email }, { take: 100 });
+        const [records] = await UserService.getUsers({ search: localUser.email }, { take: 100 });
 
-        expect(result.records.some((u) => u.id === localUser.id)).to.be.true;
+        expect(records.some((u) => u.id === localUser.id)).to.be.true;
       }
     });
 
@@ -382,9 +382,9 @@ describe('UserService', async (): Promise<void> => {
       user.deleted = true;
       await user.save();
 
-      const result = await UserService.getUsers({}, { take: 100 });
+      const [records] = await UserService.getUsers({}, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.false;
+      expect(records.some((u) => u.id === user.id)).to.be.false;
 
       user.deleted = false;
       await user.save();
@@ -395,81 +395,81 @@ describe('UserService', async (): Promise<void> => {
       user.deleted = true;
       await user.save();
 
-      const result = await UserService.getUsers({ allowDeleted: true }, { take: 100 });
+      const [records] = await UserService.getUsers({ allowDeleted: true }, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.true;
+      expect(records.some((u) => u.id === user.id)).to.be.true;
 
       user.deleted = false;
       await user.save();
     });
 
     it('should exclude POINT_OF_SALE users by default', async () => {
-      const result = await UserService.getUsers({}, { take: 100 });
+      const [records] = await UserService.getUsers({}, { take: 100 });
 
-      result.records.forEach((user) => {
+      records.forEach((user) => {
         expect(user.type).to.not.equal(UserType.POINT_OF_SALE);
       });
     });
 
     it('should handle empty search results', async () => {
-      const result = await UserService.getUsers({ search: 'nonexistentuser12345' }, { take: 100 });
+      const [records] = await UserService.getUsers({ search: 'nonexistentuser12345' }, { take: 100 });
 
-      expect(result.records.length).to.equal(0);
+      expect(records.length).to.equal(0);
     });
 
     it('should search with multiple terms', async () => {
       const user = ctx.users[0];
-      const result = await UserService.getUsers({ search: `${user.firstName} ${user.lastName}` }, { take: 100 });
+      const [records] = await UserService.getUsers({ search: `${user.firstName} ${user.lastName}` }, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.true;
+      expect(records.some((u) => u.id === user.id)).to.be.true;
     });
 
     it('should search by nickname', async () => {
       const user = ctx.users.find((u) => u.nickname);
       if (user && user.nickname) {
-        const result = await UserService.getUsers({ search: user.nickname }, { take: 100 });
+        const [records] = await UserService.getUsers({ search: user.nickname }, { take: 100 });
 
-        expect(result.records.some((u) => u.id === user.id)).to.be.true;
+        expect(records.some((u) => u.id === user.id)).to.be.true;
       }
     });
 
     it('should filter by pointOfSaleId', async () => {
       if (ctx.pointsOfSale.length > 0) {
         const pos = ctx.pointsOfSale[0];
-        const result = await UserService.getUsers({ pointOfSaleId: pos.id }, { take: 100 });
+        const [records] = await UserService.getUsers({ pointOfSaleId: pos.id }, { take: 100 });
 
-        expect(result.records.length).to.be.greaterThan(0);
-        expect(result.records.some((u) => u.id === pos.user.id)).to.be.true;
+        expect(records.length).to.be.greaterThan(0);
+        expect(records.some((u) => u.id === pos.user.id)).to.be.true;
       }
     });
 
     it('should include POINT_OF_SALE users when type filter is set', async () => {
-      const result = await UserService.getUsers({ type: UserType.POINT_OF_SALE }, { take: 100 });
+      const [records] = await UserService.getUsers({ type: UserType.POINT_OF_SALE }, { take: 100 });
 
-      expect(result.records.length).to.be.greaterThan(0);
-      result.records.forEach((user) => {
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach((user) => {
         expect(user.type).to.equal(UserType.POINT_OF_SALE);
       });
     });
 
     it('should handle search with id filter intersection', async () => {
       const user = ctx.users[0];
-      const result = await UserService.getUsers({
+      const [records] = await UserService.getUsers({
         id: [user.id, 999999],
         search: user.firstName,
       }, { take: 100 });
 
-      expect(result.records.some((u) => u.id === user.id)).to.be.true;
-      expect(result.records.some((u) => u.id === 999999)).to.be.false;
+      expect(records.some((u) => u.id === user.id)).to.be.true;
+      expect(records.some((u) => u.id === 999999)).to.be.false;
     });
 
     it('should handle search with id filter that results in empty intersection', async () => {
-      const result = await UserService.getUsers({
+      const [records] = await UserService.getUsers({
         id: [999999],
         search: ctx.users[0].firstName,
       }, { take: 100 });
 
-      expect(result.records.length).to.equal(0);
+      expect(records.length).to.equal(0);
     });
   });
 

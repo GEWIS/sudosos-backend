@@ -29,6 +29,7 @@ import AuthenticationResponse from '../controller/response/authentication-respon
 import TokenHandler from '../authentication/token-handler';
 import JsonWebToken from '../authentication/json-web-token';
 import User from '../entity/user/user';
+import UserService from './user-service';
 import { TransactionResponse } from '../controller/response/transaction-response';
 import { parseRoom } from './websocket/room-parser';
 import {
@@ -337,9 +338,7 @@ export default class WebSocketService {
 
     try {
       const token = await this.tokenHandler.verifyToken(tokenString);
-      const user = await User.findOne({ 
-        where: { id: token.user.id },
-      });
+      const user = await User.findOne(UserService.getOptions({ id: token.user.id, allowPos: true }));
 
       if (user) {
         client.data.user = user;

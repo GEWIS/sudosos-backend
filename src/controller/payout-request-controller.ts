@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import { parseRequestPagination } from '../helpers/pagination';
+import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import PayoutRequestService, { parseGetPayoutRequestsFilters } from '../service/payout-request-service';
 import { PayoutRequestStatusRequest } from './request/payout-request-status-request';
 import PayoutRequest from '../entity/transactions/payout/payout-request';
@@ -129,8 +129,9 @@ export default class PayoutRequestController extends BaseController {
     }
 
     try {
-      const results = await PayoutRequestService.getPayoutRequests(filters, pagination);
-      res.status(200).json(results);
+      const [data, count] = await PayoutRequestService.getPayoutRequests(filters, pagination);
+      const records = data.map((o) => PayoutRequestService.asBasePayoutRequestResponse(o));
+      res.status(200).json(toResponse(records, count, pagination));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);
@@ -166,7 +167,7 @@ export default class PayoutRequestController extends BaseController {
       return;
     }
 
-    res.status(200).json(payoutRequest);
+    res.status(200).json(PayoutRequestService.asPayoutRequestResponse(payoutRequest));
   }
 
   /**
@@ -197,7 +198,7 @@ export default class PayoutRequestController extends BaseController {
       }
 
       const payoutRequest = await PayoutRequestService.createPayoutRequest(body, user);
-      res.status(200).json(payoutRequest);
+      res.status(200).json(PayoutRequestService.asPayoutRequestResponse(payoutRequest));
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
@@ -251,7 +252,7 @@ export default class PayoutRequestController extends BaseController {
 
     if (body.state === PayoutRequestState.APPROVED) {
       const balance = await new BalanceService().getBalance(payoutRequest.requestedBy.id);
-      if (balance.amount.amount < payoutRequest.amount.amount) {
+      if (balance.amount.amount < payoutRequest.amount.getAmount()) {
         res.status(400).json('Insufficient balance.');
         return;
       }
@@ -267,8 +268,8 @@ export default class PayoutRequestController extends BaseController {
 
     // Execute
     try {
-      payoutRequest = await PayoutRequestService.updateStatus(id, body.state, req.token.user);
-      res.status(200).json(payoutRequest);
+      const updatedPayoutRequest = await PayoutRequestService.updateStatus(id, body.state, req.token.user);
+      res.status(200).json(PayoutRequestService.asPayoutRequestResponse(updatedPayoutRequest));
     } catch (e) {
       res.status(500).send();
       this.logger.error(e);
