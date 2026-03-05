@@ -59,7 +59,8 @@ import sinon from 'sinon';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { createTransactionRequest, requestToTransaction } from '../../helpers/transaction-factory';
-import { InvoiceSeeder, RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('InvoiceController', async () => {
   let ctx: {
@@ -139,29 +140,7 @@ describe('InvoiceController', async () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Invoice: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        Invoice: {
-          get: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER
-          || user.type === UserType.INVOICE,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
@@ -169,9 +148,9 @@ describe('InvoiceController', async () => {
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
 
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
-    const invoiceToken = await tokenHandler.signToken(await new RbacSeeder().getToken(invoiceUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
+    const invoiceToken = await signTokenFor(invoiceUser, tokenHandler);
 
     const controller = new InvoiceController({ specification, roleManager });
     app.use(json());

@@ -22,7 +22,7 @@ import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user
 import generateBalance from './test-helpers';
 import { DeleteResult } from 'typeorm';
 import TokenHandler from '../../src/authentication/token-handler';
-import DefaultRoles from '../../src/rbac/default-roles';
+import DefaultRoles, { SELLER_ROLE } from '../../src/rbac/default-roles';
 import Role from '../../src/entity/rbac/role';
 import JsonWebToken from '../../src/authentication/json-web-token';
 
@@ -55,6 +55,9 @@ export async function tokenFor(
   user: User, organs?: User[], posId?: number,
 ): Promise<JsonWebToken> {
   const roles = await getProductionRoleNames(user.type);
+  if (organs && organs.length > 0 && !roles.includes(SELLER_ROLE)) {
+    roles.push(SELLER_ROLE);
+  }
   return { user, roles, organs, posId };
 }
 
