@@ -19,30 +19,33 @@
  */
 
 /**
- * @module GEWIS
+ * This is the module page of the member-authentication-secure-controller.
+ *
+ * @module authentication
  */
 
 import { Response } from 'express';
 import log4js, { Logger } from 'log4js';
-import BaseController, { BaseControllerOptions } from '../../controller/base-controller';
-import Policy from '../../controller/policy';
-import { RequestWithToken } from '../../middleware/token-middleware';
-import TokenHandler from '../../authentication/token-handler';
-import User from '../../entity/user/user';
-import PointOfSale from '../../entity/point-of-sale/point-of-sale';
-import { UserType } from '../../entity/user/user';
-import AuthenticationController from '../../controller/authentication-controller';
-import GEWISAuthenticationSecurePinRequest from './request/gewis-authentication-secure-pin-request';
-import MemberUser from '../../entity/user/member-user';
+import BaseController, { BaseControllerOptions } from './base-controller';
+import Policy from './policy';
+import { RequestWithToken } from '../middleware/token-middleware';
+import TokenHandler from '../authentication/token-handler';
+import User from '../entity/user/user';
+import PointOfSale from '../entity/point-of-sale/point-of-sale';
+import { UserType } from '../entity/user/user';
+import AuthenticationController from './authentication-controller';
+import MemberAuthenticationSecurePinRequest from './request/member-authentication-secure-pin-request';
+import MemberUser from '../entity/user/member-user';
+import UserService from '../service/user-service';
 
 /**
- * Handles authenticated-only GEWIS authentication endpoints for secure PIN authentication.
+ * Handles authenticated-only member authentication endpoints for secure PIN authentication.
  * All endpoints require valid JWT tokens and build upon existing authentication.
  *
  * @promote
  */
-export default class GewisAuthenticationSecureController extends BaseController {
-  private logger: Logger = log4js.getLogger('GewisAuthenticationSecureController');
+export default class MemberAuthenticationSecureController extends BaseController {
+  private logger: Logger = log4js.getLogger('MemberAuthenticationSecureController');
 
   /**
    * Reference to the token handler of the application.
@@ -50,7 +53,7 @@ export default class GewisAuthenticationSecureController extends BaseController 
   protected tokenHandler: TokenHandler;
 
   /**
-   * Creates a new GEWIS authentication secure controller instance.
+   * Creates a new member authentication secure controller instance.
    * @param options - The options passed to the base controller.
    * @param tokenHandler - The token handler for creating signed tokens.
    */
@@ -65,10 +68,10 @@ export default class GewisAuthenticationSecureController extends BaseController 
    */
   public getPolicy(): Policy {
     return {
-      '/GEWIS/pin-secure': {
+      '/member/pin-secure': {
         POST: {
           policy: async () => Promise.resolve(true),
-          handler: this.secureGewisPINLogin.bind(this),
+          handler: this.secureMemberPINLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
@@ -76,25 +79,25 @@ export default class GewisAuthenticationSecureController extends BaseController 
   }
 
   /**
-   * POST /authentication/GEWIS/pin-secure
-   * @summary Secure GEWIS PIN authentication that requires POS user authentication
-   * @operationId secureGewisPINAuthentication
+   * POST /authentication/member/pin-secure
+   * @summary Secure member PIN authentication that requires POS user authentication
+   * @operationId secureMemberPINAuthentication
    * @tags authenticate - Operations of authentication controller
    * @security JWT
-   * @param {GEWISAuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
+   * @param {MemberAuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
    * @return {string} 500 - Internal server error
    */
-  private async secureGewisPINLogin(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as GEWISAuthenticationSecurePinRequest;
-    this.logger.trace('Secure GEWIS PIN authentication for gewisId', body.gewisId, 'by POS user', req.token.user.id);
+  private async secureMemberPINLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as MemberAuthenticationSecurePinRequest;
+    this.logger.trace('Secure member PIN authentication for memberId', body.memberId, 'by POS user', req.token.user.id);
 
     try {
       // Verify the caller is a POS user
-      const tokenUser = await User.findOne({ where: { id: req.token.user.id } });
+      const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
-        res.status(403).json('Only POS users can use secure GEWIS PIN authentication.');
+        res.status(403).json('Only POS users can use secure member PIN authentication.');
         return;
       }
 
@@ -105,15 +108,15 @@ export default class GewisAuthenticationSecureController extends BaseController 
         return;
       }
 
-      // Look up the GEWIS user by memberId
+      // Look up the member user by memberId
       const memberUser = await MemberUser.findOne({
-        where: { memberId: body.gewisId },
+        where: { memberId: body.memberId },
         relations: ['user'],
       });
 
       if (!memberUser) {
         res.status(403).json({
-          message: `User ${body.gewisId} not registered`,
+          message: `User ${body.memberId} not registered`,
         });
         return;
       }
@@ -122,9 +125,8 @@ export default class GewisAuthenticationSecureController extends BaseController 
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
         this.tokenHandler, body.pin, memberUser.user.id, body.posId))(req, res);
     } catch (error) {
-      this.logger.error('Could not authenticate using secure GEWIS PIN:', error);
+      this.logger.error('Could not authenticate using secure member PIN:', error);
       res.status(500).json('Internal server error.');
     }
   }
 }
-
