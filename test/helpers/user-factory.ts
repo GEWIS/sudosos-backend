@@ -21,6 +21,64 @@
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import generateBalance from './test-helpers';
 import { DeleteResult } from 'typeorm';
+import TokenHandler from '../../src/authentication/token-handler';
+import DefaultRoles from '../../src/rbac/default-roles';
+import Role from '../../src/entity/rbac/role';
+import JsonWebToken from '../../src/authentication/json-web-token';
+
+let productionRolesSynced = false;
+
+/**
+ * Ensures production roles from DefaultRoles are loaded into the DB.
+ * Only runs once per test suite (idempotent).
+ */
+export async function ensureProductionRoles(): Promise<void> {
+  if (productionRolesSynced) return;
+  await DefaultRoles.synchronize();
+  productionRolesSynced = true;
+}
+
+/**
+ * Reset the sync flag (call in after() hooks if needed for isolation).
+ */
+export function resetProductionRolesFlag(): void {
+  productionRolesSynced = false;
+}
+
+/**
+ * Get the production role names for a given UserType by querying
+ * the synced system default roles in the DB.
+ */
+async function getProductionRoleNames(userType: UserType): Promise<string[]> {
+  const roles = await Role.find({
+    where: { systemDefault: true },
+    relations: { roleUserTypes: true },
+  });
+  return roles
+    .filter((r) => r.roleUserTypes.some((rut) => rut.userType === userType))
+    .map((r) => r.name);
+}
+
+/**
+ * Build a JsonWebToken for a user using their production roles.
+ */
+export async function tokenFor(
+  user: User, organs?: User[], posId?: number,
+): Promise<JsonWebToken> {
+  const roles = await getProductionRoleNames(user.type);
+  return { user, roles, organs, posId };
+}
+
+/**
+ * Convenience: build and sign a token string in one call.
+ */
+export async function signTokenFor(
+  user: User, tokenHandler: TokenHandler, nonce: string = 'nonce',
+  organs?: User[], posId?: number,
+): Promise<string> {
+  const jwt = await tokenFor(user, organs, posId);
+  return tokenHandler.signToken(jwt, nonce);
+}
 
 export class Builder {
   user: User;
