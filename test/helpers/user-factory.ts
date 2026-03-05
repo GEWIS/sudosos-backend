@@ -26,23 +26,12 @@ import DefaultRoles from '../../src/rbac/default-roles';
 import Role from '../../src/entity/rbac/role';
 import JsonWebToken from '../../src/authentication/json-web-token';
 
-let productionRolesSynced = false;
-
 /**
  * Ensures production roles from DefaultRoles are loaded into the DB.
- * Only runs once per test suite (idempotent).
+ * Always calls synchronize() since each test suite may use a fresh DB.
  */
 export async function ensureProductionRoles(): Promise<void> {
-  if (productionRolesSynced) return;
   await DefaultRoles.synchronize();
-  productionRolesSynced = true;
-}
-
-/**
- * Reset the sync flag (call in after() hooks if needed for isolation).
- */
-export function resetProductionRolesFlag(): void {
-  productionRolesSynced = false;
 }
 
 /**
