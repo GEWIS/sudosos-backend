@@ -204,6 +204,7 @@ export default class DefaultRoles {
         Balance: admin,
         Banner: admin,
         Container: admin,
+        Event: admin,
         Invoice: admin,
         Fine: {
           ...admin,

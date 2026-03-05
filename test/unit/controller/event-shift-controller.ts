@@ -45,7 +45,8 @@ import Event, { EventType } from '../../../src/entity/event/event';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
-import { EventSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { EventSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -95,42 +96,15 @@ describe('EventShiftController', () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { all: new Set<string>(['*']) };
-    const accessRoles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Event: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-        EventAnswer: {
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        Event: {
-          get: own,
-        },
-        EventAnswer: {
-          update: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, accessRoles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(localUser, tokenHandler);
 
     const controller = new EventShiftController({ specification, roleManager });
     app.use(json());
