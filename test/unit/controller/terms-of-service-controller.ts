@@ -21,7 +21,6 @@
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import sinon from 'sinon';
-import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TermsOfServiceController from '../../../src/controller/terms-of-service-controller';
 import TermsOfServiceService, { TermsOfService } from '../../../src/service/terms-of-service-service';

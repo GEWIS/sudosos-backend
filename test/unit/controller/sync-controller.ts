@@ -20,13 +20,11 @@
 
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
-import User, { UserType } from '../../../src/entity/user/user';
-import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
+import { ADMIN_USER, UserFactory, ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
 import SyncController from '../../../src/controller/sync-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
-import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('SyncController', () => {
   let ctx: DefaultContext & {

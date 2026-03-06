@@ -40,7 +40,7 @@ import { CreatePermissionParams, UpdateRoleRequest } from '../../../src/controll
 import PermissionResponse from '../../../src/controller/response/rbac/permission-response';
 import Permission from '../../../src/entity/rbac/permission';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
-import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+import { signTokenFor } from '../../helpers/user-factory';
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {

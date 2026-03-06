@@ -21,7 +21,7 @@
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
-import User, { UserType } from '../../../src/entity/user/user';
+import User from '../../../src/entity/user/user';
 import { ADMIN_USER, ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
 import { WriteOffResponse } from '../../../src/controller/response/write-off-response';
