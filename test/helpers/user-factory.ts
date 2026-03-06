@@ -43,9 +43,20 @@ async function getProductionRoleNames(userType: UserType): Promise<string[]> {
     where: { systemDefault: true },
     relations: { roleUserTypes: true },
   });
-  return roles
+  const roleNames = roles
     .filter((r) => r.roleUserTypes.some((rut) => rut.userType === userType))
     .map((r) => r.name);
+
+  // Guard against unsynchronized default roles: an empty result likely means
+  // ensureProductionRoles()/DefaultRoles.synchronize() has not been called.
+  if (roleNames.length === 0) {
+    throw new Error(
+      `No production roles found for user type "${userType}". `
+      + 'Have you called ensureProductionRoles() before creating tokens?',
+    );
+  }
+
+  return roleNames;
 }
 
 /**
