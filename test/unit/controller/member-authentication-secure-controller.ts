@@ -38,11 +38,11 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder, PointOfSaleSeeder } from '../../seed';
+import { PointOfSaleSeeder } from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import DefaultRoles from '../../../src/rbac/default-roles';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('MemberAuthenticationSecureController', async (): Promise<void> => {
   let ctx: {
@@ -65,7 +65,7 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
     await truncateAllTables(connection);
 
     await ServerSettingsStore.getInstance().initialize();
-    await DefaultRoles.synchronize();
+    await ensureProductionRoles();
 
     // Create users
     const memberUser = await User.save({
@@ -96,15 +96,8 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
     });
 
     const roleManager = await new RoleManager().initialize();
-    const rbacSeeder = new RbacSeeder();
-    const posUserToken = await tokenHandler.signToken(
-      await rbacSeeder.getToken(posUser),
-      'nonce',
-    );
-    const memberUserToken = await tokenHandler.signToken(
-      await rbacSeeder.getToken(memberUser),
-      'nonce',
-    );
+    const posUserToken = await signTokenFor(posUser, tokenHandler);
+    const memberUserToken = await signTokenFor(memberUser, tokenHandler);
 
     // Initialize app
     const app = express();

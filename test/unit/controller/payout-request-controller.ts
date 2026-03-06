@@ -41,8 +41,8 @@ import { PayoutRequestState } from '../../../src/entity/transactions/payout/payo
 import { truncateAllTables } from '../../setup';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
-import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { PayoutRequestSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';
+import { PayoutRequestSeeder, UserSeeder } from '../../seed';
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -87,38 +87,15 @@ describe('PayoutRequestController', () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const own = { own: new Set<string>(['*']) };
-    const all = { all: new Set<string>(['*']), ...own };
-
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        PayoutRequest: {
-          get: all,
-          create: all,
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        PayoutRequest: {
-          get: own,
-          create: own,
-          update: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(localUser, tokenHandler);
 
     const controller = new PayoutRequestController({ specification, roleManager });
     app.use(json());
@@ -439,17 +416,12 @@ describe('PayoutRequestController', () => {
       expect(validation.valid).to.be.true;
     });
 
-    it('should correctly return own payout request', async () => {
+    it('should return 403 for own payout request if user has no PayoutRequest permission', async () => {
       const { id } = ctx.payoutRequests.filter((req) => req.requestedBy.id === ctx.localUser.id)[0];
       const res = await request(ctx.app)
         .get(`/payoutrequests/${id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`);
-      expect(res.status).to.equal(200);
-
-      const payoutRequest = res.body as PayoutRequestResponse;
-
-      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
-      expect(validation.valid).to.be.true;
+      expect(res.status).to.equal(403);
     });
 
     it("should return 403 if requesting someone else's payout request and not admin", async () => {
@@ -491,19 +463,12 @@ describe('PayoutRequestController', () => {
       expect(await PayoutRequest.count()).to.equal(countBefore + 1);
     });
 
-    it('should correctly create payout request if user', async () => {
-      const countBefore = await PayoutRequest.count();
+    it('should return 403 if user without PayoutRequest permission tries to create', async () => {
       const res = await request(ctx.app)
         .post('/payoutrequests')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(ctx.validPayoutRequestRequest);
-      expect(res.status).to.equal(200);
-
-      const payoutRequest = res.body as PayoutRequestResponse;
-
-      const validation = ctx.specification.validateModel('PayoutRequestResponse', payoutRequest, false, true);
-      expect(validation.valid).to.be.true;
-      expect(await PayoutRequest.count()).to.equal(countBefore + 1);
+      expect(res.status).to.equal(403);
     });
   });
 
@@ -585,23 +550,16 @@ describe('PayoutRequestController', () => {
       expect(res.status).to.equal(403);
     });
 
-    it('should correctly cancel payout request if cancelling own as user', async () => {
+    it('should return 403 if user without PayoutRequest permission tries to cancel own', async () => {
       const userRequests = ctx.payoutRequests
         .filter((req) => req.requestedBy.id === ctx.localUser.id
           && req.payoutRequestStatus.length === 1);
       const { id } = userRequests[0];
-      const before = await PayoutRequest.findOne({
-        where: { id },
-        relations: ['payoutRequestStatus'],
-      });
       const res = await request(ctx.app)
         .post(`/payoutrequests/${id}/status`)
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send({ state: PayoutRequestState.CANCELLED });
-      expect(res.status).to.equal(200);
-
-      const payoutRequest = res.body as PayoutRequestResponse;
-      expect(payoutRequest.statuses.length).to.equal(before.payoutRequestStatus.length + 1);
+      expect(res.status).to.equal(403);
     });
 
     it('should return 404 if payout request does not exist', async () => {

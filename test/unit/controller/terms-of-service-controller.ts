@@ -21,15 +21,13 @@
 import { json } from 'body-parser';
 import { expect, request } from 'chai';
 import sinon from 'sinon';
-import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TermsOfServiceController from '../../../src/controller/terms-of-service-controller';
 import TermsOfServiceService, { TermsOfService } from '../../../src/service/terms-of-service-service';
 import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
-import { ADMIN_USER, UserFactory } from '../../helpers/user-factory';
-import { RbacSeeder } from '../../seed';
+import { ADMIN_USER, ensureProductionRoles, signTokenFor, UserFactory } from '../../helpers/user-factory';
 
 describe('TermsOfServiceController', () => {
   let ctx: DefaultContext & {
@@ -47,29 +45,10 @@ describe('TermsOfServiceController', () => {
     const admin = await (await UserFactory(await ADMIN_USER())).get();
     const regularUser = await (await UserFactory()).get();
 
-    const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        TermsOfService: {
-          get: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
-    const userRole = await new RbacSeeder().seed([{
-      name: 'User',
-      permissions: {
-        TermsOfService: {
-          get: { own: new Set<string>(['*']) },
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
-    }]);
-
-    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(regularUser, userRole), 'nonce user');
+    const adminToken = await signTokenFor(admin, c.tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(regularUser, c.tokenHandler, 'nonce user');
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());
@@ -150,14 +129,9 @@ describe('TermsOfServiceController', () => {
     });
 
     it('should return 403 when a user without permissions requests a TOS version', async () => {
-      const noPermRole = await new RbacSeeder().seed([{
-        name: 'NoPermUser',
-        permissions: {},
-        assignmentCheck: async () => false,
-      }]);
       const noPermUser = await (await UserFactory()).get();
       const noPermToken = await ctx.tokenHandler.signToken(
-        await new RbacSeeder().getToken(noPermUser, noPermRole),
+        { user: noPermUser, roles: [], organs: [] },
         'nonce noperm',
       );
 

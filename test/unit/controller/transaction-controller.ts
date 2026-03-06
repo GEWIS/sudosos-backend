@@ -44,8 +44,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
-import { RbacSeeder } from '../../seed';
-import { SeededRole } from '../../seed/rbac-seeder';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -64,7 +63,6 @@ describe('TransactionController', (): void => {
     swaggerspec: SwaggerSpecification,
     logger: Logger,
     tokenHandler: TokenHandler,
-    roles: SeededRole[],
   };
 
   // eslint-disable-next-line func-names
@@ -129,7 +127,6 @@ describe('TransactionController', (): void => {
       tokenHandler: undefined,
       validTransReq,
       ...database,
-      roles: [],
     };
 
     ctx.tokenHandler = new TokenHandler({
@@ -140,62 +137,11 @@ describe('TransactionController', (): void => {
     const settingsStore = ServerSettingsStore.getInstance();
     await settingsStore.initialize();
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']), organ: new Set<string>(['*']) };
-    const organRole = { organ: new Set<string>(['*']) };
-
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Transaction: {
-          get: all,
-          create: all,
-          update: all,
-          delete: all,
-        },
-        Invoice: {
-          get: all,
-        },
-        Balance: {
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'Buyer',
-      permissions: {
-        Transaction: {
-          get: own,
-          create: own,
-        },
-        Invoice: {
-          get: own,
-        },
-        Balance: {
-          update: own,
-        },
-      },
-      assignmentCheck: async (user: User) => [UserType.LOCAL_USER, UserType.MEMBER].includes(user.type),
-    }, {
-      name: 'Seller',
-      permissions: {
-        Transaction: {
-          get: organRole,
-        },
-        Invoice: {
-          get: organRole,
-        },
-        Balance: {
-          update: organRole,
-        },
-      },
-      assignmentCheck: async (user) => user.id === ctx.users[7].id,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
-    ctx.roles = roles;
-    ctx.userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '39');
-    ctx.adminToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '39');
-    ctx.organMemberToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[1], roles, [ctx.users[0]]), '1');
+    ctx.userToken = await signTokenFor(ctx.users[0], ctx.tokenHandler);
+    ctx.adminToken = await signTokenFor(ctx.users[6], ctx.tokenHandler, 'nonce admin');
+    ctx.organMemberToken = await signTokenFor(ctx.users[1], ctx.tokenHandler, 'nonce organ', [ctx.users[0]]);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.swaggerspec = await Swagger.importSpecification();
@@ -573,7 +519,7 @@ describe('TransactionController', (): void => {
       // Existing tokens don't have the correct transactions to test
       const u = ctx.users.find((us) => us.id === 15);
       const userId = u.id;
-      const token = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(u, ctx.roles), '39');
+      const token = await signTokenFor(u, ctx.tokenHandler);
 
       const res = await request(ctx.app)
         .get('/transactions')
@@ -784,7 +730,8 @@ describe('TransactionController', (): void => {
             index: 1,
           })).save();
 
-          const canBuyToken = await ctx.tokenHandler.signToken({ user, roles: ['Buyer'] }, '39');
+          // Use signTokenFor which gives LOCAL_USER full production roles including AuthorizedBuyer (create.all)
+          const userToken = await signTokenFor(user, ctx.tokenHandler, 'organ-test');
           const req : TransactionRequest = {
             ...ctx.validTransReq,
             createdBy: otherUser.id,
@@ -792,17 +739,19 @@ describe('TransactionController', (): void => {
           };
           const res = await request(ctx.app)
             .post('/transactions')
-            .set('Authorization', `Bearer ${canBuyToken}`)
+            .set('Authorization', `Bearer ${userToken}`)
             .send(req);
           expect(res.status).to.equal(200);
         });
     });
-    it('should return an HTTP 403 when user is not admin', async () => {
+    it('should return an HTTP 200 when authorized buyer creates transaction for other user', async () => {
+      // LOCAL_USER has AuthorizedBuyer role with Transaction.create.all,
+      // so they can create transactions for other users in production
       const res = await request(ctx.app)
         .post('/transactions')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(ctx.validTransReq);
-      expect(res.status).to.equal(403);
+      expect(res.status).to.equal(200);
     });
     it('should return an HTTP 400 if the request is invalid', async () => {
       const badReq = {
@@ -961,7 +910,7 @@ describe('TransactionController', (): void => {
         // Create a token without posId
         const adminToken = await ctx.tokenHandler.signToken({
           user: ctx.users[0],
-          roles: ['Admin'],
+          roles: ['Super admin', 'User'],
         }, '39');
 
         const res = await request(ctx.app)
@@ -1050,7 +999,7 @@ describe('TransactionController', (): void => {
         // Create a lesser admin token
         const lesserAdminToken = await ctx.tokenHandler.signToken({
           user: ctx.users[6],
-          roles: ['Admin'],
+          roles: ['Super admin', 'User'],
           posId: ctx.validTransReq.pointOfSale.id,
         }, '39');
 

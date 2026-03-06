@@ -53,9 +53,8 @@ import AuthenticationNfcRequest from '../../../src/controller/request/authentica
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import Role from '../../../src/entity/rbac/role';
-import RoleResponse from '../../../src/controller/response/rbac/role-response';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { UserSeeder } from '../../seed';
+import { ensureProductionRoles } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
@@ -71,8 +70,6 @@ describe('AuthenticationController', async (): Promise<void> => {
     user2: User,
     user3: User,
     posUser: User,
-    role: Role,
-    maintenanceOverrideRole: Role,
     request: AuthenticationMockRequest,
   };
 
@@ -84,23 +81,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     ServerSettingsStore.deleteInstance();
     await ServerSettingsStore.getInstance().initialize();
 
-    const [role, maintenanceOverrideRole] = await new RbacSeeder().seed([{
-      name: 'Role',
-      permissions: {
-        Product: {
-          create: { all: new Set(['*']) },
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'MaintenanceOverride',
-      permissions: {
-        Maintenance: {
-          override: { all: new Set(['*']) },
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
     // Initialize context
     ctx = {
@@ -111,7 +92,7 @@ describe('AuthenticationController', async (): Promise<void> => {
       tokenHandler: new TokenHandler({
         algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
       }),
-      roleManager: new RoleManager(),
+      roleManager: await new RoleManager().initialize(),
       user: await User.save({
         firstName: 'Roy',
         email: 'Roy@gewis.nl',
@@ -143,13 +124,7 @@ describe('AuthenticationController', async (): Promise<void> => {
         userId: 1,
         nonce: 'test',
       },
-      role: role.role,
-      maintenanceOverrideRole: maintenanceOverrideRole.role,
     };
-
-    await Promise.all([ctx.user, ctx.user2, ctx.user3].map((u) => {
-      return new RbacSeeder().assignRoles(u, [role, maintenanceOverrideRole]);
-    }));
 
     const userSeeder = new UserSeeder();
     await userSeeder.seedHashAuthenticator([ctx.user, ctx.user2], PinAuthenticator);
@@ -225,12 +200,13 @@ describe('AuthenticationController', async (): Promise<void> => {
       await expect(promise).to.eventually.be.fulfilled;
 
       const token = await promise;
-      expect(token.roles).to.be.empty;
-      // By default no overriding maintenance mode
+      // LOCAL_USER gets production roles but no maintenance override
+      expect(token.roles).to.not.be.empty;
       expect(token.overrideMaintenance).to.be.false;
-      expect(auth.rolesWithPermissions).to.be.length(0);
+      expect(auth.rolesWithPermissions.length).to.be.greaterThan(0);
     });
     it('should contain the correct roles', async () => {
+      // LOCAL_USER gets production roles (User, Local User, Buyer, AuthorizedBuyer)
       let res = await request(ctx.app)
         .post('/authentication/mock')
         .send(ctx.request);
@@ -238,8 +214,10 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       let auth = res.body as AuthenticationResponse;
       let token = await ctx.tokenHandler.verifyToken(auth.token);
-      expect(token.roles).to.be.empty;
+      expect(token.roles).to.include('User');
+      expect(token.overrideMaintenance).to.be.false;
 
+      // LOCAL_ADMIN gets Super admin + User, including maintenance override
       const req = {
         ...ctx.request,
         userId: 2,
@@ -251,39 +229,11 @@ describe('AuthenticationController', async (): Promise<void> => {
 
       auth = res.body as AuthenticationResponse;
       token = await ctx.tokenHandler.verifyToken(auth.token);
-      expect(token.roles).to.deep.equalInAnyOrder(['Role', 'MaintenanceOverride']);
+      expect(token.roles).to.include('Super admin');
+      expect(token.roles).to.include('User');
       expect(token.overrideMaintenance).to.be.true;
-      expect(auth.rolesWithPermissions).to.deep.equalInAnyOrder([{
-        id: ctx.role.id,
-        name: ctx.role.name,
-        systemDefault: ctx.role.systemDefault,
-        userTypes: ctx.role.userTypes,
-        permissions: [{
-          entity: 'Product',
-          actions: [{
-            action: 'create',
-            relations: [{
-              relation: 'all',
-              attributes: ['*'],
-            }],
-          }],
-        }],
-      }, {
-        id: ctx.maintenanceOverrideRole.id,
-        name: ctx.maintenanceOverrideRole.name,
-        systemDefault: ctx.maintenanceOverrideRole.systemDefault,
-        userTypes: ctx.maintenanceOverrideRole.userTypes,
-        permissions: [{
-          entity: 'Maintenance',
-          actions: [{
-            action: 'override',
-            relations: [{
-              relation: 'all',
-              attributes: ['*'],
-            }],
-          }],
-        }],
-      }] as RoleResponse[]);
+      expect(auth.rolesWithPermissions.length).to.be.greaterThan(0);
+      expect(auth.rolesWithPermissions.map((r) => r.name)).to.include('Super admin');
     });
     it('should give an HTTP 403 when not in development/test environment', async () => {
       const env = process.env.NODE_ENV;

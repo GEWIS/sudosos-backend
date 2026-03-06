@@ -39,7 +39,8 @@ import { AuthenticationResult } from '../../../src/service/authentication-servic
 import DefaultRoles from '../../../src/rbac/default-roles';
 import settingDefaults from '../../../src/server-settings/setting-defaults';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { PointOfSaleSeeder, RbacSeeder, UserSeeder, QRAuthenticatorSeeder } from '../../seed';
+import { PointOfSaleSeeder, UserSeeder, QRAuthenticatorSeeder } from '../../seed';
+import { signTokenFor, tokenFor } from '../../helpers/user-factory';
 import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/authenticator/qr-authenticator';
 import WebSocketService from '../../../src/service/websocket-service';
 import QRService from '../../../src/service/qr-service';
@@ -96,8 +97,8 @@ describe('AuthenticationSecureController', () => {
     const adminUser = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const memberUser = users.find((u) => u.type === UserType.MEMBER);
     const organUser = users.find((u) => u.type === UserType.ORGAN);
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser), 'nonce');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(memberUser, [], [organUser]), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler);
+    const userToken = await signTokenFor(memberUser, tokenHandler, 'nonce', [organUser]);
 
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -153,10 +154,7 @@ describe('AuthenticationSecureController', () => {
       
       const pos = ctx.pointsOfSale[0];
       const posUser = pos.user;
-      const posToken = await ctx.tokenHandler.signToken(
-        await new RbacSeeder().getToken(posUser, [], [], pos.id),
-        'nonce',
-      );
+      const posToken = await signTokenFor(posUser, ctx.tokenHandler, 'nonce', [], pos.id);
 
       const res = await request(ctx.app)
         .get('/authentication/refreshToken')
@@ -177,7 +175,7 @@ describe('AuthenticationSecureController', () => {
 
       // Remove posId from the token
       const tokenWithoutPosId = await ctx.tokenHandler.signToken({
-        ...await new RbacSeeder().getToken(posUser),
+        ...await tokenFor(posUser),
         posId: undefined,
       }, 'nonce');
 
@@ -630,7 +628,7 @@ describe('AuthenticationSecureController', () => {
 
       // Create token for POS user
       const posUser = ctx.pointOfSaleUsers[0];
-      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+      posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
     const validSecurePinRequest: AuthenticationSecurePinRequest = {
@@ -776,7 +774,7 @@ describe('AuthenticationSecureController', () => {
 
       // Create token for POS user
       const posUser = ctx.pointOfSaleUsers[0];
-      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+      posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
     const validSecureNfcRequest: AuthenticationSecureNfcRequest = {
@@ -876,7 +874,7 @@ describe('AuthenticationSecureController', () => {
 
       // Create token for POS user
       const posUser = ctx.pointOfSaleUsers[0];
-      posUserToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(posUser), 'nonce');
+      posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
     const validSecureEanRequest: AuthenticationSecureEanRequest = {

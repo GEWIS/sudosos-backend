@@ -38,7 +38,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
-import { DepositSeeder, RbacSeeder } from '../../seed';
+import { DepositSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('StripeController', async (): Promise<void> => {
   let shouldSkip: boolean;
@@ -99,35 +100,15 @@ describe('StripeController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
-
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        StripeDeposit: {
-          create: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        StripeDeposit: {
-          create: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(localUser, tokenHandler);
 
     const controller = new StripeController({ specification, roleManager });
     app.use(json());

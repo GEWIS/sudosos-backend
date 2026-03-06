@@ -26,7 +26,8 @@ import ServerSettingsController from '../../../src/controller/server-settings-co
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import { expect, request } from 'chai';
 import sinon from 'sinon';
-import { RbacSeeder, UserSeeder } from '../../seed';
+import { UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import WebSocketService from '../../../src/service/websocket-service';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -44,25 +45,12 @@ describe('ServerSettingsController', () => {
 
     const users = await new UserSeeder().seed();
 
-    const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Maintenance: {
-          update: all,
-        },
-        ServerSettings: {
-          get: all,
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
     const admin = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const user = users.find((u) => u.type === UserType.LOCAL_USER);
-    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(user, adminRole), 'nonce');
+    const adminToken = await signTokenFor(admin, c.tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(user, c.tokenHandler);
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

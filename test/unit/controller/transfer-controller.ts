@@ -36,7 +36,8 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { TransferSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import WriteOff from '../../../src/entity/transactions/write-off';
 import Invoice from '../../../src/entity/invoices/invoice';
@@ -135,53 +136,16 @@ describe('TransferController', async (): Promise<void> => {
     app = express();
     specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const organRole = { organ: new Set<string>(['*']) };
-
-    // Create roleManager and set roles of Admin and User
-    // In this case Admin can do anything and User nothing.
-    // This does not reflect the actual roles of the users in the final product.
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Transfer: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        Transfer: {
-          get: own,
-        },
-      },
-      assignmentCheck: async () => true,
-    }, {
-      name: 'Seller',
-      permissions: {
-        Transfer: {
-          create: organRole,
-          get: organRole,
-          update: organRole,
-          delete: organRole,
-        },
-      },
-      assignmentCheck: async (user) => user.id === sellerUser.id,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
-    organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(sellerUser, roles, [adminUser]), '1');
+    adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    token = await signTokenFor(localUser, tokenHandler);
+    organMemberToken = await signTokenFor(sellerUser, tokenHandler, '1', [adminUser]);
 
     const controller = new TransferController({ specification, roleManager });
     app.use(json());
