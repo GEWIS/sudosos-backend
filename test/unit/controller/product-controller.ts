@@ -49,7 +49,8 @@ import VatGroup from '../../../src/entity/vat-group';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ProductRevision from '../../../src/entity/product/product-revision';
-import { ProductSeeder, RbacSeeder, VatGroupSeeder } from '../../seed';
+import { ProductSeeder, VatGroupSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 /**
  * Tests if a product response is equal to the request.
@@ -161,53 +162,16 @@ describe('ProductController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const organRole = { organ: new Set<string>(['*']) };
-
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Product: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          approve: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'Seller',
-      permissions: {
-        Product: {
-          create: organRole,
-          get: all,
-          update: organRole,
-          delete: organRole,
-        },
-      },
-      assignmentCheck: async () => true,
-    }, {
-      name: 'User',
-      permissions: {
-        Product: {
-          get: own,
-          create: own,
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_USER,
-    }]);
+    await ensureProductionRoles();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organ]), 'nonce');
-    const tokenNoRoles = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
+    const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce', [organ]);
+    const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], organs: [] }, 'nonce');
     const roleManager = await new RoleManager().initialize();
 
     const controller = new ProductController({ specification, roleManager });
@@ -413,38 +377,15 @@ describe('ProductController', async (): Promise<void> => {
       await ProductRevision.delete({ productId: product.id, revision: product.revision });
       await Product.delete({ id: product.id });
     });
-    it('should store the given product in the database and return an HTTP 200 and the product if organ', async () => {
+    it('should return an HTTP 403 if organ member (Seller has no Product.create)', async () => {
       const productCount = await Product.count();
       const res = await request(ctx.app)
         .post('/products')
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(ctx.validCreateProductReq);
 
-      expect(res.status).to.equal(200);
-      const body = res.body as ProductResponse;
-      expect(ctx.specification.validateModel(
-        'ProductResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-      expect(await Product.count()).to.equal(productCount + 1);
-
-      productEq(ctx.validCreateProductReq, body);
-      const databaseProduct = await Product.findOne({
-        where: { id: body.id },
-      });
-      expect(databaseProduct).to.exist;
-      const databaseUpdatedProduct = await Product.findOne({
-        where: { id: body.id },
-      });
-      expect(databaseUpdatedProduct).to.exist;
-
-      const product = res.body as ProductResponse;
-
-      // Cleanup
-      await ProductRevision.delete({ productId: product.id, revision: product.revision });
-      await Product.delete({ id: product.id });
+      expect(res.status).to.equal(403);
+      expect(await Product.count()).to.equal(productCount);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const productCount = await Product.count();
@@ -726,22 +667,14 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('DELETE /products/:id', () => {
-    it('should return 204 if owner', async () => {
+    it('should return 403 if organ member (Seller has no delete permission)', async () => {
       const product = ctx.products.find((p) => p.owner.id === ctx.organ.id && p.deletedAt == null);
       const res = await request(ctx.app)
         .delete(`/products/${product.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send();
 
-      expect(res.status).to.equal(204);
-      expect(res.body).to.be.empty;
-
-      const dbProduct = await Product.findOne({ where: { id: product.id }, withDeleted: true });
-      expect(dbProduct).to.not.be.null;
-      expect(dbProduct.deletedAt).to.not.be.null;
-
-      // Cleanup
-      await dbProduct.recover();
+      expect(res.status).to.equal(403);
     });
     it('should return 204 for any product if admin', async () => {
       const product = ctx.products.find((p) => p.owner.id !== ctx.adminUser.id && p.deletedAt == null);
