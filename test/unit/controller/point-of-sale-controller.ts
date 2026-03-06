@@ -55,10 +55,12 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import { SeededRole } from '../../seed/rbac-seeder';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
-import { ContainerSeeder, PointOfSaleSeeder, RbacSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, UserSeeder } from '../../seed';
+import Role from '../../../src/entity/rbac/role';
+import AssignedRole from '../../../src/entity/rbac/assigned-role';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -94,7 +96,8 @@ describe('PointOfSaleController', async () => {
     feut1: User,
     feut2: User,
     bestuur1: User,
-    roles: SeededRole[],
+    bacFeutenRole: Role,
+    bestuurRole: Role,
     containers: Container[],
     deletedContainers: Container[],
     pointsOfSale: PointOfSale[],
@@ -130,80 +133,29 @@ describe('PointOfSaleController', async () => {
     const { containers, containerRevisions } = await new ContainerSeeder().seed([adminUser, organUser]);
     const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed([adminUser, organUser], containerRevisions);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const organ = { organ: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'SUPER_ADMIN',
-      permissions: {
-        PointOfSale: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-        Transaction: {
-          get: all,
-        },
-        Container: {
-          get: all,
-          update: all,
-        },
-        Product: {
-          get: all,
-        },
-      },
-      assignmentCheck: async (u: User) => u.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        PointOfSale: {
-          create: organ,
-          get: { ...organ, ...own },
-          update: { ...organ, ...own },
-          delete: { ...organ, ...own },
-        },
-        Transaction: {
-          get: { ...organ, ...own },
-        },
-        Container: {
-          get: { ...organ, ...own },
-        },
-        Product: {
-          get: { ...organ, ...own },
-        },
-      },
-      assignmentCheck: async () => true,
-    }, {
-      name: 'BAC Feuten',
-      permissions: {},
-      assignmentCheck: async (user) => user.id === feut1.id || user.id === feut2.id,
-    }, {
-      name: 'Bestuur',
-      permissions: {},
-      assignmentCheck: async (user) => user.id === bestuur1.id,
-    }, {
-      name: 'SYSTEM',
-      permissions: {},
-      systemDefault: true,
-      assignmentCheck: async () => false,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
+
+    // Create cashier roles (no permissions, just role groupings for POS cashiers)
+    const bacFeutenRole = await Role.save({ name: 'BAC Feuten', systemDefault: false } as Role);
+    const bestuurRole = await Role.save({ name: 'Bestuur', systemDefault: false } as Role);
+
+    // Assign cashier roles to users
+    await AssignedRole.save({ roleId: bacFeutenRole.id, userId: feut1.id } as AssignedRole);
+    await AssignedRole.save({ roleId: bacFeutenRole.id, userId: feut2.id } as AssignedRole);
+    await AssignedRole.save({ roleId: bestuurRole.id, userId: bestuur1.id } as AssignedRole);
 
     const validPOSRequest: CreatePointOfSaleRequest = {
       containers: containers.filter((c) => c.deletedAt == null).slice(0, 3).map((c) => c.id),
       name: 'Valid POS',
       useAuthentication: true,
       ownerId: 2,
-      cashierRoleIds: [roles.find((r) => r.role.name === 'BAC Feuten').role.id],
+      cashierRoleIds: [bacFeutenRole.id],
     };
 
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organUser]), '1');
-    await new RbacSeeder().assignRoles(feut1, roles);
-    await new RbacSeeder().assignRoles(feut2, roles);
-    await new RbacSeeder().assignRoles(bestuur1, roles);
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(localUser, tokenHandler);
+    const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce organ', [organUser]);
 
     const controller = new PointOfSaleController({ specification: specification, roleManager });
     const containerController = new ContainerController({ specification: specification, roleManager });
@@ -234,7 +186,8 @@ describe('PointOfSaleController', async () => {
       feut1,
       feut2,
       bestuur1,
-      roles,
+      bacFeutenRole,
+      bestuurRole,
     };
   });
 
@@ -770,7 +723,7 @@ describe('PointOfSaleController', async () => {
       await expectError(invalidRequest, `Containers: ${INVALID_CONTAINER_ID(containerId).value}`);
     });
     it('should verify cashier roles exist', async () => {
-      const roleId = ctx.roles.length + 10;
+      const roleId = 99999;
       const invalidRequest = {
         ...ctx.validPOSRequest,
         cashierRoleIds: [roleId],
@@ -778,7 +731,8 @@ describe('PointOfSaleController', async () => {
       await expectError(invalidRequest, `cashierRoleIds: ${INVALID_ROLE_ID(roleId).value}`);
     });
     it('should verify cashier role is not system default', async () => {
-      const roleId = ctx.roles.find((r) => r.role.systemDefault).role.id;
+      const systemDefaultRole = await Role.findOne({ where: { systemDefault: true } });
+      const roleId = systemDefaultRole.id;
       const invalidRequest = {
         ...ctx.validPOSRequest,
         cashierRoleIds: [roleId],
@@ -818,7 +772,7 @@ describe('PointOfSaleController', async () => {
 
       expect(res.status).to.equal(200);
     });
-    it('should store the given POS and return an HTTP 200 if connected via organ', async () => {
+    it('should return an HTTP 403 if organ member (Seller has no POS create permission)', async () => {
       const count = await PointOfSale.count();
       const createPointOfSaleParams: CreatePointOfSaleParams = {
         ...ctx.validPOSRequest,
@@ -829,27 +783,8 @@ describe('PointOfSaleController', async () => {
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send(createPointOfSaleParams);
 
-      const validation = ctx.specification.validateModel(
-        'PointOfSaleWithContainersResponse',
-        res.body,
-        false,
-        true,
-      );
-      expect(validation.valid).to.be.true;
-
-      expect(await PointOfSale.count()).to.equal(count + 1);
-      const body = res.body as PointOfSaleWithContainersResponse;
-      pointOfSaleEq(createPointOfSaleParams, body);
-      const databasePointOfSale = await PointOfSale.findOne({
-        where: { id: body.id, currentRevision: body.revision },
-      });
-      expect(databasePointOfSale).to.exist;
-
-      expect(res.status).to.equal(200);
-
-      // Cleanup
-      await PointOfSaleRevision.delete({ pointOfSaleId: databasePointOfSale.id });
-      await PointOfSale.delete({ id: databasePointOfSale.id });
+      expect(await PointOfSale.count()).to.equal(count);
+      expect(res.status).to.equal(403);
     });
     it('should return an HTTP 403 if not admin', async () => {
       const count = await PointOfSale.count();
@@ -984,22 +919,14 @@ describe('PointOfSaleController', async () => {
     });
   });
   describe('DELETE /pointsofsale/:id', () => {
-    it('should return 204 if owner', async () => {
+    it('should return 403 if organ member (Seller has no POS delete permission)', async () => {
       const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id === ctx.organUser.id && p.deletedAt == null);
       const res = await request(ctx.app)
         .delete(`/pointsofsale/${pointOfSale.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send();
 
-      expect(res.status).to.equal(204);
-      expect(res.body).to.be.empty;
-
-      const dbPointOfSale = await PointOfSale.findOne({ where: { id: pointOfSale.id }, withDeleted: true });
-      expect(dbPointOfSale).to.not.be.null;
-      expect(dbPointOfSale.deletedAt).to.not.be.null;
-
-      // Cleanup
-      await dbPointOfSale.recover();
+      expect(res.status).to.equal(403);
     });
     it('should return 204 for any point of sale if admin', async () => {
       const pointOfSale = ctx.pointsOfSale.find((p) => p.owner.id !== ctx.adminUser.id && p.deletedAt == null);
@@ -1029,7 +956,7 @@ describe('PointOfSaleController', async () => {
       expect(res.body).to.be.empty;
     });
     it('should return 404 if point of sale does not exist', async () => {
-      const pointOfSaleId = ctx.pointsOfSale.length + ctx.deletedPointsOfSale.length + 3;
+      const pointOfSaleId = (await PointOfSale.count({ withDeleted: true })) + 100;
 
       const res = await request(ctx.app)
         .delete(`/pointsofsale/${pointOfSaleId}`)
