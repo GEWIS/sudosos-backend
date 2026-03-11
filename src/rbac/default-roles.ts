@@ -204,6 +204,11 @@ export default class DefaultRoles {
         Balance: admin,
         Banner: admin,
         Container: admin,
+        Event: admin,
+        EventAnswer: {
+          ...admin,
+          assign: { all: star },
+        },
         Invoice: admin,
         Fine: {
           ...admin,
@@ -228,7 +233,10 @@ export default class DefaultRoles {
         VatGroup: admin,
         VoucherGroup: admin,
         WriteOff: admin,
-        InactiveAdministrativeCost: admin,
+        InactiveAdministrativeCost: {
+          ...admin,
+          notify: { all: star },
+        },
         Wrapped: {
           get: { own: star },
           update: { own: star },

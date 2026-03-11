@@ -42,7 +42,7 @@ import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import BannerSeeder from '../../seed/banner-seeder';
 import { bannerEq } from '../../helpers/banner-helpers';
 
@@ -121,22 +121,10 @@ describe('BannerController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Banner: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
-    const adminToken = await tokenHandler.signToken({ user: adminUser, roles: ['Admin'] }, 'nonce admin');
-    const token = await tokenHandler.signToken({ user: localUser, roles: [] }, 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
 
     const controller = new BannerController({ specification, roleManager });
     app.use(json());

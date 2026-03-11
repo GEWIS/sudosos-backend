@@ -46,7 +46,7 @@ import Sinon from 'sinon';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 /**
  * Compares VoucherGroupParams against a VoucherGroupResponse (HTTP response format).
@@ -154,19 +154,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        VoucherGroup: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
@@ -176,14 +164,8 @@ describe('VoucherGroupController', async (): Promise<void> => {
       privateKey: 'test',
       expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(
-      await new RbacSeeder().getToken(adminUser, roles),
-      'nonce admin',
-    );
-    const token = await tokenHandler.signToken(
-      await new RbacSeeder().getToken(localUser, roles),
-      'nonce',
-    );
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
 
     const controller = new VoucherGroupController({
       specification,

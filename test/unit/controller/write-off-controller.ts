@@ -21,8 +21,8 @@
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
-import User, { UserType } from '../../../src/entity/user/user';
-import { ADMIN_USER, inUserContext, UserFactory } from '../../helpers/user-factory';
+import User from '../../../src/entity/user/user';
+import { ADMIN_USER, ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';
 import { expect, request } from 'chai';
 import { WriteOffResponse } from '../../../src/controller/response/write-off-response';
 import WriteOffController from '../../../src/controller/write-off-controller';
@@ -31,7 +31,7 @@ import BalanceService from '../../../src/service/balance-service';
 import { json } from 'body-parser';
 import VatGroup from '../../../src/entity/vat-group';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { RbacSeeder, WriteOffSeeder } from '../../seed';
+import { WriteOffSeeder } from '../../seed';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
@@ -59,20 +59,10 @@ describe('WriteOffController', () => {
     const admin = await (await UserFactory(await ADMIN_USER())).get();
     const localUser = await (await UserFactory()).get();
 
-    const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        WriteOff: {
-          create: all,
-          get: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
-    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
-    const token = await c.tokenHandler.signToken(await new RbacSeeder().getToken(localUser, adminRole), 'nonce');
+    const adminToken = await signTokenFor(admin, c.tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, c.tokenHandler);
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

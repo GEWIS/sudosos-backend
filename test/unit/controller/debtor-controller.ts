@@ -49,7 +49,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import { rootStubs } from '../../root-hooks';
 import Notifier from '../../../src/notifications';
 
@@ -111,28 +112,15 @@ describe('DebtorController', () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Fine: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          notify: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(localUser, tokenHandler);
 
     const controller = new DebtorController({ specification, roleManager });
     app.use(json());

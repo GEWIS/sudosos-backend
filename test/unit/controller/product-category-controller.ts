@@ -36,7 +36,8 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { ProductCategorySeeder, RbacSeeder } from '../../seed';
+import { ProductCategorySeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -105,31 +106,15 @@ describe('ProductCategoryController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-
-    // Create roleManager and set roles of Admin and User
-    // In this case Admin can do anything and User nothing.
-    // This does not reflect the actual roles of the users in the final product.
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        ProductCategory: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
 
     const controller = new ProductCategoryController({ specification, roleManager });
     app.use(json());

@@ -43,10 +43,10 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
 import {
-  RbacSeeder,
   SellerPayoutSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
 } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import { SELLER_PAYOUT_PDF_LOCATION } from '../../../src/files/storage';
 import fs from 'fs';
 
@@ -72,24 +72,12 @@ describe('SellerPayoutController', () => {
     const transfers = await new TransferSeeder().seed(users, new Date('2020-01-01'), new Date());
     const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder().seed(users, transactions, subTransactions, transfers);
 
-    const all = { all: new Set<string>(['*']) };
-    const adminRole = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        SellerPayout: {
-          get: all,
-          create: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
     const admin = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const user = users.find((u) => u.type === UserType.LOCAL_USER);
-    const adminToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(admin, adminRole), 'nonce admin');
-    const userToken = await c.tokenHandler.signToken(await new RbacSeeder().getToken(user, adminRole), 'nonce');
+    const adminToken = await signTokenFor(admin, c.tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(user, c.tokenHandler);
 
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: c.tokenHandler, refreshFactor: 0.5 }).getMiddleware();
     c.app.use(json());

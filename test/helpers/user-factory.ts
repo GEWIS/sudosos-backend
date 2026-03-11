@@ -21,6 +21,67 @@
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import generateBalance from './test-helpers';
 import { DeleteResult } from 'typeorm';
+import TokenHandler from '../../src/authentication/token-handler';
+import DefaultRoles, { SELLER_ROLE } from '../../src/rbac/default-roles';
+import Role from '../../src/entity/rbac/role';
+import JsonWebToken from '../../src/authentication/json-web-token';
+
+/**
+ * Ensures production roles from DefaultRoles are loaded into the DB.
+ * Always calls synchronize() since each test suite may use a fresh DB.
+ */
+export async function ensureProductionRoles(): Promise<void> {
+  await DefaultRoles.synchronize();
+}
+
+/**
+ * Get the production role names for a given UserType by querying
+ * the synced system default roles in the DB.
+ */
+async function getProductionRoleNames(userType: UserType): Promise<string[]> {
+  const roles = await Role.find({
+    where: { systemDefault: true },
+    relations: { roleUserTypes: true },
+  });
+  const roleNames = roles
+    .filter((r) => r.roleUserTypes.some((rut) => rut.userType === userType))
+    .map((r) => r.name);
+
+  // Guard against unsynchronized default roles: an empty result likely means
+  // ensureProductionRoles()/DefaultRoles.synchronize() has not been called.
+  if (roleNames.length === 0) {
+    throw new Error(
+      `No production roles found for user type "${userType}". `
+      + 'Have you called ensureProductionRoles() before creating tokens?',
+    );
+  }
+
+  return roleNames;
+}
+
+/**
+ * Build a JsonWebToken for a user using their production roles.
+ */
+export async function tokenFor(
+  user: User, organs?: User[], posId?: number,
+): Promise<JsonWebToken> {
+  const roles = await getProductionRoleNames(user.type);
+  if (organs && organs.length > 0 && !roles.includes(SELLER_ROLE)) {
+    roles.push(SELLER_ROLE);
+  }
+  return { user, roles, organs, posId };
+}
+
+/**
+ * Convenience: build and sign a token string in one call.
+ */
+export async function signTokenFor(
+  user: User, tokenHandler: TokenHandler, nonce: string = 'nonce',
+  organs?: User[], posId?: number,
+): Promise<string> {
+  const jwt = await tokenFor(user, organs, posId);
+  return tokenHandler.signToken(jwt, nonce);
+}
 
 export class Builder {
   user: User;
