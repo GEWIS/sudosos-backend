@@ -20,6 +20,7 @@
 
 import WithManager from '../../src/database/with-manager';
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import MemberUser from '../../src/entity/user/member-user';
 import InvoiceUser from '../../src/entity/user/invoice-user';
 import bcrypt from 'bcrypt';
 import HashBasedAuthenticationMethod from '../../src/entity/authenticator/hash-based-authentication-method';
@@ -163,7 +164,24 @@ export default class UserSeeder extends WithManager {
         memberAuthenticators.push(authenticator);
       }));
     }));
-    
     return memberAuthenticators;
   }
+}
+
+/**
+ * Seeds a default dataset of Member Users, and stores them in the database.
+ * @param users - Array of users to create member user entries for
+ * @returns Array of created member users
+ */
+export async function seedMemberUsers(users: User[]): Promise<MemberUser[]> {
+  const promises: Promise<MemberUser>[] = users.map((user, i) => {
+    const memberUser = Object.assign(new MemberUser(), {
+      user,
+      memberId: 1000 + i,
+    });
+    return MemberUser.save(memberUser);
+  });
+
+  const memberUsers = await Promise.all(promises);
+  return memberUsers;
 }

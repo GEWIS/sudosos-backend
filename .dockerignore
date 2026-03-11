@@ -10,6 +10,9 @@ reports
 node_modules
 out
 
+#CLI dev tooling (not part of the production runtime)
+cli
+
 #Local data
 *.sqlite
 
