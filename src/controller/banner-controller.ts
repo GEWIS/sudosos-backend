@@ -171,7 +171,7 @@ export default class BannerController extends BaseController {
    * @param {BannerRequest} request.body.required - The banner which should be created
    * @security JWT
    * @return {BannerResponse} 200 - The created banner entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createBanner(req: RequestWithToken, res: Response): Promise<void> {
@@ -281,7 +281,7 @@ export default class BannerController extends BaseController {
    * @param {BannerRequest} request.body.required - The updated banner
    * @security JWT
    * @return {BannerResponse} 200 - The requested banner entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */

@@ -67,13 +67,34 @@ export default class AsyncValidatorMiddleware {
       return;
     }
 
-    const result = await validateSpecification(req.body, spec);
-    if (isFail(result)) {
-      res.status(400).json({ valid: false, errors: [result.fail.value] });
-      return;
+    // Mirror RequestValidatorMiddleware behavior: if this endpoint allows a blank
+    // body and the incoming body is empty/undefined, skip async validation entirely.
+    if (this.validator.allowBlankTarget) {
+      const body = req.body;
+      const isUndefinedOrNull = body === undefined || body === null;
+      const isEmptyObject =
+        typeof body === 'object' &&
+        body !== null &&
+        !Array.isArray(body) &&
+        Object.keys(body).length === 0;
+
+      if (isUndefinedOrNull || isEmptyObject) {
+        next();
+        return;
+      }
     }
 
-    next();
+    try {
+      const result = await validateSpecification(req.body, spec);
+      if (isFail(result)) {
+        res.status(400).json({ valid: false, errors: [result.fail.value] });
+        return;
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
   }
 
   /**
