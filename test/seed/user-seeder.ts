@@ -231,6 +231,14 @@ export default class UserSeeder extends WithManager {
         hash: await bcrypt.hash('user', BCRYPT_ROUNDS),
       })),
       this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user: admin,
+        hash: await bcrypt.hash('0000', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user,
+        hash: await bcrypt.hash('1111', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
         user: alice,
         hash: await bcrypt.hash('1234', BCRYPT_ROUNDS),
       })),
