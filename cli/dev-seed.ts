@@ -72,9 +72,10 @@ export default async function devSeed() {
   const { bar, barRevision } = await new PointOfSaleSeeder().init(gewis, containers);
   logger.info('Catalogue created: products, containers, Bar POS');
 
-  // 4. Transactions - alice and bob buy from Bar
+  // 4. Transactions - alice and bob buy from Bar; invoiceco also buys (for invoicing)
   await new TransactionSeeder().init([alice, bob], barRevision);
-  logger.info('Transactions created: alice and bob purchasing from Bar');
+  const { transactions: invoicecoTransactions } = await new TransactionSeeder().init([invoiceco], barRevision);
+  logger.info('Transactions created: alice and bob purchasing from Bar, invoiceco purchasing for invoice');
 
   // 5. Stripe deposit - credits alice with EUR 50.00
   await new DepositSeeder().init(alice);
@@ -96,9 +97,9 @@ export default async function devSeed() {
   await new SellerPayoutSeeder().init(gewis, dinero({ amount: 500 }));
   logger.info('Seller payout created: GEWIS withdraws EUR 5.00');
 
-  // 10. Invoice - invoice for invoiceco
-  await new InvoiceSeeder().init(invoiceco, admin);
-  logger.info('Invoice created: invoiceco EUR 41.00');
+  // 10. Invoice - invoice for invoiceco, rows derived from invoiceco's transactions
+  await new InvoiceSeeder().init(invoiceco, admin, invoicecoTransactions);
+  logger.info('Invoice created: invoiceco (rows matched to transactions)');
 
   // 11. Write-off - a closed user is written off
   const { user: closedUser } = await new WriteOffSeeder().init();
