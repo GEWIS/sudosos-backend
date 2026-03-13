@@ -27,6 +27,10 @@ import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-
 import { getRandomDate } from '../helpers';
 import { PointOfSaleSeeder } from '../catalogue';
 
+export interface DevTransactions {
+  transactions: Transaction[];
+}
+
 export default class TransactionSeeder extends WithManager {
   /**
    * Defines transaction objects subtransactions and rows based on the parameters passed.
@@ -101,6 +105,51 @@ export default class TransactionSeeder extends WithManager {
     }
 
     return transactions;
+  }
+
+  /**
+   * Creates a small set of named transactions for dev seeding.
+   * Alice and Bob each make two purchases from the Bar POS.
+   *
+   * @param buyers - The member users who buy from the POS (alice and bob).
+   * @param posRevision - The POS revision to buy from (barRevision).
+   */
+  public async init(buyers: User[], posRevision: PointOfSaleRevision): Promise<DevTransactions> {
+    const transactions: Transaction[] = [];
+    const to = posRevision.pointOfSale.owner;
+
+    for (const buyer of buyers) {
+      for (let i = 0; i < 2; i++) {
+        const transaction = await this.manager.save(Transaction, Object.assign(new Transaction(), {
+          from: buyer,
+          createdBy: buyer,
+          pointOfSale: posRevision,
+          subTransactions: [],
+        }));
+
+        for (const container of posRevision.containers) {
+          if (container.products.length === 0) continue;
+          const product = container.products[i % container.products.length];
+          const subTransaction = await this.manager.save(SubTransaction, Object.assign(new SubTransaction(), {
+            transaction,
+            to,
+            container,
+            subTransactionRows: [],
+          }));
+          const row = await this.manager.save(SubTransactionRow, Object.assign(new SubTransactionRow(), {
+            subTransaction,
+            product,
+            amount: 1,
+          }));
+          subTransaction.subTransactionRows = [row];
+          transaction.subTransactions.push(subTransaction);
+        }
+
+        transactions.push(transaction);
+      }
+    }
+
+    return { transactions };
   }
 
   /**

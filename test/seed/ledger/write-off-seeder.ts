@@ -27,6 +27,44 @@ import dinero from 'dinero.js';
 import Transfer from '../../../src/entity/transactions/transfer';
 
 export default class WriteOffSeeder extends WithManager {
+  /**
+   * Creates a single write-off for dev seeding.
+   * A new LOCAL_USER is created with a negative balance, then written off.
+   */
+  public async init(): Promise<{ writeOff: WriteOff; user: User }> {
+    const userCount = await User.count();
+    const [closedUser] = new UserSeeder().defineUsers(userCount, 1, UserType.LOCAL_USER, false);
+    closedUser.firstName = 'Closed';
+    closedUser.lastName = 'User';
+    closedUser.deleted = true;
+    await User.save(closedUser);
+
+    // Give the user a negative balance of -EUR 10.00 via a direct transfer
+    await this.manager.save(Transfer, {
+      from: closedUser,
+      to: null,
+      amountInclVat: dinero({ amount: 1000 }),
+      description: 'Dev seed: pre-write-off spending',
+    });
+
+    const writeOff = Object.assign(new WriteOff(), {
+      to: closedUser,
+      amount: dinero({ amount: 1000 }),
+    });
+    await this.manager.save(writeOff);
+
+    writeOff.transfer = await this.manager.save(Transfer, {
+      amountInclVat: dinero({ amount: 1000 }),
+      toId: closedUser.id,
+      description: 'Dev seed write-off',
+      fromId: null,
+      writeOff,
+    });
+    await this.manager.save(writeOff);
+
+    return { writeOff, user: closedUser };
+  }
+
   public async seed(count = 10): Promise<WriteOff[]> {
     const userCount = await User.count();
     const users = new UserSeeder().defineUsers(userCount, count, UserType.LOCAL_USER, false);

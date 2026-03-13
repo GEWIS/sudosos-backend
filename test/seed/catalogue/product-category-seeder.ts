@@ -21,7 +21,23 @@
 import WithManager from '../../../src/database/with-manager';
 import ProductCategory from '../../../src/entity/product/product-category';
 
+export interface DevCategories {
+  beer: ProductCategory;
+  softDrinks: ProductCategory;
+}
+
 export default class ProductCategorySeeder extends WithManager {
+  /**
+   * Creates the minimal set of product categories for dev seeding.
+   */
+  public async init(): Promise<DevCategories> {
+    const [beer, softDrinks] = await this.manager.save(ProductCategory, [
+      { name: 'Beer' },
+      { name: 'Soft Drinks' },
+    ]);
+    return { beer, softDrinks };
+  }
+
   /**
    * Seeds a default dataset of product categories, and stores them in the database.
    */

@@ -25,9 +25,41 @@ import User, { UserType } from '../../../src/entity/user/user';
 import { calculateBalance } from '../../helpers/balance';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import dinero from 'dinero.js';
+import { Dinero } from 'dinero.js';
 import WithManager from '../../../src/database/with-manager';
 
 export default class SellerPayoutSeeder extends WithManager {
+  /**
+   * Creates a single seller payout for dev seeding.
+   * GEWIS extracts a fixed amount of revenue as a payout.
+   *
+   * @param organ - The ORGAN user requesting the payout (gewis).
+   * @param amount - The payout amount in dinero.
+   */
+  public async init(organ: User, amount: Dinero): Promise<SellerPayout> {
+    const now = new Date();
+    const startDate = new Date('2020-01-01');
+    startDate.setMilliseconds(0);
+    now.setMilliseconds(0);
+
+    const transfer = await this.manager.save(Transfer, {
+      from: organ,
+      amountInclVat: amount,
+      description: `Dev seed seller payout for ${organ.firstName}`,
+    });
+
+    const sellerPayout = await this.manager.save(SellerPayout, {
+      requestedBy: organ,
+      transfer,
+      amount,
+      startDate,
+      endDate: now,
+      reference: 'DEV-001',
+    });
+
+    return sellerPayout;
+  }
+
   public async seed(
     users: User[],
     transactions: Transaction[],

@@ -24,8 +24,36 @@ import PayoutRequest from '../../../src/entity/transactions/payout/payout-reques
 import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import PayoutRequestStatus, { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
+import dinero from 'dinero.js';
 
 export default class PayoutRequestSeeder extends WithManager {
+  /**
+   * Creates a single payout request for dev seeding.
+   * The member requests EUR 10.00 back to their bank account.
+   *
+   * @param member - The MEMBER user who requests the payout (alice).
+   */
+  public async init(member: User): Promise<PayoutRequest> {
+    const amount = dinero({ amount: 1000 });
+    const payoutRequest = Object.assign(new PayoutRequest(), {
+      requestedBy: member,
+      amount,
+      bankAccountNumber: 'NL91ABNA0417164300',
+      bankAccountName: `${member.firstName} ${member.lastName}`,
+    });
+
+    const saved = await this.manager.save(PayoutRequest, payoutRequest);
+
+    const status = Object.assign(new PayoutRequestStatus(), {
+      payoutRequest: saved,
+      state: PayoutRequestState.CREATED,
+    });
+    await this.manager.save(PayoutRequestStatus, status);
+    saved.payoutRequestStatus = [status];
+
+    return saved;
+  }
+
   public async seed(users: User[]): Promise<{
     payoutRequests: PayoutRequest[], payoutRequestTransfers: Transfer[],
   }> {

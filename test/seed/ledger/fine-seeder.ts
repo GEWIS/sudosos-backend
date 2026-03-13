@@ -31,6 +31,42 @@ import Fine from '../../../src/entity/fine/fine';
 
 export default class FineSeeder extends WithManager {
   /**
+   * Creates a single fine for dev seeding.
+   * A FineHandoutEvent is created and the given user receives a EUR 5.00 fine.
+   *
+   * @param user - The user to fine (bob).
+   */
+  public async init(user: User): Promise<{ fineHandoutEvent: FineHandoutEvent; fine: Fine; fineTransfer: Transfer }> {
+    const amountInclVat = dinero({ amount: 500 });
+
+    const fineHandoutEvent = await this.manager.save(FineHandoutEvent, {
+      referenceDate: new Date(),
+    });
+
+    const userFineGroup = await this.manager.save(UserFineGroup, {
+      user,
+      userId: user.id,
+    });
+
+    const fineTransfer = await this.manager.save(Transfer, {
+      from: user,
+      fromId: user.id,
+      amountInclVat,
+      description: 'Dev seed fine',
+    });
+
+    const fine = await this.manager.save(Fine, {
+      fineHandoutEvent,
+      userFineGroup,
+      transfer: fineTransfer,
+      amount: amountInclVat,
+    });
+    fineTransfer.fine = fine;
+
+    return { fineHandoutEvent, fine, fineTransfer };
+  }
+
+  /**
    * Handout fines for all eligible users on the given reference date. Reuse the given user fine groups if it exists
    * @param users
    * @param transactions

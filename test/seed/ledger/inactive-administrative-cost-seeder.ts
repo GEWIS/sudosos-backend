@@ -26,6 +26,37 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 
 export default class InactiveAdministrativeCostSeeder extends WithManager {
+  /**
+   * Creates a single inactive administrative cost for dev seeding.
+   * The given user is charged EUR 0.05 for inactivity.
+   *
+   * @param user - The user to charge (bob).
+   */
+  public async init(user: User): Promise<{ inactiveAdministrativeCost: InactiveAdministrativeCost; transfer: Transfer }> {
+    const amount = DineroTransformer.Instance.from(5);
+    const now = new Date();
+
+    const transfer = Object.assign(new Transfer(), {
+      from: user,
+      to: null,
+      amountInclVat: amount,
+      description: 'Dev seed inactive administrative cost',
+      createdAt: now,
+    });
+    await this.manager.save(Transfer, transfer);
+
+    const inactiveAdministrativeCost = Object.assign(new InactiveAdministrativeCost(), {
+      from: user,
+      amount,
+      createdAt: now,
+      transfer,
+    });
+    transfer.inactiveAdministrativeCost = inactiveAdministrativeCost;
+    await this.manager.save(InactiveAdministrativeCost, inactiveAdministrativeCost);
+
+    return { inactiveAdministrativeCost, transfer };
+  }
+
   public async seed(
     users: User[],
     startDate?: Date,
