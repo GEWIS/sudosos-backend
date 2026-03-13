@@ -31,23 +31,29 @@ import { Joinable, Specification } from '../helpers/specification-validation';
  * Controllers register their specs at startup; the AsyncValidatorMiddleware
  * looks them up at request time.
  */
+/**
+ * A factory function that returns a fresh Specification per call.
+ * This prevents ValidationError.join() from mutating shared trace instances across requests.
+ */
+export type SpecificationFactory<T = any, F extends Joinable = Joinable> = () => Specification<T, F>;
+
 export default class AsyncValidatorRegistry {
-  private readonly registry = new Map<string, Specification<any, Joinable>>();
+  private readonly registry = new Map<string, SpecificationFactory>();
 
   /**
-   * Register an async validation spec for a given Swagger model name.
+   * Register an async validation spec factory for a given Swagger model name.
    * @param modelName - The Swagger model name (must match the `modelName` in BodyValidator).
-   * @param spec - The specification to run against the request body.
+   * @param factory - A function returning a fresh specification per request.
    */
-  public register(modelName: string, spec: Specification<any, Joinable>): void {
-    this.registry.set(modelName, spec);
+  public register(modelName: string, factory: SpecificationFactory): void {
+    this.registry.set(modelName, factory);
   }
 
   /**
-   * Retrieve the spec registered for the given model name, or undefined if none registered.
+   * Retrieve the spec factory registered for the given model name, or undefined if none.
    * @param modelName - The Swagger model name to look up.
    */
-  public get(modelName: string): Specification<any, Joinable> | undefined {
+  public get(modelName: string): SpecificationFactory | undefined {
     return this.registry.get(modelName);
   }
 }

@@ -58,11 +58,15 @@ const endDateNotInPast = (br: BannerRequest) => {
  * - startDate: valid date string
  * - endDate: valid date string, after startDate, and not in the past
  */
-const bannerRequestSpec: Specification<BannerRequest, ValidationError> = [
-  [stringSpec(), 'name', new ValidationError('name:')],
-  [[validDuration], 'duration', new ValidationError('duration:')],
-  ...durationSpec<BannerRequest>(),
-  endDateNotInPast,
-];
-
-export default bannerRequestSpec;
+/**
+ * Factory that returns a fresh spec per call, preventing ValidationError.join()
+ * from mutating shared trace instances across requests.
+ */
+export default function bannerRequestSpec(): Specification<BannerRequest, ValidationError> {
+  return [
+    [stringSpec(), 'name', new ValidationError('name:')],
+    [[validDuration], 'duration', new ValidationError('duration:')],
+    ...durationSpec<BannerRequest>(),
+    endDateNotInPast,
+  ];
+}
