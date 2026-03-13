@@ -58,7 +58,7 @@ export default async function devSeed() {
   // 1. Users
   const { admin, user: localUser, alice, bob, gewis, invoiceco } = await new UserSeeder().init();
   const logger = log4js.getLogger('DevSeed');
-  logger.info('Users created: admin, user, alice, bob, gewis, invoiceco');
+  logger.info('Users created: admin, user, alice, bob, GEWIS, invoiceco');
 
   // 2. Roles (assigns Super Admin to admin automatically)
   await DefaultRoles.synchronize();
@@ -98,7 +98,7 @@ export default async function devSeed() {
 
   // 10. Invoice - invoice for invoiceco
   await new InvoiceSeeder().init(invoiceco, admin);
-  logger.info('Invoice created: invoiceco');
+  logger.info('Invoice created: invoiceco EUR 41.00');
 
   // 11. Write-off - a closed user is written off
   const { user: closedUser } = await new WriteOffSeeder().init();

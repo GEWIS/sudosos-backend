@@ -36,7 +36,7 @@ export default class InvoiceSeeder extends WithManager {
    * @param admin - The user marking the invoice status (admin).
    */
   public async init(invoiceUser: User, admin: User): Promise<Invoice> {
-    const amount = dinero({ amount: 4200 });
+    const amount = dinero({ amount: 4100 });
 
     const transfer = Object.assign(new Transfer(), {
       from: null,

@@ -33,11 +33,11 @@ import ProductCategorySeeder, { DevCategories } from './product-category-seeder'
 import VatGroupSeeder, { DevVatGroups } from './vat-group-seeder';
 
 export interface DevProducts {
-  heineken: Product;
+  grimbergen: Product;
   grolsch: Product;
   cola: Product;
   water: Product;
-  heinekenRevision: ProductRevision;
+  grimbergenRevision: ProductRevision;
   grolschRevision: ProductRevision;
   colaRevision: ProductRevision;
   waterRevision: ProductRevision;
@@ -142,18 +142,18 @@ export default class ProductSeeder extends WithManager {
    * @param categories - Dev categories returned by ProductCategorySeeder.init().
    */
   public async init(owner: User, vatGroups: DevVatGroups, categories: DevCategories): Promise<DevProducts> {
-    const [heineken, grolsch, cola, water] = await this.manager.save(Product, [
+    const [grimbergen, grolsch, cola, water] = await this.manager.save(Product, [
       Object.assign(new Product(), { owner }),
       Object.assign(new Product(), { owner }),
       Object.assign(new Product(), { owner }),
       Object.assign(new Product(), { owner }),
     ]);
 
-    const [heinekenRevision, grolschRevision, colaRevision, waterRevision] = await this.manager.save(ProductRevision, [
+    const [grimbergenRevision, grolschRevision, colaRevision, waterRevision] = await this.manager.save(ProductRevision, [
       Object.assign(new ProductRevision(), {
-        product: heineken,
+        product: grimbergen,
         revision: 1,
-        name: 'Heineken',
+        name: 'Grimbergen',
         category: categories.beer,
         featured: true,
         preferred: true,
@@ -201,13 +201,13 @@ export default class ProductSeeder extends WithManager {
     ]);
 
     // Persist currentRevision = 1 on each product
-    heineken.currentRevision = 1;
+    grimbergen.currentRevision = 1;
     grolsch.currentRevision = 1;
     cola.currentRevision = 1;
     water.currentRevision = 1;
-    await this.manager.save(Product, [heineken, grolsch, cola, water]);
+    await this.manager.save(Product, [grimbergen, grolsch, cola, water]);
 
-    return { heineken, grolsch, cola, water, heinekenRevision, grolschRevision, colaRevision, waterRevision };
+    return { grimbergen, grolsch, cola, water, grimbergenRevision, grolschRevision, colaRevision, waterRevision };
   }
 
   /**

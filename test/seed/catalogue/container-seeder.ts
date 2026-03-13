@@ -104,7 +104,7 @@ export default class ContainerSeeder extends WithManager {
         container: alcoholic,
         revision: 1,
         name: 'Alcoholic Drinks',
-        products: [products.heinekenRevision, products.grolschRevision],
+        products: [products.grimbergenRevision, products.grolschRevision],
       }),
       Object.assign(new ContainerRevision(), {
         container: nonAlcoholic,
