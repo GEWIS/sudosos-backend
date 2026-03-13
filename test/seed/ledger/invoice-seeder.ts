@@ -65,6 +65,10 @@ export default class InvoiceSeeder extends WithManager {
     transfer.invoice = invoice;
     await this.manager.save(Invoice, invoice);
 
+    // Link rows to the saved invoice (defineInvoiceEntries used a placeholder ID)
+    for (const row of subTransactionRows) {
+      row.invoice = invoice;
+    }
     await this.manager.save(SubTransactionRow, subTransactionRows);
 
     const status = Object.assign(new InvoiceStatus(), {

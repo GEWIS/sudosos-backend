@@ -69,7 +69,7 @@ export default async function devSeed() {
   const categories = await new ProductCategorySeeder().init();
   const products = await new ProductSeeder().init(gewis, vatGroups, categories);
   const containers = await new ContainerSeeder().init(gewis, products);
-  const { bar, barRevision } = await new PointOfSaleSeeder().init(gewis, containers);
+  const { barRevision } = await new PointOfSaleSeeder().init(gewis, containers);
   logger.info('Catalogue created: products, containers, Bar POS');
 
   // 4. Transactions - alice and bob buy from Bar; invoiceco also buys (for invoicing)

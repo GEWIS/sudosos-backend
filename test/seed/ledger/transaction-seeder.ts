@@ -154,7 +154,7 @@ export default class TransactionSeeder extends WithManager {
 
   /**
    * Seeds a default dataset of transactions, based on the supplied user and point of sale
-   * revision dataset. Every point of sale revision will recevie transactions.
+   * revision dataset. Every point of sale revision will receive transactions.
    *
    * @param users - The dataset of users to base the point of sale dataset on.
    * @param pointOfSaleRevisions
