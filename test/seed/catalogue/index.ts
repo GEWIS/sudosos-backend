@@ -18,8 +18,8 @@
  *  @license
  */
 
-export { default as ContainerSeeder } from './container-seeder';
-export { default as PointOfSaleSeeder } from './point-of-sale-seeder';
-export { default as ProductSeeder } from './product-seeder';
-export { default as ProductCategorySeeder } from './product-category-seeder';
-export { default as VatGroupSeeder } from './vat-group-seeder';
+export { default as ContainerSeeder, DevContainers } from './container-seeder';
+export { default as PointOfSaleSeeder, DevPointOfSale } from './point-of-sale-seeder';
+export { default as ProductSeeder, DevProducts } from './product-seeder';
+export { default as ProductCategorySeeder, DevCategories } from './product-category-seeder';
+export { default as VatGroupSeeder, DevVatGroups } from './vat-group-seeder';

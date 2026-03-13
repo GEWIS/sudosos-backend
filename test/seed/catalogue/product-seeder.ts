@@ -29,8 +29,19 @@ import ProductCategory from '../../../src/entity/product/product-category';
 import VatGroup from '../../../src/entity/vat-group';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import dinero from 'dinero.js';
-import ProductCategorySeeder from './product-category-seeder';
-import VatGroupSeeder from './vat-group-seeder';
+import ProductCategorySeeder, { DevCategories } from './product-category-seeder';
+import VatGroupSeeder, { DevVatGroups } from './vat-group-seeder';
+
+export interface DevProducts {
+  grimbergen: Product;
+  grolsch: Product;
+  cola: Product;
+  water: Product;
+  grimbergenRevision: ProductRevision;
+  grolschRevision: ProductRevision;
+  colaRevision: ProductRevision;
+  waterRevision: ProductRevision;
+}
 
 export default class ProductSeeder extends WithManager {
   /**
@@ -121,6 +132,82 @@ export default class ProductSeeder extends WithManager {
     }
 
     return revisions;
+  }
+
+  /**
+   * Creates the minimal set of named products for dev seeding.
+   *
+   * @param owner - The organ user that will own the products.
+   * @param vatGroups - Dev VAT groups returned by VatGroupSeeder.init().
+   * @param categories - Dev categories returned by ProductCategorySeeder.init().
+   */
+  public async init(owner: User, vatGroups: DevVatGroups, categories: DevCategories): Promise<DevProducts> {
+    const [grimbergen, grolsch, cola, water] = await this.manager.save(Product, [
+      Object.assign(new Product(), { owner }),
+      Object.assign(new Product(), { owner }),
+      Object.assign(new Product(), { owner }),
+      Object.assign(new Product(), { owner }),
+    ]);
+
+    const [grimbergenRevision, grolschRevision, colaRevision, waterRevision] = await this.manager.save(ProductRevision, [
+      Object.assign(new ProductRevision(), {
+        product: grimbergen,
+        revision: 1,
+        name: 'Grimbergen',
+        category: categories.beer,
+        featured: true,
+        preferred: true,
+        priceList: true,
+        priceInclVat: dinero({ amount: 150 }),
+        vat: vatGroups.low,
+        alcoholPercentage: 5,
+      }),
+      Object.assign(new ProductRevision(), {
+        product: grolsch,
+        revision: 1,
+        name: 'Grolsch',
+        category: categories.beer,
+        featured: true,
+        preferred: true,
+        priceList: true,
+        priceInclVat: dinero({ amount: 150 }),
+        vat: vatGroups.low,
+        alcoholPercentage: 5,
+      }),
+      Object.assign(new ProductRevision(), {
+        product: cola,
+        revision: 1,
+        name: 'Cola',
+        category: categories.softDrinks,
+        featured: true,
+        preferred: true,
+        priceList: true,
+        priceInclVat: dinero({ amount: 100 }),
+        vat: vatGroups.low,
+        alcoholPercentage: 0,
+      }),
+      Object.assign(new ProductRevision(), {
+        product: water,
+        revision: 1,
+        name: 'Water',
+        category: categories.softDrinks,
+        featured: true,
+        preferred: true,
+        priceList: true,
+        priceInclVat: dinero({ amount: 50 }),
+        vat: vatGroups.zero,
+        alcoholPercentage: 0,
+      }),
+    ]);
+
+    // Persist currentRevision = 1 on each product
+    grimbergen.currentRevision = 1;
+    grolsch.currentRevision = 1;
+    cola.currentRevision = 1;
+    water.currentRevision = 1;
+    await this.manager.save(Product, [grimbergen, grolsch, cola, water]);
+
+    return { grimbergen, grolsch, cola, water, grimbergenRevision, grolschRevision, colaRevision, waterRevision };
   }
 
   /**

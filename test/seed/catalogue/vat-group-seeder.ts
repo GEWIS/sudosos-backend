@@ -22,7 +22,26 @@ import WithManager from '../../../src/database/with-manager';
 import VatGroup from '../../../src/entity/vat-group';
 import { VatGroupRequest } from '../../../src/controller/request/vat-group-request';
 
+export interface DevVatGroups {
+  high: VatGroup;
+  low: VatGroup;
+  zero: VatGroup;
+}
+
 export default class VatGroupSeeder extends WithManager {
+  /**
+   * Creates the minimal set of VAT groups needed for dev seeding.
+   * Returns named references to high (21%), low (9%) and zero (0%) groups.
+   */
+  public async init(): Promise<DevVatGroups> {
+    const groups = await this.seed();
+    return {
+      high: groups.find((g) => g.percentage === 21),
+      low: groups.find((g) => g.percentage === 9 && !g.deleted),
+      zero: groups.find((g) => g.percentage === 0 && !g.hidden),
+    };
+  }
+
   /**
    * Seed the (default) Dutch VAT groups (2022)
    */

@@ -23,7 +23,14 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Container from '../../../src/entity/container/container';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import ProductSeeder from './product-seeder';
+import ProductSeeder, { DevProducts } from './product-seeder';
+
+export interface DevContainers {
+  alcoholic: Container;
+  nonAlcoholic: Container;
+  alcoholicRevision: ContainerRevision;
+  nonAlcoholicRevision: ContainerRevision;
+}
 
 export default class ContainerSeeder extends WithManager {
   /**
@@ -78,6 +85,40 @@ export default class ContainerSeeder extends WithManager {
       }));
     }
     return revisions;
+  }
+
+  /**
+   * Creates the minimal set of named containers for dev seeding.
+   *
+   * @param owner - The user that owns the containers.
+   * @param products - Dev products returned by ProductSeeder.init().
+   */
+  public async init(owner: User, products: DevProducts): Promise<DevContainers> {
+    const [alcoholic, nonAlcoholic] = await this.manager.save(Container, [
+      Object.assign(new Container(), { owner, public: true }),
+      Object.assign(new Container(), { owner, public: true }),
+    ]);
+
+    const [alcoholicRevision, nonAlcoholicRevision] = await this.manager.save(ContainerRevision, [
+      Object.assign(new ContainerRevision(), {
+        container: alcoholic,
+        revision: 1,
+        name: 'Alcoholic Drinks',
+        products: [products.grimbergenRevision, products.grolschRevision],
+      }),
+      Object.assign(new ContainerRevision(), {
+        container: nonAlcoholic,
+        revision: 1,
+        name: 'Non-Alcoholic Drinks',
+        products: [products.colaRevision, products.waterRevision],
+      }),
+    ]);
+
+    alcoholic.currentRevision = 1;
+    nonAlcoholic.currentRevision = 1;
+    await this.manager.save(Container, [alcoholic, nonAlcoholic]);
+
+    return { alcoholic, nonAlcoholic, alcoholicRevision, nonAlcoholicRevision };
   }
 
   /**
