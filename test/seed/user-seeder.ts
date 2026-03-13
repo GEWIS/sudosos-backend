@@ -154,9 +154,8 @@ export default class UserSeeder extends WithManager {
   }
 
   /**
-   * Seed some organ memberships
-   * @param users Users who are members of organs
-   * @param organs The organs that the users are members of
+   * Creates a fixed set of named dev users with authenticators.
+   * Used by cli/dev-seed.ts for local development.
    */
   public async init(): Promise<DevUsers> {
     const BCRYPT_ROUNDS = 4;
