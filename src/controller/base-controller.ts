@@ -81,10 +81,12 @@ export default abstract class BaseController {
     if (methodPolicy.body) {
       const validator = new RequestValidatorMiddleware(spec, methodPolicy.body);
       handlers.push(validator.getMiddleware());
-      handlers.push(new AsyncValidatorMiddleware(globalAsyncValidatorRegistry, methodPolicy.body).getMiddleware());
     }
     handlers.push(new PolicyMiddleware(methodPolicy.policy).getMiddleware());
     handlers.push(new RestrictionMiddleware(() => methodPolicy.restrictions || {}).getMiddleware());
+    if (methodPolicy.body) {
+      handlers.push(new AsyncValidatorMiddleware(globalAsyncValidatorRegistry, methodPolicy.body).getMiddleware());
+    }
     handlers.push(methodPolicy.handler);
     callback(
       route,

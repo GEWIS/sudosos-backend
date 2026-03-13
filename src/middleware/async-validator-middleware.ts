@@ -61,8 +61,8 @@ export default class AsyncValidatorMiddleware {
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    const spec = this.registry.get(this.validator.modelName);
-    if (!spec) {
+    const specFactory = this.registry.get(this.validator.modelName);
+    if (!specFactory) {
       next();
       return;
     }
@@ -85,9 +85,10 @@ export default class AsyncValidatorMiddleware {
     }
 
     try {
+      const spec = specFactory();
       const result = await validateSpecification(req.body, spec);
       if (isFail(result)) {
-        res.status(400).json({ valid: false, errors: [result.fail.value] });
+        res.status(400).json({ valid: false, errors: [String(result.fail.value)] });
         return;
       }
 
