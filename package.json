@@ -10,6 +10,7 @@
     "serve": "node out/src/index.js",
     "schema": "ts-node src/database/schema.ts",
     "seed": "ts-node cli/seed.ts",
+    "seed:dev": "ts-node cli/dev-seed.ts",
     "swagger": "ts-node src/start/swagger.ts",
     "migrate": "ts-node src/database/migrate.ts",
     "swagger:validate": "ts-node src/start/swagger.ts && swagger-cli validate ./out/swagger.json",
@@ -31,6 +32,7 @@
     "docs:preview": "vitepress preview docs",
     "maintenance": "ts-node src/maintenance.ts",
     "init:migrate": "npm run migrate && npm run seed && npm run maintenance",
+    "init:dev": "npm run migrate && npm run seed:dev",
     "init:schema": "npm run schema && npm run seed && npm run maintenance",
     "prepare": "husky || true"
   },

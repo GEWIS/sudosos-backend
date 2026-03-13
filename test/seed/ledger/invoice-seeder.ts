@@ -28,6 +28,52 @@ import InvoiceStatus, { InvoiceState } from '../../../src/entity/invoices/invoic
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
 export default class InvoiceSeeder extends WithManager {
+  /**
+   * Creates a single invoice for dev seeding.
+   * An invoice for EUR 42.00 is created for the given invoice user.
+   *
+   * @param invoiceUser - The INVOICE user to bill (invoiceco).
+   * @param admin - The user marking the invoice status (admin).
+   */
+  public async init(invoiceUser: User, admin: User): Promise<Invoice> {
+    const amount = dinero({ amount: 4200 });
+
+    const transfer = Object.assign(new Transfer(), {
+      from: null,
+      to: invoiceUser,
+      amountInclVat: amount,
+      description: 'Dev seed invoice',
+    });
+    await this.manager.save(Transfer, transfer);
+
+    const invoice = Object.assign(new Invoice(), {
+      to: invoiceUser,
+      addressee: `${invoiceUser.firstName} ${invoiceUser.lastName}`,
+      reference: 'DEV-INV-001',
+      city: 'Eindhoven',
+      country: 'Netherlands',
+      postalCode: '5612 AE',
+      street: 'Groene Loper 5',
+      description: 'Dev seed invoice',
+      transfer,
+      date: new Date(),
+      invoiceStatus: [],
+    });
+    transfer.invoice = invoice;
+    await this.manager.save(Invoice, invoice);
+
+    const status = Object.assign(new InvoiceStatus(), {
+      invoice,
+      changedBy: admin,
+      state: InvoiceState.CREATED,
+      dateChanged: new Date(),
+    });
+    invoice.invoiceStatus.push(status);
+    await this.manager.save(Invoice, invoice);
+
+    return invoice;
+  }
+
   private defineInvoiceEntries(invoiceId: number, startEntryId: number,
     transactions: Transaction[]): { subTransactionRows: SubTransactionRow[], cost: number } {
     const subTransactions = (

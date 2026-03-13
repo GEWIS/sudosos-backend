@@ -30,6 +30,41 @@ import StripePaymentIntentStatus, {
 
 export default class DepositSeeder extends WithManager {
   /**
+   * Creates a single completed Stripe deposit for dev seeding.
+   * Alice receives a EUR 50.00 top-up via a fake Stripe payment intent.
+   *
+   * @param user - The user to deposit to (alice).
+   */
+  public async init(user: User): Promise<{ stripeDeposit: StripeDeposit; transfer: Transfer }> {
+    const amount = DineroTransformer.Instance.from(5000);
+
+    const stripePaymentIntent = await this.manager.save(StripePaymentIntent, {
+      stripeId: 'FakeStripeIDDevSeed_alice',
+      amount,
+      paymentIntentStatuses: [],
+    });
+
+    const stripeDeposit = await StripeDeposit.save({ stripePaymentIntent, to: user });
+
+    const transfer = await this.manager.save(Transfer, {
+      from: null,
+      to: user,
+      amountInclVat: amount,
+      description: 'Dev seed Stripe deposit',
+    });
+    stripeDeposit.transfer = transfer;
+    await this.manager.save(StripeDeposit, stripeDeposit);
+    transfer.deposit = stripeDeposit;
+
+    for (const state of [StripePaymentIntentState.CREATED, StripePaymentIntentState.PROCESSING, StripePaymentIntentState.SUCCEEDED]) {
+      const status = await this.manager.save(StripePaymentIntentStatus, { stripePaymentIntent, state });
+      stripePaymentIntent.paymentIntentStatuses.push(status);
+    }
+
+    return { stripeDeposit, transfer };
+  }
+
+  /**
    * Create mock stripe deposits objects. Note that the stripe IDs are fake, so you cannot use
    * these entries to make actual API calls to Stripe.
    * @param users
