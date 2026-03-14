@@ -153,7 +153,7 @@ export default class UserController extends BaseController {
       '/recently-charged': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
+            req.token.roles, 'get', 'all', 'User', ['*'],
           ),
           handler: this.getRecentlyChargedUsers.bind(this),
         },
