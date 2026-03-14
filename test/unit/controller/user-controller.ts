@@ -3434,4 +3434,53 @@ describe('UserController', (): void => {
       expect(res.body).to.equal('Cannot change to MEMBER since no memberId is associated to this user.');
     });
   });
+
+  describe('GET /users/recently-charged', () => {
+    it('should return 200 with an array for admin token', async () => {
+      const res = await request(ctx.app)
+        .get('/users/recently-charged')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.be.an('array');
+    });
+
+    it('should return 200 for POS token', async () => {
+      const res = await request(ctx.app)
+        .get('/users/recently-charged')
+        .set('Authorization', `Bearer ${ctx.posToken}`);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.be.an('array');
+    });
+
+    it('should return 403 for regular user token', async () => {
+      const res = await request(ctx.app)
+        .get('/users/recently-charged')
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return 400 for invalid take parameter', async () => {
+      const res = await request(ctx.app)
+        .get('/users/recently-charged?take=notanumber')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return correct user shapes', async () => {
+      const spec = await Swagger.importSpecification();
+      const res = await request(ctx.app)
+        .get('/users/recently-charged')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      (res.body as UserResponse[]).forEach((u) => verifyUserResponse(spec, u));
+    });
+
+    it('should respect the take query parameter', async () => {
+      const res = await request(ctx.app)
+        .get('/users/recently-charged?take=1')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as UserResponse[]).length).to.be.at.most(1);
+    });
+  });
 });
