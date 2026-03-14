@@ -36,7 +36,7 @@ import BaseUserRequest, {
   PatchUserTypeRequest,
   UpdateUserRequest,
 } from './request/user-request';
-import { parseRequestPagination, toResponse } from '../helpers/pagination';
+import { maxPagination, parseRequestPagination, toResponse } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
@@ -148,6 +148,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.findUserNfc.bind(this),
+        },
+      },
+      '/recently-charged': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
+          ),
+          handler: this.getRecentlyChargedUsers.bind(this),
         },
       },
       '/:id(\\d+)/authenticator/pin': {
@@ -1916,6 +1924,42 @@ export default class UserController extends BaseController {
       await UserService.updateUserType(user, body.userType);
       const updatedUser = await UserService.getSingleUser(userId);
       res.status(200).json(asUserResponse(updatedUser, true));
+    } catch (e) {
+      res.status(500).send('Internal server error.');
+      this.logger.error(e);
+    }
+  }
+
+  /**
+   * GET /users/recently-charged
+   * @summary Get users recently charged by the caller via an authenticated point of sale.
+   * Returns distinct buyers ordered by most recent transaction first, intended for
+   * quick suggestions in the authenticated POS flow.
+   * @operationId getRecentlyChargedUsers
+   * @tags users - Operations of user controller
+   * @param {integer} take.query - Maximum number of users to return (default 50)
+   * @security JWT
+   * @return {Array.<UserResponse>} 200 - List of recently charged users.
+   */
+  public async getRecentlyChargedUsers(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get recently charged users by user', req.token.user);
+
+    let take: number;
+    try {
+      take = req.query.take !== undefined ? asNumber(req.query.take) : 50;
+      take = Math.min(Math.max(1, Math.trunc(take)), maxPagination());
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const users = await new TransactionService().getRecentlyChargedUsers(req.token.user.id, take);
+      const records = users.map((u) => asUserResponse(u));
+      if (!await this.canSeeEmail(req, 'all')) {
+        records.forEach((u) => { u.email = undefined; });
+      }
+      res.status(200).json(records);
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);

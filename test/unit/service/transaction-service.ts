@@ -38,7 +38,10 @@ import {
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
-import { createTransactions, createValidTransactionRequest } from '../../helpers/transaction-factory';
+import { createTransactions, createValidTransactionRequest, createValidTransactionRequestPOS, requestToTransaction } from '../../helpers/transaction-factory';
+import PointOfSaleService from '../../../src/service/point-of-sale-service';
+import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
+import { toMySQLString } from '../../../src/helpers/timestamps';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
@@ -997,6 +1000,122 @@ describe('TransactionService', (): void => {
         expect(dataValue).to.equal(value);
         expect(categoryValue).to.equal(value);
         expect(vatValue).to.equal(value);
+      });
+    });
+  });
+
+  describe('getRecentlyChargedUsers', () => {
+    async function getPOSResponse(pos: PointOfSaleRevision): Promise<PointOfSaleWithContainersResponse> {
+      const [revisions] = await PointOfSaleService.getPointsOfSale({
+        pointOfSaleId: pos.pointOfSaleId,
+        pointOfSaleRevision: pos.revision,
+        returnContainers: true,
+        returnProducts: true,
+      });
+      return PointOfSaleService.revisionToResponse(revisions[0]) as PointOfSaleWithContainersResponse;
+    }
+
+    it('should return empty array if cashier has no transactions', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (cashier: User) => {
+        const users = await new TransactionService().getRecentlyChargedUsers(cashier.id);
+        expect(users).to.be.empty;
+      });
+    });
+
+    it('should return users charged via authenticated POS', async () => {
+      await inUserContext((await UserFactory()).clone(4), async (cashier: User, buyer1: User, buyer2: User, seller: User) => {
+        await generateBalance(1000, buyer1.id);
+        await generateBalance(1000, buyer2.id);
+
+        const authPos = await PointOfSaleRevision.findOne({
+          where: { useAuthentication: true },
+          relations: ['containers', 'containers.products'],
+        });
+        expect(authPos).to.not.be.null;
+        const posResponse = await getPOSResponse(authPos);
+
+        const req1 = await createValidTransactionRequestPOS(buyer1.id, seller.id, 1, posResponse);
+        req1.createdBy = cashier.id;
+        const req2 = await createValidTransactionRequestPOS(buyer2.id, seller.id, 1, posResponse);
+        req2.createdBy = cashier.id;
+        await requestToTransaction([req1, req2]);
+
+        const users = await new TransactionService().getRecentlyChargedUsers(cashier.id);
+        const ids = users.map((u) => u.id);
+        expect(ids).to.include.members([buyer1.id, buyer2.id]);
+      });
+    });
+
+    it('should not include users from non-authenticated POS transactions', async () => {
+      await inUserContext((await UserFactory()).clone(3), async (cashier: User, buyer: User, seller: User) => {
+        await generateBalance(1000, buyer.id);
+
+        const nonAuthPos = await PointOfSaleRevision.findOne({
+          where: { useAuthentication: false },
+          relations: ['containers', 'containers.products'],
+        });
+        expect(nonAuthPos).to.not.be.null;
+        const posResponse = await getPOSResponse(nonAuthPos);
+
+        const req = await createValidTransactionRequestPOS(buyer.id, seller.id, 1, posResponse);
+        req.createdBy = cashier.id;
+        await requestToTransaction([req]);
+
+        const users = await new TransactionService().getRecentlyChargedUsers(cashier.id);
+        const ids = users.map((u) => u.id);
+        expect(ids).to.not.include(buyer.id);
+      });
+    });
+
+    it('should order by most recent transaction first', async () => {
+      await inUserContext((await UserFactory()).clone(4), async (cashier: User, buyer1: User, buyer2: User, seller: User) => {
+        await generateBalance(1000, buyer1.id);
+        await generateBalance(1000, buyer2.id);
+
+        const authPos = await PointOfSaleRevision.findOne({
+          where: { useAuthentication: true },
+          relations: ['containers', 'containers.products'],
+        });
+        const posResponse = await getPOSResponse(authPos);
+
+        const req1 = await createValidTransactionRequestPOS(buyer1.id, seller.id, 1, posResponse);
+        req1.createdBy = cashier.id;
+        const { transactions: [{ tId }] } = await requestToTransaction([req1]);
+
+        // Backdate buyer1's transaction so buyer2 is more recent
+        const past = new Date('2020-01-01T00:00:00.000Z');
+        await AppDataSource.query(`UPDATE \`transaction\` SET createdAt = '${toMySQLString(past)}' WHERE id = ${tId}`);
+
+        const req2 = await createValidTransactionRequestPOS(buyer2.id, seller.id, 1, posResponse);
+        req2.createdBy = cashier.id;
+        await requestToTransaction([req2]);
+
+        const users = await new TransactionService().getRecentlyChargedUsers(cashier.id);
+        const ids = users.map((u) => u.id);
+        expect(ids.indexOf(buyer2.id)).to.be.lessThan(ids.indexOf(buyer1.id));
+      });
+    });
+
+    it('should respect the take limit', async () => {
+      await inUserContext((await UserFactory()).clone(5), async (cashier: User, b1: User, b2: User, b3: User, seller: User) => {
+        await generateBalance(1000, b1.id);
+        await generateBalance(1000, b2.id);
+        await generateBalance(1000, b3.id);
+
+        const authPos = await PointOfSaleRevision.findOne({
+          where: { useAuthentication: true },
+          relations: ['containers', 'containers.products'],
+        });
+        const posResponse = await getPOSResponse(authPos);
+
+        for (const buyer of [b1, b2, b3]) {
+          const req = await createValidTransactionRequestPOS(buyer.id, seller.id, 1, posResponse);
+          req.createdBy = cashier.id;
+          await requestToTransaction([req]);
+        }
+
+        const users = await new TransactionService().getRecentlyChargedUsers(cashier.id, 2);
+        expect(users.length).to.equal(2);
       });
     });
   });
