@@ -60,7 +60,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asBoolean, asDate, asNumber } from '../helpers/validators';
-import { PaginationParameters } from '../helpers/pagination';
+import { maxPagination, PaginationParameters } from '../helpers/pagination';
 import { toMySQLString, utcToDate } from '../helpers/timestamps';
 import {
   TransactionReport,
@@ -1171,7 +1171,7 @@ export default class TransactionService extends WithManager {
    * @param take - Maximum number of users to return
    */
   public async getRecentlyChargedUsers(createdById: number, take = 50): Promise<User[]> {
-    take = Math.min(Math.max(1, Math.trunc(take)), 500);
+    take = Math.min(Math.max(1, Math.trunc(take)), maxPagination());
     const rows = await this.manager
       .createQueryBuilder(Transaction, 't')
       .select('t.fromId', 'fromId')
@@ -1188,7 +1188,9 @@ export default class TransactionService extends WithManager {
     const ids = rows.map((r) => r.fromId);
     const users = await this.manager
       .createQueryBuilder(User, 'user')
-      .whereInIds(ids)
+      .leftJoinAndSelect('user.memberUser', 'memberUser')
+      .where('user.id IN (:...ids)', { ids })
+      .andWhere('user.deleted = false')
       .getMany();
 
     const order = new Map(ids.map((id, i) => [id, i]));
