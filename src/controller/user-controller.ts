@@ -1947,8 +1947,7 @@ export default class UserController extends BaseController {
     let take: number;
     try {
       take = req.query.take !== undefined ? asNumber(req.query.take) : 50;
-      if (!Number.isInteger(take) || take < 1) throw new Error('take must be a positive integer');
-      take = Math.min(take, maxPagination());
+      take = Math.min(Math.max(1, Math.trunc(take)), maxPagination());
     } catch (e) {
       res.status(400).send(e.message);
       return;
