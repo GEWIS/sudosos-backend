@@ -1186,12 +1186,7 @@ export default class TransactionService extends WithManager {
     if (rows.length === 0) return [];
 
     const ids = rows.map((r) => r.fromId);
-    const users = await this.manager
-      .createQueryBuilder(User, 'user')
-      .leftJoinAndSelect('user.memberUser', 'memberUser')
-      .where('user.id IN (:...ids)', { ids })
-      .andWhere('user.deleted = false')
-      .getMany();
+    const [users] = await UserService.getUsers({ id: ids });
 
     const order = new Map(ids.map((id, i) => [id, i]));
     return users.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
