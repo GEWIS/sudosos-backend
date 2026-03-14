@@ -1185,7 +1185,7 @@ export default class TransactionService extends WithManager {
 
     if (rows.length === 0) return [];
 
-    const ids = rows.map((r) => r.fromId);
+    const ids = rows.map((r) => Number(r.fromId));
     const [users] = await UserService.getUsers({ id: ids });
 
     const order = new Map(ids.map((id, i) => [id, i]));
