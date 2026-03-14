@@ -150,6 +150,14 @@ export default class UserController extends BaseController {
           handler: this.findUserNfc.bind(this),
         },
       },
+      '/recently-charged': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'User', ['id', 'firstName', 'lastName'],
+          ),
+          handler: this.getRecentlyChargedUsers.bind(this),
+        },
+      },
       '/:id(\\d+)/authenticator/pin': {
         PUT: {
           body: { modelName: 'UpdatePinRequest' },
@@ -1916,6 +1924,37 @@ export default class UserController extends BaseController {
       await UserService.updateUserType(user, body.userType);
       const updatedUser = await UserService.getSingleUser(userId);
       res.status(200).json(asUserResponse(updatedUser, true));
+    } catch (e) {
+      res.status(500).send('Internal server error.');
+      this.logger.error(e);
+    }
+  }
+
+  /**
+   * GET /users/recently-charged
+   * @summary Get users recently charged by the caller via an authenticated point of sale.
+   * Returns distinct buyers ordered by most recent transaction first, intended for
+   * quick suggestions in the authenticated POS flow.
+   * @operationId getRecentlyChargedUsers
+   * @tags users - Operations of user controller
+   * @param {integer} take.query - Maximum number of users to return (default 50)
+   * @security JWT
+   * @return {Array.<UserResponse>} 200 - List of recently charged users.
+   */
+  public async getRecentlyChargedUsers(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get recently charged users by user', req.token.user);
+
+    let take: number;
+    try {
+      take = req.query.take !== undefined ? asNumber(req.query.take) : 50;
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const users = await new TransactionService().getRecentlyChargedUsers(req.token.user.id, take);
+      res.status(200).json(users.map((u) => asUserResponse(u)));
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);

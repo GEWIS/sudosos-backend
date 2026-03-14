@@ -1162,4 +1162,35 @@ export default class TransactionService extends WithManager {
       vat: reduceMapToVatEntries(vatEntryMap),
     };
   }
+
+  /**
+   * Returns the distinct set of users that the given user has most recently charged
+   * via an authenticated point of sale (useAuthentication = true), ordered by the
+   * most recent transaction timestamp descending.
+   * @param createdById - The user whose cashier history to query
+   * @param take - Maximum number of users to return
+   */
+  public async getRecentlyChargedUsers(createdById: number, take = 50): Promise<User[]> {
+    const rows = await this.manager
+      .createQueryBuilder(Transaction, 't')
+      .select('t.fromId', 'fromId')
+      .innerJoin('t.pointOfSale', 'pos')
+      .where('t.createdById = :createdById', { createdById })
+      .andWhere('pos.useAuthentication = :auth', { auth: true })
+      .groupBy('t.fromId')
+      .orderBy('MAX(t.createdAt)', 'DESC')
+      .limit(take)
+      .getRawMany<{ fromId: number }>();
+
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((r) => r.fromId);
+    const users = await this.manager
+      .createQueryBuilder(User, 'user')
+      .whereInIds(ids)
+      .getMany();
+
+    const order = new Map(ids.map((id, i) => [id, i]));
+    return users.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  }
 }
