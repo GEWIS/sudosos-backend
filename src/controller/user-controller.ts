@@ -36,7 +36,7 @@ import BaseUserRequest, {
   PatchUserTypeRequest,
   UpdateUserRequest,
 } from './request/user-request';
-import { parseRequestPagination, toResponse } from '../helpers/pagination';
+import { maxPagination, parseRequestPagination, toResponse } from '../helpers/pagination';
 import ProductService from '../service/product-service';
 import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
@@ -1947,6 +1947,8 @@ export default class UserController extends BaseController {
     let take: number;
     try {
       take = req.query.take !== undefined ? asNumber(req.query.take) : 50;
+      if (!Number.isInteger(take) || take < 1) throw new Error('take must be a positive integer');
+      take = Math.min(take, maxPagination());
     } catch (e) {
       res.status(400).send(e.message);
       return;
@@ -1954,7 +1956,11 @@ export default class UserController extends BaseController {
 
     try {
       const users = await new TransactionService().getRecentlyChargedUsers(req.token.user.id, take);
-      res.status(200).json(users.map((u) => asUserResponse(u)));
+      const records = users.map((u) => asUserResponse(u));
+      if (!await this.canSeeEmail(req, 'all')) {
+        records.forEach((u) => { u.email = undefined; });
+      }
+      res.status(200).json(records);
     } catch (e) {
       res.status(500).send('Internal server error.');
       this.logger.error(e);

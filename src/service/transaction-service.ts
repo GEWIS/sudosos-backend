@@ -1171,6 +1171,7 @@ export default class TransactionService extends WithManager {
    * @param take - Maximum number of users to return
    */
   public async getRecentlyChargedUsers(createdById: number, take = 50): Promise<User[]> {
+    take = Math.min(Math.max(1, Math.trunc(take)), 500);
     const rows = await this.manager
       .createQueryBuilder(Transaction, 't')
       .select('t.fromId', 'fromId')
