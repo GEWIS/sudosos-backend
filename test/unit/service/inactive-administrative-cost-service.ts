@@ -65,7 +65,6 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
-import Redis from 'ioredis';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -101,7 +100,6 @@ describe('InactiveAdministrativeCostService', () => {
   };
 
   let sandbox: SinonSandbox;
-  let redis: Redis;
 
   before(async function test(): Promise<void> {
     this.timeout(30000);
@@ -149,13 +147,7 @@ describe('InactiveAdministrativeCostService', () => {
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
 
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      maxRetriesPerRequest: null,
-    });
-
-    const mailer = new Mailer(redis);
+    const mailer = new Mailer();
 
     // initialize context
     ctx = {
@@ -182,7 +174,7 @@ describe('InactiveAdministrativeCostService', () => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer(redis);
+      new Mailer();
     }
 
     sandbox = sinon.createSandbox();
@@ -193,7 +185,6 @@ describe('InactiveAdministrativeCostService', () => {
     await finishTestDB(ctx.connection);
 
     Mailer.reset();
-    if (redis) await redis.quit();
 
     sandbox.restore();
   });
