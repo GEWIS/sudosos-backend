@@ -60,7 +60,7 @@ import { DineroObjectRequest } from '../controller/request/dinero-request';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
 import BalanceService from './balance-service';
 import { asBoolean, asDate, asNumber } from '../helpers/validators';
-import { PaginationParameters } from '../helpers/pagination';
+import { maxPagination, PaginationParameters } from '../helpers/pagination';
 import { toMySQLString, utcToDate } from '../helpers/timestamps';
 import {
   TransactionReport,
@@ -1161,5 +1161,34 @@ export default class TransactionService extends WithManager {
       entries: reduceMapToReportEntries(productEntryMap),
       vat: reduceMapToVatEntries(vatEntryMap),
     };
+  }
+
+  /**
+   * Returns the distinct set of users that the given user has most recently charged
+   * via an authenticated point of sale (useAuthentication = true), ordered by the
+   * most recent transaction timestamp descending.
+   * @param createdById - The user whose cashier history to query
+   * @param take - Maximum number of users to return
+   */
+  public async getRecentlyChargedUsers(createdById: number, take = 50): Promise<User[]> {
+    take = Math.min(Math.max(1, Math.trunc(take)), maxPagination());
+    const rows = await this.manager
+      .createQueryBuilder(Transaction, 't')
+      .select('t.fromId', 'fromId')
+      .innerJoin('t.pointOfSale', 'pos')
+      .where('t.createdById = :createdById', { createdById })
+      .andWhere('pos.useAuthentication = :auth', { auth: true })
+      .groupBy('t.fromId')
+      .orderBy('MAX(t.createdAt)', 'DESC')
+      .limit(take)
+      .getRawMany<{ fromId: number }>();
+
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((r) => Number(r.fromId));
+    const [users] = await UserService.getUsers({ id: ids });
+
+    const order = new Map(ids.map((id, i) => [id, i]));
+    return users.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
   }
 }
