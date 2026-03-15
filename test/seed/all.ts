@@ -52,7 +52,7 @@ import {
   UserSeeder,
   VatGroupSeeder, WriteOffSeeder, UserNotificationSeeder,
 } from './index';
-import { seedMemberUsers } from '../../src/database/seed';
+import { seedMemberUsers } from './user-seeder';
 import BannerSeeder from './banner-seeder';
 import QRAuthenticatorSeeder from './qr-authenticator-seeder';
 import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
