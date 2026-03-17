@@ -819,7 +819,6 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers/aggregate', () => {
-    let depositTransfer: Transfer;
 
     before(async () => {
       const user1 = ctx.users[0];
@@ -848,7 +847,7 @@ describe('TransferController', async (): Promise<void> => {
       });
 
       depositTransferEntity.deposit = deposit;
-      depositTransfer = await Transfer.save(depositTransferEntity);
+      await Transfer.save(depositTransferEntity);
     });
 
     it('should return HTTP 200 with a valid model', async () => {
