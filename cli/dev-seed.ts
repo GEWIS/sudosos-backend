@@ -56,9 +56,9 @@ import WriteOffSeeder from '../test/seed/ledger/write-off-seeder';
 
 export default async function devSeed() {
   // 1. Users
-  const { admin, user: localUser, alice, bob, gewis, invoiceco } = await new UserSeeder().init();
+  const { admin, alice, bob, organ, invoice } = await new UserSeeder().init();
   const logger = log4js.getLogger('DevSeed');
-  logger.info('Users created: admin, user, alice, bob, GEWIS, invoiceco');
+  logger.info('Users created: admin, alice, bob, organ, invoice');
 
   // 2. Roles (assigns Super Admin to admin automatically)
   await DefaultRoles.synchronize();
@@ -67,15 +67,15 @@ export default async function devSeed() {
   // 3. Catalogue
   const vatGroups = await new VatGroupSeeder().init();
   const categories = await new ProductCategorySeeder().init();
-  const products = await new ProductSeeder().init(gewis, vatGroups, categories);
-  const containers = await new ContainerSeeder().init(gewis, products);
-  const { barRevision } = await new PointOfSaleSeeder().init(gewis, containers);
+  const products = await new ProductSeeder().init(organ, vatGroups, categories);
+  const containers = await new ContainerSeeder().init(organ, products);
+  const { barRevision } = await new PointOfSaleSeeder().init(organ, containers);
   logger.info('Catalogue created: products, containers, Bar POS');
 
-  // 4. Transactions - alice and bob buy from Bar; invoiceco also buys (for invoicing)
+  // 4. Transactions - alice and bob buy from Bar; invoice user also buys (for invoicing)
   await new TransactionSeeder().init([alice, bob], barRevision);
-  const { transactions: invoicecoTransactions } = await new TransactionSeeder().init([invoiceco], barRevision);
-  logger.info('Transactions created: alice and bob purchasing from Bar, invoiceco purchasing for invoice');
+  const { transactions: invoiceTransactions } = await new TransactionSeeder().init([invoice], barRevision);
+  logger.info('Transactions created: alice and bob purchasing from Bar, invoice user purchasing for invoice');
 
   // 5. Stripe deposit - credits alice with EUR 50.00
   await new DepositSeeder().init(alice);
@@ -93,13 +93,13 @@ export default async function devSeed() {
   await new InactiveAdministrativeCostSeeder().init(bob);
   logger.info('Inactive administrative cost created: bob charged EUR 0.05');
 
-  // 9. Seller payout - GEWIS withdraws EUR 5.00 in revenue
-  await new SellerPayoutSeeder().init(gewis, dinero({ amount: 500 }));
-  logger.info('Seller payout created: GEWIS withdraws EUR 5.00');
+  // 9. Seller payout - organ withdraws EUR 5.00 in revenue
+  await new SellerPayoutSeeder().init(organ, dinero({ amount: 500 }));
+  logger.info('Seller payout created: organ withdraws EUR 5.00');
 
-  // 10. Invoice - invoice for invoiceco, rows derived from invoiceco's transactions
-  await new InvoiceSeeder().init(invoiceco, admin, invoicecoTransactions);
-  logger.info('Invoice created: invoiceco (rows matched to transactions)');
+  // 10. Invoice - invoice for invoice user, rows derived from invoice user's transactions
+  await new InvoiceSeeder().init(invoice, admin, invoiceTransactions);
+  logger.info('Invoice created: invoice user (rows matched to transactions)');
 
   // 11. Write-off - a closed user is written off
   const { user: closedUser } = await new WriteOffSeeder().init();

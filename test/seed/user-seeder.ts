@@ -33,8 +33,8 @@ export interface DevUsers {
   user: User;
   alice: User;
   bob: User;
-  gewis: User;
-  invoiceco: User;
+  organ: User;
+  invoice: User;
 }
 
 /**
@@ -160,7 +160,7 @@ export default class UserSeeder extends WithManager {
   public async init(): Promise<DevUsers> {
     const BCRYPT_ROUNDS = 4;
 
-    const [admin, user, alice, bob, gewis, invoiceco] = await this.manager.save(User, [
+    const [admin, user, alice, bob, organ, invoice] = await this.manager.save(User, [
       Object.assign(new User(), {
         firstName: 'Admin',
         lastName: 'SudoSOS',
@@ -202,7 +202,7 @@ export default class UserSeeder extends WithManager {
         extensiveDataProcessing: true,
       }),
       Object.assign(new User(), {
-        firstName: 'GEWIS',
+        firstName: 'Organ',
         lastName: '',
         email: '',
         type: UserType.ORGAN,
@@ -247,23 +247,23 @@ export default class UserSeeder extends WithManager {
       })),
     ]);
 
-    // Organ memberships: alice and bob are members of GEWIS
+    // Organ memberships: alice and bob are members of organ
     await this.manager.save(OrganMembership, [
-      Object.assign(new OrganMembership(), { userId: alice.id, organId: gewis.id, index: 0 }),
-      Object.assign(new OrganMembership(), { userId: bob.id, organId: gewis.id, index: 1 }),
+      Object.assign(new OrganMembership(), { userId: alice.id, organId: organ.id, index: 0 }),
+      Object.assign(new OrganMembership(), { userId: bob.id, organId: organ.id, index: 1 }),
     ]);
 
-    // Invoice billing address for invoiceco
+    // Invoice billing address for invoice user
     await this.manager.save(InvoiceUser, Object.assign(new InvoiceUser(), {
-      user: invoiceco,
+      user: invoice,
       automatic: false,
-      street: 'Groene Loper 5',
-      postalCode: '5612 AE',
-      city: 'Eindhoven',
+      street: 'Placeholder Street 1',
+      postalCode: '0000 AA',
+      city: 'Placeholder City',
       country: 'Netherlands',
     }));
 
-    return { admin, user, alice, bob, gewis, invoiceco };
+    return { admin, user, alice, bob, organ, invoice };
   }
 
   public async seedMemberAuthenticators(users: User[], organs: User[]): Promise<OrganMembership[]> {

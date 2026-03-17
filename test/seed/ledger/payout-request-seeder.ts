@@ -38,7 +38,7 @@ export default class PayoutRequestSeeder extends WithManager {
     const payoutRequest = Object.assign(new PayoutRequest(), {
       requestedBy: member,
       amount,
-      bankAccountNumber: 'NL91ABNA0417164300',
+      bankAccountNumber: 'NL00TEST0000000000',
       bankAccountName: `${member.firstName} ${member.lastName}`,
     });
 
