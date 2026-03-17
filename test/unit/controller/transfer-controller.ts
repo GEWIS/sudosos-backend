@@ -319,6 +319,32 @@ describe('TransferController', async (): Promise<void> => {
         .query({ tillDate: 'Wie dit leest trekt een bak' });
       expect(res.status).to.equal(400);
     });
+
+    it('should return only transfers from the given fromId', async () => {
+      const fromId = adminAccountWithdraw.fromId;
+      const res = await request(app)
+        .get('/transfers')
+        .query({ fromId, take: 100 })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const records = res.body.records as TransferResponse[];
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach((t) => expect(t.from.id).to.equal(fromId));
+    });
+
+    it('should return only transfers to the given toId', async () => {
+      const toId = adminAccountDeposit.toId;
+      const res = await request(app)
+        .get('/transfers')
+        .query({ toId, take: 100 })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const records = res.body.records as TransferResponse[];
+      expect(records.length).to.be.greaterThan(0);
+      records.forEach((t) => expect(t.to.id).to.equal(toId));
+    });
   });
 
   describe('GET /transfers/:id', () => {
@@ -889,15 +915,22 @@ describe('TransferController', async (): Promise<void> => {
     });
 
     it('should filter by deposit category', async () => {
+      const depositTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.deposit', 'deposit')
+        .getMany();
+      const expectedCount = depositTransfers.length;
+      const expectedTotal = depositTransfers.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
       const res = await request(app)
         .get('/transfers/aggregate')
         .query({ category: 'deposit' })
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.body.count).to.be.greaterThan(0);
-      // The deposit transfer we created should be included
-      expect(res.body.total.amount).to.be.at.least(depositTransfer.amountInclVat.getAmount());
+      expect(res.body.count).to.equal(expectedCount);
+      expect(res.body.total.amount).to.equal(expectedTotal);
     });
 
     it('should return zero total when no transfers match the date range', async () => {
