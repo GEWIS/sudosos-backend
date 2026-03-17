@@ -44,11 +44,11 @@ const validDuration = (duration: number) => {
 /**
  * Validates that the end date is not in the past.
  */
-const endDateNotInPast = (br: BannerRequest) => {
-  if (Date.parse(br.endDate) <= new Date().getTime()) {
-    return toFail(new ValidationError('endDate: End date cannot be in the past.'));
+const endDateNotInPast = (endDate: string) => {
+  if (Date.parse(endDate) <= new Date().getTime()) {
+    return toFail(new ValidationError('End date cannot be in the past.'));
   }
-  return toPass(br);
+  return toPass(endDate);
 };
 
 /**
@@ -67,6 +67,6 @@ export default function bannerRequestSpec(): Specification<BannerRequest, Valida
     [stringSpec(), 'name', new ValidationError('name:')],
     [[validDuration], 'duration', new ValidationError('duration:')],
     ...durationSpec<BannerRequest>(),
-    endDateNotInPast,
+    [[endDateNotInPast], 'endDate', new ValidationError('endDate:')],
   ];
 }

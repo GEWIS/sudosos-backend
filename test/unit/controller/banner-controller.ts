@@ -508,6 +508,7 @@ describe('BannerController', async (): Promise<void> => {
       // check response body has validation error shape
       expect(res.body.valid).to.be.false;
       expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('name:');
 
       // invalid code
       expect(res.status).to.equal(400);
@@ -630,6 +631,7 @@ describe('BannerController', async (): Promise<void> => {
       // check response body has validation error shape
       expect(res.body.valid).to.be.false;
       expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('name:');
     });
     it('should return an HTTP 404 if the banner with given id does not exist', async () => {
       // patching banner request
