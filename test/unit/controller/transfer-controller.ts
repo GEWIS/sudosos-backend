@@ -791,4 +791,163 @@ describe('TransferController', async (): Promise<void> => {
       expect(res.body).to.equal('Internal server error.');
     });
   });
+
+  describe('GET /transfers/aggregate', () => {
+    let depositTransfer: Transfer;
+
+    before(async () => {
+      const user1 = ctx.users[0];
+
+      // Create a deposit-linked transfer for category filtering tests
+      const depositTransferEntity = await Transfer.save({
+        fromId: null,
+        toId: user1.id,
+        amountInclVat: DineroTransformer.Instance.from(500),
+        description: 'Aggregate test deposit transfer',
+        version: 1,
+      });
+
+      const stripePaymentIntent = await StripePaymentIntent.save({
+        stripeId: 'pi_aggregate_test',
+        amount: DineroTransformer.Instance.from(500),
+        paymentIntentStatuses: [],
+        version: 1,
+      });
+
+      const deposit = await StripeDeposit.save({
+        transfer: depositTransferEntity,
+        to: user1,
+        stripePaymentIntent,
+        version: 1,
+      });
+
+      depositTransferEntity.deposit = deposit;
+      depositTransfer = await Transfer.save(depositTransferEntity);
+    });
+
+    it('should return HTTP 200 with a valid model', async () => {
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(specification.validateModel(
+        'TransferAggregateResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
+    it('should return correct total and count for all transfers', async () => {
+      const allTransfers = await Transfer.find();
+      const expectedTotal = allTransfers.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(allTransfers.length);
+      expect(res.body.total.amount).to.equal(expectedTotal);
+    });
+
+    it('should filter by fromId', async () => {
+      const user1 = ctx.users[0];
+      const fromUser1 = await Transfer.find({ where: { fromId: user1.id } });
+      const expectedTotal = fromUser1.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ fromId: user1.id })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(fromUser1.length);
+      expect(res.body.total.amount).to.equal(expectedTotal);
+    });
+
+    it('should filter by toId', async () => {
+      const user1 = ctx.users[0];
+      const toUser1 = await Transfer.find({ where: { toId: user1.id } });
+      const expectedTotal = toUser1.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ toId: user1.id })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(toUser1.length);
+      expect(res.body.total.amount).to.equal(expectedTotal);
+    });
+
+    it('should filter by deposit category', async () => {
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ category: 'deposit' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.be.greaterThan(0);
+      // The deposit transfer we created should be included
+      expect(res.body.total.amount).to.be.at.least(depositTransfer.amountInclVat.getAmount());
+    });
+
+    it('should return zero total when no transfers match the date range', async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 100);
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ fromDate: futureDate.toISOString() })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(0);
+      expect(res.body.total.amount).to.equal(0);
+    });
+
+    it('should return fewer results when a date range is applied', async () => {
+      const allRes = await request(app)
+        .get('/transfers/aggregate')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const totalCount: number = allRes.body.count;
+
+      // A till-date in the past should yield zero results
+      const pastDate = new Date('2000-01-01T00:00:00.000Z');
+      const restrictedRes = await request(app)
+        .get('/transfers/aggregate')
+        .query({ tillDate: pastDate.toISOString() })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(restrictedRes.status).to.equal(200);
+      expect(restrictedRes.body.count).to.equal(0);
+      expect(restrictedRes.body.count).to.be.lessThan(totalCount);
+    });
+
+    it('should return HTTP 400 for an invalid category', async () => {
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ category: 'notARealCategory' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+    });
+
+    it('should return HTTP 403 if user does not have Transfer:get:all permission', async () => {
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).to.equal(403);
+    });
+  });
 });
