@@ -142,6 +142,7 @@ export default class InvoiceService extends WithManager {
    * @param invoice - The Invoice to parse
    */
   public static asBaseInvoiceResponse(invoice: Invoice): BaseInvoiceResponse {
+    const latestStatus = InvoiceService.getLatestInvoiceStatus(invoice.invoiceStatus);
     return {
       id: invoice.id,
       createdAt: invoice.createdAt.toISOString(),
@@ -152,10 +153,10 @@ export default class InvoiceService extends WithManager {
       reference: invoice.reference,
       attention: invoice.attention,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
-      creditTransfer: InvoiceService.isState(invoice, InvoiceState.DELETED) && invoice.creditTransfer ? TransferService.asTransferResponse(invoice.creditTransfer) : undefined,
+      creditTransfer: latestStatus.state === InvoiceState.DELETED && invoice.creditTransfer ? TransferService.asTransferResponse(invoice.creditTransfer) : undefined,
       description: invoice.description,
       pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,
-      currentState: InvoiceService.asInvoiceStatusResponse(InvoiceService.getLatestInvoiceStatus(invoice.invoiceStatus)),
+      currentState: InvoiceService.asInvoiceStatusResponse(latestStatus),
       city: invoice.city,
       country: invoice.country,
       postalCode: invoice.postalCode,
@@ -540,11 +541,11 @@ export default class InvoiceService extends WithManager {
       to: true,
       invoiceStatus: true,
       transfer: { to: true, from: true },
+      creditTransfer: { to: true, from: true },
       pdf: true,
     };
 
     if (params.returnInvoiceEntries) {
-      relations.creditTransfer = { to: true, from: true };
       relations.subTransactionRows = {
         product: {
           vat: true,
