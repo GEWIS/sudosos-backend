@@ -72,6 +72,7 @@ export interface InvoiceEntryResponse {
  * @property {string} country.required -  Country of the invoice.
  * @property {string} date.required - Date of the invoice
  * @property {TransferResponse} transfer - Transfer linked to the invoice.
+ * @property {TransferResponse} creditTransfer - Credit transfer created when the invoice was deleted.
  * @property {string} pdf - Pdf url path linked to the invoice
  * @property {DineroObjectResponse} totalInclVat.required - Total amount of the invoice, including custom entries.
  */
@@ -88,6 +89,7 @@ export interface BaseInvoiceResponse extends BaseResponse {
   country: string;
   date: string;
   transfer?: TransferResponse,
+  creditTransfer?: TransferResponse,
   pdf?: string,
   totalInclVat: DineroObjectResponse,
 }

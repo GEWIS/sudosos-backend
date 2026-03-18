@@ -763,6 +763,52 @@ describe('InvoiceService', () => {
           expect(InvoiceService.isState(updatedInvoice, InvoiceState.DELETED)).to.be.true;
         });
     });
+    it('should set creditTransfer on the invoice after deletion', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const originalAmount = invoice.transfer.amountInclVat.getAmount();
+
+          const deletedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
+          });
+
+          expect(deletedInvoice.creditTransfer).to.not.be.undefined;
+          expect(deletedInvoice.creditTransfer.amountInclVat.getAmount()).to.equal(originalAmount);
+          expect(deletedInvoice.creditTransfer.from.id).to.equal(debtor.id);
+        },
+      );
+    });
+    it('should include creditTransfer in asBaseInvoiceResponse for a deleted invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const originalAmount = invoice.transfer.amountInclVat.getAmount();
+
+          const deletedInvoice = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
+          });
+
+          const response = InvoiceService.asBaseInvoiceResponse(deletedInvoice);
+          expect(response.creditTransfer).to.not.be.undefined;
+          expect(response.creditTransfer.amount.amount).to.equal(originalAmount);
+        },
+      );
+    });
+    it('should not include creditTransfer in asBaseInvoiceResponse for a non-deleted invoice', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const [loaded] = await new InvoiceService().getInvoices({ invoiceId: invoice.id });
+
+          const response = InvoiceService.asBaseInvoiceResponse(loaded);
+          expect(response.creditTransfer).to.be.undefined;
+        },
+      );
+    });
   });
   describe('getTransactionInvoices', () => {
     it('should return invoices containing subtransaction rows from the transaction', async () => {

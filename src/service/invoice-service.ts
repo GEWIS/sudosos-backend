@@ -152,6 +152,7 @@ export default class InvoiceService extends WithManager {
       reference: invoice.reference,
       attention: invoice.attention,
       transfer: invoice.transfer ? TransferService.asTransferResponse(invoice.transfer) : undefined,
+      creditTransfer: InvoiceService.isState(invoice, InvoiceState.DELETED) && invoice.creditTransfer ? TransferService.asTransferResponse(invoice.creditTransfer) : undefined,
       description: invoice.description,
       pdf: invoice.pdf ? invoice.pdf.downloadName : undefined,
       currentState: InvoiceService.asInvoiceStatusResponse(InvoiceService.getLatestInvoiceStatus(invoice.invoiceStatus)),
@@ -543,6 +544,7 @@ export default class InvoiceService extends WithManager {
     };
 
     if (params.returnInvoiceEntries) {
+      relations.creditTransfer = { to: true, from: true };
       relations.subTransactionRows = {
         product: {
           vat: true,
