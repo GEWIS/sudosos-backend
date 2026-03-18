@@ -26,11 +26,16 @@ flowchart LR
 Most endpoints follow the same shape:
 
 1. **Middleware** authenticates the request and attaches a token.
-2. **Controller** checks RBAC and translates HTTP to typed input/output.
-3. **Service** validates domain rules and orchestrates multiple entities.
-4. **Entities** persist data via TypeORM.
+2. `RequestValidatorMiddleware` validates the request body structure against the Swagger spec.
+3. `PolicyMiddleware` checks RBAC and `RestrictionMiddleware` applies row-level restrictions.
+4. `AsyncValidatorMiddleware` runs registered business-rule specs (which may include async/DB checks). Runs after authorization so unauthorized requests never trigger DB-hitting validation.
+5. **Controller handler** translates HTTP to typed input/output.
+6. **Service** orchestrates domain logic across multiple entities.
+7. **Entities** persist data via TypeORM.
 
-The practical rule: **controllers should stay thin**. If you need business rules, put them in a service.
+Both `RequestValidatorMiddleware` and `AsyncValidatorMiddleware` return `{ valid: false, errors: string[] }` on failure so callers see a consistent 400 shape.
+
+The practical rule: **controllers should stay thin**. Structural validation belongs in the middleware layers; deeper domain rules belong in a service or, when they need to run before the handler, in a spec registered with `AsyncValidatorRegistry`.
 
 ## Where correctness is enforced
 

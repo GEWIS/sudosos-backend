@@ -29,6 +29,8 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import Policy, { MethodPolicy } from './policy';
 import PolicyMiddleware from '../middleware/policy-middleware';
 import RequestValidatorMiddleware from '../middleware/request-validator-middleware';
+import AsyncValidatorMiddleware from '../middleware/async-validator-middleware';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import RoleManager from '../rbac/role-manager';
 import RestrictionMiddleware from '../middleware/restriction-middleware';
 
@@ -82,6 +84,9 @@ export default abstract class BaseController {
     }
     handlers.push(new PolicyMiddleware(methodPolicy.policy).getMiddleware());
     handlers.push(new RestrictionMiddleware(() => methodPolicy.restrictions || {}).getMiddleware());
+    if (methodPolicy.body) {
+      handlers.push(new AsyncValidatorMiddleware(globalAsyncValidatorRegistry, methodPolicy.body).getMiddleware());
+    }
     handlers.push(methodPolicy.handler);
     callback(
       route,

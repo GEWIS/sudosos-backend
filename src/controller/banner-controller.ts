@@ -30,6 +30,8 @@ import Policy from './policy';
 import BannerRequest from './request/banner-request';
 import { RequestWithToken } from '../middleware/token-middleware';
 import BannerService, { BannerFilterParameters } from '../service/banner-service';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
+import bannerRequestSpec from './request/validators/banner-request-spec';
 import Banner from '../entity/banner';
 import FileService from '../service/file-service';
 import { BANNER_IMAGE_LOCATION } from '../files/storage';
@@ -52,6 +54,7 @@ export default class BannerController extends BaseController {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
     this.fileService = new FileService(BANNER_IMAGE_LOCATION);
+    globalAsyncValidatorRegistry.register('BannerRequest', bannerRequestSpec);
   }
 
   /**
@@ -168,7 +171,7 @@ export default class BannerController extends BaseController {
    * @param {BannerRequest} request.body.required - The banner which should be created
    * @security JWT
    * @return {BannerResponse} 200 - The created banner entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createBanner(req: RequestWithToken, res: Response): Promise<void> {
@@ -177,12 +180,8 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      if (BannerService.verifyBanner(body)) {
-        const banner = await BannerService.createBanner(body);
-        res.json(BannerService.asBannerResponse(banner));
-      } else {
-        res.status(400).json('Invalid banner.');
-      }
+      const banner = await BannerService.createBanner(body);
+      res.json(BannerService.asBannerResponse(banner));
     } catch (error) {
       this.logger.error('Could not create banner:', error);
       res.status(500).json('Internal server error.');
@@ -282,7 +281,7 @@ export default class BannerController extends BaseController {
    * @param {BannerRequest} request.body.required - The updated banner
    * @security JWT
    * @return {BannerResponse} 200 - The requested banner entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 404 - Not found error
    * @return {string} 500 - Internal server error
    */
@@ -293,16 +292,11 @@ export default class BannerController extends BaseController {
 
     // handle request
     try {
-      if (BannerService.verifyBanner(body)) {
-        // try patching the banner
-        const banner = await BannerService.updateBanner(Number.parseInt(id, 10), body);
-        if (banner) {
-          res.json(BannerService.asBannerResponse(banner));
-        } else {
-          res.status(404).json('Banner not found.');
-        }
+      const banner = await BannerService.updateBanner(Number.parseInt(id, 10), body);
+      if (banner) {
+        res.json(BannerService.asBannerResponse(banner));
       } else {
-        res.status(400).json('Invalid banner.');
+        res.status(404).json('Banner not found.');
       }
     } catch (error) {
       this.logger.error('Could not update banner:', error);

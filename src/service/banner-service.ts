@@ -56,33 +56,6 @@ export interface BannerFilterParameters {
  */
 export default class BannerService {
   /**
-   * Verifies whether the banner request translates to a valid banner object
-   * @param {BannerRequest.model} br - the banner request to verify
-   * @returns {boolean} - whether banner is ok or not
-   */
-  // eslint-disable-next-line class-methods-use-this
-  public static verifyBanner(br: BannerRequest): boolean {
-    const sDate = Date.parse(br.startDate);
-    const eDate = Date.parse(br.endDate);
-
-    return br.name !== ''
-
-        // duration must be integer greater than 0
-        && br.duration > 0
-
-        && Number.isInteger(br.duration)
-        && br.active !== null
-        && !Number.isNaN(sDate)
-        && !Number.isNaN(eDate)
-
-        // end date cannot be in the past
-        && eDate > new Date().getTime()
-
-        // end date must be later than start date
-        && eDate > sDate;
-  }
-
-  /**
    * Creates a banner from a banner request
    * @param {BannerRequest.model} bannerReq - banner request
    * @returns {Banner.model} - a banner entity created with the banner request
@@ -201,8 +174,8 @@ export default class BannerService {
     // check if banner in database
     const bannerFound = await Banner.findOne({ where: { id } });
 
-    // return undefined if banner not found or request is invalid
-    if (!bannerFound || !this.verifyBanner(bannerReq)) {
+    // return undefined if banner not found
+    if (!bannerFound) {
       return undefined;
     }
 
