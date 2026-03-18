@@ -77,6 +77,12 @@ export default class TransferController extends BaseController {
           handler: this.getTransferPdf.bind(this),
         },
       },
+      '/report' : {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
+          handler: this.getTransferReport.bind(this),
+        },
+      },
     };
   }
 
@@ -271,5 +277,19 @@ export default class TransferController extends BaseController {
       this.logger.error('Could not return transfer PDF:', error);
       res.status(500).json('Internal server error.');
     }
+  }
+
+  /**
+   * GET /transfers/report
+   * @summary Get the report of all transfers
+   * @tags transfers - Operations of transfer controller
+   * @return {string} 200 - Report of transfers
+   */
+  public async getTransferReport(req: RequestWithToken, res: Response): Promise<void> {
+    const request = req.body;
+    this.logger.trace('Get transfer Report(', request);
+    res.json('Test');
+    res.status(200).json('Mooi');
+    return;
   }
 }
