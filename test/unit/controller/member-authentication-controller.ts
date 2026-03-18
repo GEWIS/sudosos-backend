@@ -37,7 +37,7 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { RbacSeeder } from '../../seed';
+import { ensureProductionRoles } from '../../helpers/user-factory';
 
 describe('MemberAuthenticationController', async (): Promise<void> => {
   let ctx: {
@@ -70,11 +70,7 @@ describe('MemberAuthenticationController', async (): Promise<void> => {
       await User.findOne({ where: { id: user.id } }), '1000', PinAuthenticator,
     );
 
-    await new RbacSeeder().seed([{
-      name: 'Role',
-      permissions: {},
-      assignmentCheck: async (u: User) => u.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,

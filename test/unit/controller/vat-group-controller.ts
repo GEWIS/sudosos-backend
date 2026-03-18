@@ -41,11 +41,11 @@ import {
   ContainerSeeder,
   PointOfSaleSeeder,
   ProductSeeder,
-  RbacSeeder,
   TransactionSeeder,
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('VatGroupController', () => {
   let ctx: {
@@ -94,26 +94,14 @@ describe('VatGroupController', () => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        VatGroup: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (usr: User) => usr.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     // create bearer tokens
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce admin');
+    const token = await signTokenFor(user, tokenHandler, 'nonce admin');
 
     const controller = new VatGroupController({ specification, roleManager });
     app.use(json());

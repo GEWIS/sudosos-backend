@@ -72,7 +72,7 @@ import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { SeededRole } from '../../seed/rbac-seeder';
+import Role from '../../../src/entity/rbac/role';
 import { createTransactions, createValidTransactionRequest } from '../../helpers/transaction-factory';
 import { ReportResponse } from '../../../src/controller/response/report-response';
 import TransactionService from '../../../src/service/transaction-service';
@@ -81,7 +81,7 @@ import { toMySQLString } from '../../../src/helpers/timestamps';
 import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';
-import { RbacSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import Dinero from 'dinero.js';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
@@ -106,7 +106,6 @@ describe('UserController', (): void => {
     organ: User,
     tokenHandler: TokenHandler,
     users: User[],
-    roles: SeededRole[],
     categories: ProductCategory[],
     products: Product[],
     productRevisions: ProductRevision[],
@@ -159,7 +158,6 @@ describe('UserController', (): void => {
         ofAge: true,
       } as CreateUserRequest,
       ...database,
-      roles: [],
       mailer,
     };
     const deletedUser = Object.assign(new User(), {
@@ -185,125 +183,18 @@ describe('UserController', (): void => {
     ctx.users.push(ctx.organ);
     ctx.deletedUser = deletedUser;
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const organ = { organ: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        User: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          acceptToS: all,
-        },
-        Product: {
-          get: all,
-        },
-        Container: {
-          get: all,
-        },
-        PointOfSale: {
-          get: all,
-        },
-        Transaction: {
-          get: all,
-          create: all,
-          update: all,
-          delete: all,
-        },
-        Transfer: {
-          get: all,
-        },
-        Authenticator: {
-          get: all,
-          update: all,
-        },
-        Roles: {
-          get: all,
-          delete: all,
-          create: all,
-        },
-        Fine: {
-          get: all,
-          delete: all,
-        },
-        Wrapped: {
-          get: all,
-          update: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        User: {
-          get: own,
-          acceptToS: own,
-          update: { own: new Set<string>(['firstName', 'lastName', 'extensiveDataProcessing', 'settings']) },
-        },
-        Product: {
-          get: own,
-          update: own,
-        },
-        Authenticator: {
-          update: { own: new Set<string>(['pin', 'password', 'nfcCode', 'key']) },
-          get: own,
-        },
-        Roles: {
-          get: own,
-        },
-        Container: {
-          get: own,
-        },
-        PointOfSale: {
-          get: own,
-        },
-        Transaction: {
-          get: own,
-          create: own,
-          update: own,
-          delete: own,
-        },
-        Transfer: {
-          get: own,
-        },
-        Wrapped: {
-          get: own,
-          update: own,
-        },
-      },
-      assignmentCheck: async () => true,
-    }, {
-      name: 'Seller',
-      permissions: {
-        User: {
-          get: organ,
-        },
-      },
-      assignmentCheck: async (user) => user.id === ctx.users[7].id,
-    }, {
-      name: 'Point of Sale',
-      permissions: {
-        User: {
-          get: { all: new Set<string>(['id', 'firstName', 'lastName', 'nickname', 'active',
-            'deleted', 'type', 'acceptedToS', 'extensiveDataProcessing', 'ofAge', 'canGoIntoDebt']) },
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.POINT_OF_SALE,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
     ctx.tokenHandler = tokenHandler;
-    ctx.userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[0], roles), '1');
-    ctx.adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[6], roles), '1');
-    ctx.organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(ctx.users[7], roles, [ctx.organ]), '1');
+    ctx.userToken = await signTokenFor(ctx.users[0], tokenHandler);
+    ctx.adminToken = await signTokenFor(ctx.users[6], tokenHandler, 'admin');
+    ctx.organMemberToken = await signTokenFor(ctx.users[7], tokenHandler, 'organ', [ctx.organ]);
 
-    // Create a POS user that will match the 'Point of Sale' role's assignmentCheck above.
+    // Create a POS user
     const posUser = await User.save(Object.assign(new User(), {
       firstName: 'POS',
       lastName: 'Terminal',
@@ -312,8 +203,7 @@ describe('UserController', (): void => {
       deleted: false,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     }));
-    ctx.posToken = await tokenHandler.signToken(await new RbacSeeder().getToken(posUser, roles), '1');
-    ctx.roles = roles;
+    ctx.posToken = await signTokenFor(posUser, tokenHandler);
 
     ctx.specification = await Swagger.initialize(ctx.app);
     ctx.controller = new UserController({
@@ -1074,19 +964,12 @@ describe('UserController', (): void => {
         .send({ active: undefined });
       expect(res.status).to.equal(400);
     });
-    it('should allow user to update own firstName', async () => {
-      const firstName = 'Ralf';
-
+    it('should return 403 when user tries to update own firstName (only admins can)', async () => {
       const res = await request(ctx.app)
         .patch(`/users/${ctx.users[0].id}`)
         .set('Authorization', `Bearer ${ctx.userToken}`)
-        .send({ firstName });
-      expect(res.status).to.equal(200);
-
-      const user = res.body as UserResponse;
-      const spec = await Swagger.importSpecification();
-      expect(user.firstName).to.deep.equal(firstName);
-      verifyUserResponse(spec, user);
+        .send({ firstName: 'Ralf' });
+      expect(res.status).to.equal(403);
     });
     it('should allow user to update extensiveDataProcessing', async () => {
       const processing = ctx.users[0].extensiveDataProcessing;
@@ -1156,7 +1039,7 @@ describe('UserController', (): void => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/users/1/products')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'PaginatedProductResponse',
@@ -1168,7 +1051,7 @@ describe('UserController', (): void => {
     it('should give correct owned products for user', async () => {
       const res = await request(ctx.app)
         .get('/users/1/products')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
 
       // TODO: test response validity
@@ -1205,7 +1088,7 @@ describe('UserController', (): void => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/users/1/containers')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'PaginatedContainerResponse',
@@ -1214,10 +1097,10 @@ describe('UserController', (): void => {
         true,
       ).valid).to.be.true;
     });
-    it('should give an HTTP 200 when requesting own containers', async () => {
+    it('should give an HTTP 200 when requesting containers as admin', async () => {
       const res = await request(ctx.app)
         .get('/users/1/containers')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
     });
     it('should give an HTTP 403 when user requests containers (s)he does not own', async () => {
@@ -1250,7 +1133,7 @@ describe('UserController', (): void => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/users/1/pointsofsale')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       const validation = ctx.specification.validateModel(
         'PaginatedPointOfSaleResponse',
@@ -1261,10 +1144,10 @@ describe('UserController', (): void => {
       expect(validation.valid).to.be.true;
       expect(res.body.records.length).to.be.greaterThan(0);
     });
-    it('should give an HTTP 200 when requesting own points of sale', async () => {
+    it('should give an HTTP 200 when requesting points of sale as admin', async () => {
       const res = await request(ctx.app)
         .get('/users/1/pointsofsale')
-        .set('Authorization', `Bearer ${ctx.userToken}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
     });
     it('should give an HTTP 403 when user requests points of sale (s)he does not own', async () => {
@@ -1645,8 +1528,8 @@ describe('UserController', (): void => {
       } as User)).get();
       ctx.users.push(userNotAccepted, userNotRequired);
 
-      userNotAcceptedToken = await ctx.tokenHandler.signToken({ user: userNotAccepted, roles: ['User'] }, '1');
-      userNotRequiredToken = await ctx.tokenHandler.signToken({ user: userNotRequired, roles: ['User'] }, '1');
+      userNotAcceptedToken = await signTokenFor(userNotAccepted, ctx.tokenHandler);
+      userNotRequiredToken = await signTokenFor(userNotRequired, ctx.tokenHandler);
     });
 
     it('should correctly accept ToS if not accepted', async () => {
@@ -1701,7 +1584,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/pin', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updatePinRequest: UpdatePinRequest = {
           pin: '1000',
@@ -1715,7 +1598,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updatePinRequest: UpdatePinRequest = {
           pin: '1000',
@@ -1729,7 +1612,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if pin is not 4 numbers', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updatePinRequest: UpdatePinRequest = {
           pin: 'wrong',
@@ -1756,7 +1639,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'correctNfcCode',
@@ -1770,7 +1653,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if duplicate nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'dupplicateNfcCode',
@@ -1789,7 +1672,7 @@ describe('UserController', (): void => {
     });
     it('should return an 200 if updating to a valid nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest1: UpdateNfcRequest = {
           nfcCode: 'correctNfcCode1',
@@ -1812,7 +1695,7 @@ describe('UserController', (): void => {
     });
     it('should return an 400 if empty nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: '',
@@ -1827,7 +1710,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'wrongNfcCode',
@@ -1853,7 +1736,7 @@ describe('UserController', (): void => {
   describe('DELETE /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1877,7 +1760,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1889,7 +1772,7 @@ describe('UserController', (): void => {
   describe('DELETE /users/{id}/authenticator/nfc', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1913,7 +1796,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1925,7 +1808,7 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const updateNfcRequest: UpdateNfcRequest = {
           nfcCode: 'toBeDeletedNfcRequest',
@@ -1949,7 +1832,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if user has no nfc', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/nfc`)
@@ -1961,14 +1844,14 @@ describe('UserController', (): void => {
   describe('PUT /users/{id}/authenticator/local', () => {
     it('should return an HTTP 204 if authorized', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
-
+        // Use adminToken — production MEMBER users don't have Authenticator.update.own(password)
+        // (only LOCAL_USER via "Local User" role has password update)
         const updateLocalRequest: UpdateLocalRequest = {
           password: 'P4ssword1!@',
         };
         const res = await request(ctx.app)
           .put(`/users/${user.id}/authenticator/local`)
-          .set('Authorization', `Bearer ${userToken}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send(updateLocalRequest);
         expect(res.status).to.equal(204);
       });
@@ -2007,11 +1890,10 @@ describe('UserController', (): void => {
   describe('POST /users/{id}/authenticator/key', () => {
     it('should return an HTTP 200 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
-
+        // Use adminToken — no production non-admin role has Authenticator.update.own(key)
         const res = await request(ctx.app)
           .post(`/users/${user.id}/authenticator/key`)
-          .set('Authorization', `Bearer ${userToken}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send();
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
@@ -2024,7 +1906,7 @@ describe('UserController', (): void => {
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .post(`/users/${ctx.users[0].id}/authenticator/key`)
@@ -2043,20 +1925,19 @@ describe('UserController', (): void => {
     });
   });
   describe('DELETE /users/{id}/authenticator/key', () => {
-    it('should return an HTTP 200 if authorized', async () => {
+    it('should return an HTTP 204 if authorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
-
+        // Use adminToken — no production non-admin role has Authenticator.update.own(key)
         const res = await request(ctx.app)
           .delete(`/users/${user.id}/authenticator/key`)
-          .set('Authorization', `Bearer ${userToken}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
           .send();
         expect(res.status).to.equal(204);
       });
     });
     it('should return an 403 if unauthorized', async () => {
       await inUserContext((await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .delete(`/users/${ctx.users[0].id}/authenticator/key`)
@@ -2078,13 +1959,13 @@ describe('UserController', (): void => {
   describe('GET /users/{id}/roles', () => {
     it('should return correct model', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(user, ctx.roles), '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)
           .set('Authorization', `Bearer ${userToken}`);
 
-        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User']);
+        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User', 'Buyer', 'AuthorizedBuyer']);
         expect(res.status).to.equal(200);
         expect(ctx.specification.validateModel(
           'Array.<RoleResponse.model>',
@@ -2096,19 +1977,19 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 200 and the users roles', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(user, ctx.roles), '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .get(`/users/${user.id}/roles`)
           .set('Authorization', `Bearer ${userToken}`);
 
-        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User']);
+        expect((res.body as RoleResponse[]).map((r) => r.name)).to.deep.equalInAnyOrder(['User', 'Buyer', 'AuthorizedBuyer']);
         expect(res.status).to.equal(200);
       });
     });
     it('should return an HTTP 404 if user does not exist', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Admin'] }, '1');
+        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User', 'Super admin'] }, '1');
 
         const res = await request(ctx.app)
           .get('/users/0/roles')
@@ -2118,7 +1999,7 @@ describe('UserController', (): void => {
     });
     it('should return an HTTP 403 if insufficient rights', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        const userToken = await ctx.tokenHandler.signToken({ user, roles: ['User'] }, '1');
+        const userToken = await signTokenFor(user, ctx.tokenHandler);
 
         const res = await request(ctx.app)
           .get(`/users/${ctx.users[0].id}/roles`)
@@ -2780,30 +2661,24 @@ describe('UserController', (): void => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
 
         // Create a new role
-        const [role] = await new RbacSeeder().seed([{
-          name: 'Test 1',
-          permissions: {
-          },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          assignmentCheck: async (_: User) => false,
-        }]);
+        const role = await Role.save({ name: 'Test 1', systemDefault: false } as Role);
 
         // Assign the role to the user
         await AssignedRole.save({
           userId: user.id,
-          roleId: role.role.id,
+          roleId: role.id,
         });
 
         // Sanity check
-        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.not.be.undefined;
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })).to.not.be.undefined;
 
         const res = await request(ctx.app)
-          .delete(`/users/${user.id}/roles/${role.role.id}`)
+          .delete(`/users/${user.id}/roles/${role.id}`)
           .set('Authorization', `Bearer ${ctx.adminToken}`);
         expect(res.status).to.equal(204);
 
         // Sanity check
-        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.be.null;
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })).to.be.null;
       });
     });
 
@@ -2848,25 +2723,19 @@ describe('UserController', (): void => {
     it('should return an HTTP 204 and add the role to user if admin', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
         // Create a new role
-        const [role] = await new RbacSeeder().seed([{
-          name: 'Test 2',
-          permissions: {
-          },
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          assignmentCheck: async (_: User) => false,
-        }]);
+        const role = await Role.save({ name: 'Test 2', systemDefault: false } as Role);
 
         // Sanity check
-        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.be.null;
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })).to.be.null;
 
         const res = await request(ctx.app)
           .post(`/users/${user.id}/roles`)
           .set('Authorization', `Bearer ${ctx.adminToken}`)
-          .send({ roleId: role.role.id });
+          .send({ roleId: role.id });
         expect(res.status).to.equal(204);
 
         // Sanity check
-        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.role.id } })).to.not.be.null;
+        expect(await AssignedRole.findOne({ where: { userId: user.id, roleId: role.id } })).to.not.be.null;
       });
     });
     it('should return an HTTP 404 if role does not exist', async () => {
@@ -2964,8 +2833,8 @@ describe('UserController', (): void => {
       const freshUser = await User.findOne({ where: { id: user.id } });
       if (!freshUser) return;
 
-      // Create token for the same user using RbacSeeder to avoid circular references
-      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      // Create token for the same user to avoid circular references
+      const userToken = await signTokenFor(freshUser, ctx.tokenHandler);
 
       const res = await request(ctx.app)
         .get(`/users/${user.id}/wrapped`)
@@ -2997,7 +2866,7 @@ describe('UserController', (): void => {
       if (!freshUser) return;
 
       // Create token for different user without 'all' permission
-      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      const userToken = await signTokenFor(freshUser, ctx.tokenHandler);
 
       const res = await request(ctx.app)
         .get(`/users/${otherUser.id}/wrapped`)
@@ -3069,7 +2938,7 @@ describe('UserController', (): void => {
       const freshUser = await User.findOne({ where: { id: user.id } });
       if (!freshUser) return;
 
-      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      const userToken = await signTokenFor(freshUser, ctx.tokenHandler);
       process.env.WRAPPED_YEAR = '2023';
 
       const res = await request(ctx.app)
@@ -3088,7 +2957,7 @@ describe('UserController', (): void => {
       const freshUser = await User.findOne({ where: { id: user.id } });
       if (!freshUser) return;
 
-      const userToken = await ctx.tokenHandler.signToken(await new RbacSeeder().getToken(freshUser, ctx.roles), '1');
+      const userToken = await signTokenFor(freshUser, ctx.tokenHandler);
       process.env.WRAPPED_YEAR = '2023';
 
       const res = await request(ctx.app)

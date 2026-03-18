@@ -19,7 +19,8 @@
  */
 import { DefaultContext, defaultBefore, finishTestDB } from '../../helpers/test-helpers';
 import TransactionSummaryController from '../../../src/controller/transaction-summary-controller';
-import { ContainerSeeder, PointOfSaleSeeder, RbacSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { ContainerSeeder, PointOfSaleSeeder, TransactionSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import Container from '../../../src/entity/container/container';
 import Transaction from '../../../src/entity/transactions/transaction';
 import { expect, request } from 'chai';
@@ -50,25 +51,13 @@ describe('TransactionSummaryController', () => {
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
     const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions);
 
-    const all = { all: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Transaction: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-        },
-      },
-      assignmentCheck: async (usr: User) => usr.type === UserType.LOCAL_ADMIN,
-    }]);
+    await ensureProductionRoles();
     await d.roleManager.initialize();
 
     const admin = users.find((u) => u.type === UserType.LOCAL_ADMIN);
     const user = users.find((u) => u.type === UserType.LOCAL_USER);
-    const adminToken = await d.tokenHandler.signToken(await new RbacSeeder().getToken(admin, roles), 'nonce admin');
-    const userToken = await d.tokenHandler.signToken(await new RbacSeeder().getToken(user, roles), 'nonce user');
+    const adminToken = await signTokenFor(admin, d.tokenHandler, 'nonce admin');
+    const userToken = await signTokenFor(user, d.tokenHandler, 'nonce user');
 
     const controller = new TransactionSummaryController({ specification: d.specification, roleManager: d.roleManager });
     const transactionController = new TransactionController({ specification: d.specification, roleManager: d.roleManager });

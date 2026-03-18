@@ -44,7 +44,8 @@ import Fine from '../../../src/entity/fine/fine';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { FineSeeder, RbacSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 describe('BalanceController', (): void => {
   let ctx: {
@@ -74,35 +75,13 @@ describe('BalanceController', (): void => {
       .map((t) => t.subTransactions));
     const transfers = await new TransferSeeder().seed(users);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']) };
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Balance: {
-          get: all,
-          update: all,
-        },
-
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        Balance: {
-          get: own,
-          update: own,
-        },
-
-      },
-      assignmentCheck: async () => true,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
     });
-    const userToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[0], roles), '33');
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(users[6], roles), '33');
+    const userToken = await signTokenFor(users[0], tokenHandler, '33');
+    const adminToken = await signTokenFor(users[6], tokenHandler, '33');
 
     const { fines, fineTransfers, userFineGroups, users: usersWithFines } = await new FineSeeder().seed(users, transactions, transfers, true);
 

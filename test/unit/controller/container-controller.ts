@@ -47,7 +47,8 @@ import ContainerRevision from '../../../src/entity/container/container-revision'
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
-import { ContainerSeeder, ProductSeeder, RbacSeeder } from '../../seed';
+import { ContainerSeeder, ProductSeeder } from '../../seed';
+import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -152,47 +153,12 @@ describe('ContainerController', async (): Promise<void> => {
     const app = express();
     const specification = await Swagger.initialize(app);
 
-    const all = { all: new Set<string>(['*']) };
-    const own = { own: new Set<string>(['*']), public: new Set<string>(['*']) };
-    const organRole = { organ: new Set<string>(['*']) };
-
-    const roles = await new RbacSeeder().seed([{
-      name: 'Admin',
-      permissions: {
-        Container: {
-          create: all,
-          get: all,
-          update: all,
-          delete: all,
-          approve: all,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.LOCAL_ADMIN,
-    }, {
-      name: 'User',
-      permissions: {
-        Container: {
-          get: own,
-          create: own,
-          update: own,
-          delete: own,
-        },
-      },
-      assignmentCheck: async (user: User) => user.type === UserType.MEMBER,
-    }, {
-      name: 'Seller',
-      permissions: {
-        Container: {
-          get: organRole,
-        },
-      },
-      assignmentCheck: async () => true,
-    }]);
+    await ensureProductionRoles();
     const roleManager = await new RoleManager().initialize();
 
-    const adminToken = await tokenHandler.signToken(await new RbacSeeder().getToken(adminUser, roles), 'nonce admin');
-    const token = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles), 'nonce');
-    const organMemberToken = await tokenHandler.signToken(await new RbacSeeder().getToken(localUser, roles, [organ]), 'nonce organ');
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const token = await signTokenFor(localUser, tokenHandler);
+    const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce organ', [organ]);
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());
@@ -311,15 +277,21 @@ describe('ContainerController', async (): Promise<void> => {
       expect(container).to.not.be.undefined;
       await getAndCheck(container, ctx.adminToken);
     });
-    it('should return an HTTP 200 and the container with the given id if own container', async () => {
+    it('should return an HTTP 403 for own container if regular member (no Container perms)', async () => {
       const container = ctx.containers.find((c) => !c.public && c.owner.id === ctx.localUser.id);
       expect(container).to.not.be.undefined;
-      await getAndCheck(container, ctx.token);
+      const res = await request(ctx.app)
+        .get(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
     });
-    it('should return an HTTP 200 and container if the container is public and not admin', async () => {
+    it('should return an HTTP 403 for public container if regular member (no Container perms)', async () => {
       const container = ctx.containers.find((c) => c.public && c.owner.id !== ctx.localUser.id);
       expect(container).to.not.be.undefined;
-      await getAndCheck(container, ctx.token);
+      const res = await request(ctx.app)
+        .get(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+      expect(res.status).to.equal(403);
     });
     it('should return an HTTP 200 and the container if the user is connected via organ', async () => {
       const newContainer = await Container.save({
@@ -473,65 +445,33 @@ describe('ContainerController', async (): Promise<void> => {
     describe('verifyContainerRequest Specification', async () => {
       testValidationOnRoute('post', '/containers');
     });
-    it('should store the given container in the database and return an HTTP 200 and the created container if user', async () => {
+    it('should return an HTTP 403 if regular member tries to create container', async () => {
       const containerCount = await Container.count();
       const res = await request(ctx.app)
         .post('/containers')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerReq);
 
-      expect(res.status).to.equal(200);
-      const containerResponse = res.body as ContainerWithProductsResponse;
-      expect(ctx.specification.validateModel(
-        'ContainerWithProductsResponse',
-        containerResponse,
-        false,
-        true,
-      ).valid).to.be.true;
-
-      expect(await Container.count()).to.equal(containerCount + 1);
-      containerProductsEq(ctx.validContainerReq, containerResponse);
-
-      const dbContainer = await Container.findOne({
-        where: { id: (res.body as ContainerResponse).id },
-      });
-      expect(dbContainer).to.exist;
-
-      // Cleanup
-      await ContainerRevision.delete({ containerId: dbContainer.id });
-      await Container.delete({ id: dbContainer.id });
+      expect(res.status).to.equal(403);
+      expect(await Container.count()).to.equal(containerCount);
     });
   });
   describe('PATCH /containers/:id', () => {
     describe('verifyContainerRequest Specification', async () => {
       testValidationOnRoute('patch', '/containers/1');
     });
-    it('should return an HTTP 200 and the container update if user', async () => {
+    it('should return an HTTP 403 if regular member tries to update container', async () => {
       const res = await request(ctx.app)
         .patch('/containers/1')
         .set('Authorization', `Bearer ${ctx.token}`)
         .send(ctx.validContainerUpdate);
 
-      expect(res.status).to.equal(200);
-      expect(ctx.specification.validateModel(
-        'ContainerWithProductsResponse',
-        res.body,
-        false,
-        true,
-      ).valid).to.be.true;
-
-      const body = res.body as ContainerWithProductsResponse;
-      containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
-
-      const databaseContainer = await Container.findOne({
-        where: { id: body.id, currentRevision: body.revision },
-      });
-      expect(databaseContainer).to.exist;
+      expect(res.status).to.equal(403);
     });
     it('should return an HTTP 200 and the container update if admin', async () => {
       const res = await request(ctx.app)
         .patch('/containers/1')
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerUpdate);
 
       expect(res.status).to.equal(200);
@@ -562,7 +502,7 @@ describe('ContainerController', async (): Promise<void> => {
 
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)
-        .set('Authorization', `Bearer ${ctx.token}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(ctx.validContainerUpdate);
 
       containerProductsEq(ctx.validContainerReq, res.body as ContainerWithProductsResponse);
@@ -620,7 +560,7 @@ describe('ContainerController', async (): Promise<void> => {
     it('should return correct model', async () => {
       const res = await request(ctx.app)
         .get('/containers/public')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
       expect(res.status).to.equal(200);
       expect(ctx.specification.validateModel(
         'PaginatedContainerResponse',
@@ -632,7 +572,7 @@ describe('ContainerController', async (): Promise<void> => {
     it('should return an HTTP 200 and all public containers', async () => {
       const res = await request(ctx.app)
         .get('/containers/public')
-        .set('Authorization', `Bearer ${ctx.token}`);
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       (res.body as PaginatedContainerResponse).records.every(
         async (container) => (expect(container.public).true),
@@ -641,22 +581,14 @@ describe('ContainerController', async (): Promise<void> => {
     });
   });
   describe('DELETE /containers/:id', () => {
-    it('should return 204 if owner', async () => {
+    it('should return 403 if organ member (Seller has no Container.delete)', async () => {
       const container = ctx.containers.find((p) => p.owner.id === ctx.localUser.id && !p.public && p.deletedAt == null);
       const res = await request(ctx.app)
         .delete(`/containers/${container.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`)
         .send();
 
-      expect(res.status).to.equal(204);
-      expect(res.body).to.be.empty;
-
-      const dbContainer = await Container.findOne({ where: { id: container.id }, withDeleted: true });
-      expect(dbContainer).to.not.be.null;
-      expect(dbContainer.deletedAt).to.not.be.null;
-
-      // Cleanup
-      await dbContainer.recover();
+      expect(res.status).to.equal(403);
     });
     it('should return 204 for any container if admin', async () => {
       const container = ctx.containers.find((p) => p.owner.id !== ctx.adminUser.id && !p.public && p.deletedAt == null);
