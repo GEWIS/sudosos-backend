@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
+import TransferService, { parseGetTransferAggregateFilters, parseGetTransferFilters } from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
@@ -50,6 +50,12 @@ export default class TransferController extends BaseController {
 
   getPolicy(): Policy {
     return {
+      '/aggregate': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
+          handler: this.returnTransferAggregate.bind(this),
+        },
+      },
       '/': {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
@@ -100,6 +106,41 @@ export default class TransferController extends BaseController {
       return 'own';
     }
     return 'all';
+  }
+
+  /**
+   * GET /transfers/aggregate
+   * @summary Returns the aggregate (sum and count) of transfers matching the given filters
+   * @operationId getTransferAggregate
+   * @tags transfers - Operations of transfer controller
+   * @security JWT
+   * @param {string} fromDate.query - Start date for selected transfers (inclusive)
+   * @param {string} tillDate.query - End date for selected transfers (exclusive)
+   * @param {integer} fromId.query - Filter transfers from this user ID
+   * @param {integer} toId.query - Filter transfers to this user ID
+   * @param {string} category.query - Restrict to a specific transfer category: deposit, payoutRequest, invoice, fine, waivedFines, writeOff, inactiveAdministrativeCost
+   * @return {TransferAggregateResponse} 200 - Aggregate sum and count of matching transfers
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async returnTransferAggregate(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get transfer aggregate by user', req.token.user);
+
+    let filters;
+    try {
+      filters = parseGetTransferAggregateFilters(req);
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const { total, count } = await new TransferService().getTransferAggregate(filters);
+      res.json({ total: total.toObject(), count });
+    } catch (error) {
+      this.logger.error('Could not return transfer aggregate:', error);
+      res.status(500).json('Internal server error.');
+    }
   }
 
   /**

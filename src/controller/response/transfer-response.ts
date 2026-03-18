@@ -80,3 +80,13 @@ export interface PaginatedTransferResponse {
   _pagination: PaginationResult,
   records: TransferResponse[],
 }
+
+/**
+ * @typedef {object} TransferAggregateResponse
+ * @property {DineroObjectResponse} total.required - The sum of the amountInclVat of all matching transfers
+ * @property {integer} count.required - The number of matching transfers
+ */
+export interface TransferAggregateResponse {
+  total: DineroObjectResponse;
+  count: number;
+}

@@ -24,8 +24,9 @@
  * @module transfers
  */
 
-import dinero from 'dinero.js';
+import dinero, { Dinero } from 'dinero.js';
 import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
+import DineroTransformer from '../entity/transformer/dinero-transformer';
 import Transfer from '../entity/transactions/transfer';
 import { TransferResponse } from '../controller/response/transfer-response';
 import TransferRequest from '../controller/request/transfer-request';
@@ -54,13 +55,45 @@ export interface TransferFilterParameters {
   tillDate?: Date,
 }
 
+export enum TransferCategory {
+  DEPOSIT = 'deposit',
+  PAYOUT_REQUEST = 'payoutRequest',
+  INVOICE = 'invoice',
+  FINE = 'fine',
+  WAIVED_FINES = 'waivedFines',
+  WRITE_OFF = 'writeOff',
+  INACTIVE_ADMINISTRATIVE_COST = 'inactiveAdministrativeCost',
+}
+
+export interface TransferAggregateFilterParameters {
+  fromId?: number,
+  toId?: number,
+  fromDate?: Date,
+  tillDate?: Date,
+  category?: TransferCategory,
+}
+
 export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
   return {
     id: asNumber(req.query.id),
-    fromId: asNumber(req.query.id),
-    toId: asNumber(req.query.id),
+    fromId: asNumber(req.query.fromId),
+    toId: asNumber(req.query.toId),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
+  };
+}
+
+export function parseGetTransferAggregateFilters(req: RequestWithToken): TransferAggregateFilterParameters {
+  const { category } = req.query;
+  if (category !== undefined && !Object.values(TransferCategory).includes(category as TransferCategory)) {
+    throw new Error(`Invalid category '${category}'. Must be one of: ${Object.values(TransferCategory).join(', ')}`);
+  }
+  return {
+    fromId: asNumber(req.query.fromId),
+    toId: asNumber(req.query.toId),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+    category: category as TransferCategory | undefined,
   };
 }
 
@@ -198,6 +231,53 @@ export default class TransferService extends WithManager {
         || await this.manager.findOne(User, { where: { id: request.toId } }))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;
+  }
+
+  /**
+   * Returns the aggregate (SUM and COUNT) of transfers matching the given filters.
+   * The aggregation is performed entirely on the database side.
+   * @param filters - Optional filters to narrow the set of transfers
+   */
+  public async getTransferAggregate(filters: TransferAggregateFilterParameters = {}): Promise<{ total: Dinero, count: number }> {
+    const categoryRelationMap: Record<TransferCategory, string> = {
+      [TransferCategory.DEPOSIT]: 'deposit',
+      [TransferCategory.PAYOUT_REQUEST]: 'payoutRequest',
+      [TransferCategory.INVOICE]: 'invoice',
+      [TransferCategory.FINE]: 'fine',
+      [TransferCategory.WAIVED_FINES]: 'waivedFines',
+      [TransferCategory.WRITE_OFF]: 'writeOff',
+      [TransferCategory.INACTIVE_ADMINISTRATIVE_COST]: 'inactiveAdministrativeCost',
+    };
+
+    let query = this.manager.createQueryBuilder(Transfer, 'transfer');
+
+    if (filters.category !== undefined) {
+      const rel = categoryRelationMap[filters.category];
+      query = query.innerJoin(`transfer.${rel}`, rel);
+    }
+
+    if (filters.fromId !== undefined) {
+      query = query.andWhere('transfer.fromId = :fromId', { fromId: filters.fromId });
+    }
+    if (filters.toId !== undefined) {
+      query = query.andWhere('transfer.toId = :toId', { toId: filters.toId });
+    }
+    if (filters.fromDate) {
+      query = query.andWhere('transfer.createdAt >= :fromDate', { fromDate: toMySQLString(filters.fromDate) });
+    }
+    if (filters.tillDate) {
+      query = query.andWhere('transfer.createdAt < :tillDate', { tillDate: toMySQLString(filters.tillDate) });
+    }
+
+    const result = await query
+      .select('COALESCE(SUM(transfer.amountInclVat), 0)', 'total')
+      .addSelect('COUNT(transfer.id)', 'count')
+      .getRawOne();
+
+    return {
+      total: DineroTransformer.Instance.from(parseInt(result?.total ?? '0', 10)),
+      count: parseInt(result?.count ?? '0', 10),
+    };
   }
 
   public async deleteTransfer(id: number): Promise<void> {
