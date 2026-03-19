@@ -450,6 +450,62 @@ describe('InvoiceController', async () => {
 
       expect(res.status).to.equal(404);
     });
+    it('should include creditTransfer in the response for a deleted invoice', async () => {
+      await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transactionRequests: TransactionRequest[] = await createTransactionRequest(debtor.id, creditor.id, 1);
+        const { transactions, total } = await requestToTransaction(transactionRequests);
+        const tIds = transactions.map((t) => t.tId);
+
+        const createParams: CreateInvoiceParams = {
+          city: 'city', country: 'country', postalCode: 'postalCode', street: 'street',
+          reference: 'BAC-41', byId: ctx.adminUser.id, addressee: 'Addressee',
+          description: 'Description', forId: debtor.id, date: new Date(),
+          transactionIDs: tIds, amount: { amount: total, currency: 'EUR', precision: 2 },
+        };
+
+        const invoice = await AppDataSource.manager.transaction(async (manager) => {
+          return new InvoiceService(manager).createInvoice(createParams);
+        });
+        await AppDataSource.manager.transaction(async (manager) => {
+          return new InvoiceService(manager).deleteInvoice(invoice.id, ctx.adminUser.id);
+        });
+
+        const res = await request(ctx.app)
+          .get(`/invoices/${invoice.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(200);
+        const body = res.body as InvoiceResponse;
+        expect(body.creditTransfer).to.not.be.undefined;
+        expect(body.creditTransfer.amount.amount).to.equal(total);
+      });
+    });
+    it('should not include creditTransfer in the response for a non-deleted invoice', async () => {
+      await inUserContext(await (await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
+        const transactionRequests: TransactionRequest[] = await createTransactionRequest(debtor.id, creditor.id, 1);
+        const { transactions, total } = await requestToTransaction(transactionRequests);
+        const tIds = transactions.map((t) => t.tId);
+
+        const createParams: CreateInvoiceParams = {
+          city: 'city', country: 'country', postalCode: 'postalCode', street: 'street',
+          reference: 'BAC-41', byId: ctx.adminUser.id, addressee: 'Addressee',
+          description: 'Description', forId: debtor.id, date: new Date(),
+          transactionIDs: tIds, amount: { amount: total, currency: 'EUR', precision: 2 },
+        };
+
+        const invoice = await AppDataSource.manager.transaction(async (manager) => {
+          return new InvoiceService(manager).createInvoice(createParams);
+        });
+
+        const res = await request(ctx.app)
+          .get(`/invoices/${invoice.id}`)
+          .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+        expect(res.status).to.equal(200);
+        const body = res.body as InvoiceResponse;
+        expect(body.creditTransfer).to.be.undefined;
+      });
+    });
   });
   describe('PATCH /invoices/{id}', () => {
     it('should return an HTTP 200 and update an invoice if admin', async () => {
