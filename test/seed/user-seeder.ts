@@ -25,6 +25,17 @@ import InvoiceUser from '../../src/entity/user/invoice-user';
 import bcrypt from 'bcrypt';
 import HashBasedAuthenticationMethod from '../../src/entity/authenticator/hash-based-authentication-method';
 import OrganMembership from '../../src/entity/organ/organ-membership';
+import LocalAuthenticator from '../../src/entity/authenticator/local-authenticator';
+import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
+
+export interface DevUsers {
+  admin: User;
+  user: User;
+  alice: User;
+  bob: User;
+  organ: User;
+  invoice: User;
+}
 
 /**
  * Seeder for users and their login methods
@@ -143,10 +154,118 @@ export default class UserSeeder extends WithManager {
   }
 
   /**
-   * Seed some organ memberships
-   * @param users Users who are members of organs
-   * @param organs The organs that the users are members of
+   * Creates a fixed set of named dev users with authenticators.
+   * Used by cli/dev-seed.ts for local development.
    */
+  public async init(): Promise<DevUsers> {
+    const BCRYPT_ROUNDS = 4;
+
+    const [admin, user, alice, bob, organ, invoice] = await this.manager.save(User, [
+      Object.assign(new User(), {
+        firstName: 'Admin',
+        lastName: 'SudoSOS',
+        email: 'admin@sudosos.nl',
+        type: UserType.LOCAL_ADMIN,
+        active: true,
+        ofAge: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        extensiveDataProcessing: true,
+      }),
+      Object.assign(new User(), {
+        firstName: 'Local',
+        lastName: 'User',
+        email: 'user@sudosos.nl',
+        type: UserType.LOCAL_USER,
+        active: true,
+        ofAge: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        extensiveDataProcessing: true,
+      }),
+      Object.assign(new User(), {
+        firstName: 'Alice',
+        lastName: 'Member',
+        email: 'alice@gewis.nl',
+        type: UserType.MEMBER,
+        active: true,
+        ofAge: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        extensiveDataProcessing: true,
+      }),
+      Object.assign(new User(), {
+        firstName: 'Bob',
+        lastName: 'Member',
+        email: 'bob@gewis.nl',
+        type: UserType.MEMBER,
+        active: true,
+        ofAge: true,
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        extensiveDataProcessing: true,
+      }),
+      Object.assign(new User(), {
+        firstName: 'Organ',
+        lastName: '',
+        email: '',
+        type: UserType.ORGAN,
+        active: true,
+        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      }),
+      Object.assign(new User(), {
+        firstName: 'Invoice',
+        lastName: 'Company',
+        email: 'invoices@company.nl',
+        type: UserType.INVOICE,
+        active: true,
+        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      }),
+    ]);
+
+    // Hash-based auth for local users (4 bcrypt rounds for fast dev seeding)
+    await Promise.all([
+      this.manager.save(LocalAuthenticator, Object.assign(new LocalAuthenticator(), {
+        user: admin,
+        hash: await bcrypt.hash('admin', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(LocalAuthenticator, Object.assign(new LocalAuthenticator(), {
+        user,
+        hash: await bcrypt.hash('user', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user: admin,
+        hash: await bcrypt.hash('0000', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user,
+        hash: await bcrypt.hash('1111', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user: alice,
+        hash: await bcrypt.hash('1234', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(PinAuthenticator, Object.assign(new PinAuthenticator(), {
+        user: bob,
+        hash: await bcrypt.hash('5678', BCRYPT_ROUNDS),
+      })),
+    ]);
+
+    // Organ memberships: alice and bob are members of organ
+    await this.manager.save(OrganMembership, [
+      Object.assign(new OrganMembership(), { userId: alice.id, organId: organ.id, index: 0 }),
+      Object.assign(new OrganMembership(), { userId: bob.id, organId: organ.id, index: 1 }),
+    ]);
+
+    // Invoice billing address for invoice user
+    await this.manager.save(InvoiceUser, Object.assign(new InvoiceUser(), {
+      user: invoice,
+      automatic: false,
+      street: 'Placeholder Street 1',
+      postalCode: '0000 AA',
+      city: 'Placeholder City',
+      country: 'Netherlands',
+    }));
+
+    return { admin, user, alice, bob, organ, invoice };
+  }
+
   public async seedMemberAuthenticators(users: User[], organs: User[]): Promise<OrganMembership[]> {
     const memberAuthenticators: OrganMembership[] = [];
     

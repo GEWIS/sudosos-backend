@@ -23,7 +23,13 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import ContainerSeeder from './container-seeder';
+import ContainerSeeder, { DevContainers } from './container-seeder';
+
+export interface DevPointOfSale {
+  bar: PointOfSale;
+  barRevision: PointOfSaleRevision;
+  barPosUser: User;
+}
 
 export default class PointOfSaleSeeder extends WithManager {
   /**
@@ -95,6 +101,39 @@ export default class PointOfSaleSeeder extends WithManager {
       }));
     }
     return revisions;
+  }
+
+  /**
+   * Creates the minimal "Bar" point of sale for dev seeding.
+   *
+   * @param owner - The organ user that owns the POS.
+   * @param containers - Dev containers returned by ContainerSeeder.init().
+   */
+  public async init(owner: User, containers: DevContainers): Promise<DevPointOfSale> {
+    const barPosUser = await this.manager.save(User, Object.assign(new User(), {
+      firstName: 'Bar POS',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    }));
+
+    const bar = await this.manager.save(PointOfSale, Object.assign(new PointOfSale(), {
+      owner,
+      user: barPosUser,
+    }));
+
+    const barRevision = await this.manager.save(PointOfSaleRevision, Object.assign(new PointOfSaleRevision(), {
+      pointOfSale: bar,
+      revision: 1,
+      name: 'Bar',
+      useAuthentication: true,
+      containers: [containers.alcoholicRevision, containers.nonAlcoholicRevision],
+    }));
+
+    bar.currentRevision = 1;
+    await this.manager.save(PointOfSale, bar);
+
+    return { bar, barRevision, barPosUser };
   }
 
   /**
