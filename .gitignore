@@ -21,3 +21,8 @@ data/
 /docs/.vitepress/cache/
 /docs/.vitepress/dist/
 /docs/content/typedoc/
+
+# Generated client
+client/src/
+client/dist/
+client/node_modules/

@@ -33,6 +33,7 @@
     "maintenance": "ts-node src/maintenance.ts",
     "init:migrate": "npm run migrate && npm run seed && npm run maintenance",
     "init:dev": "npm run migrate && npm run seed:dev",
+    "client:gen": "npm run swagger && cd client && npm install && npm run genbuild",
     "init:schema": "npm run schema && npm run seed && npm run maintenance",
     "prepare": "husky || true"
   },
