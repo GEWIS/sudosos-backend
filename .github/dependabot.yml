@@ -21,3 +21,25 @@ updates:
         dependency-type: "production"
         update-types:
           - "patch"
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 15
+    groups:
+      development_minors_and_patches:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production_patches:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+
