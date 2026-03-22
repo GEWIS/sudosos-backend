@@ -38,11 +38,13 @@ import {
   ContainerSeeder, DepositSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductSeeder,
+  SellerPayoutSeeder,
   TransactionSeeder, TransferSeeder,
   UserSeeder,
   VatGroupSeeder,
 } from '../../seed';
 import sinon from 'sinon';
+import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
 
 describe('TransferService', async (): Promise<void> => {
   let ctx: {
@@ -51,6 +53,7 @@ describe('TransferService', async (): Promise<void> => {
     specification: SwaggerSpecification,
     users: User[],
     transfers: Transfer[],
+    sellerPayouts: SellerPayout[],
     vatGroups: VatGroup[],
   };
   before(async () => {
@@ -67,13 +70,19 @@ describe('TransferService', async (): Promise<void> => {
     const { pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(users, containerRevisions);
     const transfers = await new TransferSeeder().seed(users, begin, end);
     const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, begin, end);
+    const subTransactions = transactions.map((t) => t.subTransactions).flat();
     const { invoiceTransfers } = await new InvoiceSeeder().seed(users, transactions);
     const { payoutRequestTransfers } = await new PayoutRequestSeeder().seed(users);
     const { stripeDepositTransfers } = await new DepositSeeder().seed(users);
+    const { sellerPayouts, transfers: sellerPayoutTransfers } = await new SellerPayoutSeeder()
+      .seed(users, transactions, subTransactions, transfers);
 
-    const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers);
+    const transfers2 = transfers.concat(invoiceTransfers).concat(payoutRequestTransfers).concat(stripeDepositTransfers).concat(sellerPayoutTransfers);
 
     const { users: users2, fineTransfers } = await new FineSeeder().seed(users, transactions, transfers, true);
+
+    // Sanity check: seeder must produce at least one seller payout
+    if (sellerPayouts.length === 0) throw new Error('SellerPayoutSeeder produced no payouts — check seed data');
 
     // start app
     const app = express();
@@ -86,6 +95,7 @@ describe('TransferService', async (): Promise<void> => {
       app,
       specification,
       users: users2,
+      sellerPayouts,
       vatGroups,
       transfers: transfers2.concat(fineTransfers),
     };
@@ -206,6 +216,16 @@ describe('TransferService', async (): Promise<void> => {
       expect(records[0].payoutRequest).to.not.be.null;
     });
 
+    it('should return corresponding sellerPayout if transfer has any', async () => {
+      const sellerPayoutTransfer = ctx.sellerPayouts[0].transfer;
+      expect(sellerPayoutTransfer).to.not.be.undefined;
+      const [records] = await new TransferService()
+        .getTransfers({ id: sellerPayoutTransfer.id });
+      expect(records.length).to.equal(1);
+      expect(records[0].sellerPayout).to.not.be.null;
+      expect(records[0].sellerPayout.id).to.equal(ctx.sellerPayouts[0].id);
+    });
+
     it('should return corresponding fine if transfer has any', async () => {
       const transfer = ctx.transfers.filter((t) => t.fine != null)[0];
       expect(transfer).to.not.be.undefined;
@@ -314,7 +334,7 @@ describe('TransferService', async (): Promise<void> => {
   describe('deleteTransfer function', () => {
     it('should successfully delete a transfer with no relations', async () => {
       // Find a transfer that has no relations
-      const transfer = ctx.transfers.find((t) => !t.invoice && !t.deposit && !t.payoutRequest && !t.fine && !t.writeOff && !t.waivedFines && !t.inactiveAdministrativeCost);
+      const transfer = ctx.transfers.find((t) => !t.invoice && !t.deposit && !t.payoutRequest && !t.sellerPayout && !t.fine && !t.writeOff && !t.waivedFines && !t.inactiveAdministrativeCost);
       expect(transfer).to.not.be.undefined;
 
       const transferCount = await Transfer.count();
@@ -354,6 +374,22 @@ describe('TransferService', async (): Promise<void> => {
 
       expect(await Transfer.count()).to.equal(transferCount);
       expect(await Transfer.findOne({ where: { id: transfer.id } })).to.not.be.null;
+    });
+
+    it('should throw error when trying to delete a transfer with sellerPayout relation', async () => {
+      const sellerPayoutTransfer = ctx.sellerPayouts[0].transfer;
+      expect(sellerPayoutTransfer).to.not.be.undefined;
+
+      const transferCount = await Transfer.count();
+      try {
+        await new TransferService().deleteTransfer(sellerPayoutTransfer.id);
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error.message).to.equal('Cannot delete transfer because it is referenced by another entity');
+      }
+
+      expect(await Transfer.count()).to.equal(transferCount);
+      expect(await Transfer.findOne({ where: { id: sellerPayoutTransfer.id } })).to.not.be.null;
     });
 
     it('should throw error when trying to delete a transfer with deposit relation', async () => {
