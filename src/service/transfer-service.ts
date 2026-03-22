@@ -43,6 +43,7 @@ import DebtorService from './debtor-service';
 import VatGroup from '../entity/vat-group';
 import { toMySQLString } from '../helpers/timestamps';
 import WriteOffService from './write-off-service';
+import SellerPayoutService from './seller-payout-service';
 import WithManager from '../database/with-manager';
 import UserService from './user-service';
 import BalanceService from './balance-service';
@@ -58,6 +59,7 @@ export interface TransferFilterParameters {
 export enum TransferCategory {
   DEPOSIT = 'deposit',
   PAYOUT_REQUEST = 'payoutRequest',
+  SELLER_PAYOUT = 'sellerPayout',
   INVOICE = 'invoice',
   FINE = 'fine',
   WAIVED_FINES = 'waivedFines',
@@ -115,6 +117,7 @@ export default class TransferService extends WithManager {
       waivedFines: transfer.waivedFines ? DebtorService.asUserFineGroupResponse(transfer.waivedFines) : null,
       writeOff: transfer.writeOff ? WriteOffService.asBaseWriteOffResponse(transfer.writeOff) : null,
       inactiveAdministrativeCost: transfer.inactiveAdministrativeCost ? transfer.inactiveAdministrativeCost.toBaseResponse() : null,
+      sellerPayout: transfer.sellerPayout ? SellerPayoutService.asSellerPayoutResponse(transfer.sellerPayout) : null,
       vat: transfer.vat ? parseVatGroupToResponse(transfer.vat) : null,
     };
   }
@@ -198,6 +201,7 @@ export default class TransferService extends WithManager {
         invoice: { invoiceStatus: true, transfer: true },
         deposit: { stripePaymentIntent: { paymentIntentStatuses: true } },
         payoutRequest: { payoutRequestStatus: true, requestedBy: true },
+        sellerPayout: { requestedBy: true },
         fine: { userFineGroup: { user: true } },
         waivedFines: { fines: { userFineGroup: true } },
         inactiveAdministrativeCost: {  transfer: true  },
@@ -242,6 +246,7 @@ export default class TransferService extends WithManager {
     const categoryRelationMap: Record<TransferCategory, string> = {
       [TransferCategory.DEPOSIT]: 'deposit',
       [TransferCategory.PAYOUT_REQUEST]: 'payoutRequest',
+      [TransferCategory.SELLER_PAYOUT]: 'sellerPayout',
       [TransferCategory.INVOICE]: 'invoice',
       [TransferCategory.FINE]: 'fine',
       [TransferCategory.WAIVED_FINES]: 'waivedFines',
@@ -283,14 +288,14 @@ export default class TransferService extends WithManager {
   public async deleteTransfer(id: number): Promise<void> {
     const transfer = await this.manager.findOne(Transfer, {
       where: { id },
-      relations: ['from', 'to', 'payoutRequest', 'deposit', 'invoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
+      relations: ['from', 'to', 'payoutRequest', 'sellerPayout', 'deposit', 'invoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
     });
 
     if (!transfer) {
       throw new Error('Transfer not found');
     }
 
-    if (transfer.payoutRequest || transfer.deposit || transfer.invoice || transfer.fine || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
+    if (transfer.payoutRequest || transfer.sellerPayout || transfer.deposit || transfer.invoice || transfer.fine || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
       throw new Error('Cannot delete transfer because it is referenced by another entity');
     }
 
