@@ -33,6 +33,7 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 import PayoutRequest from './payout/payout-request';
+import SellerPayout from './payout/seller-payout';
 import StripeDeposit from '../stripe/stripe-deposit';
 import Invoice from '../invoices/invoice';
 import Fine from '../fine/fine';
@@ -109,6 +110,9 @@ export default class Transfer extends UnstoredPdfAble(BaseEntity) {
 
   @OneToOne(() => InactiveAdministrativeCost, (a) => a.transfer, { nullable: true })
   public inactiveAdministrativeCost: InactiveAdministrativeCost | null;
+
+  @OneToOne(() => SellerPayout, (s) => s.transfer, { nullable: true })
+  public sellerPayout: SellerPayout | null;
 
   pdfService = new TransferPdfService();
 }

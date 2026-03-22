@@ -35,6 +35,7 @@ import { FineResponse, UserFineGroupResponse } from './debtor-response';
 import { BaseVatGroupResponse } from './vat-group-response';
 import { BaseWriteOffResponse } from './write-off-response';
 import { BaseInactiveAdministrativeCostResponse } from './inactive-administrative-cost-response';
+import { SellerPayoutResponse } from './seller-payout-response';
 
 /**
  * @typedef {allOf|BaseResponse} TransferResponse
@@ -51,6 +52,7 @@ import { BaseInactiveAdministrativeCostResponse } from './inactive-administrativ
  * @property {BaseWriteOffResponse} writeOff - write-off belonging to this transfer
  * @property {UserFineGroupResponse} waivedFines - fines that have been waived by this transfer
  * @property {BaseInactiveAdministrativeCostResponse} inactiveAdministrativeCost - inactive administrative cost that belongs to this transfer
+ * @property {SellerPayoutResponse} sellerPayout - seller payout belonging to this transfer
  */
 export interface TransferResponse extends BaseResponse {
   amountInclVat: DineroObjectResponse;
@@ -69,6 +71,7 @@ export interface TransferResponse extends BaseResponse {
   writeOff?: BaseWriteOffResponse;
   waivedFines?: UserFineGroupResponse;
   inactiveAdministrativeCost?: BaseInactiveAdministrativeCostResponse;
+  sellerPayout?: SellerPayoutResponse;
 }
 
 /**
