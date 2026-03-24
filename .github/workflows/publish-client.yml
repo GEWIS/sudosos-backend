@@ -1,0 +1,66 @@
+name: Publish Client
+
+on:
+  push:
+    branches: [develop]
+  release:
+    types: [published]
+
+concurrency:
+  group: publish-client-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      # Generate swagger spec from backend
+      - run: npm install
+      - run: npm run swagger
+
+      # Generate and build client
+      - name: Install client dependencies
+        working-directory: client
+        run: npm install
+
+      - name: Generate and build client
+        working-directory: client
+        run: npm run genbuild
+
+      # Set version based on trigger
+      - name: Set package version
+        working-directory: client
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+            npm version "$VERSION" --no-git-tag-version
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            npm version "0.0.0-develop.$(git rev-parse --short HEAD)" --no-git-tag-version
+          fi
+
+      # Publish with appropriate dist-tag
+      - name: Publish to npm
+        working-directory: client
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            npm publish --tag latest
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            npm publish --tag develop
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
