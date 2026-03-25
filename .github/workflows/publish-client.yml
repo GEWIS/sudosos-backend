@@ -1,10 +1,8 @@
-name: Publish Client
+name: Publish Client (develop snapshot)
 
 on:
   push:
     branches: [develop]
-  release:
-    types: [published]
 
 concurrency:
   group: publish-client-${{ github.ref }}
@@ -20,7 +18,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - uses: actions/setup-java@v4
@@ -41,26 +39,12 @@ jobs:
         working-directory: client
         run: npm run genbuild
 
-      # Set version based on trigger
       - name: Set package version
         working-directory: client
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            VERSION="${VERSION#v}"
-            npm version "$VERSION" --no-git-tag-version
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            npm version "0.0.0-develop.$(git rev-parse --short HEAD)" --no-git-tag-version
-          fi
+        run: npm version "0.0.0-develop.$(git rev-parse --short HEAD)" --no-git-tag-version
 
-      # Publish with appropriate dist-tag
       - name: Publish to npm
         working-directory: client
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            npm publish --tag latest
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            npm publish --tag develop
-          fi
+        run: npm publish --tag develop
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
