@@ -115,7 +115,7 @@ export function createTransactionPdf(options: ITransactionPdf): string {
     <tbody>${itemsHtml}</tbody>
   </table>
 
-  <div class="summary" style="margin-top:1em; text-align:right;">
+  <div class="summary" style="margin-top:1em; text-align:right; break-inside:avoid; page-break-inside:avoid;">
     <table style="margin-left:auto;text-align:right">
       <tr>
         <td>Subtotal excl.</td>
