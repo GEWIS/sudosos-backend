@@ -47,6 +47,7 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import Transfer from '../../../src/entity/transactions/transfer';
+import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { Currency } from 'dinero.js';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
 
@@ -932,6 +933,116 @@ describe('InvoiceService', () => {
         expect(response.currentState).to.not.be.undefined;
         expect(response.to.id).to.equal(debtor.id);
       });
+    });
+  });
+
+  describe('findDriftedInvoices function', () => {
+    it('should return an invoice whose transfer amount does not match the row sum', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const originalCents = invoice.transfer.amountInclVat.getAmount();
+
+          // Introduce drift by bumping the transfer amount by 100 cents
+          await Transfer.update(invoice.transfer.id, {
+            amountInclVat: DineroTransformer.Instance.from(originalCents + 100),
+          });
+
+          const results = await new InvoiceService().findDriftedInvoices();
+          const match = results.find((r) => r.invoice.id === invoice.id);
+
+          expect(match).to.not.be.undefined;
+          expect(match.deltaAmount.getAmount()).to.equal(100);
+          expect(match.actualAmount.getAmount()).to.equal(originalCents + 100);
+          expect(match.expectedAmount.getAmount()).to.equal(originalCents);
+        },
+      );
+    });
+
+    it('should not return an invoice whose transfer amount matches the row sum', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+          const results = await new InvoiceService().findDriftedInvoices();
+          const ids = results.map((r) => r.invoice.id);
+
+          expect(ids).to.not.include(invoice.id);
+        },
+      );
+    });
+
+    it('should not return a deleted invoice when its credit transfer matches the original', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+
+          // Delete it — the service creates a credit transfer equal to the original amount
+          await AppDataSource.manager.transaction(async (manager) => {
+            await new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
+          });
+
+          const results = await new InvoiceService().findDriftedInvoices();
+          const ids = results.map((r) => r.invoice.id);
+
+          expect(ids).to.not.include(invoice.id);
+        },
+      );
+    });
+
+    it('should return a deleted invoice when its credit transfer does not match the original transfer', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const originalCents = invoice.transfer.amountInclVat.getAmount();
+
+          // Delete it so a credit transfer is created
+          const deleted = await AppDataSource.manager.transaction(async (manager) => {
+            return new InvoiceService(manager).deleteInvoice(invoice.id, creditor.id);
+          });
+
+          // Tamper with the credit transfer so it no longer matches
+          await Transfer.update(deleted.creditTransfer.id, {
+            amountInclVat: DineroTransformer.Instance.from(originalCents + 300),
+          });
+
+          const results = await new InvoiceService().findDriftedInvoices();
+          const match = results.find((r) => r.invoice.id === invoice.id);
+
+          expect(match).to.not.be.undefined;
+          expect(match.deltaAmount.getAmount()).to.equal(-300);
+        },
+      );
+    });
+
+    it('asInvoiceDriftResponse should embed a full BaseInvoiceResponse', async () => {
+      await inUserContext(
+        await (await UserFactory()).clone(2),
+        async (debtor: User, creditor: User) => {
+          const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
+          const cents = invoice.transfer.amountInclVat.getAmount();
+
+          await Transfer.update(invoice.transfer.id, {
+            amountInclVat: DineroTransformer.Instance.from(cents + 200),
+          });
+
+          const results = await new InvoiceService().findDriftedInvoices();
+          const match = results.find((r) => r.invoice.id === invoice.id);
+          expect(match).to.not.be.undefined;
+
+          const response = InvoiceService.asInvoiceDriftResponse(match);
+          expect(response.invoice).to.not.be.undefined;
+          expect(response.invoice.id).to.equal(invoice.id);
+          expect(response.invoice.to.id).to.equal(debtor.id);
+          expect(response.deltaAmount.amount).to.equal(200);
+          expect(response.actualAmount.amount).to.equal(cents + 200);
+          expect(response.expectedAmount.amount).to.equal(cents);
+        },
+      );
     });
   });
 });
