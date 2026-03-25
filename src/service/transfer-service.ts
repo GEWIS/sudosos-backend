@@ -61,10 +61,41 @@ export enum TransferCategory {
   PAYOUT_REQUEST = 'payoutRequest',
   SELLER_PAYOUT = 'sellerPayout',
   INVOICE = 'invoice',
+  CREDIT_INVOICE = 'creditInvoice',
   FINE = 'fine',
   WAIVED_FINES = 'waivedFines',
   WRITE_OFF = 'writeOff',
   INACTIVE_ADMINISTRATIVE_COST = 'inactiveAdministrativeCost',
+  /**
+   * Orphaned transfer with no entity attached where fromId IS NULL — money entering the system
+   * without a linked deposit, invoice, etc.
+   */
+  MANUAL_CREATION = 'manualCreation',
+  /**
+   * Orphaned transfer with no entity attached where toId IS NULL — money leaving the system
+   * without a linked payout request, invoice, etc.
+   */
+  MANUAL_DELETION = 'manualDeletion',
+}
+
+export interface TransferAggregateResult {
+  total: Dinero;
+  count: number;
+}
+
+export interface TransferSummaryResult {
+  total: TransferAggregateResult;
+  deposits: TransferAggregateResult;
+  payoutRequests: TransferAggregateResult;
+  sellerPayouts: TransferAggregateResult;
+  invoices: TransferAggregateResult;
+  creditInvoices: TransferAggregateResult;
+  fines: TransferAggregateResult;
+  waivedFines: TransferAggregateResult;
+  writeOffs: TransferAggregateResult;
+  inactiveAdministrativeCosts: TransferAggregateResult;
+  manualCreations: TransferAggregateResult;
+  manualDeletions: TransferAggregateResult;
 }
 
 export interface TransferAggregateFilterParameters {
@@ -78,6 +109,15 @@ export interface TransferAggregateFilterParameters {
 export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
   return {
     id: asNumber(req.query.id),
+    fromId: asNumber(req.query.fromId),
+    toId: asNumber(req.query.toId),
+    fromDate: asDate(req.query.fromDate),
+    tillDate: asDate(req.query.tillDate),
+  };
+}
+
+export function parseGetTransferSummaryFilters(req: RequestWithToken): Omit<TransferAggregateFilterParameters, 'category'> {
+  return {
     fromId: asNumber(req.query.fromId),
     toId: asNumber(req.query.toId),
     fromDate: asDate(req.query.fromDate),
@@ -242,12 +282,13 @@ export default class TransferService extends WithManager {
    * The aggregation is performed entirely on the database side.
    * @param filters - Optional filters to narrow the set of transfers
    */
-  public async getTransferAggregate(filters: TransferAggregateFilterParameters = {}): Promise<{ total: Dinero, count: number }> {
-    const categoryRelationMap: Record<TransferCategory, string> = {
+  public async getTransferAggregate(filters: TransferAggregateFilterParameters = {}): Promise<TransferAggregateResult> {
+    const categoryRelationMap: Partial<Record<TransferCategory, string>> = {
       [TransferCategory.DEPOSIT]: 'deposit',
       [TransferCategory.PAYOUT_REQUEST]: 'payoutRequest',
       [TransferCategory.SELLER_PAYOUT]: 'sellerPayout',
       [TransferCategory.INVOICE]: 'invoice',
+      [TransferCategory.CREDIT_INVOICE]: 'creditInvoice',
       [TransferCategory.FINE]: 'fine',
       [TransferCategory.WAIVED_FINES]: 'waivedFines',
       [TransferCategory.WRITE_OFF]: 'writeOff',
@@ -257,8 +298,22 @@ export default class TransferService extends WithManager {
     let query = this.manager.createQueryBuilder(Transfer, 'transfer');
 
     if (filters.category !== undefined) {
-      const rel = categoryRelationMap[filters.category];
-      query = query.innerJoin(`transfer.${rel}`, rel);
+      switch (filters.category) {
+        case TransferCategory.MANUAL_CREATION:
+          query = query.andWhere('transfer.fromId IS NULL');
+          break;
+        case TransferCategory.MANUAL_DELETION:
+          query = query.andWhere('transfer.toId IS NULL');
+          break;
+        default: {
+          const rel = categoryRelationMap[filters.category];
+          if (!rel) throw new Error(`Unsupported transfer category: ${filters.category}`);
+          query = query.innerJoin(`transfer.${rel}`, rel);
+          if (filters.category === TransferCategory.INVOICE) {
+            query = query.andWhere('invoice.creditTransferId IS NULL');
+          }
+        }
+      }
     }
 
     if (filters.fromId !== undefined) {
@@ -285,17 +340,41 @@ export default class TransferService extends WithManager {
     };
   }
 
+  /**
+   * Returns an aggregate breakdown of transfers for every category plus an overall total.
+   * All filters except `category` are forwarded to each per-category query.
+   * @param filters - Optional filters (fromId, toId, fromDate, tillDate)
+   */
+  public async getTransferSummary(filters: Omit<TransferAggregateFilterParameters, 'category'> = {}): Promise<TransferSummaryResult> {
+    const [total, deposits, payoutRequests, sellerPayouts, invoices, creditInvoices, fines, waivedFines, writeOffs, inactiveAdministrativeCosts, manualCreations, manualDeletions] = await Promise.all([
+      this.getTransferAggregate(filters),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.DEPOSIT }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.PAYOUT_REQUEST }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.SELLER_PAYOUT }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.INVOICE }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.CREDIT_INVOICE }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.FINE }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.WAIVED_FINES }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.WRITE_OFF }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.INACTIVE_ADMINISTRATIVE_COST }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.MANUAL_CREATION }),
+      this.getTransferAggregate({ ...filters, category: TransferCategory.MANUAL_DELETION }),
+    ]);
+
+    return { total, deposits, payoutRequests, sellerPayouts, invoices, creditInvoices, fines, waivedFines, writeOffs, inactiveAdministrativeCosts, manualCreations, manualDeletions };
+  }
+
   public async deleteTransfer(id: number): Promise<void> {
     const transfer = await this.manager.findOne(Transfer, {
       where: { id },
-      relations: ['from', 'to', 'payoutRequest', 'sellerPayout', 'deposit', 'invoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
+      relations: ['from', 'to', 'payoutRequest', 'sellerPayout', 'deposit', 'invoice', 'creditInvoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
     });
 
     if (!transfer) {
       throw new Error('Transfer not found');
     }
 
-    if (transfer.payoutRequest || transfer.sellerPayout || transfer.deposit || transfer.invoice || transfer.fine || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
+    if (transfer.payoutRequest || transfer.sellerPayout || transfer.deposit || transfer.invoice || transfer.creditInvoice || transfer.fine || transfer.writeOff || transfer.waivedFines || transfer.inactiveAdministrativeCost) {
       throw new Error('Cannot delete transfer because it is referenced by another entity');
     }
 
