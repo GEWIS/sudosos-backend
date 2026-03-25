@@ -34,8 +34,8 @@ import ContainerRevision from '../entity/container/container-revision';
 import Container from '../entity/container/container';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
-import { verifyContainerRequest, verifyCreateContainerRequest } from './request/validators/container-request-spec';
-import { isFail } from '../helpers/specification-validation';
+import { baseContainerRequestSpec, createContainerRequestSpec } from './request/validators/container-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import {
   CreateContainerParams,
   CreateContainerRequest,
@@ -54,6 +54,8 @@ export default class ContainerController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    globalAsyncValidatorRegistry.register('CreateContainerRequest', createContainerRequestSpec);
+    globalAsyncValidatorRegistry.register('UpdateContainerRequest', baseContainerRequestSpec);
   }
 
   /**
@@ -209,7 +211,7 @@ export default class ContainerController extends BaseController {
    *    The container which should be created
    * @security JWT
    * @return {ContainerWithProductsResponse} 200 - The created container entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createContainer(req: RequestWithToken, res: Response): Promise<void> {
@@ -220,14 +222,8 @@ export default class ContainerController extends BaseController {
     try {
       const request: CreateContainerParams = {
         ...body,
-        ownerId: body.ownerId ?? req.token.user.id,
+        ownerId: body.ownerId,
       };
-
-      const validation = await verifyCreateContainerRequest(request);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const revision = await ContainerService.createContainer(request);
       res.json(ContainerService.revisionToResponse(revision));
@@ -277,7 +273,7 @@ export default class ContainerController extends BaseController {
    *    The container which should be updated
    * @security JWT
    * @return {ContainerWithProductsResponse} 200 - The created container entity
-   * @return {string} 400 - Validation error
+   * @return {object} 400 - Validation error
    * @return {string} 404 - Product not found error
    * @return {string} 500 - Internal server error
    */
@@ -293,12 +289,6 @@ export default class ContainerController extends BaseController {
         ...body,
         id: containerId,
       };
-
-      const validation = await verifyContainerRequest(request);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const container = await Container.findOne({ where: { id: containerId } });
       if (!container) {

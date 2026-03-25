@@ -41,7 +41,7 @@ import {
 } from '../../../src/controller/response/container-response';
 import { ProductResponse } from '../../../src/controller/response/product-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
+import { BaseContainerParams, CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import { truncateAllTables } from '../../setup';
@@ -57,7 +57,7 @@ chai.use(deepEqualInAnyOrder);
  * @param source - The source from which the container was created.
  * @param response - The received container.
  */
-function containerEq(source: CreateContainerRequest, response: ContainerResponse) {
+function containerEq(source: BaseContainerParams, response: ContainerResponse) {
   expect(source.name).to.equal(response.name);
   expect(source.public).to.equal(response.public);
 }
@@ -68,7 +68,7 @@ function asRequested(requested: Container, response: ContainerResponse) {
   expect(response.public).to.eq(requested.public);
 }
 
-function containerProductsEq(source: CreateContainerRequest,
+function containerProductsEq(source: BaseContainerParams,
   response: ContainerWithProductsResponse) {
   containerEq(source, response);
   expect(response.products.map((p) => p.id)).to.deep.equalInAnyOrder(source.products);
@@ -399,38 +399,34 @@ describe('ContainerController', async (): Promise<void> => {
   });
 
   function testValidationOnRoute(type: any, route: string) {
-    async function expectError(req: CreateContainerRequest, error: string) {
+    async function expectError(req: CreateContainerRequest | UpdateContainerRequest, error: string) {
       // @ts-ignore
       const res = await ((request(ctx.app)[type])(route)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(req));
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(error);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(error);
     }
 
     describe('validate products function', () => {
       it('should verify products exist', async () => {
         const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
         const productId = ctx.products.length + ctx.deletedProducts.length + 10;
-        const req: CreateContainerRequest = {
-          ...containerRequest,
-          products: [productId],
-        };
+        const req = { ...containerRequest, products: [productId] };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
       });
       it('should verify product is not soft deleted', async () => {
         const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
         const productId = ctx.deletedProducts[0].id;
-        const req: CreateContainerRequest = {
-          ...containerRequest,
-          products: [productId],
-        };
+        const req = { ...containerRequest, products: [productId] };
         await expectError(req, `Products: ${INVALID_PRODUCT_ID(productId).value}`);
       });
     });
     it('should verify Name', async () => {
       const containerRequest = type === 'post' ? ctx.validContainerReq : ctx.validContainerUpdate;
-      const req: CreateContainerRequest = { ...containerRequest, name: '' };
+      const req = { ...containerRequest, name: '' };
       await expectError(req, 'Name: must be a non-zero length string.');
     });
     if (type === 'post') {
@@ -494,7 +490,7 @@ describe('ContainerController', async (): Promise<void> => {
       const { id } = ctx.containers[0];
 
       const products = ctx.products.slice(0, 2);
-      const newUpdate: CreateContainerRequest = {
+      const newUpdate: UpdateContainerRequest = {
         public: true,
         name: 'Valid Container Update',
         products: products.map((p) => p.id),
@@ -527,6 +523,8 @@ describe('ContainerController', async (): Promise<void> => {
         .send(inValidContainerUpdate);
 
       expect(res.status).to.equal(400);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
       const id = await Container.count({ withDeleted: true }) + 1;
