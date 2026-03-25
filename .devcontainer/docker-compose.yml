@@ -31,11 +31,23 @@ services:
       - PAGINATION_DEFAULT=20
       - PAGINATION_MAX=500
       - RESET_TOKEN_EXPIRES=3600
+      - TZ=Europe/Amsterdam
+      - ENABLE_GEWISDB_SYNC=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_TLS=false
+      - SMTP_FROM=SudoSOS Dev <dev@sudosos.local>
+      - HTML_PDF_GEN_URL=http://pdf-compiler:80/api/v1
     ports:
       - "3000:3000"
       - "8080:8080"
     depends_on:
       - mariadb
+      - redis
+      - mailpit
+      - pdf-compiler
     networks:
       - sudosos-network
 
@@ -48,6 +60,8 @@ services:
       MARIADB_PASSWORD: sudosos
     ports:
       - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
@@ -67,6 +81,29 @@ services:
     networks:
       - sudosos-network
 
+  redis:
+    image: redis:7.2-alpine
+    expose:
+      - 6379
+    networks:
+      - sudosos-network
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+    environment:
+      - MP_SMTP_AUTH_ACCEPT_ANY=true
+      - MP_SMTP_AUTH_ALLOW_INSECURE=true
+    networks:
+      - sudosos-network
+
+  pdf-compiler:
+    image: abc.docker-registry.gewis.nl/eou/pdf-compiler:latest
+    platform: linux/amd64
+    networks:
+      - sudosos-network
+
   nginx:
     image: nginx:alpine
     ports:
@@ -79,8 +116,8 @@ services:
     networks:
       - sudosos-network
 
-# volumes:
-  # mariadb_data:
+volumes:
+  mariadb_data:
 
 networks:
   sudosos-network:

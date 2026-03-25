@@ -4,7 +4,7 @@
   "service": "backend",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
-  
+
   "features": {},
 
   "customizations": {
@@ -31,7 +31,7 @@
     }
   },
 
-  "forwardPorts": [3000, 8080, 3306],
+  "forwardPorts": [3000, 8080, 3306, 8025],
   "portsAttributes": {
     "3000": {
       "label": "Backend API",
@@ -44,10 +44,14 @@
     "3306": {
       "label": "MariaDB",
       "onAutoForward": "silent"
+    },
+    "8025": {
+      "label": "Mailpit (email UI)",
+      "onAutoForward": "silent"
     }
   },
 
-  "postCreateCommand": "npm install",
+  "postCreateCommand": "npm install && npm run init:dev",
   "postStartCommand": "",
 
   "remoteEnv": {
@@ -70,7 +74,16 @@
     "ENABLE_LDAP": "false",
     "PAGINATION_DEFAULT": "20",
     "PAGINATION_MAX": "500",
-    "RESET_TOKEN_EXPIRES": "3600"
+    "RESET_TOKEN_EXPIRES": "3600",
+    "TZ": "Europe/Amsterdam",
+    "ENABLE_GEWISDB_SYNC": "false",
+    "REDIS_HOST": "redis",
+    "REDIS_PORT": "6379",
+    "SMTP_HOST": "mailpit",
+    "SMTP_PORT": "1025",
+    "SMTP_TLS": "false",
+    "SMTP_FROM": "SudoSOS Dev <dev@sudosos.local>",
+    "HTML_PDF_GEN_URL": "http://pdf-compiler:80/api/v1"
   },
 
   "mounts": [
