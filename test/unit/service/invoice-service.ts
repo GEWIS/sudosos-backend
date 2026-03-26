@@ -155,6 +155,21 @@ describe('InvoiceService', () => {
       );
       returnsAll(res, [ctx.invoices[0]], keyMapping);
     });
+    it('should return invoices whose description contains the search term', async () => {
+      const target = ctx.invoices[0];
+      // Use a mid-string slice to ensure LIKE '%term%' (not just a prefix match)
+      const start = Math.floor(target.description.length / 2);
+      const substring = target.description.substring(start, start + 4);
+      const res = await new InvoiceService().getInvoices({ description: substring });
+      expect(res.length).to.be.greaterThan(0);
+      res.forEach((inv) => {
+        expect(inv.description.toLowerCase()).to.include(substring.toLowerCase());
+      });
+    });
+    it('should return no invoices when the description does not match', async () => {
+      const res = await new InvoiceService().getInvoices({ description: '__no_match_xyzzy__' });
+      expect(res).to.be.empty;
+    });
   });
   describe('getDefaultInvoiceParams function', () => {
     it('should return the default invoice parameters for an invoice user', async () => {

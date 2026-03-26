@@ -87,6 +87,10 @@ export interface InvoiceFilterParameters {
    * Filter based on till date,
    */
   tillDate?: Date
+  /**
+   * Filter based on a partial match of the invoice description.
+   */
+  description?: string;
 }
 
 
@@ -98,6 +102,7 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
     returnInvoiceEntries: asBoolean(req.query.returnInvoiceEntries),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
+    description: typeof req.query.description === 'string' ? req.query.description : undefined,
   };
 }
 
@@ -526,6 +531,7 @@ export default class InvoiceService extends WithManager {
       currentState: 'currentState',
       toId: 'toId',
       invoiceId: 'id',
+      description: '%description%',
     };
 
     let stateFilter: FindOptionsWhere<Invoice> = { };

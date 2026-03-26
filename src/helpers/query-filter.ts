@@ -106,7 +106,7 @@ export default class QueryFilter {
         const split = property.split('.');
         if (split.length === 1 && property.substring(0, 1) === '%') {
           // No dot, so no nested where clause. However, search starts with a "%"
-          where[property.substring(1)] = Like(`%${value}%`);
+          where[property.replace(/^%|%$/g, '')] = Like(`%${value}%`);
         } else if (split.length === 1) {
           // No dot, so no nested where clause and no LIKE-search
           where[property] = value;
