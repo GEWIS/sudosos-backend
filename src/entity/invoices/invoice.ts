@@ -150,7 +150,7 @@ export default class Invoice extends PdfAble(BaseEntity) {
   /**
    * If this invoice is deleted, this will be credit transfer.
    */
-  @OneToOne(() => Transfer, { nullable: true })
+  @OneToOne(() => Transfer, (t) => t.creditInvoice, { nullable: true })
   @JoinColumn()
   public creditTransfer?: Transfer;
 

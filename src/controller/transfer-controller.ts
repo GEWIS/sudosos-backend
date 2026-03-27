@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import TransferService, { parseGetTransferAggregateFilters, parseGetTransferFilters } from '../service/transfer-service';
+import TransferService, { parseGetTransferAggregateFilters, parseGetTransferFilters, parseGetTransferSummaryFilters } from '../service/transfer-service';
 import TransferRequest from './request/transfer-request';
 import Transfer from '../entity/transactions/transfer';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
@@ -54,6 +54,12 @@ export default class TransferController extends BaseController {
         GET: {
           policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
           handler: this.returnTransferAggregate.bind(this),
+        },
+      },
+      '/summary': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Transfer', ['*']),
+          handler: this.returnTransferSummary.bind(this),
         },
       },
       '/': {
@@ -118,7 +124,7 @@ export default class TransferController extends BaseController {
    * @param {string} tillDate.query - End date for selected transfers (exclusive)
    * @param {integer} fromId.query - Filter transfers from this user ID
    * @param {integer} toId.query - Filter transfers to this user ID
-   * @param {string} category.query - Restrict to a specific transfer category: deposit, payoutRequest, invoice, fine, waivedFines, writeOff, inactiveAdministrativeCost
+   * @param {string} category.query - Restrict to a specific transfer category: deposit, payoutRequest, sellerPayout, invoice, creditInvoice, fine, waivedFines, writeOff, inactiveAdministrativeCost
    * @return {TransferAggregateResponse} 200 - Aggregate sum and count of matching transfers
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
@@ -139,6 +145,53 @@ export default class TransferController extends BaseController {
       res.json({ total: total.toObject(), count });
     } catch (error) {
       this.logger.error('Could not return transfer aggregate:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /transfers/summary
+   * @summary Returns an aggregate breakdown of transfers for every category plus an overall total
+   * @operationId getTransferSummary
+   * @tags transfers - Operations of transfer controller
+   * @security JWT
+   * @param {string} fromDate.query - Start date for selected transfers (inclusive)
+   * @param {string} tillDate.query - End date for selected transfers (exclusive)
+   * @param {integer} fromId.query - Filter transfers from this user ID
+   * @param {integer} toId.query - Filter transfers to this user ID
+   * @return {TransferSummaryResponse} 200 - Per-category aggregate sums and counts
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async returnTransferSummary(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get transfer summary by user', req.token.user);
+
+    let filters;
+    try {
+      filters = parseGetTransferSummaryFilters(req);
+    } catch (e) {
+      res.status(400).send(e.message);
+      return;
+    }
+
+    try {
+      const summary = await new TransferService().getTransferSummary(filters);
+      res.json({
+        total: { total: summary.total.total.toObject(), count: summary.total.count },
+        deposits: { total: summary.deposits.total.toObject(), count: summary.deposits.count },
+        payoutRequests: { total: summary.payoutRequests.total.toObject(), count: summary.payoutRequests.count },
+        sellerPayouts: { total: summary.sellerPayouts.total.toObject(), count: summary.sellerPayouts.count },
+        invoices: { total: summary.invoices.total.toObject(), count: summary.invoices.count },
+        creditInvoices: { total: summary.creditInvoices.total.toObject(), count: summary.creditInvoices.count },
+        fines: { total: summary.fines.total.toObject(), count: summary.fines.count },
+        waivedFines: { total: summary.waivedFines.total.toObject(), count: summary.waivedFines.count },
+        writeOffs: { total: summary.writeOffs.total.toObject(), count: summary.writeOffs.count },
+        inactiveAdministrativeCosts: { total: summary.inactiveAdministrativeCosts.total.toObject(), count: summary.inactiveAdministrativeCosts.count },
+        manualCreations: { total: summary.manualCreations.total.toObject(), count: summary.manualCreations.count },
+        manualDeletions: { total: summary.manualDeletions.total.toObject(), count: summary.manualDeletions.count },
+      });
+    } catch (error) {
+      this.logger.error('Could not return transfer summary:', error);
       res.status(500).json('Internal server error.');
     }
   }
