@@ -110,6 +110,7 @@ import {
   RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
 } from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 import { AddLastSeenToUser1769000095806 } from '../migrations/1769000095806-add-last-seen-to-user';
+import { AddExpiryToUser1770391238004 } from '../migrations/1770391238004-add-expiry-to-user';
 
 // We need to load the dotenv to prevent the env from being undefined.
 dotenv.config();
@@ -145,6 +146,7 @@ const options: DataSourceOptions = {
     UserSetting1768697568707,
     RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
     AddLastSeenToUser1769000095806,
+    AddExpiryToUser1770391238004,
   ],
   extra: {
     authPlugins: {
