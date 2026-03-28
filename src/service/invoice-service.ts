@@ -34,6 +34,7 @@ import {
 import InvoiceStatus, { InvoiceState } from '../entity/invoices/invoice-status';
 import {
   BaseInvoiceResponse,
+  InvoiceDriftResponse,
   InvoiceEntryResponse,
   InvoiceResponse,
   InvoiceStatusResponse,
@@ -61,6 +62,7 @@ import InvoiceUser, { InvoiceUserDefaults } from '../entity/user/invoice-user';
 import Transfer from '../entity/transactions/transfer';
 import WithManager from '../database/with-manager';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
+import { Dinero } from 'dinero.js';
 
 export interface InvoiceFilterParameters {
   /**
@@ -106,6 +108,13 @@ export function parseInvoiceFilterParameters(req: RequestWithToken): InvoiceFilt
   };
 }
 
+
+export interface InvoiceDriftResult {
+  invoice: Invoice;
+  actualAmount: Dinero;
+  expectedAmount: Dinero;
+  delta: Dinero;
+}
 
 export default class InvoiceService extends WithManager {
   /**
@@ -612,5 +621,66 @@ export default class InvoiceService extends WithManager {
     });
 
     return Array.from(invoiceMap.values());
+  }
+
+  /**
+   * Returns all invoices with a transfer amount drift:
+   * - Non-deleted invoices: transfer.amountInclVat ≠ sum(row.amount × row.product.priceInclVat)
+   * - Deleted invoices: transfer.amountInclVat ≠ creditTransfer.amountInclVat
+   *   (the credit transfer should fully reverse the original)
+   */
+  public async findDriftedInvoices(): Promise<InvoiceDriftResult[]> {
+    const invoices = await this.manager.find(Invoice, {
+      relations: {
+        to: true,
+        invoiceStatus: true,
+        transfer: { to: true, from: true },
+        creditTransfer: { to: true, from: true },
+        pdf: true,
+        subTransactionRows: { product: true },
+      },
+    });
+
+    const results: InvoiceDriftResult[] = [];
+
+    for (const invoice of invoices) {
+      if (!invoice.transfer) continue;
+
+      const actualCents = invoice.transfer.amountInclVat.getAmount();
+      let expectedCents: number;
+
+      if (InvoiceService.isState(invoice, InvoiceState.DELETED)) {
+        // For deleted invoices the credit transfer should fully reverse the original
+        if (!invoice.creditTransfer) continue;
+        expectedCents = invoice.creditTransfer.amountInclVat.getAmount();
+      } else {
+        expectedCents = invoice.subTransactionRows.reduce(
+          (sum, row) => sum + row.amount * row.product.priceInclVat.getAmount(),
+          0,
+        );
+      }
+
+      const deltaCents = actualCents - expectedCents;
+
+      if (deltaCents !== 0) {
+        results.push({
+          invoice,
+          actualAmount: DineroTransformer.Instance.from(actualCents),
+          expectedAmount: DineroTransformer.Instance.from(expectedCents),
+          delta: DineroTransformer.Instance.from(deltaCents),
+        });
+      }
+    }
+
+    return results;
+  }
+
+  public static asInvoiceDriftResponse(result: InvoiceDriftResult): InvoiceDriftResponse {
+    return {
+      invoice: InvoiceService.asBaseInvoiceResponse(result.invoice),
+      actualAmount: result.actualAmount.toObject(),
+      expectedAmount: result.expectedAmount.toObject(),
+      delta: result.delta.toObject(),
+    };
   }
 }
