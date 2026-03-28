@@ -783,6 +783,7 @@ describe('TransferController', async (): Promise<void> => {
   });
 
   describe('GET /transfers/aggregate', () => {
+    let creditInvoiceTransfer: Transfer;
 
     before(async () => {
       const user1 = ctx.users[0];
@@ -812,6 +813,40 @@ describe('TransferController', async (): Promise<void> => {
 
       depositTransferEntity.deposit = deposit;
       await Transfer.save(depositTransferEntity);
+
+      // Create a credited invoice so that creditInvoice category tests have data
+      const invoiceTransfer = await Transfer.save(Object.assign(new Transfer(), {
+        toId: user1.id,
+        amountInclVat: DineroTransformer.Instance.from(750),
+        description: 'Invoice transfer for credit aggregate test',
+        version: 1,
+      }));
+
+      creditInvoiceTransfer = await Transfer.save(Object.assign(new Transfer(), {
+        fromId: user1.id,
+        amountInclVat: DineroTransformer.Instance.from(750),
+        description: 'Credit invoice transfer for aggregate test',
+        version: 1,
+      }));
+
+      const invoice = Object.assign(new Invoice(), {
+        to: user1,
+        addressee: user1.firstName,
+        reference: 'CTRL-AGG-CREDIT-001',
+        city: 'Eindhoven',
+        country: 'Netherlands',
+        postalCode: '5612 AE',
+        street: 'Test Street 1',
+        description: 'Aggregate test credited invoice',
+        transfer: invoiceTransfer,
+        creditTransfer: creditInvoiceTransfer,
+        date: new Date(),
+        subTransactionRows: [],
+        invoiceStatus: [],
+      });
+      const savedInvoice = await Invoice.save(invoice);
+      invoiceTransfer.invoice = savedInvoice;
+      await Transfer.save(invoiceTransfer);
     });
 
     it('should return HTTP 200 with a valid model', async () => {
@@ -929,6 +964,43 @@ describe('TransferController', async (): Promise<void> => {
       expect(restrictedRes.body.count).to.be.lessThan(totalCount);
     });
 
+    it('should filter by creditInvoice category', async () => {
+      const creditInvoiceTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.creditInvoice', 'creditInvoice')
+        .getMany();
+      const expectedCount = creditInvoiceTransfers.length;
+      const expectedTotal = creditInvoiceTransfers.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ category: 'creditInvoice' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(expectedCount);
+      expect(res.body.count).to.be.greaterThan(0);
+      expect(res.body.total.amount).to.equal(expectedTotal);
+    });
+
+    it('should not count the credited invoice transfer under the invoice category', async () => {
+      const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.invoice', 'invoice')
+        .where('invoice.creditTransferId IS NULL')
+        .getMany();
+
+      const res = await request(app)
+        .get('/transfers/aggregate')
+        .query({ category: 'invoice' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.count).to.equal(invoiceTransfers.length);
+      // The creditInvoiceTransfer itself (the reversal) must not appear here
+      expect(invoiceTransfers.map((t) => t.id)).to.not.include(creditInvoiceTransfer.id);
+    });
+
     it('should return HTTP 400 for an invalid category', async () => {
       const res = await request(app)
         .get('/transfers/aggregate')
@@ -944,6 +1016,77 @@ describe('TransferController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).to.equal(403);
+    });
+  });
+
+  describe('GET /transfers/summary', () => {
+    it('should return HTTP 200 with a valid model', async () => {
+      const res = await request(app)
+        .get('/transfers/summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(specification.validateModel(
+        'TransferSummaryResponse',
+        res.body,
+        false,
+        true,
+      ).valid).to.be.true;
+    });
+
+    it('should return HTTP 403 if user does not have Transfer:get:all permission', async () => {
+      const res = await request(app)
+        .get('/transfers/summary')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return overall total matching the unfiltered aggregate', async () => {
+      const allTransfers = await Transfer.find();
+      const expectedTotal = allTransfers.reduce(
+        (sum, t) => sum + t.amountInclVat.getAmount(), 0,
+      );
+
+      const res = await request(app)
+        .get('/transfers/summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.total.count).to.equal(allTransfers.length);
+      expect(res.body.total.total.amount).to.equal(expectedTotal);
+    });
+
+    it('should report credited invoices under creditInvoices, not invoices', async () => {
+      const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.invoice', 'invoice')
+        .where('invoice.creditTransferId IS NULL')
+        .getMany();
+      const creditInvoiceTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.creditInvoice', 'creditInvoice')
+        .getMany();
+
+      const res = await request(app)
+        .get('/transfers/summary')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.invoices.count).to.equal(invoiceTransfers.length);
+      expect(res.body.creditInvoices.count).to.equal(creditInvoiceTransfers.length);
+      expect(res.body.creditInvoices.count).to.be.greaterThan(0);
+    });
+
+    it('should filter by fromId across all categories', async () => {
+      const user1 = ctx.users[0];
+      const fromUser1 = await Transfer.find({ where: { fromId: user1.id } });
+
+      const res = await request(app)
+        .get('/transfers/summary')
+        .query({ fromId: user1.id })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.body.total.count).to.equal(fromUser1.length);
     });
   });
 });

@@ -28,7 +28,8 @@ import TransferRequest from '../../../src/controller/request/transfer-request';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
 import User from '../../../src/entity/user/user';
-import TransferService from '../../../src/service/transfer-service';
+import TransferService, { TransferCategory } from '../../../src/service/transfer-service';
+import Invoice from '../../../src/entity/invoices/invoice';
 import Swagger from '../../../src/start/swagger';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { truncateAllTables } from '../../setup';
@@ -434,6 +435,159 @@ describe('TransferService', async (): Promise<void> => {
       } catch (error) {
         expect(error.message).to.equal('Transfer not found');
       }
+    });
+  });
+
+  describe('getTransferAggregate function', async () => {
+    let creditInvoiceTransfer: Transfer;
+    let originalInvoiceTransfer: Transfer;
+
+    before(async () => {
+      const user = ctx.users[0];
+
+      originalInvoiceTransfer = await Transfer.save(Object.assign(new Transfer(), {
+        to: user,
+        amountInclVat: DineroTransformer.Instance.from(1000),
+        description: 'Invoice transfer for aggregate test',
+      }));
+
+      creditInvoiceTransfer = await Transfer.save(Object.assign(new Transfer(), {
+        from: user,
+        amountInclVat: DineroTransformer.Instance.from(1000),
+        description: 'Credit invoice transfer for aggregate test',
+      }));
+
+      const invoice = Object.assign(new Invoice(), {
+        to: user,
+        addressee: user.firstName,
+        reference: 'SVC-AGG-CREDIT-001',
+        city: 'Eindhoven',
+        country: 'Netherlands',
+        postalCode: '5612 AE',
+        street: 'Test Street 1',
+        description: 'Aggregate test credited invoice',
+        transfer: originalInvoiceTransfer,
+        creditTransfer: creditInvoiceTransfer,
+        date: new Date(),
+        subTransactionRows: [],
+        invoiceStatus: [],
+      });
+      const savedInvoice = await Invoice.save(invoice);
+      originalInvoiceTransfer.invoice = savedInvoice;
+      await Transfer.save(originalInvoiceTransfer);
+    });
+
+    it('should return the total and count for all transfers', async () => {
+      const allTransfers = await Transfer.find();
+      const result = await new TransferService().getTransferAggregate();
+      expect(result.count).to.equal(allTransfers.length);
+      const expectedTotal = allTransfers.reduce((sum, t) => sum + t.amountInclVat.getAmount(), 0);
+      expect(result.total.getAmount()).to.equal(expectedTotal);
+    });
+
+    it('should exclude credited invoice transfers from the INVOICE category', async () => {
+      const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.invoice', 'invoice')
+        .where('invoice.creditTransferId IS NULL')
+        .getMany();
+
+      const result = await new TransferService().getTransferAggregate({ category: TransferCategory.INVOICE });
+      expect(result.count).to.equal(invoiceTransfers.length);
+      expect(result.total.getAmount()).to.equal(
+        invoiceTransfers.reduce((sum, t) => sum + t.amountInclVat.getAmount(), 0),
+      );
+    });
+
+    it('should return only credit invoice transfers for the CREDIT_INVOICE category', async () => {
+      const creditTransfers = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.creditInvoice', 'creditInvoice')
+        .getMany();
+
+      const result = await new TransferService().getTransferAggregate({ category: TransferCategory.CREDIT_INVOICE });
+      expect(result.count).to.equal(creditTransfers.length);
+      expect(result.count).to.be.greaterThan(0);
+      expect(result.total.getAmount()).to.equal(
+        creditTransfers.reduce((sum, t) => sum + t.amountInclVat.getAmount(), 0),
+      );
+    });
+
+    it('should not count the credited invoice original transfer under CREDIT_INVOICE', async () => {
+      const creditInvoiceIds = (await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.creditInvoice', 'creditInvoice')
+        .select('transfer.id')
+        .getMany()).map((t) => t.id);
+
+      // The credit transfer itself should be listed; the original invoice transfer should not
+      expect(creditInvoiceIds).to.include(creditInvoiceTransfer.id);
+      expect(creditInvoiceIds).to.not.include(originalInvoiceTransfer.id);
+    });
+
+    it('should return all transfers with null fromId for the MANUAL_CREATION category', async () => {
+      const manualCreations = await Transfer.createQueryBuilder('transfer')
+        .where('transfer.fromId IS NULL')
+        .getMany();
+
+      const result = await new TransferService().getTransferAggregate({ category: TransferCategory.MANUAL_CREATION });
+      expect(result.count).to.equal(manualCreations.length);
+      expect(result.count).to.be.greaterThan(0);
+      expect(result.total.getAmount()).to.equal(
+        manualCreations.reduce((sum, t) => sum + t.amountInclVat.getAmount(), 0),
+      );
+    });
+
+    it('should return all transfers with null toId for the MANUAL_DELETION category', async () => {
+      const manualDeletions = await Transfer.createQueryBuilder('transfer')
+        .where('transfer.toId IS NULL')
+        .getMany();
+
+      const result = await new TransferService().getTransferAggregate({ category: TransferCategory.MANUAL_DELETION });
+      expect(result.count).to.equal(manualDeletions.length);
+      expect(result.count).to.be.greaterThan(0);
+      expect(result.total.getAmount()).to.equal(
+        manualDeletions.reduce((sum, t) => sum + t.amountInclVat.getAmount(), 0),
+      );
+    });
+  });
+
+  describe('getTransferSummary function', async () => {
+    it('should contain all expected category keys', async () => {
+      const summary = await new TransferService().getTransferSummary();
+      expect(summary).to.have.all.keys([
+        'total', 'deposits', 'payoutRequests', 'sellerPayouts',
+        'invoices', 'creditInvoices', 'fines', 'waivedFines',
+        'writeOffs', 'inactiveAdministrativeCosts', 'manualCreations', 'manualDeletions',
+      ]);
+    });
+
+    it('should match the unfiltered aggregate for the overall total', async () => {
+      const [aggregate, summary] = await Promise.all([
+        new TransferService().getTransferAggregate(),
+        new TransferService().getTransferSummary(),
+      ]);
+      expect(summary.total.count).to.equal(aggregate.count);
+      expect(summary.total.total.getAmount()).to.equal(aggregate.total.getAmount());
+    });
+
+    it('should match per-category aggregates for invoices and creditInvoices', async () => {
+      const [invoiceAggregate, creditInvoiceAggregate, summary] = await Promise.all([
+        new TransferService().getTransferAggregate({ category: TransferCategory.INVOICE }),
+        new TransferService().getTransferAggregate({ category: TransferCategory.CREDIT_INVOICE }),
+        new TransferService().getTransferSummary(),
+      ]);
+      expect(summary.invoices.count).to.equal(invoiceAggregate.count);
+      expect(summary.invoices.total.getAmount()).to.equal(invoiceAggregate.total.getAmount());
+      expect(summary.creditInvoices.count).to.equal(creditInvoiceAggregate.count);
+      expect(summary.creditInvoices.total.getAmount()).to.equal(creditInvoiceAggregate.total.getAmount());
+    });
+
+    it('should apply filters across all categories', async () => {
+      const user = ctx.users[0];
+      const [aggregate, summary] = await Promise.all([
+        new TransferService().getTransferAggregate({ fromId: user.id }),
+        new TransferService().getTransferSummary({ fromId: user.id }),
+      ]);
+      expect(summary.total.count).to.equal(aggregate.count);
+      expect(summary.total.total.getAmount()).to.equal(aggregate.total.getAmount());
     });
   });
 

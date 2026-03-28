@@ -89,7 +89,7 @@ describe('Disk Storage', async () => {
 
   describe('saveFile', async () => {
     beforeEach(() => {
-      const randomFileNameStub = sinon.stub(DiskStorage, <any>'getRandomName').returns('randomName');
+      const randomFileNameStub = sinon.stub(DiskStorage, 'getRandomName' as any).returns('randomName');
       stubs.push(randomFileNameStub);
     });
 
@@ -98,7 +98,7 @@ describe('Disk Storage', async () => {
       const fileData = Buffer.from('text content');
       const expLocation = path.join(__dirname, '/../../../../imaginary/directory/randomName.txt');
 
-      const writeFileStub = sinon.stub(DiskStorage, <any>'writeFile').returns(expLocation);
+      const writeFileStub = sinon.stub(DiskStorage, 'writeFile' as any).returns(expLocation);
       stubs.push(writeFileStub);
 
       const result = await ctx.diskStorage.saveFile(fileName, fileData);
@@ -108,7 +108,7 @@ describe('Disk Storage', async () => {
       const fileName = 'test.txt';
       const fileData = Buffer.from('text content');
 
-      const writeFileStub = sinon.stub(DiskStorage, <any>'writeFile').throwsException(new Error('Saving failed'));
+      const writeFileStub = sinon.stub(DiskStorage, 'writeFile' as any).throwsException(new Error('Saving failed'));
       stubs.push(writeFileStub);
 
       await expect(ctx.diskStorage.saveFile(fileName, fileData))
@@ -119,16 +119,16 @@ describe('Disk Storage', async () => {
   describe('getFile', async () => {
     it('should correctly return buffer for the given file', async () => {
       const buffer = Buffer.from('Wie dit leest trekt een rbac');
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(true);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(true);
       stubs.push(fileExistsStub);
-      const readFileStub = sinon.stub(DiskStorage, <any>'readFile').returns(buffer);
+      const readFileStub = sinon.stub(DiskStorage, 'readFile' as any).returns(buffer);
       stubs.push(readFileStub);
 
       const data = await ctx.diskStorage.getFile(ctx.files[0]);
       expect(data).to.equal(buffer);
     });
     it('should reject when file does not exist', async () => {
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(false);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(false);
       stubs.push(fileExistsStub);
 
       try {
@@ -140,9 +140,9 @@ describe('Disk Storage', async () => {
     });
     it('should reject when reading file fails', async () => {
       const error = new Error('Getting file failed');
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(true);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(true);
       stubs.push(fileExistsStub);
-      const readFileStub = sinon.stub(DiskStorage, <any>'readFile').throws(error);
+      const readFileStub = sinon.stub(DiskStorage, 'readFile' as any).throws(error);
       stubs.push(readFileStub);
 
       try {
@@ -156,16 +156,16 @@ describe('Disk Storage', async () => {
 
   describe('deleteFile', async () => {
     it('should correctly delete file on disk given baseFile object', async () => {
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(true);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(true);
       stubs.push(fileExistsStub);
-      const removeFileStub = sinon.stub(DiskStorage, <any>'removeFile');
+      const removeFileStub = sinon.stub(DiskStorage, 'removeFile' as any);
       stubs.push(removeFileStub);
 
       await ctx.diskStorage.deleteFile(ctx.files[0]);
       expect(removeFileStub).to.be.calledWith(ctx.files[0].location);
     });
     it('should reject when file does not exist', async () => {
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(false);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(false);
       stubs.push(fileExistsStub);
 
       try {
@@ -177,9 +177,9 @@ describe('Disk Storage', async () => {
     });
     it('should reject when deleting file fails', async () => {
       const error = new Error('Removing file from disk failed');
-      const fileExistsStub = sinon.stub(DiskStorage, <any>'fileExists').returns(true);
+      const fileExistsStub = sinon.stub(DiskStorage, 'fileExists' as any).returns(true);
       stubs.push(fileExistsStub);
-      const removeFileStub = sinon.stub(DiskStorage, <any>'removeFile').throws(error);
+      const removeFileStub = sinon.stub(DiskStorage, 'removeFile' as any).throws(error);
       stubs.push(removeFileStub);
 
       try {

@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.7.0",
-    "typescript": "~5.5.3"
+    "typescript": "~5.9.3"
   },
   "repository": {
     "type": "git",

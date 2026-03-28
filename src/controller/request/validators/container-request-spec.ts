@@ -29,12 +29,12 @@ import {
   createArrayRule,
   Specification,
   toFail,
-  toPass, validateSpecification,
+  toPass,
   ValidationError,
 } from '../../../helpers/specification-validation';
 import {
   BaseContainerParams,
-  ContainerParams, CreateContainerParams,
+  CreateContainerParams,
 } from '../container-request';
 import stringSpec from './string-spec';
 import { INVALID_PRODUCT_ID } from './validation-errors';
@@ -50,36 +50,24 @@ async function validProductId(p: number) {
 }
 
 /**
- * Specification of a baseContainerRequestSpec
- * Again we use a function since otherwise it tends to resuse internal ValidationErrors.
+ * Validates name and products for both create and update requests.
  */
-const baseContainerRequestSpec: <T extends BaseContainerParams>()
-=> Specification<T, ValidationError> = () => [
-  [stringSpec(), 'name', new ValidationError('Name:')],
-  // Turn our validProduct function into an array subspecification.
-  [[createArrayRule([validProductId])], 'products', new ValidationError('Products:')],
-];
-
-/**
- * Specification of a createContainerRequestSpec
- * Here we check if the owner is actually an Organ or not.
- */
-const createContainerRequestSpec:
-() => Specification<CreateContainerParams, ValidationError> = () => [
-  ...baseContainerRequestSpec<CreateContainerParams>(),
-  [[ownerIsOrgan], 'ownerId', new ValidationError('')],
-];
-
-export async function verifyContainerRequest(containerRequest:
-ContainerParams) {
-  return Promise.resolve(await validateSpecification(
-    containerRequest, baseContainerRequestSpec(),
-  ));
+export function baseContainerRequestSpec<T extends BaseContainerParams>():
+Specification<T, ValidationError> {
+  return [
+    [stringSpec(), 'name', new ValidationError('Name:')],
+    // Turn our validProduct function into an array subspecification.
+    [[createArrayRule([validProductId])], 'products', new ValidationError('Products:')],
+  ];
 }
 
-export async function verifyCreateContainerRequest(createContainerRequest:
-CreateContainerParams) {
-  return Promise.resolve(await validateSpecification(
-    createContainerRequest, createContainerRequestSpec(),
-  ));
+/**
+ * Extends the base spec with owner validation.
+ */
+export function createContainerRequestSpec():
+Specification<CreateContainerParams, ValidationError> {
+  return [
+    ...baseContainerRequestSpec<CreateContainerParams>(),
+    [[ownerIsOrgan], 'ownerId', new ValidationError('')],
+  ];
 }

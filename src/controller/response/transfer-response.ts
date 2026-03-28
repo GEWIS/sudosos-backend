@@ -93,3 +93,33 @@ export interface TransferAggregateResponse {
   total: DineroObjectResponse;
   count: number;
 }
+
+/**
+ * @typedef {object} TransferSummaryResponse
+ * @property {TransferAggregateResponse} total.required - Aggregate over all transfers
+ * @property {TransferAggregateResponse} deposits.required - Aggregate over deposit transfers
+ * @property {TransferAggregateResponse} payoutRequests.required - Aggregate over payout-request transfers
+ * @property {TransferAggregateResponse} sellerPayouts.required - Aggregate over seller-payout transfers
+ * @property {TransferAggregateResponse} invoices.required - Aggregate over invoice transfers (excluding credited/deleted invoices)
+ * @property {TransferAggregateResponse} creditInvoices.required - Aggregate over credit-invoice (reversal) transfers
+ * @property {TransferAggregateResponse} fines.required - Aggregate over fine transfers
+ * @property {TransferAggregateResponse} waivedFines.required - Aggregate over waived-fines transfers
+ * @property {TransferAggregateResponse} writeOffs.required - Aggregate over write-off transfers
+ * @property {TransferAggregateResponse} inactiveAdministrativeCosts.required - Aggregate over inactive-administrative-cost transfers
+ * @property {TransferAggregateResponse} manualCreations.required - Aggregate over orphaned transfers where fromId is null (money entering the system without a linked entity)
+ * @property {TransferAggregateResponse} manualDeletions.required - Aggregate over orphaned transfers where toId is null (money leaving the system without a linked entity)
+ */
+export interface TransferSummaryResponse {
+  total: TransferAggregateResponse;
+  deposits: TransferAggregateResponse;
+  payoutRequests: TransferAggregateResponse;
+  sellerPayouts: TransferAggregateResponse;
+  invoices: TransferAggregateResponse;
+  creditInvoices: TransferAggregateResponse;
+  fines: TransferAggregateResponse;
+  waivedFines: TransferAggregateResponse;
+  writeOffs: TransferAggregateResponse;
+  inactiveAdministrativeCosts: TransferAggregateResponse;
+  manualCreations: TransferAggregateResponse;
+  manualDeletions: TransferAggregateResponse;
+}

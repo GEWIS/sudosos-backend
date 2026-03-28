@@ -99,6 +99,9 @@ export default class Transfer extends UnstoredPdfAble(BaseEntity) {
   @OneToOne(() => Invoice, (i) => i.transfer, { nullable: true })
   public invoice: Invoice | null;
 
+  @OneToOne(() => Invoice, (i) => i.creditTransfer, { nullable: true })
+  public creditInvoice: Invoice | null;
+
   @OneToOne(() => Fine, (f) => f.transfer, { nullable: true })
   public fine: Fine | null;
 
