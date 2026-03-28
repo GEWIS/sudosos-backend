@@ -38,7 +38,7 @@ import {
   INVALID_CONTAINER_ID,
 } from './validation-errors';
 import { rolesCannotBeSystemDefault, rolesMustExist, userMustExist } from './general-validators';
-import { verifyContainerRequest } from './container-request-spec';
+import { baseContainerRequestSpec } from './container-request-spec';
 
 /**
  * Tests if the given param is either a valid container ID or ContainerRequest
@@ -50,7 +50,7 @@ async function validContainerRequestOrId(p: number | ContainerParams) {
     if (!product) return toFail(INVALID_CONTAINER_ID(p));
     return toPass(p);
   }
-  return Promise.resolve(await verifyContainerRequest(p));
+  return validateSpecification(p, baseContainerRequestSpec());
 }
 
 /**

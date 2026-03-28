@@ -50,11 +50,10 @@ export type ContainerParams = UpdateContainerParams | CreateContainerParams;
  * @property {Array<integer>} products.required -
  *    IDs or requests of the products to add to the container
  * @property {boolean} public.required - Whether the container is public or not
- * @property {integer} ownerId - Id of the user who will own the container, if undefined it will
- *    default to the token ID.
+ * @property {integer} ownerId.required - Id of the organ that will own the container
  */
 export interface CreateContainerRequest extends BaseContainerParams {
-  ownerId?: number,
+  ownerId: number,
 }
 
 /**
