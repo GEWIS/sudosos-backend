@@ -1,8 +1,6 @@
-name: Build & Test
+name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main, develop]
 
@@ -178,8 +176,18 @@ jobs:
           if_no_artifact_found: warn
           branch: ${{ github.base_ref }}
           path: reports/coverage-base
-      - name: "Comment code coverage on PR"
+      - name: "Check for base coverage artifact"
+        id: base-coverage
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
+        run: |
+          if [ -f reports/coverage-base/coverage-summary.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice No base coverage artifact found for ${GITHUB_BASE_REF}; skipping coverage diff comment"
+          fi
+      - name: "Comment code coverage on PR"
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb' && steps.base-coverage.outputs.exists == 'true'
         uses: sidx1024/report-nyc-coverage-github-action@v1.2.7
         with:
           comment_template_file: .github/coverage-template.md
