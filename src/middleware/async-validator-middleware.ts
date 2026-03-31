@@ -55,21 +55,26 @@ export default class AsyncValidatorMiddleware {
   }
 
   /**
-   * Middleware handler. Looks up the spec for the model name and runs it against req.body.
+   * Middleware handler. Looks up the spec for the model name and validates the
+   * request. When a `buildTarget` is registered, it constructs the validation
+   * target from the full request (params, token, body); otherwise `req.body`
+   * is validated directly.
    * @param req - the express request to handle.
    * @param res - the express response object.
    * @param next - the express next function to continue processing of the request.
    */
   public async handle(req: RequestWithToken, res: Response, next: Function): Promise<void> {
-    const specFactory = this.registry.get(this.validator.modelName);
-    if (!specFactory) {
+    const entry = this.registry.get(this.validator.modelName);
+    if (!entry) {
       next();
       return;
     }
 
     // Mirror RequestValidatorMiddleware behavior: if this endpoint allows a blank
-    // body and the incoming body is empty/undefined, skip async validation entirely.
-    if (this.validator.allowBlankTarget) {
+    // body and the incoming body is empty/undefined, skip async validation — but
+    // only when no buildTarget is registered, since buildTarget may construct a
+    // valid target from route params or token data even with an empty body.
+    if (this.validator.allowBlankTarget && !entry.buildTarget) {
       const body = req.body;
       const isUndefinedOrNull = body === undefined || body === null;
       const isEmptyObject =
@@ -85,8 +90,9 @@ export default class AsyncValidatorMiddleware {
     }
 
     try {
-      const spec = specFactory();
-      const result = await validateSpecification(req.body, spec);
+      const spec = entry.factory();
+      const target = entry.buildTarget ? entry.buildTarget(req) : req.body;
+      const result = await validateSpecification(target, spec);
       if (isFail(result)) {
         res.status(400).json({ valid: false, errors: [String(result.fail.value)] });
         return;
