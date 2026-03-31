@@ -119,3 +119,17 @@ export interface PaginatedInvoiceResponse {
   _pagination: PaginationResult,
   records: InvoiceResponseTypes[],
 }
+
+/**
+ * @typedef {object} InvoiceDriftResponse
+ * @property {BaseInvoiceResponse} invoice.required - The invoice whose transfer amount has drifted.
+ * @property {DineroObjectResponse} actualAmount.required - The transfer amount currently recorded.
+ * @property {DineroObjectResponse} expectedAmount.required - For non-deleted invoices: sum of sub-transaction row totals. For deleted invoices: the credit transfer amount.
+ * @property {DineroObjectResponse} deltaAmount.required - The difference between actual and expected (actual − expected).
+ */
+export interface InvoiceDriftResponse {
+  invoice: BaseInvoiceResponse;
+  actualAmount: DineroObjectResponse;
+  expectedAmount: DineroObjectResponse;
+  deltaAmount: DineroObjectResponse;
+}

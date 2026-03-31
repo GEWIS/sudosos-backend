@@ -121,6 +121,12 @@ export default class InvoiceController extends BaseController {
           handler: this.getEligibleTransactions.bind(this),
         },
       },
+      '/drift': {
+        GET: {
+          policy: async (req) => this.roleManager.can(req.token.roles, 'get', 'all', 'Invoice', ['*']),
+          handler: this.getDriftedInvoices.bind(this),
+        },
+      },
     };
   }
 
@@ -536,6 +542,26 @@ export default class InvoiceController extends BaseController {
     }
   }
 
+
+  /**
+   * GET /invoices/drift
+   * @summary Returns all invoices with transfer amount drift: for active invoices transfer != row sum; for deleted invoices transfer != credit transfer.
+   * @operationId getInvoiceDrift
+   * @tags invoices - Operations of the invoices controller
+   * @security JWT
+   * @return {Array<InvoiceDriftResponse>} 200 - All invoices with transfer amount drift
+   * @return {string} 500 - Internal server error
+   */
+  public async getDriftedInvoices(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get drifted invoices by user', req.token.user);
+    try {
+      const results = await new InvoiceService().findDriftedInvoices();
+      res.json(results.map(InvoiceService.asInvoiceDriftResponse));
+    } catch (error) {
+      this.logger.error('Could not return drifted invoices:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
 
   /**
    * Function to determine which credentials are needed to get invoice
