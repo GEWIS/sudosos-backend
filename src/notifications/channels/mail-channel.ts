@@ -36,6 +36,7 @@ import {
   UserGotFinedTemplate,
   UserGotInactiveAdministrativeCostTemplate,
   UserNearExpirationTemplate,
+  UserAccountExpiredTemplate,
   UserTypeUpdatedTemplate,
   UserTypeUpdatedWithResetTemplate,
   UserWillGetFinedTemplate,
@@ -72,6 +73,7 @@ MailMessage<EmailTemplate<any>>
     UserTypeUpdated: UserTypeUpdatedTemplate,
     UserTypeUpdatedWithReset: UserTypeUpdatedWithResetTemplate,
     UserNearExpiration: UserNearExpirationTemplate,
+    UserAccountExpired: UserAccountExpiredTemplate,
   };
 
   readonly name = NotificationChannels.EMAIL;

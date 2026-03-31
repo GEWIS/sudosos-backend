@@ -35,5 +35,6 @@ export * from './user-will-get-fined';
 export * from './welcome-to-sudosos';
 export * from './welcome-with-reset';
 export * from './user-near-expiration';
+export * from './user-account-expired';
 export * from './user-type-updated';
 export * from './user-type-updated-with-reset';
