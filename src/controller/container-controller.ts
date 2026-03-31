@@ -211,7 +211,7 @@ export default class ContainerController extends BaseController {
    *    The container which should be created
    * @security JWT
    * @return {ContainerWithProductsResponse} 200 - The created container entity
-   * @return {object} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createContainer(req: RequestWithToken, res: Response): Promise<void> {
@@ -273,7 +273,7 @@ export default class ContainerController extends BaseController {
    *    The container which should be updated
    * @security JWT
    * @return {ContainerWithProductsResponse} 200 - The created container entity
-   * @return {object} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 404 - Product not found error
    * @return {string} 500 - Internal server error
    */

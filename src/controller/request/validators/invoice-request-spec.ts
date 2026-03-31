@@ -26,13 +26,12 @@
 
 import { FindOptionsRelations, In } from 'typeorm';
 import {
-  BaseInvoice, CreateInvoiceParams, CreateInvoiceRequest, UpdateInvoiceParams,
+  BaseInvoice, CreateInvoiceParams, UpdateInvoiceParams,
 } from '../invoice-request';
 import {
   Specification,
   toFail,
   toPass,
-  validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
 import Transaction from '../../../entity/transactions/transaction';
@@ -117,6 +116,15 @@ async function differentState<T extends UpdateInvoiceParams>(p: T) {
 }
 
 /**
+ * Validates that the user exists, but only if the value is provided.
+ * Skips validation when the field is undefined (the handler will default it from the token).
+ */
+const userMustExistIfProvided = async (p: number | undefined) => {
+  if (p === undefined || p === null) return toPass(p);
+  return userMustExist(p);
+};
+
+/**
  * Specification for an InvoiceRequest
  */
 function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, ValidationError> {
@@ -127,40 +135,34 @@ function baseInvoiceRequestSpec<T extends BaseInvoice>(): Specification<T, Valid
 }
 
 /**
- * Specification for an UpdateInvoiceParams
+ * Specification for an UpdateInvoiceParams.
+ * Registered with the async validator middleware using a buildTarget that
+ * merges route params (invoiceId) and token defaults (byId) into the
+ * validation target.
  */
-const updateInvoiceRequestSpec: Specification<UpdateInvoiceParams, ValidationError> = [
-  [stringSpec(), 'description', new ValidationError('description:')],
-  differentState,
-  existsAndNotPaidOrDeleted,
-];
-
-/**
- * Specification for an CreateInvoiceParams
- */
-const createInvoiceRequestSpec: () => Specification<CreateInvoiceParams, ValidationError> = () => [
-  ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
-  [[userMustExist], 'byId', new ValidationError('byId:')],
-  [stringSpec(), 'street', new ValidationError('street:')],
-  [stringSpec(), 'postalCode', new ValidationError('postalCode:')],
-  [stringSpec(), 'city', new ValidationError('city:')],
-  [stringSpec(), 'country', new ValidationError('country:')],
-  [stringSpec(), 'reference', new ValidationError('reference:')],
-  [stringSpec(), 'description', new ValidationError('description:')],
-];
-
-export default async function verifyCreateInvoiceRequest(
-  createInvoiceRequest: CreateInvoiceRequest,
-) {
-  return Promise.resolve(await validateSpecification(
-    createInvoiceRequest, createInvoiceRequestSpec(),
-  ));
+export function updateInvoiceRequestSpec(): Specification<UpdateInvoiceParams, ValidationError> {
+  return [
+    [stringSpec(), 'description', new ValidationError('description:')],
+    differentState,
+    existsAndNotPaidOrDeleted,
+  ];
 }
 
-export async function verifyUpdateInvoiceRequest(
-  updateInvoiceRequest: UpdateInvoiceParams,
-) {
-  return Promise.resolve(await validateSpecification(
-    updateInvoiceRequest, updateInvoiceRequestSpec,
-  ));
+/**
+ * Specification for a CreateInvoiceRequest.
+ * Registered with the async validator middleware; runs against req.body before
+ * the handler. byId is validated only if provided (the handler defaults it
+ * from the token).
+ */
+export function createInvoiceRequestSpec(): Specification<CreateInvoiceParams, ValidationError> {
+  return [
+    ...baseInvoiceRequestSpec<CreateInvoiceParams>(),
+    [[userMustExistIfProvided], 'byId', new ValidationError('byId:')],
+    [stringSpec(), 'street', new ValidationError('street:')],
+    [stringSpec(), 'postalCode', new ValidationError('postalCode:')],
+    [stringSpec(), 'city', new ValidationError('city:')],
+    [stringSpec(), 'country', new ValidationError('country:')],
+    [stringSpec(), 'reference', new ValidationError('reference:')],
+    [stringSpec(), 'description', new ValidationError('description:')],
+  ];
 }
