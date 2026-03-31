@@ -35,6 +35,7 @@ import {
   UserWillGetFinedOptions,
   WelcomeToSudososOptions,
   WelcomeWithResetOptions,
+  UserNearExpirationOptions,
 } from './notification-options';
 
 NotificationTypeRegistry.register<ChangedPinOptions>({
@@ -130,6 +131,12 @@ NotificationTypeRegistry.register<UserTypeUpdatedOptions>({
 NotificationTypeRegistry.register<UserTypeUpdatedWithResetOptions>({
   type: NotificationTypes.UserTypeUpdatedWithReset,
   paramClass: UserTypeUpdatedWithResetOptions,
+  isMandatory: true,
+});
+
+NotificationTypeRegistry.register<UserNearExpirationOptions>({
+  type: NotificationTypes.UserNearExpiration,
+  paramClass: UserNearExpirationOptions,
   isMandatory: true,
 });
 
