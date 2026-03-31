@@ -24,6 +24,7 @@
  * @module internal/middleware
  */
 
+import { RequestWithToken } from './token-middleware';
 import { Joinable, Specification } from '../helpers/specification-validation';
 
 /**
@@ -31,29 +32,44 @@ import { Joinable, Specification } from '../helpers/specification-validation';
  * Controllers register their specs at startup; the AsyncValidatorMiddleware
  * looks them up at request time.
  */
+
 /**
  * A factory function that returns a fresh Specification per call.
  * This prevents ValidationError.join() from mutating shared trace instances across requests.
  */
 export type SpecificationFactory<T = any, F extends Joinable = Joinable> = () => Specification<T, F>;
 
+/**
+ * Builds the validation target from the request. When provided, the middleware
+ * calls this instead of using raw `req.body`, allowing specs that need route
+ * params, token data, or other request context.
+ */
+export type BuildTarget<T = any> = (req: RequestWithToken) => T;
+
+export interface RegistryEntry {
+  factory: SpecificationFactory;
+  buildTarget?: BuildTarget;
+}
+
 export default class AsyncValidatorRegistry {
-  private readonly registry = new Map<string, SpecificationFactory>();
+  private readonly registry = new Map<string, RegistryEntry>();
 
   /**
    * Register an async validation spec factory for a given Swagger model name.
    * @param modelName - The Swagger model name (must match the `modelName` in BodyValidator).
    * @param factory - A function returning a fresh specification per request.
+   * @param buildTarget - Optional function that builds the validation target from the
+   *   request. When omitted the middleware validates `req.body` directly.
    */
-  public register(modelName: string, factory: SpecificationFactory): void {
-    this.registry.set(modelName, factory);
+  public register<T>(modelName: string, factory: SpecificationFactory<T>, buildTarget?: BuildTarget<T>): void {
+    this.registry.set(modelName, { factory, buildTarget });
   }
 
   /**
-   * Retrieve the spec factory registered for the given model name, or undefined if none.
+   * Retrieve the registry entry for the given model name, or undefined if none.
    * @param modelName - The Swagger model name to look up.
    */
-  public get(modelName: string): SpecificationFactory | undefined {
+  public get(modelName: string): RegistryEntry | undefined {
     return this.registry.get(modelName);
   }
 }
