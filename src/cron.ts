@@ -39,6 +39,7 @@ import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
 import WrappedService from './service/wrapped-service';
+import UserExpiryService from './service/user-expiry-service';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
 
@@ -122,8 +123,16 @@ async function createCronTasks(): Promise<void> {
       logger.error('Could not sync user notification preferences.', error);
     });
   });
+  const deactivateExpiredUsers = cron.schedule('45 2 * * *', () => {
+    logger.debug('Deactivating expired users.');
+    new UserExpiryService().deactivateExpiredUsers().then(() => {
+      logger.debug('Deactivated expired users.');
+    }).catch((error) => {
+      logger.error('Could not deactivate expired users.', error);
+    });
+  });
 
-  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
+  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences, deactivateExpiredUsers];
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();
