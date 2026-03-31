@@ -260,7 +260,9 @@ describe('InvoiceController', async () => {
         .set('Authorization', `Bearer ${ctx.adminToken}`)
         .send(req));
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(error);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(error);
     }
 
     it('should verify that all transactions are owned by the debtor', async () => {
@@ -270,7 +272,7 @@ describe('InvoiceController', async () => {
     });
     it('should verify that forId is a valid user', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, forId: -1, transactionIDs: [1] };
-      await expectError(req, `forId: ${INVALID_USER_ID().value}`);
+      await expectError(req, INVALID_USER_ID().value);
     });
     it('should verify that transactionIDs is not empty', async () => {
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs: [] };
@@ -279,7 +281,7 @@ describe('InvoiceController', async () => {
     it('should verify that description is a valid string', async () => {
       const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.validInvoiceRequest.forId).map((t) => t.id);
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '', transactionIDs };
-      await expectError(req, `description: ${ZERO_LENGTH_STRING().value}`);
+      await expectError(req, ZERO_LENGTH_STRING().value);
     });
     it('should disallow double invoicing of a transaction', async () => {
       await inUserContext(await (await UserFactory()).clone(2),
@@ -566,7 +568,9 @@ describe('InvoiceController', async () => {
         .send(req);
 
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(SAME_INVOICE_STATE().value);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(SAME_INVOICE_STATE().value);
     });
     it('should verify that invoice is not deleted', async () => {
       const invoice = ctx.invoices.find((i) => InvoiceService.isState(i, InvoiceState.DELETED));
@@ -582,7 +586,9 @@ describe('InvoiceController', async () => {
         .send(req);
 
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(INVOICE_IS_DELETED().value);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(INVOICE_IS_DELETED().value);
     });
     it('should verify that invoice is not paid', async () => {
       const invoice = ctx.invoices.find((i) => InvoiceService.isState(i, InvoiceState.PAID));
@@ -598,7 +604,9 @@ describe('InvoiceController', async () => {
         .send(req);
 
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(INVOICE_IS_PAID().value);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(INVOICE_IS_PAID().value);
     });
   });
   describe('DELETE /invoices/{id}', () => {

@@ -37,8 +37,8 @@ import {
   UpdateInvoiceParams,
   UpdateInvoiceRequest,
 } from './request/invoice-request';
-import verifyCreateInvoiceRequest, { verifyUpdateInvoiceRequest } from './request/validators/invoice-request-spec';
-import { isFail } from '../helpers/specification-validation';
+import { createInvoiceRequestSpec, updateInvoiceRequestSpec } from './request/validators/invoice-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import { asBoolean, asDate, asInvoiceState, asNumber } from '../helpers/validators';
 import Invoice from '../entity/invoices/invoice';
 import User, { UserType } from '../entity/user/user';
@@ -61,6 +61,13 @@ export default class InvoiceController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.logger.level = process.env.LOG_LEVEL;
+    globalAsyncValidatorRegistry.register('CreateInvoiceRequest', createInvoiceRequestSpec);
+    globalAsyncValidatorRegistry.register('UpdateInvoiceRequest', updateInvoiceRequestSpec, (req) => ({
+      ...req.body,
+      invoiceId: parseInt(req.params.id, 10),
+      state: asInvoiceState((req.body as UpdateInvoiceRequest).state),
+      byId: (req.body as UpdateInvoiceRequest).byId ?? req.token.user.id,
+    }));
   }
 
   /**
@@ -233,7 +240,7 @@ export default class InvoiceController extends BaseController {
    * @param {CreateInvoiceRequest} request.body.required -
    * The invoice which should be created
    * @return {InvoiceResponse} 200 - The created invoice entity
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createInvoice(req: RequestWithToken, res: Response): Promise<void> {
@@ -252,12 +259,6 @@ export default class InvoiceController extends BaseController {
         byId: body.byId ?? req.token.user.id,
         description: body.description ?? '',
       };
-
-      const validation = await verifyCreateInvoiceRequest(params);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).createInvoice(params));
@@ -282,7 +283,7 @@ export default class InvoiceController extends BaseController {
    * @param {UpdateInvoiceRequest} request.body.required -
    * The invoice update to process
    * @return {BaseInvoiceResponse} 200 - The updated invoice entity
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async updateInvoice(req: RequestWithToken, res: Response): Promise<void> {
@@ -299,12 +300,6 @@ export default class InvoiceController extends BaseController {
         state: asInvoiceState(body.state),
         byId: body.byId ?? req.token.user.id,
       };
-
-      const validation = await verifyUpdateInvoiceRequest(params);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const invoice: Invoice = await AppDataSource.manager.transaction(async (manager) =>
         new InvoiceService(manager).updateInvoice(params));
