@@ -27,6 +27,7 @@ import {
   UserDebtNotificationOptions,
   UserGotFinedOptions,
   UserGotInactiveAdministrativeCostOptions, UserNearExpirationOptions,
+  UserAccountExpiredOptions,
   UserTypeUpdatedOptions,
   UserTypeUpdatedWithResetOptions,
   UserWillGetFinedOptions,
@@ -49,6 +50,7 @@ import TransactionNotification from '../../mailer/messages/transaction-notificat
 import UserTypeUpdated from '../../mailer/messages/user-type-updated';
 import UserTypeUpdatedWithReset from '../../mailer/messages/user-type-updated-with-reset';
 import UserNearExpiration from '../../mailer/messages/user-near-expiration';
+import UserAccountExpired from '../../mailer/messages/user-account-expired';
 
 export const ChangedPinTemplate = new EmailTemplate(
   (params: ChangedPinOptions) => new ChangedPin(params),
@@ -113,3 +115,8 @@ export const UserTypeUpdatedWithResetTemplate = new EmailTemplate(
 export const UserNearExpirationTemplate = new EmailTemplate(
   (params: UserNearExpirationOptions) => new UserNearExpiration(params),
 );
+
+export const UserAccountExpiredTemplate = new EmailTemplate(
+  (params: UserAccountExpiredOptions) => new UserAccountExpired(params),
+);
+

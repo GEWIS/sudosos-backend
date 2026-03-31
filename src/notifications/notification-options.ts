@@ -248,3 +248,17 @@ export class UserNearExpirationOptions extends TemplateOptions {
     super();
   }
 }
+
+/**
+ * Email to notify user that their account has expired
+ */
+export class UserAccountExpiredOptions extends TemplateOptions {
+  /**
+   * @param expiryDate - The date on which the account expired.
+   */
+  constructor(
+    public expiryDate: Date,
+  ) {
+    super();
+  }
+}
