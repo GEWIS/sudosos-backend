@@ -22,7 +22,7 @@ import User, { UserType } from '../entity/user/user';
 import WithManager from '../database/with-manager';
 import Notifier from '../notifications/notifier';
 import { NotificationTypes } from '../notifications/notification-types';
-import { UserAccountExpiredOptions } from '../notifications/notification-options';
+import { UserAccountExpiredOptions, UserNearExpirationOptions } from '../notifications/notification-options';
 
 /**
  * This is the module page of the user-expiry-service.
@@ -72,6 +72,43 @@ export default class UserExpiryService extends WithManager {
     );
 
     return toDeactivate;
+  }
+
+  /**
+   * Sends a near-expiration notification to all active local users whose account
+   * will expire within 30 days from now.
+   * Only notifies LOCAL_USER accounts that are currently active,
+   * not deleted, and have an expiryDate set.
+   * @returns The list of users that were notified.
+   */
+  public async notifyNearExpirationUsers(): Promise<User[]> {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now);
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const activeUsers = await User.find({
+      where: {
+        active: true,
+        deleted: false,
+        type: UserType.LOCAL_USER,
+      },
+    });
+
+    const nearExpiration = activeUsers.filter(
+      (u) => u.expiryDate != null && u.expiryDate > now && u.expiryDate <= thirtyDaysFromNow,
+    );
+
+    await Promise.all(
+      nearExpiration.map((u) =>
+        Notifier.getInstance().notify({
+          type: NotificationTypes.UserNearExpiration,
+          userId: u.id,
+          params: new UserNearExpirationOptions(u.expiryDate),
+        }),
+      ),
+    );
+
+    return nearExpiration;
   }
 }
 
