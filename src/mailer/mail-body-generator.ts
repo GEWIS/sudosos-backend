@@ -49,8 +49,8 @@ keyof Pick<TemplateFields, 'serviceEmail' | 'reasonForEmail'>
     'nl-NL': process.env.SMTP_FROM?.split('<')[1].split('>')[0] || '',
   },
   reasonForEmail: {
-    'en-US': 'You are receiving this email because you are registered as a SudoSOS user. Learn more about how we treat your personal data on <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
-    'nl-NL': 'Je ontvangt deze email omdat je bent geregistreerd als een SudoSOS gebruiker. Lees hoe wij je persoonlijke informatie verwerken op <a href="https://gew.is/privacy">https://gew.is/privacy</a>.',
+    'en-US': 'You are receiving this email because you are registered as a SudoSOS user.',
+    'nl-NL': 'Je ontvangt deze e-mail omdat je bent geregistreerd als een SudoSOS gebruiker.',
   },
 };
 
