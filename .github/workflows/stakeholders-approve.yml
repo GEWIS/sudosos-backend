@@ -1,4 +1,4 @@
-name: Stakeholders
+name: Policy - Stakeholders
 on:
   pull_request:
 

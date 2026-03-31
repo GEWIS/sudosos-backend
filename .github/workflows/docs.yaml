@@ -1,4 +1,4 @@
-name: Build and Push Docs
+name: Docs
 
 on:
   push:
@@ -12,43 +12,15 @@ concurrency:
 
 jobs:
   dockerize:
-    runs-on: ubuntu-latest
-    container:
-      image: docker:dind
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get Docker meta (for tags)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ vars.DOCKER_REGISTRY }}/${{ vars.DOCKER_DOCS_TAG }}
-          tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.DOCKER_REGISTRY }}
-          username: ${{ secrets.SVC_GH_SUDOSOS_USERNAME }}
-          password: ${{ secrets.SVC_GH_SUDOSOS_PWD }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile-docs
-          platforms: linux/amd64
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    permissions:
+      contents: read
+      packages: write
+    uses: GEWIS/actions/.github/workflows/docker-branch-release.yml@v1
+    with:
+      projects: '["."]'
+      docker-paths: '["${{ vars.DOCKER_DOCS_TAG }}"]'
+      docker-registry: ${{ vars.DOCKER_REGISTRY }}
+      dockerfile: './Dockerfile-docs'
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.SVC_GH_SUDOSOS_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.SVC_GH_SUDOSOS_PWD }}

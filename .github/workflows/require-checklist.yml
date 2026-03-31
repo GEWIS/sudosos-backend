@@ -1,4 +1,4 @@
-name: PR Checklist
+name: Policy - PR Checklist
 on:
   pull_request:
     types: [edited, opened, synchronize, reopened]

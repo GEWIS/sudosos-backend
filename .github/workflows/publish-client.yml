@@ -1,4 +1,4 @@
-name: Publish Client (develop snapshot)
+name: Publish Client Snapshot
 
 on:
   push:
