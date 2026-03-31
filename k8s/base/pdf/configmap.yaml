@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pdf-env
+data:
+  NODE_ENV: development
+  PORT: "3001"
+  TZ: Europe/Amsterdam
+  SERVER_HOST: http://localhost:3001
+  WORK_DIR: tmp/
+  TEMPLATE_DIR: templates
+  STATIONERY_DIR_GEWIS: templates/GEWIS
+  STATIONERY_DIR_BAC: templates/BAC
+  QUOTE_NAME: template_quote.tex
+  INVOICE_NAME: template_invoice.tex
+  INVOICE_NAME_WEEKLY: template_invoice_weekly.tex
+  CONTRACT_NAME_DUTCH: template_contract_dutch.tex
+  CONTRACT_NAME: template_contract.tex
+  PAYOUT_NAME: template_payout.tex
+  FINE_REPORT_NAME: template_fine_report.tex
+  USER_REPORT_NAME: template_user_report.tex
+  DISBURSEMENT_NAME: template_disbursement.tex
+  WRITE_OFF_NAME: template_writeoff.tex
+  DEFAULT_DUE_DAYS: "30"

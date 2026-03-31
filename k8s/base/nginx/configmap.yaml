@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  default.conf: |
+    map $http_cookie $frontend_upstream {
+        default          frontend;
+        ~*X-Beta-Enabled=true  frontend-beta;
+    }
+
+    map $http_cookie $pos_upstream {
+        default          pos;
+        ~*X-Beta-Enabled=true  pos-develop;
+    }
+
+    upstream frontend {
+      server frontend:80;
+    }
+
+    upstream frontend-beta {
+      server frontend-beta:80;
+    }
+
+    upstream backend {
+      server backend:80;
+    }
+
+    upstream backend-ws {
+      server backend:8080;
+    }
+
+    upstream docs {
+      server docs:80;
+    }
+
+    upstream pos {
+      server pos:80;
+    }
+
+    upstream pos-develop {
+      server pos-develop:80;
+    }
+
+    server {
+      listen       80;
+      listen  [::]:80;
+      server_name  localhost;
+
+      location / {
+        proxy_pass http://$frontend_upstream;
+      }
+
+      location /ws/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 60;
+        proxy_pass http://backend-ws/;
+      }
+
+      location = /enable-beta {
+        add_header Set-Cookie "X-Beta-Enabled=true; Path=/";
+        return 302 /;
+      }
+
+      location = /disable-beta {
+        add_header Set-Cookie "X-Beta-Enabled=; Path=/; Max-Age=0";
+        return 302 /;
+      }
+
+      location /pos/ {
+          rewrite ^/pos(/.*)$ $1 break;
+          proxy_pass http://$pos_upstream;
+      }
+
+      location /pos-develop/ {
+        proxy_pass http://pos-develop/;
+      }
+
+      location /docs/ {
+        proxy_pass http://docs/;
+      }
+
+      location /static/products {
+        alias /data/products;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /static/banners {
+        alias /data/banners;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /static/invoices {
+        alias /data/invoices;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /static/payouts {
+        alias /data/payout_requests;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /static/sellerPayouts {
+        alias /data/seller_payouts;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /static/writeOffs {
+        alias /data/write_offs;
+        add_header Cache-Control "max-age=31536000";
+      }
+
+      location /api/ {
+        if ($request_method = 'OPTIONS') {
+          add_header 'Access-Control-Allow-Origin' '*';
+          add_header 'Access-Control-Allow-Methods' 'GET, HEAD, POST, OPTIONS, PATCH';
+          add_header 'Access-Control-Allow-Headers' '*';
+          add_header 'Access-Control-Expose-Headers' '*';
+          add_header 'Access-Control-Max-Age' 1728000;
+          add_header 'Content-Type' 'text/plain; charset=utf-8';
+          return 204;
+        }
+        if ($request_method = 'POST') {
+          add_header 'Access-Control-Allow-Headers' '*';
+          add_header 'Access-Control-Allow-Origin' '*';
+          add_header 'Access-Control-Allow-Methods' 'POST';
+          add_header 'Access-Control-Expose-Headers' '*';
+        }
+
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Expose-Headers' '*';
+        proxy_pass http://backend/;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+      }
+    }

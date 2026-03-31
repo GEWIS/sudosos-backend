@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pos-develop
+  labels:
+    app: pos-develop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pos-develop
+  template:
+    metadata:
+      labels:
+        app: pos-develop
+    spec:
+      containers:
+        - name: pos-develop
+          image: abc.docker-registry.gewis.nl/pos/sudosos/point-of-sale:develop
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
