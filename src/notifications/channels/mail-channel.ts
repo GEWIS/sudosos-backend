@@ -35,6 +35,7 @@ import {
   UserDebtNotificationTemplate,
   UserGotFinedTemplate,
   UserGotInactiveAdministrativeCostTemplate,
+  UserNearExpirationTemplate,
   UserTypeUpdatedTemplate,
   UserTypeUpdatedWithResetTemplate,
   UserWillGetFinedTemplate,
@@ -70,6 +71,7 @@ MailMessage<EmailTemplate<any>>
     TransactionNotificationChargedByOther: TransactionNotificationTemplate,
     UserTypeUpdated: UserTypeUpdatedTemplate,
     UserTypeUpdatedWithReset: UserTypeUpdatedWithResetTemplate,
+    UserNearExpiration: UserNearExpirationTemplate,
   };
 
   readonly name = NotificationChannels.EMAIL;
