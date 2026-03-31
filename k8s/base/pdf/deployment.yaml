@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf
+  labels:
+    app: pdf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pdf
+  template:
+    metadata:
+      labels:
+        app: pdf
+    spec:
+      containers:
+        - name: pdf
+          image: abc.docker-registry.gewis.nl/eou/pdf-generator:1.5.1
+          command: ["node", "/usr/src/app/build/index.js"]
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: pdf-env
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
