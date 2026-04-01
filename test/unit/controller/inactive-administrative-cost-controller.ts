@@ -300,7 +300,9 @@ describe('InactiveAdministrativeCostController', async () => {
         .send(req);
 
       expect(res.status).to.eq(400);
-      expect(res.body).to.equal(INVALID_USER_ID().value);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include(INVALID_USER_ID().value);
     });
     it('should return 400 when verifyValidUserId returns a fail object', async () => {
       // Stub the validator to simulate a fail
@@ -460,7 +462,9 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: [validId, invalidId] });
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('userIds is not a valid array of user IDs');
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('userIds is not a valid array of user IDs');
     });
   });
   describe('POST /inactive-administrative-costs/handout', () => {
@@ -513,7 +517,9 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: [validId, invalidId] });
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('userIds is not a valid array of user IDs');
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('userIds is not a valid array of user IDs');
     });
   });
   describe('GET /inactive-administrative-costs/report', () => {
