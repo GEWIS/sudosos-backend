@@ -26,7 +26,6 @@
  */
 
 import 'reflect-metadata';
-import { config } from 'dotenv';
 import log4js, { Logger } from 'log4js';
 import Database from './database/database';
 import dinero, { Currency } from 'dinero.js';
@@ -41,6 +40,8 @@ import GewisDBSyncService from './gewis/service/gewisdb-sync-service';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
 import WrappedService from './service/wrapped-service';
+import Config from './config';
+import { applyConfiguredLogLevel } from './helpers/logging';
 
 class MaintenanceApplication {
   logger: Logger;
@@ -59,9 +60,10 @@ class MaintenanceApplication {
  * Validates that the environment is set to development
  */
 function validateDevelopmentEnvironment(logger: Logger): void {
-  if (process.env.NODE_ENV !== 'development') {
+  const config = Config.get();
+  if (!config.app.isDevelopment) {
     logger.error('This script is only meant for development environments.');
-    logger.error(`Current NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
+    logger.error(`Current NODE_ENV: ${config.app.nodeEnv || 'undefined'}`);
     logger.error('Please set NODE_ENV=development to run this script.');
     process.exit(1);
   }
@@ -72,9 +74,10 @@ function validateDevelopmentEnvironment(logger: Logger): void {
  * Performs all maintenance tasks that are normally handled by cron jobs
  */
 async function performMaintenanceTasks(application: MaintenanceApplication): Promise<void> {
+  const config = Config.get();
   // Set up monetary value configuration
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+  dinero.defaultCurrency = config.currency.code as Currency;
+  dinero.defaultPrecision = config.currency.precision;
   application.logger.info('Monetary configuration set up');
 
   // Initialize database-stored settings
@@ -110,7 +113,7 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
   // Setup user synchronization services based on environment variables
   const syncServices: UserSyncService[] = [];
 
-  if (process.env.ENABLE_LDAP === 'true') {
+  if (config.ldap.enabled) {
     application.logger.info('Setting up LDAP sync service...');
     const ldapSyncService = new LdapSyncService(application.roleManager);
     syncServices.push(ldapSyncService);
@@ -119,7 +122,7 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
     application.logger.info('LDAP sync disabled (ENABLE_LDAP not set to true)');
   }
 
-  if (process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL) {
+  if (config.gewis.gewisdbApiKey && config.gewis.gewisdbApiUrl) {
     application.logger.info('Setting up GEWIS DB sync service...');
     const gewisDBSyncService = new GewisDBSyncService();
     syncServices.push(gewisDBSyncService);
@@ -152,14 +155,11 @@ async function performMaintenanceTasks(application: MaintenanceApplication): Pro
  */
 async function runMaintenance(): Promise<void> {
   try {
-    // Load environment variables
-    config();
-    
     // Initialize application
     const application = new MaintenanceApplication();
     application.connection = await Database.initialize();
     application.logger = log4js.getLogger('Maintenance');
-    application.logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(application.logger);
     application.logger.info('Starting maintenance tasks...');
 
     console.log = (message: any, ...additional: any[]) => application.logger.debug(message, ...additional);
@@ -177,7 +177,7 @@ async function runMaintenance(): Promise<void> {
   } catch (error) {
     console.error('❌ Maintenance failed:', error);
     const logger = log4js.getLogger('maintenance');
-    logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(logger);
     logger.fatal('Maintenance failed:', error);
     process.exit(1);
   }

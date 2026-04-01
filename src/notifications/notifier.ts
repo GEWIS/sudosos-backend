@@ -31,6 +31,7 @@ import { EmailChannel } from './channels/mail-channel';
 import User from '../entity/user/user';
 import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import NotificationLog from '../entity/notifications/notification-log';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 /**
  * This is the module page of the notifier.
@@ -52,7 +53,7 @@ export default class Notifier {
   constructor(
     private channels: NotificationChannel<any, any, any>[],
   ) {
-    this.logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(this.logger);
   }
 
   static getInstance(): Notifier {

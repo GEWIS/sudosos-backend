@@ -55,7 +55,7 @@ export default class EventController extends BaseController {
     options: BaseControllerOptions,
   ) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
   }
 
   public getPolicy(): Policy {

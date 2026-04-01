@@ -30,6 +30,7 @@ import MailMessage, { Language, MailLanguageMap } from '../mail-message';
 import { MembershipExpiryNotificationOptions } from '../../notifications';
 import Mail from 'nodemailer/lib/mailer';
 import User from '../../entity/user/user';
+import Config from '../../config';
 
 const formatBalance = (balance: Dinero) => {
   const isNegative = balance.getAmount() < 0;
@@ -90,7 +91,7 @@ export default class MembershipExpiryNotification extends MailMessage<Membership
 
     return {
       ...options,
-      bcc: process.env.FINANCIAL_RESPONSIBLE,
+      bcc: Config.get().mail.financialResponsible,
     };
   }
 }

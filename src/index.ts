@@ -32,7 +32,6 @@ import { promises as fs } from 'fs';
 import { json } from 'body-parser';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import dinero, { Currency } from 'dinero.js';
-import { config } from 'dotenv';
 import express from 'express';
 import log4js, { Logger } from 'log4js';
 import { DataSource } from 'typeorm';
@@ -91,6 +90,8 @@ import { Worker } from 'bullmq';
 import Mailer from './mailer';
 import Redis from 'ioredis';
 import TermsOfServiceController from './controller/terms-of-service-controller';
+import Config from './config';
+import { applyConfiguredLogLevel } from './helpers/logging';
 
 export class Application {
   app: express.Express;
@@ -133,9 +134,9 @@ export class Application {
  * Sets up the token handler to be used by the application.
  */
 async function createTokenHandler(): Promise<TokenHandler> {
+  const config = Config.get();
   // Import JWT key
-  const jwtPath = process.env.JWT_KEY_PATH;
-  const jwtContent = await fs.readFile(jwtPath);
+  const jwtContent = await fs.readFile(config.auth.jwtKeyPath);
   const jwtPrivate = crypto.createPrivateKey(jwtContent);
   const jwtPublic = crypto.createPublicKey(jwtPrivate);
 
@@ -156,6 +157,7 @@ async function createTokenHandler(): Promise<TokenHandler> {
  *                      and controller.
  */
 async function setupAuthentication(tokenHandler: TokenHandler, application: Application) {
+  const config = Config.get();
   // Define authentication controller and bind before middleware.
   const controller = new AuthenticationController(
     {
@@ -173,7 +175,7 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
       roleManager: application.roleManager,
     },
     tokenHandler,
-    process.env.GEWISWEB_JWT_SECRET,
+    config.gewis.gewiswebJwtSecret,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
 
@@ -204,12 +206,10 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
 }
 
 export default async function createApp(): Promise<Application> {
+  const config = Config.get();
   const application = new Application();
   application.logger = getAppLogger();
   application.logger.info('Starting application instance...');
-
-  // Validate environment variables
-  if (!process.env.NAME) throw new Error('NAME environment variable is not set.');
 
   // Create folders for disk storage
   initializeDiskStorage();
@@ -218,12 +218,12 @@ export default async function createApp(): Promise<Application> {
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+  dinero.defaultCurrency = config.currency.code as Currency;
+  dinero.defaultPrecision = config.currency.precision;
 
   // Initialize database-stored settings
   const store = ServerSettingsStore.getInstance();
@@ -248,7 +248,7 @@ export default async function createApp(): Promise<Application> {
   }).getRouter());
 
   // Product images
-  if (process.env.NODE_ENV === 'development') {
+  if (config.app.isDevelopment) {
     application.app.use('/static/products', express.static('data/products'));
     application.app.use('/static/banners', express.static('data/banners'));
     application.app.use('/static/invoices', express.static('data/invoices'));
@@ -294,21 +294,16 @@ export default async function createApp(): Promise<Application> {
   // The connect timeout defaults to 100 ms in test environments (to avoid
   // slowing down suites that run without Redis) and 3 s otherwise.
   // Override via REDIS_CONNECT_TIMEOUT_MS if needed.
-  const isTestEnv = process.env.NODE_ENV === 'test';
-  const connectTimeout = Number(
-    process.env.REDIS_CONNECT_TIMEOUT_MS ?? (isTestEnv ? '100' : '3000'),
-  );
-
   let redisClient: Redis | undefined;
   try {
     redisClient = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
+      host: config.redis.host,
+      port: config.redis.port,
       maxRetriesPerRequest: null,
       // Give up quickly so startup is not delayed when Redis is absent.
       // We intentionally omit retryStrategy so that once the connection is
       // established, ioredis uses its default reconnection behaviour on drop.
-      connectTimeout,
+      connectTimeout: config.redis.connectTimeoutMs,
     });
 
     // Wait for the connection to be established (or fail).
@@ -350,7 +345,7 @@ export default async function createApp(): Promise<Application> {
     }
     application.redisConnection = undefined;
 
-    if (process.env.NODE_ENV === 'production') {
+    if (config.app.isProduction) {
       // In production a Redis outage must be an explicit, loud failure rather
       // than a silent fallback that changes email delivery semantics.
       throw new Error(
@@ -400,7 +395,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   application.app.use('/v1/sync', new SyncController(options).getRouter());
   application.app.use('/v1/terms-of-service', new TermsOfServiceController(options).getRouter());
-  if (process.env.NODE_ENV === 'development') {
+  if (config.app.isDevelopment) {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
@@ -412,19 +407,18 @@ export default async function createApp(): Promise<Application> {
     : [];
 
   // Start express application.
-  logger.info(`Server listening on port ${process.env.HTTP_PORT}.`);
-  application.server = application.app.listen(process.env.HTTP_PORT);
+  logger.info(`Server listening on port ${config.app.httpPort}.`);
+  application.server = application.app.listen(config.app.httpPort);
   application.logger.info('Application started.');
   return application;
 }
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  config();
   createApp().catch((e) => {
     console.error(e);
     const logger = log4js.getLogger('index');
-    logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(logger);
     logger.fatal(e);
   });
 }

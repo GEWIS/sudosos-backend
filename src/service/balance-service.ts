@@ -37,6 +37,7 @@ import { defaultPagination, PaginationParameters } from '../helpers/pagination';
 import { UserType } from '../entity/user/user';
 import WithManager from '../database/with-manager';
 import { DineroObjectResponse } from '../controller/response/dinero-response';
+import Config from '../config';
 
 export enum BalanceOrderColumn {
   ID = 'id',
@@ -89,7 +90,7 @@ export default class BalanceService extends WithManager {
   private static sqlTimeToISOTime(rawDate: any): string | null {
     let date = null;
     if (rawDate) {
-      const dateSinceUtc = process.env.TYPEORM_CONNECTION === 'sqlite' ? rawDate + 'Z' : rawDate;
+      const dateSinceUtc = Config.get().database.isSqlite ? rawDate + 'Z' : rawDate;
       date = new Date(dateSinceUtc).toISOString();
     }
     return date;
@@ -146,6 +147,7 @@ export default class BalanceService extends WithManager {
    * Insafe Query! Safety leveraged by type safety
    */
   public async updateBalances(params: UpdateBalanceParameters) {
+    const isSqlite = Config.get().database.isSqlite;
     const entityManager = this.manager;
 
     const parameters: any[] = [];
@@ -153,8 +155,8 @@ export default class BalanceService extends WithManager {
     // eslint-disable-next-line prefer-template
     let query = 'REPLACE INTO balance '
       + 'select '
-      + (process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
-      + (process.env.TYPEORM_CONNECTION === 'sqlite' ? "datetime('now'), " : 'NOW(), ')
+      + (isSqlite ? "datetime('now'), " : 'NOW(), ')
+      + (isSqlite ? "datetime('now'), " : 'NOW(), ')
       + '1, '
       + 'moneys2.id, '
       + 'max(moneys2.amount), '
@@ -247,7 +249,7 @@ export default class BalanceService extends WithManager {
       return result;
     };
 
-    const greatest = process.env.TYPEORM_CONNECTION === 'sqlite' ? 'max' : 'greatest';
+    const greatest = Config.get().database.isSqlite ? 'max' : 'greatest';
 
     let query = 'SELECT userBalance.id as id, '
       + 'userBalance.firstName as firstName, '

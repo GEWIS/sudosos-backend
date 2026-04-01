@@ -25,14 +25,15 @@
  */
 
 import { Request } from 'express';
+import Config from '../config';
 
 export const PAGINATION_DEFAULT = 25;
 export const PAGINATION_MAX = 500;
 
 export const defaultPagination = () => (
-  parseInt(process.env.PAGINATION_DEFAULT, 10) || PAGINATION_DEFAULT);
+  Config.get().pagination.defaultTake || PAGINATION_DEFAULT);
 export const maxPagination = () => (
-  parseInt(process.env.PAGINATION_MAX, 10) || PAGINATION_MAX);
+  Config.get().pagination.maxTake || PAGINATION_MAX);
 
 export interface PaginationParameters {
   take?: number;

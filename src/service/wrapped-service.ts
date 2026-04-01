@@ -29,6 +29,7 @@ import OrganMembership from '../entity/organ/organ-membership';
 import WrappedOrganMember from '../entity/wrapped/wrapped-organ-member';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
 import { Between, In } from 'typeorm';
+import Config from '../config';
 
 export interface UpdateWrappedParameters {
   ids?: number[],
@@ -117,7 +118,7 @@ export default class WrappedService extends WithManager {
     let users : User[];
     let rows : Wrapped[] = [];
 
-    const wrappedYear = Number(process.env.WRAPPED_YEAR || new Date().getFullYear());
+    const wrappedYear = Config.get().wrapped.year;
 
     if (params.ids && params.ids.length > 0) {
       users = await this.manager.find(User, {

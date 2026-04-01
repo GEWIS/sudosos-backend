@@ -36,7 +36,7 @@ export default abstract class SyncManager<T, S extends SyncService<T>> extends W
 
   constructor(services: S[]) {
     super();
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.services = services;
   }
 

@@ -33,6 +33,7 @@ import AuthenticationService from './authentication-service';
 import RoleManager from '../rbac/role-manager';
 import WithManager from '../database/with-manager';
 import Gewis from '../gewis/gewis';
+import Config from '../config';
 
 export default class ADService extends WithManager {
 
@@ -165,7 +166,7 @@ export default class ADService extends WithManager {
    * @param guid
    */
   public async getLDAPResponseFromGUID(client: Client, guid: Buffer): Promise<LDAPUser | undefined> {
-    const results = await client.search(process.env.LDAP_BASE, {
+    const results = await client.search(Config.get().ldap.base, {
       filter: new EqualityFilter({
         attribute: 'objectGUID',
         value: guid,
@@ -186,7 +187,7 @@ export default class ADService extends WithManager {
    */
   public getLDAPGroupMembers(client: Client, dn: string):
   Promise<Pick<SearchResult, 'searchReferences'> & { searchEntries: LDAPResult[] }> {
-    return client.search(process.env.LDAP_BASE, {
+    return client.search(Config.get().ldap.base, {
       filter: `(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=${dn}))`,
       explicitBufferAttributes: ['objectGUID'],
     // This is because `search` returns the most generic response and we want to narrow it down.

@@ -29,6 +29,7 @@ import { HtmlUnstoredPdfService } from './pdf-service';
 import Transaction from '../../entity/transactions/transaction';
 import { createTransactionPdf, ITransactionPdf } from '../../html/transaction.html';
 import { PdfError } from '../../errors';
+import Config from '../../config';
 
 export default class TransactionPdfService extends HtmlUnstoredPdfService<Transaction, ITransactionPdf> {
 
@@ -80,7 +81,7 @@ export default class TransactionPdfService extends HtmlUnstoredPdfService<Transa
       createdByUserLastName: transaction.createdBy.lastName,
       date: transaction.createdAt.toLocaleDateString('nl-NL'),
       items,
-      serviceEmail: process.env.FINANCIAL_RESPONSIBLE || '',
+      serviceEmail: Config.get().mail.financialResponsible || '',
     };
   }
 }

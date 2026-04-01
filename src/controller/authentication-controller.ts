@@ -51,6 +51,7 @@ import { AppDataSource } from '../database/database';
 import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { WelcomeWithResetOptions } from '../notifications';
 import UserService from '../service/user-service';
+import Config from '../config';
 
 /**
  * The authentication controller is responsible for verifying user authentications and handing out json web tokens.
@@ -76,7 +77,7 @@ export default class AuthenticationController extends BaseController {
     tokenHandler: TokenHandler,
   ) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.tokenHandler = tokenHandler;
   }
 
@@ -164,7 +165,7 @@ export default class AuthenticationController extends BaseController {
     const body = req.body as AuthenticationMockRequest;
 
     // Only allow in development setups
-    if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') return false;
+    if (!Config.get().app.isDevelopment && !Config.get().app.isTest) return false;
 
     // Check the existence of the user
     const user = await User.findOne(UserService.getOptions({ id: body.userId }));

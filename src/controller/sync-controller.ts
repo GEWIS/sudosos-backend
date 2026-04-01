@@ -50,7 +50,7 @@ export default class SyncController extends BaseController {
    */
   public constructor(options: BaseControllerOptions) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
   }
 
   /**

@@ -25,22 +25,23 @@
  * @mergeTarget
  */
 
-import { config } from 'dotenv';
 import { Application } from '../index';
 import log4js from 'log4js';
 import Database from './database';
+import Config from '../config';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 export default async function migrate() {
   const application = new Application();
   application.logger = log4js.getLogger('Migration');
-  application.logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(application.logger);
   application.logger.info('Starting Migrator');
 
   application.connection = await Database.initialize();
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   try {
@@ -53,11 +54,9 @@ export default async function migrate() {
   }
 }
 
-// Only allow in test environment, for production use CLI.
-if (require.main === module || process.env.NODE_ENV === 'test') {
+if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  config();
-  if (process.env.TYPEORM_CONNECTION === 'sqlite') console.warn('Migrations in sqlite most likely have no effect.');
+  if (Config.get().database.isSqlite) console.warn('Migrations in sqlite most likely have no effect.');
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   migrate();
 }

@@ -33,6 +33,7 @@ import { In } from 'typeorm';
 import OrganMembership from '../entity/organ/organ-membership';
 import { SELLER_ROLE } from './default-roles';
 import { AllowedAttribute } from './role-definitions';
+import Config from '../config';
 
 /**
  * The role manager is responsible for the management of registered roles in the system,
@@ -77,7 +78,7 @@ export default class RoleManager {
     entity: string,
     attributes: AllowedAttribute[],
   ): Promise<boolean> {
-    if (process.env.NODE_ENV === 'development') return true;
+    if (Config.get().app.isDevelopment) return true;
 
     // Convert roles to array if a single role is given.
     let rolesArray: string[];

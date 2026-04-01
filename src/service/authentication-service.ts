@@ -48,6 +48,8 @@ import Role from '../entity/rbac/role';
 import WithManager from '../database/with-manager';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
+import Config from '../config';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -73,27 +75,22 @@ export default class AuthenticationService extends WithManager {
   /**
    * Amount of salt rounds to use.
    */
-  private static BCRYPT_ROUNDS: number = (() => {
-    const env = parseInt(process.env.BCRYPT_ROUNDS, 10);
-    return Number.isNaN(env) ? 12 : env;
-  })();
+  private static get BCRYPT_ROUNDS(): number {
+    return Config.get().auth.bcryptRounds;
+  }
 
   /**
    * Amount of salt rounds to use for PIN authentication (lower for performance).
    */
-  private static BCRYPT_ROUNDS_PIN: number = (() => {
-    const env = parseInt(process.env.BCRYPT_ROUNDS_PIN, 10);
-    return Number.isNaN(env) ? 1 : env;
-  })();
+  private static get BCRYPT_ROUNDS_PIN(): number {
+    return Config.get().auth.bcryptRoundsPin;
+  }
 
   /**
    * ResetToken expiry time in seconds
    */
   private RESET_TOKEN_EXPIRES: () => number =
-    () => {
-      const env = parseInt(process.env.RESET_TOKEN_EXPIRES, 10);
-      return Number.isNaN(env) ? 3600 : env;
-    };
+    () => Config.get().auth.resetTokenExpiresInSeconds;
 
   /**
    * Helper function hashes the given string with salt.
@@ -342,7 +339,7 @@ export default class AuthenticationService extends WithManager {
   public async LDAPAuthentication(uid: string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
     const logger: Logger = log4js.getLogger('LDAP');
-    logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(logger);
 
     const ldapSettings = getLDAPSettings();
     const client = await getLDAPConnection();

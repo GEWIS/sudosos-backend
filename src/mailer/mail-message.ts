@@ -28,6 +28,7 @@ import Mail from 'nodemailer/lib/mailer';
 import MailContentBuilder from './messages/mail-content-builder';
 import MailBodyGenerator from './mail-body-generator';
 import User from '../entity/user/user';
+import Config from '../config';
 
 export enum Language {
   DUTCH = 'nl-NL',
@@ -40,7 +41,7 @@ export type MailLanguageMap<T> = {
 
 export default class MailMessage<T> {
   protected baseMailOptions: Mail.Options = {
-    from: process.env.SMTP_FROM,
+    from: Config.get().smtp.from,
   };
 
   protected contentOptions: T;

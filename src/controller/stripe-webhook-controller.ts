@@ -33,6 +33,7 @@ import { RequestWithRawBody } from '../helpers/raw-body';
 import { StripePublicKeyResponse } from './response/stripe-response';
 import { AppDataSource } from '../database/database';
 import Stripe from 'stripe';
+import Config from '../config';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -43,7 +44,7 @@ export default class StripeWebhookController extends BaseController {
    */
   public constructor(options: BaseControllerOptions) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
   }
 
   /**
@@ -75,10 +76,11 @@ export default class StripeWebhookController extends BaseController {
    */
   public async getStripePublicKey(req: Request, res: Response): Promise<void> {
     this.logger.trace('Get Stripe public key by IP', req.ip);
+    const config = Config.get();
 
     const response: StripePublicKeyResponse = {
-      publicKey: process.env.STRIPE_PUBLIC_KEY,
-      returnUrl: process.env.STRIPE_RETURN_URL,
+      publicKey: config.stripe.publicKey,
+      returnUrl: config.stripe.returnUrl,
     };
 
     res.json(response);
@@ -95,6 +97,7 @@ export default class StripeWebhookController extends BaseController {
    */
   public async handleWebhookEvent(req: RequestWithRawBody, res: Response): Promise<void> {
     this.logger.trace('Receive Stripe webhook event with body', req.body);
+    const config = Config.get();
     const { rawBody } = req;
     const signature = req.headers['stripe-signature'];
 
@@ -112,8 +115,8 @@ export default class StripeWebhookController extends BaseController {
       return;
     }
 
-    if ((webhookEvent.data.object as any)?.metadata?.service !== process.env.NAME) {
-      this.logger.trace(`Event ignored, because it is not for service "${process.env.NAME}"`);
+    if ((webhookEvent.data.object as any)?.metadata?.service !== config.app.name) {
+      this.logger.trace(`Event ignored, because it is not for service "${config.app.name}"`);
       res.status(204).send();
       return;
     }

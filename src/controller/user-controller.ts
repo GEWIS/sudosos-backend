@@ -100,7 +100,7 @@ export default class UserController extends BaseController {
     tokenHandler: TokenHandler,
   ) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.tokenHandler = tokenHandler;
   }
 

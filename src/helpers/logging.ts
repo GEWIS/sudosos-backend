@@ -19,6 +19,15 @@
  */
 
 import log4js from 'log4js';
+import Config from '../config';
+
+export function getConfiguredLogLevel(): string {
+  return Config.get().app.logLevel;
+}
+
+export function applyConfiguredLogLevel(logger: log4js.Logger): void {
+  logger.level = getConfiguredLogLevel();
+}
 
 export default function getAppLogger(category: string = 'Application'): log4js.Logger {
   log4js.configure({
@@ -30,6 +39,6 @@ export default function getAppLogger(category: string = 'Application'): log4js.L
     categories: { default: { appenders: ['out'], level: 'all' } },
   });
   const logger = log4js.getLogger(category);
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
   return logger;
 }
