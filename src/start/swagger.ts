@@ -78,6 +78,21 @@ export default class Swagger {
 
       instance.on('finish', async (swaggerObject) => {
         Swagger.logger.trace('Swagger specification generation finished');
+
+        // Fix express-jsdoc-swagger bug: enum is emitted on the array schema instead of on items,
+        // which causes openapi-generator-cli to ignore the enum values for array item typing.
+        for (const swaggerPath of Object.values(swaggerObject.paths ?? {})) {
+          for (const operation of Object.values(swaggerPath)) {
+            for (const param of (operation as any)?.parameters ?? []) {
+              const schema = param?.schema;
+              if (schema?.type === 'array' && schema.enum && schema.items && !schema.items.enum) {
+                schema.items.enum = schema.enum;
+                delete schema.enum;
+              }
+            }
+          }
+        }
+
         new Validator(swaggerObject);
         await fs.writeFile(
           path.join(process.cwd(), 'out/swagger.json'),

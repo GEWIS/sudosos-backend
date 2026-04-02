@@ -31,6 +31,11 @@ import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
 import { SupportedLanguage } from '../../entity/user-setting';
 
 /**
+ * enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,POINT_OF_SALE,INTEGRATION - The type of a user
+ * @typedef {string} UserType
+ */
+
+/**
  * @typedef {allOf|BaseResponse} BaseUserResponse
  * @property {string} firstName.required - The name of the user.
  * @property {string} lastName.required - The last name of the user
