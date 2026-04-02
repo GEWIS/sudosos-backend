@@ -170,7 +170,7 @@ jobs:
         if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork && matrix.typeorm-connection == 'mariadb'
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: build.yml
+          workflow: coverage-baseline.yml
           workflow_conclusion: success
           name: coverage
           if_no_artifact_found: warn
