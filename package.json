@@ -73,7 +73,7 @@
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.28",
     "uuid": "^10.0.0",
-    "validator": "^13.15.26",
+    "validator": "^13.15.35",
     "vitepress-theme-openapi": "^0.0.3-alpha.34"
   },
   "devDependencies": {
