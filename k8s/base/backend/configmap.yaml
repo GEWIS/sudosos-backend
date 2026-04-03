@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-env-config
+data:
+  # App
+  NODE_ENV: production
+  API_BASEPATH: /api/v1
+  HTTP_PORT: "80"
+  TZ: Europe/Amsterdam
+  LOG_LEVEL: TRACE
+  WRAPPED_YEAR: "2025"
+
+  # Database (non-sensitive config — credentials go in the sealed secret)
+  TYPEORM_CONNECTION: mariadb
+  TYPEORM_SSL_ENABLED: "true"
+
+  # LDAP — enabled; credentials go in the sealed secret
+  ENABLE_LDAP: "true"
+
+  # SMTP — credentials go in the sealed secret; port here so the enabled check triggers
+  SMTP_PORT: "587"
+
+  # Redis — must use the in-cluster service name (default would be localhost)
+  REDIS_HOST: redis
+
+  # GEWIS integrations (public URL, key goes in the sealed secret)
+  GEWISDB_API_URL: https://database.gewis.nl/api

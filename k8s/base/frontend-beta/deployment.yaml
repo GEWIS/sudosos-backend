@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-beta
+  labels:
+    app: frontend-beta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-beta
+  template:
+    metadata:
+      labels:
+        app: frontend-beta
+    spec:
+      containers:
+        - name: frontend-beta
+          image: abc.docker-registry.gewis.nl/pos/sudosos/dashboard:develop
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

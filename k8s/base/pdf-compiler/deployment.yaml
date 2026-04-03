@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf-compiler
+  labels:
+    app: pdf-compiler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pdf-compiler
+  template:
+    metadata:
+      labels:
+        app: pdf-compiler
+    spec:
+      containers:
+        - name: pdf-compiler
+          image: abc.docker-registry.gewis.nl/eou/pdf-compiler:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi

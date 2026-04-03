@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-env-config
+data:
+  NAME: sudosos-test
+  API_HOST: sudosos.test.gewis.nl
+  URL: https://sudosos.test.gewis.nl
+  STRIPE_RETURN_URL: https://sudosos.test.gewis.nl
+  SMTP_FROM: "SudoSOS Test <svc-sudosos-test@gewis.nl>"
+  FINANCIAL_RESPONSIBLE: bacpm@gewis.nl

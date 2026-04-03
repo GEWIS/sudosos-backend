@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: abc.docker-registry.gewis.nl/pos/sudosos/backend:latest
+          ports:
+            - name: http
+              containerPort: 80
+            - name: ws
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: backend-env-config
+            - secretRef:
+                name: backend-env
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+            - name: data-products
+              mountPath: /app/out/data/products
+            - name: data-banners
+              mountPath: /app/out/data/banners
+            - name: data-invoices
+              mountPath: /app/out/data/invoices
+            - name: data-payout-requests
+              mountPath: /app/out/data/payout_requests
+            - name: data-seller-payouts
+              mountPath: /app/out/data/seller_payouts
+            - name: data-write-offs
+              mountPath: /app/out/data/write_offs
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sudosos-backend-config
+        - name: data-products
+          persistentVolumeClaim:
+            claimName: sudosos-products
+        - name: data-banners
+          persistentVolumeClaim:
+            claimName: sudosos-banners
+        - name: data-invoices
+          persistentVolumeClaim:
+            claimName: sudosos-invoices
+        - name: data-payout-requests
+          persistentVolumeClaim:
+            claimName: sudosos-payout-requests
+        - name: data-seller-payouts
+          persistentVolumeClaim:
+            claimName: sudosos-seller-payouts
+        - name: data-write-offs
+          persistentVolumeClaim:
+            claimName: sudosos-write-offs
