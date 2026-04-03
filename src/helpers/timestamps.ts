@@ -24,6 +24,8 @@
  * @module helpers
  */
 
+import Config from '../config';
+
 /**
  * Change the timezone of the given date to UTC
  * @param date
@@ -79,5 +81,5 @@ export function toLocalMySQLString(date: Date): string {
  * @param date
  */
 export function toMySQLString(date: Date): string {
-  return process.env.TYPEORM_CONNECTION === 'sqlite' ? toUTCMySQLString(date) : toLocalMySQLString(date);
+  return Config.get().database.isSqlite ? toUTCMySQLString(date) : toLocalMySQLString(date);
 }

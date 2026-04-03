@@ -60,7 +60,7 @@ export default class InvoiceController extends BaseController {
     */
   public constructor(options: BaseControllerOptions) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     globalAsyncValidatorRegistry.register('CreateInvoiceRequest', createInvoiceRequestSpec);
     globalAsyncValidatorRegistry.register('UpdateInvoiceRequest', updateInvoiceRequestSpec, (req) => ({
       ...req.body,

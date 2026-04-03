@@ -41,8 +41,8 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
-import { asNumber } from '../helpers/validators';
 import WithManager from '../database/with-manager';
+import Config from '../config';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
@@ -53,7 +53,12 @@ export default class StripeService extends WithManager {
 
   constructor(manager?: EntityManager) {
     super(manager);
-    this.stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY, {
+    const config = Config.get();
+    if (!config.stripe.privateKey) {
+      throw new Error('STRIPE_PRIVATE_KEY environment variable is not set.');
+    }
+
+    this.stripe = new Stripe(config.stripe.privateKey, {
       apiVersion: STRIPE_API_VERSION,
     });
     this.logger = log4js.getLogger('StripeController');
@@ -65,7 +70,7 @@ export default class StripeService extends WithManager {
    * @param request
    */
   public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
-    const MIN_TOPUP = asNumber(process.env.MIN_TOPUP) || 1000;
+    const minimumTopup = Config.get().stripe.minTopupAmount;
 
     //check for negative and zero 
     if (request.amount.amount <= 0) {
@@ -73,7 +78,7 @@ export default class StripeService extends WithManager {
     }
     
     // Check if top-up is enough
-    if (request.amount.amount >= MIN_TOPUP) return true;
+    if (request.amount.amount >= minimumTopup) return true;
     return request.amount.amount === -1 * balance.amount.amount;
   }
 
@@ -83,10 +88,10 @@ export default class StripeService extends WithManager {
    * @param request
    */
   public static validateStripeRequestMaximumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
-    const MAX_BALANCE = asNumber(process.env.MAX_BALANCE) || 15000;
+    const maximumBalance = Config.get().stripe.maxBalanceAmount;
 
     // Check if top-up will not exceed max balance
-    return MAX_BALANCE >= (balance.amount.amount + request.amount.amount);
+    return maximumBalance >= (balance.amount.amount + request.amount.amount);
   }
 
   private static asStripePaymentIntentStatusResponse(status: StripePaymentIntentStatus): StripePaymentIntentStatusResponse {
@@ -157,13 +162,14 @@ export default class StripeService extends WithManager {
   public async createStripePaymentIntent(
     user: User, amount: Dinero,
   ): Promise<{ deposit: StripeDeposit, clientSecret: string }> {
+    const config = Config.get();
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: DineroTransformer.Instance.to(amount),
       currency: amount.getCurrency(),
       automatic_payment_methods: { enabled: true },
       description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
       metadata: {
-        'service': process.env.NAME ?? 'sudosos-unknown',
+        'service': config.app.name,
         'userId': user.id,
       },
     });
@@ -192,7 +198,12 @@ export default class StripeService extends WithManager {
   public async constructWebhookEvent(
     body: any, signature: string | string[],
   ): Promise<Stripe.Event> {
-    return this.stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    const webhookSecret = Config.get().stripe.webhookSecret;
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set.');
+    }
+
+    return this.stripe.webhooks.constructEvent(body, signature, webhookSecret);
   }
 
   /**

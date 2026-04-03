@@ -35,6 +35,7 @@ import log4js from 'log4js';
 import TransactionService from '../service/transaction-service';
 import { TransactionResponse } from '../controller/response/transaction-response';
 import { TransactionNotificationOptions } from '../notifications/notification-options';
+import Config from '../config';
 
 @EventSubscriber()
 export default class TransactionSubscriber implements EntitySubscriberInterface {
@@ -43,7 +44,7 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
   }
 
   async afterInsert(event: InsertEvent<Transaction>): Promise<void> {
-    if (process.env.NODE_ENV === 'test') return;
+    if (Config.get().app.isTest) return;
     let { entity } = event;
     if (entity.subTransactions == null
       || (entity.subTransactions.length > 0 && entity.subTransactions[0].subTransactionRows == null)

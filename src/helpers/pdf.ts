@@ -29,6 +29,7 @@ import User from '../entity/user/user';
 import { Report, ReportProductEntry, ReportVatEntry } from '../entity/report/report';
 import ProductRevision from '../entity/product/product-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
+import Config from '../config';
 
 export const PDF_VAT_ZERO = 0;
 export const PDF_VAT_LOW = 9;
@@ -36,7 +37,9 @@ export const PDF_VAT_HIGH = 21;
 
 export const UNUSED_PARAM = '';
 export const UNUSED_NUMBER = 0;
-export const PDF_GEN_URL =  process.env.PDF_GEN_URL ? process.env.PDF_GEN_URL : 'http://localhost:3001/pdf';
+export function getPdfGenUrl(): string {
+  return Config.get().pdf.pdfGeneratorUrl;
+}
 
 /**
  * Convert VAT percentage to PDF VAT

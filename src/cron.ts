@@ -39,6 +39,8 @@ import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
 import WrappedService from './service/wrapped-service';
+import Config from './config';
+import { applyConfiguredLogLevel } from './helpers/logging';
 
 class CronApplication {
   logger: Logger;
@@ -57,19 +59,20 @@ class CronApplication {
 }
 
 async function createCronTasks(): Promise<void> {
+  const config = Config.get();
   const application = new CronApplication();
   application.connection = await Database.initialize();
   application.logger = log4js.getLogger('Application');
-  application.logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(application.logger);
   application.logger.info('Starting cron tasks...');
 
   const logger = getAppLogger('Console (cron)');
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+  dinero.defaultCurrency = config.currency.code as Currency;
+  dinero.defaultPrecision = config.currency.precision;
 
   // Initialize database-stored settings
   const store = ServerSettingsStore.getInstance();
@@ -157,7 +160,7 @@ if (require.main === module) {
   createCronTasks().catch((e) => {
     console.error(e);
     const logger = log4js.getLogger('index');
-    logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(logger);
     logger.fatal(e);
   });
 }

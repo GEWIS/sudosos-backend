@@ -18,7 +18,6 @@
  *  @license
  */
 
-import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
 import Database from '../src/database/database';
@@ -26,11 +25,14 @@ import { Application } from '../src';
 import seedDatabase from '../test/seed';
 import initializeDiskStorage from '../src/files/initialize';
 import { truncateAllTables } from '../test/setup';
+import Config from '../src/config';
+import { applyConfiguredLogLevel } from '../src/helpers/logging';
 
 export default async function createApp() {
+  const config = Config.get();
   const application = new Application();
   application.logger = log4js.getLogger('Seeder');
-  application.logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(application.logger);
   application.logger.info('Starting Seeder');
 
   application.connection = await Database.initialize();
@@ -38,12 +40,12 @@ export default async function createApp() {
 
   // Silent in-dependency logs unless really wanted by the environment.
   const logger = log4js.getLogger('Console');
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION, 10);
+  dinero.defaultCurrency = config.currency.code as Currency;
+  dinero.defaultPrecision = config.currency.precision;
 
   initializeDiskStorage();
 
@@ -57,7 +59,6 @@ export default async function createApp() {
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  config();
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   createApp();
 }

@@ -31,7 +31,6 @@
  *   - Bob:    bob@gewis.nl      / PIN 5678 (MEMBER, member of GEWIS organ)
  */
 
-import { config } from 'dotenv';
 import log4js from 'log4js';
 import dinero, { Currency } from 'dinero.js';
 import Database from '../src/database/database';
@@ -53,6 +52,8 @@ import InactiveAdministrativeCostSeeder from '../test/seed/ledger/inactive-admin
 import SellerPayoutSeeder from '../test/seed/ledger/seller-payout-seeder';
 import InvoiceSeeder from '../test/seed/ledger/invoice-seeder';
 import WriteOffSeeder from '../test/seed/ledger/write-off-seeder';
+import Config from '../src/config';
+import { applyConfiguredLogLevel } from '../src/helpers/logging';
 
 export default async function devSeed() {
   // 1. Users
@@ -107,16 +108,17 @@ export default async function devSeed() {
 }
 
 async function createApp() {
+  const config = Config.get();
   const application = new Application();
   application.logger = log4js.getLogger('DevSeed');
-  application.logger.level = process.env.LOG_LEVEL ?? 'info';
+  applyConfiguredLogLevel(application.logger);
   application.logger.info('Starting dev seed...');
 
   application.connection = await Database.initialize();
   await truncateAllTables(application.connection);
 
-  dinero.defaultCurrency = process.env.CURRENCY_CODE as Currency ?? 'EUR' as Currency;
-  dinero.defaultPrecision = parseInt(process.env.CURRENCY_PRECISION ?? '2', 10);
+  dinero.defaultCurrency = config.currency.code as Currency;
+  dinero.defaultPrecision = config.currency.precision;
 
   initializeDiskStorage();
 
@@ -130,7 +132,6 @@ async function createApp() {
 }
 
 if (require.main === module) {
-  config();
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   createApp();
 }

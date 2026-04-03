@@ -40,6 +40,7 @@ import { IPdfAble, IUnstoredPdfAble } from '../../entity/file/pdf-able';
 import WithManager from '../../database/with-manager';
 import { postCompileHtml } from '@gewis/pdf-compiler-ts';
 import { createClient, type Client as PdfCompilerClient } from '@gewis/pdf-compiler-ts/dist/client/client';
+import Config from '../../config';
 
 /**
  * Base interface for all PDF services.
@@ -107,8 +108,7 @@ export abstract class BasePdfService<T, R extends RouteParams>
 
   constructor(manager?: EntityManager) {
     super(manager);
-    const PDF_GEN_URL = process.env.PDF_GEN_URL ?? 'http://localhost:3001/pdf';
-    this.client = BasePdfService.getClient(PDF_GEN_URL);
+    this.client = BasePdfService.getClient(Config.get().pdf.pdfGeneratorUrl);
   }
 
   protected getFileSettings(fileType = ReturnFileType.PDF): FileSettings {
@@ -194,7 +194,7 @@ export abstract class BaseHtmlPdfService<T, P extends PdfTemplateParameters = Pd
 
   constructor(manager?: EntityManager) {
     super(manager);
-    this.htmlPdfGenUrl = process.env.HTML_PDF_GEN_URL ?? 'http://localhost:3001';
+    this.htmlPdfGenUrl = Config.get().pdf.htmlPdfGeneratorUrl;
     // Create a client instance per service instance to avoid race conditions
     this.client = createClient({ baseUrl: this.htmlPdfGenUrl });
   }

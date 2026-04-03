@@ -32,6 +32,7 @@ import { ConnectionOptions, Queue } from 'bullmq';
 import Redis from 'ioredis';
 import createSMTPTransporter from './transporter';
 import { Transporter } from 'nodemailer';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 enum MailQueues {
   SendEmail = 'send-email',
@@ -55,7 +56,7 @@ export default class Mailer {
    * where Redis may not be running.
    */
   constructor(redisConnection?: Redis) {
-    this.logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(this.logger);
 
     if (redisConnection) {
       this.mailQueue = new Queue('mail-queue', {

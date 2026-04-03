@@ -37,6 +37,7 @@ import BannerImage from '../entity/file/banner-image';
 import Pdf from '../entity/file/pdf-file';
 import { IPdfAble } from '../entity/file/pdf-able';
 import { AppDataSource } from '../database/database';
+import Config from '../config';
 
 /**
  *  Possible storage methods that can be used
@@ -52,14 +53,14 @@ export default class FileService {
   private fileStorage: FileStorage;
 
   constructor(workdir?: string, storageMethod?: StorageMethod) {
-    switch (storageMethod ?? process.env.FILE_STORAGE_METHOD) {
-      case undefined:
-      case '':
+    const configuredStorageMethod = storageMethod ?? Config.get().files.storageMethod;
+
+    switch (configuredStorageMethod) {
       case 'disk':
         this.fileStorage = new DiskStorage(workdir ?? SIMPLE_FILE_LOCATION);
         break;
       default:
-        throw new TypeError(`Unknown file storage method: ${process.env.FILE_STORAGE_METHOD}`);
+        throw new TypeError(`Unknown file storage method: ${configuredStorageMethod}`);
     }
   }
 

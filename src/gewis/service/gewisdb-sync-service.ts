@@ -38,6 +38,7 @@ import { ISettings } from '../../entity/server-setting';
 import { EntityManager } from 'typeorm';
 import Notifier, { MembershipExpiryNotificationOptions } from '../../notifications';
 import { NotificationTypes } from '../../notifications/notification-types';
+import Config from '../../config';
 
 export default class GewisDBSyncService extends UserSyncService {
 
@@ -51,11 +52,12 @@ export default class GewisDBSyncService extends UserSyncService {
 
   constructor(gewisdbApiKey?: string, gewisdbApiUrl?: string, manager?: EntityManager) {
     super(manager);
-    const basePath = gewisdbApiUrl ?? process.env.GEWISDB_API_URL;
-    const token = gewisdbApiKey ?? process.env.GEWISDB_API_KEY;
+    const config = Config.get();
+    const basePath = gewisdbApiUrl ?? config.gewis.gewisdbApiUrl;
+    const token = gewisdbApiKey ?? config.gewis.gewisdbApiKey;
     this.api = new MembersApi(new Configuration({ basePath, accessToken: () => token }));
     this.pinger = new BasicApi(new Configuration({ basePath, accessToken: () => token }));
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
   }
 
   async guard(entity: User): Promise<boolean> {

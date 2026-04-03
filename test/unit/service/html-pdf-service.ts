@@ -140,7 +140,7 @@ describe('BaseHtmlPdfService', () => {
       
       const newService = new TestBaseHtmlPdfService();
       // eslint-disable-next-line @typescript-eslint/dot-notation
-      expect(newService['htmlPdfGenUrl']).to.eq('http://localhost:3001');
+      expect(newService['htmlPdfGenUrl']).to.eq('http://pdf-compiler:80/api/v1');
       
       if (originalEnv) {
         process.env.HTML_PDF_GEN_URL = originalEnv;

@@ -20,7 +20,10 @@
 
 /* eslint-disable import/prefer-default-export */
 import * as util from 'util';
-import { generateKeyPair } from 'crypto';
+import { generateKeyPair, generateKeyPairSync } from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { use } from 'chai';
 import chaiSwag from 'chai-swag';
 import chaiHttp from 'chai-http';
@@ -34,6 +37,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 import '../src/database/database';
+import Config from '../src/config';
 
 // Root hooks
 export { mochaHooks, closeDBHook } from './root-hooks';
@@ -50,6 +54,44 @@ process.env.NODE_ENV = 'test';
 if (!process.env.LOG_LEVEL) {
   process.env.LOG_LEVEL = 'OFF';
 }
+if (!process.env.NAME) {
+  process.env.NAME = 'sudosos-test';
+}
+if (!process.env.SMTP_FROM) {
+  process.env.SMTP_FROM = 'SudoSOS <no-reply@example.test>';
+}
+if (!process.env.SMTP_HOST) {
+  process.env.SMTP_HOST = 'localhost';
+}
+if (!process.env.SMTP_PORT) {
+  process.env.SMTP_PORT = '1025';
+}
+if (process.env.SMTP_USERNAME && !process.env.SMTP_PASSWORD) {
+  process.env.SMTP_PASSWORD = 'test-password';
+}
+if (process.env.SMTP_PASSWORD && !process.env.SMTP_USERNAME) {
+  process.env.SMTP_USERNAME = 'test-user';
+}
+if (!process.env.JWT_KEY_PATH) {
+  const { privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem',
+    },
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem',
+    },
+  });
+  const jwtKeyPath = path.join(os.tmpdir(), `sudosos-test-jwt-${process.pid}.pem`);
+  fs.writeFileSync(jwtKeyPath, privateKey, 'utf-8');
+  process.env.JWT_KEY_PATH = jwtKeyPath;
+
+  process.on('exit', () => {
+    try { fs.unlinkSync(jwtKeyPath); } catch { /* already removed */ }
+  });
+}
 if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
@@ -57,6 +99,24 @@ if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqli
   process.env.TYPEORM_DATABASE = ':memory:';
   process.env.TYPEORM_SYNCHRONIZE = 'true';
 }
+
+const originalEnv = process.env;
+process.env = new Proxy(originalEnv, {
+  set(target, property, value) {
+    Config.reset();
+    // Node stores environment values as strings.
+    // eslint-disable-next-line no-param-reassign
+    target[property as string] = value as string;
+    return true;
+  },
+  deleteProperty(target, property) {
+    Config.reset();
+    // eslint-disable-next-line no-param-reassign
+    delete target[property as string];
+    return true;
+  },
+});
+Config.reset();
 
 dinero.defaultCurrency = 'EUR';
 dinero.defaultPrecision = 2;

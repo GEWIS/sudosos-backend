@@ -41,6 +41,7 @@ import Gewis from '../gewis';
 import UserService from '../../service/user-service';
 import { webResponseToUpdate } from '../helpers/gewis-helper';
 import { UserType } from '../../entity/user/user';
+import Config from '../../config';
 
 /**
   * The GEWIS authentication controller is responsible for:
@@ -75,7 +76,7 @@ export default class GewisAuthenticationController extends BaseController {
     gewiswebSecret: string,
   ) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.tokenHandler = tokenHandler;
     this.gewiswebSecret = gewiswebSecret;
   }
@@ -117,7 +118,7 @@ export default class GewisAuthenticationController extends BaseController {
   public async getGEWISWebPublic(req: Request, res: Response): Promise<void> {
     this.logger.trace('Get GEWISWeb public token by IP', req.ip);
 
-    res.json(process.env.GEWISWEB_PUBLIC_TOKEN);
+    res.json(Config.get().gewis.gewiswebPublicToken);
   }
 
   /**

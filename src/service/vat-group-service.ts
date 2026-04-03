@@ -42,6 +42,7 @@ import ProductRevision from '../entity/product/product-revision';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import ProductService from './product-service';
 import { AppDataSource } from '../database/database';
+import Config from '../config';
 
 interface VatGroupFilterParameters {
   vatGroupId?: number;
@@ -207,6 +208,7 @@ export default class VatGroupService {
     }
 
     const vatGroups = await VatGroup.find({ where: { deleted: false } });
+    const isSqlite = Config.get().database.isSqlite;
 
     const builder = AppDataSource.createQueryBuilder(SubTransactionRow, 'str')
       .select([
@@ -215,10 +217,10 @@ export default class VatGroupService {
         'MAX(vatgroup.percentage) as percentage',
         'MAX(vatgroup.deleted) as deleted',
         // Timezones are a bitch
-        process.env.TYPEORM_CONNECTION === 'sqlite'
+        isSqlite
           ? `(STRFTIME('%m', DATETIME(str.createdAt, '${(new Date()).getTimezoneOffset()} minutes')) - 1) / ${divider} as period`
           : `FLOOR((DATE_FORMAT(DATE_ADD(str.createdAt, INTERVAL ${(new Date()).getTimezoneOffset()} MINUTE), '%m') - 1) / ${divider}) as period`,
-        process.env.TYPEORM_CONNECTION === 'sqlite'
+        isSqlite
           ? 'Strftime(\'%Y\', str.createdAt) as year'
           : 'DATE_FORMAT(str.createdAt, \'%Y\') as year',
         'SUM(ROUND((str.amount * product.priceInclVat * vatgroup.percentage) / (100 + vatgroup.percentage))) as value',
@@ -226,7 +228,7 @@ export default class VatGroupService {
       .innerJoin(ProductRevision, 'product', 'str.productRevision = product.revision AND str.productProductId = product.productId')
       .innerJoin(VatGroup, 'vatgroup', 'product.vatId = vatgroup.id')
       .where('str.invoiceId IS NULL')
-      .andWhere(`${process.env.TYPEORM_CONNECTION === 'sqlite'
+      .andWhere(`${isSqlite
         ? 'Strftime(\'%Y\', str.createdAt)'
         : 'DATE_FORMAT(str.createdAt, \'%Y\')'} = :year`, { year: params.year.toString() })
       .groupBy('vatgroup.id')

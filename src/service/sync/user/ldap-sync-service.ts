@@ -34,6 +34,7 @@ import { getLDAPConnection, LDAPGroup, LDAPUser } from '../../../helpers/ad';
 import RBACService from '../../rbac-service';
 import log4js, { Logger } from 'log4js';
 import { UserSyncService } from './user-sync-service';
+import Config from '../../../config';
 
 export default class LdapSyncService extends UserSyncService {
 
@@ -51,10 +52,10 @@ export default class LdapSyncService extends UserSyncService {
 
   constructor(roleManager: RoleManager, adService?: ADService, manager?: EntityManager) {
     // Sanity check, since we already have a ldapClient
-    if (!process.env.ENABLE_LDAP) throw new Error('LDAP is not enabled');
+    if (!Config.get().ldap.enabled) throw new Error('LDAP is not enabled');
 
     super(manager);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.roleManager = roleManager;
     this.adService = adService ?? new ADService(this.manager);
   }
@@ -137,7 +138,7 @@ export default class LdapSyncService extends UserSyncService {
   private async fetchSharedAccounts(): Promise<void> {
     this.logger.debug('Fetching shared accounts from LDAP');
     const sharedAccounts = await this.adService.getLDAPGroups<LDAPGroup>(
-      this.ldapClient, process.env.LDAP_SHARED_ACCOUNT_FILTER);
+      this.ldapClient, Config.get().ldap.sharedAccountFilter);
 
     // If there are new shared accounts, we create them.
     const newSharedAccounts = (await this.adService.filterUnboundGUID(sharedAccounts)) as LDAPGroup[];
@@ -162,7 +163,7 @@ export default class LdapSyncService extends UserSyncService {
   private async fetchUserRoles(): Promise<void> {
     this.logger.debug('Fetching user roles from LDAP');
     const roles = await this.adService.getLDAPGroups<LDAPGroup>(
-      this.ldapClient, process.env.LDAP_ROLE_FILTER);
+      this.ldapClient, Config.get().ldap.roleFilter);
     if (!roles) {
       this.logger.warn('Could not fetch LDAP roles (or no roles were found), skipping.');
       return;
@@ -192,7 +193,7 @@ export default class LdapSyncService extends UserSyncService {
   private async fetchServiceAccounts(): Promise<void> {
     this.logger.debug('Fetching service accounts from LDAP');
     const serviceAccounts = (await this.adService.getLDAPGroupMembers(
-      this.ldapClient, process.env.LDAP_SERVICE_ACCOUNT_FILTER)).searchEntries;
+      this.ldapClient, Config.get().ldap.serviceAccountFilter)).searchEntries;
 
     const newServiceAccounts = await this.adService.filterUnboundGUID(serviceAccounts);
     this.logger.trace(`Found ${newServiceAccounts.length} new service accounts`);
@@ -206,20 +207,21 @@ export default class LdapSyncService extends UserSyncService {
    */
   async fetch(): Promise<void> {
     this.logger.trace('Fetching LDAP data');
+    const config = Config.get();
 
-    if (!process.env.LDAP_SHARED_ACCOUNT_FILTER) {
+    if (!config.ldap.sharedAccountFilter) {
       this.logger.warn('LDAP_SHARED_ACCOUNT_FILTER is not set, skipping shared accounts');
     } else {
       await this.fetchSharedAccounts();
     }
 
-    if (!process.env.LDAP_ROLE_FILTER) {
+    if (!config.ldap.roleFilter) {
       this.logger.warn('LDAP_ROLE_FILTER is not set, skipping user roles');
     } else {
       await this.fetchUserRoles();
     }
 
-    if (!process.env.LDAP_SERVICE_ACCOUNT_FILTER) {
+    if (!config.ldap.serviceAccountFilter) {
       this.logger.warn('LDAP_SERVICE_ACCOUNT_FILTER is not set, skipping service accounts');
     } else {
       await this.fetchServiceAccounts();

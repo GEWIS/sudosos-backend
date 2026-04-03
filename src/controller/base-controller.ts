@@ -25,6 +25,7 @@
  */
 
 import express, { Router, RequestHandler } from 'express';
+import { Logger } from 'log4js';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import Policy, { MethodPolicy } from './policy';
 import PolicyMiddleware from '../middleware/policy-middleware';
@@ -33,6 +34,7 @@ import AsyncValidatorMiddleware from '../middleware/async-validator-middleware';
 import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import RoleManager from '../rbac/role-manager';
 import RestrictionMiddleware from '../middleware/restriction-middleware';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 /**
  * This interface is a wrapper around all the parameters of the BaseController,
@@ -145,5 +147,9 @@ export default abstract class BaseController {
    */
   public getRouter(): Router {
     return this.router;
+  }
+
+  protected configureLogger(logger: Logger): void {
+    applyConfiguredLogLevel(logger);
   }
 }

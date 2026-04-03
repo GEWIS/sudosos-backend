@@ -25,12 +25,18 @@
  */
 
 import { EntityManager } from 'typeorm';
+import { Logger } from 'log4js';
 import { AppDataSource } from './database';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 export default abstract class WithManager {
   protected manager: EntityManager;
 
   public constructor(manager?: EntityManager) {
     this.manager = manager ?? AppDataSource.manager;
+  }
+
+  protected configureLogger(logger: Logger): void {
+    applyConfiguredLogLevel(logger);
   }
 }

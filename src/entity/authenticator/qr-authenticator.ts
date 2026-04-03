@@ -29,6 +29,7 @@ import { v4 as uuidv4 } from 'uuid';
 import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 import { QRCodeResponse } from '../../controller/response/authentication-qr-response';
+import Config from '../../config';
 
 export enum QRAuthenticatorStatus {
   PENDING = 'PENDING',
@@ -36,11 +37,6 @@ export enum QRAuthenticatorStatus {
   EXPIRED = 'EXPIRED',
   CANCELLED = 'CANCELLED',
 }
-
-const DEFAULT_QR_AUTHENTICATOR_EXPIRES_IN_MS = 5 * 60 * 1000;
-const QR_AUTHENTICATOR_EXPIRES_IN = process.env.QR_AUTHENTICATOR_EXPIRES_IN
-  ? parseInt(process.env.QR_AUTHENTICATOR_EXPIRES_IN, 10)
-  : DEFAULT_QR_AUTHENTICATOR_EXPIRES_IN_MS;
 
 /**
  * The QR Authenticator enables QR code-based authentication in SudoSOS.
@@ -126,9 +122,10 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
   }
 
   response(): QRCodeResponse {
+    const config = Config.get();
     return {
       sessionId: this.sessionId,
-      qrCodeUrl: `${process.env.URL || 'http://localhost:5173'}/auth/qr/confirm?sessionId=${this.sessionId}`,
+      qrCodeUrl: `${config.app.frontendUrl}/auth/qr/confirm?sessionId=${this.sessionId}`,
       expiresAt: this.expiresAt.toISOString(),
     };
   }
@@ -138,8 +135,7 @@ export default class QRAuthenticator extends BaseEntityWithoutId {
     this.sessionId = uuidv4();
     this.user = null;
     this.cancelled = false;
-    this.expiresAt = new Date(Date.now() + QR_AUTHENTICATOR_EXPIRES_IN);
+    this.expiresAt = new Date(Date.now() + Config.get().auth.qrAuthenticatorExpiresInMs);
     this.confirmedAt = null;
   }
 }
-

@@ -22,6 +22,7 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import { io } from 'socket.io-client';
 import WebSocketService from '../../../src/service/websocket-service';
+import Config from '../../../src/config';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -291,31 +292,36 @@ describe('WebSocketService', () => {
 
   describe('environment handling', () => {
     it('should call setupAdapter if NODE_ENV is set to production', () => {
-      // Save and change NODE_ENV to production
+      // Save original state
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      const wss = WebSocketService as unknown as { instance: WebSocketService };
+      const originalInstance = wss.instance;
 
-      // Create a new instance to test production setup
-      const mockTokenHandler = {} as TokenHandler;
-      const mockRoleManager = {} as RoleManager;
-      const testService = new WebSocketService({
-        tokenHandler: mockTokenHandler,
-        roleManager: mockRoleManager,
-      });
-      
-      // Stub the setupAdapter method on the instance
+      // Stub setupAdapter on the prototype BEFORE creating the instance
+      // so the real cluster adapter never runs (it needs process.send)
       // @ts-ignore to allow access to the private method
-      const setupAdapterStub = sinon.stub(testService, 'setupAdapter').returns(undefined);
-      
-      // Initiate the WebSocket
-      testService.initiateWebSocket();
+      const setupAdapterStub = sinon.stub(WebSocketService.prototype, 'setupAdapter').returns(undefined);
 
-      // Verify setupAdapter was called
-      expect(setupAdapterStub.calledOnce).to.be.true;
+      try {
+        process.env.NODE_ENV = 'production';
+        Config.reset();
 
-      // Restore NODE_ENV
-      process.env.NODE_ENV = originalEnv;
-      setupAdapterStub.restore();
+        const mockTokenHandler = {} as TokenHandler;
+        const mockRoleManager = {} as RoleManager;
+        const testService = new WebSocketService({
+          tokenHandler: mockTokenHandler,
+          roleManager: mockRoleManager,
+        });
+
+        testService.initiateWebSocket();
+        expect(setupAdapterStub.calledOnce).to.be.true;
+      } finally {
+        // Restore everything so later tests are not affected
+        setupAdapterStub.restore();
+        process.env.NODE_ENV = originalEnv;
+        Config.reset();
+        wss.instance = originalInstance;
+      }
     });
   });
 

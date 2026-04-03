@@ -76,7 +76,6 @@ import EventShiftAnswer from '../entity/event/event-shift-answer';
 import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
-import dotenv from 'dotenv';
 import PayoutRequestPdf from '../entity/file/payout-request-pdf';
 import Role from '../entity/rbac/role';
 import Permission from '../entity/rbac/permission';
@@ -110,127 +109,143 @@ import {
   RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
 } from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 import { AddLastSeenToUser1769000095806 } from '../migrations/1769000095806-add-last-seen-to-user';
+import Config from '../config';
 
-// We need to load the dotenv to prevent the env from being undefined.
-dotenv.config();
+function getDataSourceOptions(): DataSourceOptions {
+  const config = Config.get();
 
-if (process.env.NODE_ENV === 'test') {
-  console.log('TYPEORM_CONNECTION:', process.env.TYPEORM_CONNECTION);
+  if (config.app.isTest) {
+    console.log('TYPEORM_CONNECTION:', config.database.connection);
+  }
+
+  const options = {
+    host: config.database.host,
+    port: config.database.port,
+    database: config.database.database,
+    type: config.database.connection,
+    username: config.database.username,
+    password: config.database.password,
+    ...(config.database.sslEnabled ? {
+      ssl: {
+        ca: fs.readFileSync(config.database.sslCaCertsPath),
+      },
+    } : {}),
+    synchronize: config.database.synchronize,
+    logging: config.database.logging,
+    migrations: [
+      InitialSQLMigration1743601882766,
+      QrAuthenticator1743601882766,
+      MemberAuthenticator1761324427011,
+      AddOrganMembershipIndex1761328648026,
+      UserAdministrativeCost1761845457283,
+      RenameGewisToExternal1763399087409,
+      UserNotificationPreference1764615514906,
+      AddWrappedTable1764842063654,
+      AddWrappedOrganMember1765826596888,
+      UserSetting1768697568707,
+      RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
+      AddLastSeenToUser1769000095806,
+    ],
+    extra: {
+      authPlugins: {
+        mysql_clear_password: () => () => Buffer.from(`${config.database.password ?? ''}\0`),
+      },
+    },
+    poolSize: 4,
+    entities: [
+      ServerSetting,
+      ProductCategory,
+      VatGroup,
+      Product,
+      ProductRevision,
+      Container,
+      ContainerRevision,
+      PointOfSale,
+      PointOfSaleRevision,
+      Transfer,
+      InactiveAdministrativeCost,
+      StripeDeposit,
+      StripePaymentIntent,
+      StripePaymentIntentStatus,
+      PayoutRequest,
+      PayoutRequestPdf,
+      PayoutRequestStatus,
+      SellerPayout,
+      SellerPayoutPdf,
+      Fine,
+      FineHandoutEvent,
+      UserFineGroup,
+      Transaction,
+      SubTransaction,
+      SubTransactionRow,
+      VoucherGroup,
+      User,
+      LocalUser,
+      MemberUser,
+      UserVoucherGroup,
+      EanAuthenticator,
+      OrganMembership,
+      NfcAuthenticator,
+      KeyAuthenticator,
+      PinAuthenticator,
+      LocalAuthenticator,
+      LDAPAuthenticator,
+      Banner,
+      ProductOrdering,
+      Balance,
+      InvoiceUser,
+      Invoice,
+      InvoiceStatus,
+      InvoicePdf,
+      BaseFile,
+      ProductImage,
+      BannerImage,
+      Role,
+      RoleUserType,
+      Permission,
+      AssignedRole,
+      ResetToken,
+      Event,
+      EventShift,
+      EventShiftAnswer,
+      Wrapped,
+      WrappedOrganMember,
+      WriteOff,
+      WriteOffPdf,
+      QRAuthenticator,
+      NotificationLog,
+      UserNotificationPreference,
+      UserSetting,
+    ],
+    subscribers: [
+      TransactionSubscriber,
+      TransferSubscriber,
+    ],
+  };
+
+  return options as DataSourceOptions;
 }
 
-const options: DataSourceOptions = {
-  host: process.env.TYPEORM_HOST,
-  port: parseInt(process.env.TYPEORM_PORT || '3001'),
-  database: process.env.TYPEORM_DATABASE,
-  type: process.env.TYPEORM_CONNECTION as 'postgres' | 'mariadb' | 'mysql',
-  username: process.env.TYPEORM_USERNAME,
-  password: process.env.TYPEORM_PASSWORD,
-  ...(process.env.TYPEORM_SSL_ENABLED === 'true' ? {
-    ssl: {
-      ca: fs.readFileSync(process.env.TYPEORM_SSL_CACERTS),
-    },
-  } : {}),
-  synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
-  logging: process.env.TYPEORM_LOGGING === 'true',
-  migrations: [
-    InitialSQLMigration1743601882766,
-    QrAuthenticator1743601882766,
-    MemberAuthenticator1761324427011,
-    AddOrganMembershipIndex1761328648026,
-    UserAdministrativeCost1761845457283,
-    RenameGewisToExternal1763399087409,
-    UserNotificationPreference1764615514906,
-    AddWrappedTable1764842063654,
-    AddWrappedOrganMember1765826596888,
-    UserSetting1768697568707,
-    RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
-    AddLastSeenToUser1769000095806,
-  ],
-  extra: {
-    authPlugins: {
-      mysql_clear_password: () => () => Buffer.from(`${process.env.TYPEORM_PASSWORD}\0`),
-    },
-  },
-  poolSize: 4,
-  entities: [
-    ServerSetting,
-    ProductCategory,
-    VatGroup,
-    Product,
-    ProductRevision,
-    Container,
-    ContainerRevision,
-    PointOfSale,
-    PointOfSaleRevision,
-    Transfer,
-    InactiveAdministrativeCost,
-    StripeDeposit,
-    StripePaymentIntent,
-    StripePaymentIntentStatus,
-    PayoutRequest,
-    PayoutRequestPdf,
-    PayoutRequestStatus,
-    SellerPayout,
-    SellerPayoutPdf,
-    Fine,
-    FineHandoutEvent,
-    UserFineGroup,
-    Transaction,
-    SubTransaction,
-    SubTransactionRow,
-    VoucherGroup,
-    User,
-    LocalUser,
-    MemberUser,
-    UserVoucherGroup,
-    EanAuthenticator,
-    OrganMembership,
-    NfcAuthenticator,
-    KeyAuthenticator,
-    PinAuthenticator,
-    LocalAuthenticator,
-    LDAPAuthenticator,
-    Banner,
-    ProductOrdering,
-    Balance,
-    InvoiceUser,
-    Invoice,
-    InvoiceStatus,
-    InvoicePdf,
-    BaseFile,
-    ProductImage,
-    BannerImage,
-    Role,
-    RoleUserType,
-    Permission,
-    AssignedRole,
-    ResetToken,
-    Event,
-    EventShift,
-    EventShiftAnswer,
-    Wrapped,
-    WrappedOrganMember,
-    WriteOff,
-    WriteOffPdf,
-    QRAuthenticator,
-    NotificationLog,
-    UserNotificationPreference,
-    UserSetting,
-  ],
-  subscribers: [
-    TransactionSubscriber,
-    TransferSubscriber,
-  ],
-};
+function getBootstrapDataSourceOptions(): DataSourceOptions {
+  return {
+    type: 'sqlite',
+    database: ':memory:',
+    synchronize: true,
+    logging: false,
+    migrations: [],
+    entities: [],
+    subscribers: [],
+  };
+}
 
-export let AppDataSource = new DataSource(options);
+export let AppDataSource = new DataSource(getBootstrapDataSourceOptions());
 
 const Database = {
   initialize: async () => {
     if (AppDataSource.isInitialized) return AppDataSource;
+    AppDataSource = new DataSource(getDataSourceOptions());
     return AppDataSource.initialize();
   },
 };
 
 export default Database;
-

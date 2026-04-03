@@ -29,6 +29,7 @@ import { UserSyncService } from './user-sync-service';
 import LdapSyncService from './ldap-sync-service';
 import GewisDBSyncService from '../../../gewis/service/gewisdb-sync-service';
 import User from '../../../entity/user/user';
+import Config from '../../../config';
 
 /**
  * User-specific sync service types.
@@ -86,9 +87,10 @@ export default class UserSyncServiceFactory extends SyncServiceFactory<User, Use
    * @returns Object describing available services
    */
   public getAvailableServices(): { ldap: boolean; gewisdb: boolean } {
+    const config = Config.get();
     return {
-      ldap: process.env.ENABLE_LDAP === 'true',
-      gewisdb: !!(process.env.GEWISDB_API_KEY && process.env.GEWISDB_API_URL),
+      ldap: config.ldap.enabled,
+      gewisdb: !!(config.gewis.gewisdbApiKey && config.gewis.gewisdbApiUrl),
     };
   }
 

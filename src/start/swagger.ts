@@ -31,7 +31,7 @@ import swaggerUi from 'swagger-ui-express';
 import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import expressJSDocSwagger from 'express-jsdoc-swagger';
 import log4js, { Logger } from 'log4js';
-import { config } from 'dotenv';
+import Config from '../config';
 
 export default class Swagger {
   private static logger: Logger = log4js.getLogger('SwaggerGenerator');
@@ -43,6 +43,7 @@ export default class Swagger {
    * @returns The Swagger specification with model validator.
    */
   public static generateSpecification(app: express.Application, filesPattern: string[]): Promise<SwaggerSpecification> {
+    const config = Config.get();
     return new Promise((resolve, reject) => {
       const options = {
         info: {
@@ -56,7 +57,7 @@ export default class Swagger {
         ],
         servers: [
           {
-            url: `http://${process.env.API_HOST}${process.env.API_BASEPATH}`,
+            url: `http://${config.app.apiHost}${config.app.apiBasePath}`,
             description: 'Development server',
           },
         ],
@@ -132,7 +133,8 @@ export default class Swagger {
    * @param app - The express application which will serve the specification.
    */
   public static async initialize(app: express.Application): Promise<SwaggerSpecification> {
-    if (process.env.NODE_ENV === 'production') {
+    const config = Config.get();
+    if (config.app.isProduction) {
       // Serve pre-generated Swagger specification in production environments.
       const specification = await Swagger.importSpecification();
       specification.info = {
@@ -142,7 +144,7 @@ export default class Swagger {
       };
       specification.servers = [
         {
-          url: `https://${process.env.API_HOST}${process.env.API_BASEPATH}`,
+          url: `https://${config.app.apiHost}${config.app.apiBasePath}`,
           description: 'Production server',
         },
       ];
@@ -164,7 +166,6 @@ export default class Swagger {
 }
 
 if (require.main === module) {
-  config();
   // Only execute directly if this is the main execution file.
   const app = express();
 

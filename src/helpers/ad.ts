@@ -29,17 +29,20 @@ import { Client } from 'ldapts';
 import log4js, { Logger } from 'log4js';
 import User from '../entity/user/user';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
+import Config from '../config';
+import { applyConfiguredLogLevel } from './logging';
 
 /**
  * Wrapper for the LDAP environment variables.
  */
 export function getLDAPSettings() {
+  const config = Config.get();
   return {
-    url: process.env.LDAP_SERVER_URL,
-    reader: process.env.LDAP_BIND_USER,
-    readerPassword: process.env.LDAP_BIND_PW,
-    base: process.env.LDAP_BASE,
-    userFilter: process.env.LDAP_USER_FILTER,
+    url: config.ldap.serverUrl,
+    reader: config.ldap.bindUser,
+    readerPassword: config.ldap.bindPassword,
+    base: config.ldap.base,
+    userFilter: config.ldap.userFilter,
   };
 }
 
@@ -86,7 +89,7 @@ export async function bindUser(manager: EntityManager,
  */
 export async function getLDAPConnection(): Promise<Client> {
   const logger: Logger = log4js.getLogger('LDAP');
-  logger.level = process.env.LOG_LEVEL;
+  applyConfiguredLogLevel(logger);
 
   const ldapSettings = getLDAPSettings();
 

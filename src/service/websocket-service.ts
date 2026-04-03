@@ -41,6 +41,8 @@ import { InPosGuard, ForUserGuard } from './websocket/event-guards';
 import { EventRegistry, ResolvedRoom } from './websocket/event-registry';
 import { getPointOfSaleRelation } from './websocket/pos-relation-helper';
 import RoleManager from '../rbac/role-manager';
+import Config from '../config';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 const SYSTEM_ROOM = 'system';
 
@@ -89,7 +91,7 @@ export default class WebSocketService {
   constructor(options: WebSocketServiceOptions) {
     this.tokenHandler = options.tokenHandler;
     this.roleManager = options.roleManager;
-    this.logger.level = process.env.LOG_LEVEL;
+    applyConfiguredLogLevel(this.logger);
     this.initializeRoomsAndHandlers();
     WebSocketService.instance = this;
   }
@@ -267,15 +269,16 @@ export default class WebSocketService {
    * Initializes the WebSocket server and sets up connection handlers.
    */
   public initiateWebSocket(): void {
+    const config = Config.get();
     // Prevent multiple initializations
     if (this.connectionHandlerRegistered) {
       this.logger.trace('WebSocket connection handler already registered, skipping initialization');
       return;
     }
 
-    const port = process.env.WEBSOCKET_PORT ? parseInt(process.env.WEBSOCKET_PORT, 10) : 8080;
+    const port = config.websocket.port;
 
-    if (process.env.NODE_ENV == 'production') {
+    if (config.app.isProduction) {
       this.setupAdapter();
     }
 

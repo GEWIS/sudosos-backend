@@ -28,6 +28,7 @@ import { Language, MailLanguageMap } from './mail-message';
 import User from '../entity/user/user';
 import fs from 'fs';
 import path from 'path';
+import Config from '../config';
 
 interface TemplateFields {
   subject: string;
@@ -40,19 +41,24 @@ interface TemplateFields {
   reasonForEmail: string;
 }
 
-export const templateFieldDefault: Record<
-keyof Pick<TemplateFields, 'serviceEmail' | 'reasonForEmail'>
-, { [key in Language]: string }
-> = {
-  serviceEmail: {
-    'en-US': process.env.SMTP_FROM?.split('<')[1].split('>')[0] || '',
-    'nl-NL': process.env.SMTP_FROM?.split('<')[1].split('>')[0] || '',
-  },
-  reasonForEmail: {
-    'en-US': 'You are receiving this email because you are registered as a SudoSOS user.',
-    'nl-NL': 'Je ontvangt deze e-mail omdat je bent geregistreerd als een SudoSOS gebruiker.',
-  },
-};
+export function getTemplateFieldDefault(): Record<
+keyof Pick<TemplateFields, 'serviceEmail' | 'reasonForEmail'>,
+{ [key in Language]: string }
+> {
+  const fromAddress = Config.get().smtp.from;
+  const serviceEmail = fromAddress?.split('<')[1]?.split('>')[0] || '';
+
+  return {
+    serviceEmail: {
+      'en-US': serviceEmail,
+      'nl-NL': serviceEmail,
+    },
+    reasonForEmail: {
+      'en-US': 'You are receiving this email because you are registered as a SudoSOS user.',
+      'nl-NL': 'Je ontvangt deze e-mail omdat je bent geregistreerd als een SudoSOS gebruiker.',
+    },
+  };
+}
 
 export default class MailBodyGenerator<T> {
   private readonly template: string;
@@ -114,6 +120,7 @@ ${this.getLocalizedClosing()}`;
     to: User,
   ) {
     const { text, html, subject, title, reason } = contents[this.language].getContent(options);
+    const templateFieldDefault = getTemplateFieldDefault();
 
     let styledHtml = this.template;
     const styledHtmlTemplateFields: TemplateFields = {

@@ -45,7 +45,7 @@ export default class AuthenticationQRController extends BaseController {
 
   public constructor(options: BaseControllerOptions, tokenHandler: TokenHandler) {
     super(options);
-    this.logger.level = process.env.LOG_LEVEL;
+    this.configureLogger(this.logger);
     this.tokenHandler = tokenHandler;
   }
 

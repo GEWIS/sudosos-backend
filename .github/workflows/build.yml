@@ -114,13 +114,8 @@ jobs:
     env:
       NAME: sudosos-test
       NODE_ENV: development
-      API_HOST: localhost:3000
       API_BASEPATH: /v1
-      CURRENCY_CODE: EUR
-      CURRENCY_PRECISION: 2
       GEWISWEB_JWT_SECRET: ChangeMe
-      JWT_KEY_PATH: ./config/jwt.key
-      HTTP_PORT: 3000
       TYPEORM_CONNECTION: ${{ matrix.typeorm-connection }}
       TYPEORM_HOST: ${{ matrix.typeorm-host }}
       TYPEORM_PORT: ${{ matrix.typeorm-port }}
@@ -129,11 +124,7 @@ jobs:
       TYPEORM_DATABASE: ${{ matrix.typeorm-database }}
       TYPEORM_SYNCHRONIZE: ${{ matrix.typeorm-synchronize }}
       TYPEORM_LOGGING: false
-      RESET_TOKEN_EXPIRES: 3600
-      FILE_STORAGE_METHOD: disk
       ENABLE_LDAP: true
-      PAGINATION_DEFAULT: 20
-      PAGINATION_MAX: 500
       STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
       STRIPE_PRIVATE_KEY: ${{ secrets.STRIPE_SUDOSOS_TEST_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_TEST_SECRET }}
