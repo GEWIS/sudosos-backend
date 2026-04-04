@@ -3,11 +3,13 @@ kind: Kustomization
 
 resources:
   - pvcs.yaml
-  # nginx
-  - nginx/configmap.yaml
-  - nginx/deployment.yaml
-  - nginx/service.yaml
-  - nginx/ingress.yaml
+  # static file server (PVC-backed files + beta toggle cookie)
+  - static/configmap.yaml
+  - static/deployment.yaml
+  - static/service.yaml
+  # traefik
+  - traefik/middlewares.yaml
+  - traefik/transport.yaml
   # backend
   - backend/configmap.yaml
   - backend/deployment.yaml

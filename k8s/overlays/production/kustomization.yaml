@@ -4,12 +4,9 @@ kind: Kustomization
 resources:
   - ../../base
   - sealed-backend-env.yaml
+  - traefik/ingressroute.yaml
 
 patches:
-  - path: patches/ingress.yaml
-    target:
-      kind: Ingress
-      name: sudosos
   - path: patches/backend-config.yaml
 
 # Image tags for production — pinned to release versions

@@ -1,0 +1,118 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /api
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-ws-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /ws
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-pos-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /pos
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-pos-develop-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /pos-develop
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-docs-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /docs
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cors-headers
+spec:
+  headers:
+    accessControlAllowOriginList:
+      - "*"
+    accessControlAllowMethods:
+      - GET
+      - HEAD
+      - POST
+      - OPTIONS
+      - PATCH
+    accessControlAllowHeaders:
+      - "*"
+    accessControlExposeHeaders:
+      - "*"
+    accessControlMaxAge: 1728000
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: buffering
+spec:
+  buffering:
+    maxRequestBodyBytes: 52428800
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+spec:
+  compress: {}
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: set-beta-cookie
+spec:
+  headers:
+    customResponseHeaders:
+      Set-Cookie: "X-Beta-Enabled=true; Path=/"
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: clear-beta-cookie
+spec:
+  headers:
+    customResponseHeaders:
+      Set-Cookie: "X-Beta-Enabled=; Path=/; Max-Age=0"
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-root
+spec:
+  redirectRegex:
+    regex: "^(https?://[^/]+).*$"
+    replacement: "${1}/"
+    permanent: false

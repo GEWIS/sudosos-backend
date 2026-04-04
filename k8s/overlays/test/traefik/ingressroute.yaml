@@ -1,0 +1,126 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: sudosos
+spec:
+  entryPoints:
+    - websecure
+  tls: {}
+  routes:
+    # API — proxy to backend, strip /api prefix, apply CORS, body-size limit, compression, and 120s timeout
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/api/`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: strip-api-prefix
+        - name: cors-headers
+        - name: buffering
+        - name: compress
+      services:
+        - name: backend
+          port: 80
+          serversTransport: backend-transport
+
+    # WebSocket — proxy to backend WS port, strip /ws prefix (no compress — breaks WS)
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/ws/`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: strip-ws-prefix
+      services:
+        - name: backend
+          port: 8080
+
+    # Docs
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/docs/`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: strip-docs-prefix
+        - name: compress
+      services:
+        - name: docs
+          port: 80
+
+    # POS develop (explicit path)
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/pos-develop/`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: strip-pos-develop-prefix
+        - name: compress
+      services:
+        - name: pos-develop
+          port: 80
+
+    # POS develop (beta cookie via /pos/)
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/pos/`) && HeaderRegexp(`Cookie`, `X-Beta-Enabled=true`)"
+      kind: Rule
+      priority: 90
+      middlewares:
+        - name: strip-pos-prefix
+        - name: compress
+      services:
+        - name: pos-develop
+          port: 80
+
+    # POS stable
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/pos/`)"
+      kind: Rule
+      priority: 80
+      middlewares:
+        - name: strip-pos-prefix
+        - name: compress
+      services:
+        - name: pos
+          port: 80
+
+    # Static files
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/static/`)"
+      kind: Rule
+      priority: 100
+      services:
+        - name: static
+          port: 80
+
+    # Enable beta — set cookie and redirect to /
+    - match: "Host(`sudosos.test.gewis.nl`) && Path(`/enable-beta`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: set-beta-cookie
+        - name: redirect-to-root
+      services:
+        - name: frontend
+          port: 80
+
+    # Disable beta — clear cookie and redirect to /
+    - match: "Host(`sudosos.test.gewis.nl`) && Path(`/disable-beta`)"
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: clear-beta-cookie
+        - name: redirect-to-root
+      services:
+        - name: frontend
+          port: 80
+
+    # Frontend beta (beta cookie)
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/`) && HeaderRegexp(`Cookie`, `X-Beta-Enabled=true`)"
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: compress
+      services:
+        - name: frontend-beta
+          port: 80
+
+    # Frontend stable (catch-all)
+    - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/`)"
+      kind: Rule
+      priority: 10
+      middlewares:
+        - name: compress
+      services:
+        - name: frontend
+          port: 80
