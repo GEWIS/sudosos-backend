@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx
+  name: static
 spec:
   selector:
-    app: nginx
+    app: static
   ports:
     - port: 80
       targetPort: 80
