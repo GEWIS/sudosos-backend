@@ -15,7 +15,7 @@ patches:
 # Image tags for production — pinned to release versions
 images:
   - name: abc.docker-registry.gewis.nl/pos/sudosos/backend
-    newTag: "1.28.2"
+    newTag: "1.29.1"
   - name: abc.docker-registry.gewis.nl/pos/sudosos/dashboard
     newTag: "1.43.0"
   - name: abc.docker-registry.gewis.nl/pos/sudosos/point-of-sale
