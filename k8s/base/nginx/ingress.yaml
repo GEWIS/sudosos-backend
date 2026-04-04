@@ -2,8 +2,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sudosos
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 spec:
   rules:
     - host: sudosos.gewis.nl
