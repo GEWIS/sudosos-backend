@@ -8,6 +8,7 @@ resources:
 
 patches:
   - path: patches/backend-config.yaml
+  - path: patches/backend-command.yaml
 
 # Test uses develop tags for everything
 images:
