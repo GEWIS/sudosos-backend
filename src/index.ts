@@ -260,7 +260,9 @@ export default async function createApp(): Promise<Application> {
     specification: application.specification,
     roleManager: application.roleManager,
   };
-  application.app.use('/v1/stripe', new StripeWebhookController(options).getRouter());
+  if (config.stripe.enabled) {
+    application.app.use('/v1/stripe', new StripeWebhookController(options).getRouter());
+  }
 
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
@@ -385,7 +387,9 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/transfers', new TransferController(options).getRouter());
   application.app.use('/v1/inactive-administrative-costs', new InactiveAdministrativeCostController(options).getRouter());
   application.app.use('/v1/fines', new DebtorController(options).getRouter());
-  application.app.use('/v1/stripe', new StripeController(options).getRouter());
+  if (config.stripe.enabled) {
+    application.app.use('/v1/stripe', new StripeController(options).getRouter());
+  }
   application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
   application.app.use('/v1/containers', new ContainerController(options).getRouter());
