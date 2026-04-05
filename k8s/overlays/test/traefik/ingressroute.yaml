@@ -19,7 +19,6 @@ spec:
       services:
         - name: backend
           port: 80
-          serversTransport: backend-transport
 
     # WebSocket — proxy to backend WS port, strip /ws prefix (no compress — breaks WS)
     - match: "Host(`sudosos.test.gewis.nl`) && PathPrefix(`/ws/`)"
