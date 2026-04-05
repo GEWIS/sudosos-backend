@@ -9,7 +9,6 @@ resources:
   - static/service.yaml
   # traefik
   - traefik/middlewares.yaml
-  - traefik/transport.yaml
   # backend
   - backend/configmap.yaml
   - backend/deployment.yaml
