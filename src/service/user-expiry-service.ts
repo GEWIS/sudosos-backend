@@ -18,8 +18,9 @@
  *  @license
  */
 
-import User, { UserType } from '../entity/user/user';
+import User, { LocalUserTypes } from '../entity/user/user';
 import WithManager from '../database/with-manager';
+import { In } from 'typeorm';
 import Notifier from '../notifications/notifier';
 import { NotificationTypes } from '../notifications/notification-types';
 import { UserAccountExpiredOptions, UserNearExpirationOptions } from '../notifications/notification-options';
@@ -46,7 +47,7 @@ export default class UserExpiryService extends WithManager {
       where: {
         active: true,
         deleted: false,
-        type: UserType.LOCAL_USER,
+        type: In(LocalUserTypes),
       },
     });
 
@@ -91,7 +92,7 @@ export default class UserExpiryService extends WithManager {
         active: true,
         deleted: false,
         expiryNotificationSent: false,
-        type: UserType.LOCAL_USER,
+        type: In(LocalUserTypes),
       },
     });
 
