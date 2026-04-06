@@ -90,6 +90,7 @@ export default class UserExpiryService extends WithManager {
       where: {
         active: true,
         deleted: false,
+        expiryNotificationSent: false,
         type: UserType.LOCAL_USER,
       },
     });
@@ -99,13 +100,15 @@ export default class UserExpiryService extends WithManager {
     );
 
     await Promise.all(
-      nearExpiration.map((u) =>
-        Notifier.getInstance().notify({
+      nearExpiration.map(async (u) => {
+        await Notifier.getInstance().notify({
           type: NotificationTypes.UserNearExpiration,
           userId: u.id,
           params: new UserNearExpirationOptions(u.expiryDate),
-        }),
-      ),
+        });
+        u.expiryNotificationSent = true;
+        await u.save();
+      }),
     );
 
     return nearExpiration;
