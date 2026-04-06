@@ -47,8 +47,8 @@ export interface BannerResponse extends BaseResponse {
 /**
  * Paginated API Response for the `banner` entity.
  * @typedef {object} PaginatedBannerResponse
- * @property {PaginationResult} _pagination - Pagination metadata
- * @property {Array<BannerResponse>} records - Returned banners
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BannerResponse>} records.required - Returned banners
  */
 export interface PaginatedBannerResponse {
   _pagination: PaginationResult,

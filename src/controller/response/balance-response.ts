@@ -92,8 +92,8 @@ export interface TotalBalanceResponse {
 
 /**
  * @typedef {object} PaginatedBalanceResponse
- * @property {PaginationResult} _pagination - Pagination metadata
- * @property {Array<BalanceResponse>} records - Returned balance responses
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BalanceResponse>} records.required - Returned balance responses
  */
 export interface PaginatedBalanceResponse {
   _pagination: PaginationResult,
