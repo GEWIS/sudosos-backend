@@ -524,7 +524,25 @@ describe('TransferService', async (): Promise<void> => {
 
     it('should return all transfers with null fromId for the MANUAL_CREATION category', async () => {
       const manualCreations = await Transfer.createQueryBuilder('transfer')
-        .where('transfer.fromId IS NULL')
+        .leftJoin('transfer.deposit', 'deposit')
+        .leftJoin('transfer.payoutRequest', 'payoutRequest')
+        .leftJoin('transfer.sellerPayout', 'sellerPayout')
+        .leftJoin('transfer.invoice', 'invoice')
+        .leftJoin('transfer.creditInvoice', 'creditInvoice')
+        .leftJoin('transfer.fine', 'fine')
+        .leftJoin('transfer.waivedFines', 'waivedFines')
+        .leftJoin('transfer.writeOff', 'writeOff')
+        .leftJoin('transfer.inactiveAdministrativeCost', 'inactiveAdministrativeCost')
+        .where('deposit.id IS NULL')
+        .andWhere('payoutRequest.id IS NULL')
+        .andWhere('sellerPayout.id IS NULL')
+        .andWhere('invoice.id IS NULL')
+        .andWhere('creditInvoice.id IS NULL')
+        .andWhere('fine.id IS NULL')
+        .andWhere('waivedFines.id IS NULL')
+        .andWhere('writeOff.id IS NULL')
+        .andWhere('inactiveAdministrativeCost.id IS NULL')
+        .andWhere('transfer.fromId IS NULL')
         .getMany();
 
       const result = await new TransferService().getTransferAggregate({ category: TransferCategory.MANUAL_CREATION });
@@ -537,7 +555,25 @@ describe('TransferService', async (): Promise<void> => {
 
     it('should return all transfers with null toId for the MANUAL_DELETION category', async () => {
       const manualDeletions = await Transfer.createQueryBuilder('transfer')
-        .where('transfer.toId IS NULL')
+        .leftJoin('transfer.deposit', 'deposit')
+        .leftJoin('transfer.payoutRequest', 'payoutRequest')
+        .leftJoin('transfer.sellerPayout', 'sellerPayout')
+        .leftJoin('transfer.invoice', 'invoice')
+        .leftJoin('transfer.creditInvoice', 'creditInvoice')
+        .leftJoin('transfer.fine', 'fine')
+        .leftJoin('transfer.waivedFines', 'waivedFines')
+        .leftJoin('transfer.writeOff', 'writeOff')
+        .leftJoin('transfer.inactiveAdministrativeCost', 'inactiveAdministrativeCost')
+        .where('deposit.id IS NULL')
+        .andWhere('payoutRequest.id IS NULL')
+        .andWhere('sellerPayout.id IS NULL')
+        .andWhere('invoice.id IS NULL')
+        .andWhere('creditInvoice.id IS NULL')
+        .andWhere('fine.id IS NULL')
+        .andWhere('waivedFines.id IS NULL')
+        .andWhere('writeOff.id IS NULL')
+        .andWhere('inactiveAdministrativeCost.id IS NULL')
+        .andWhere('transfer.toId IS NULL')
         .getMany();
 
       const result = await new TransferService().getTransferAggregate({ category: TransferCategory.MANUAL_DELETION });

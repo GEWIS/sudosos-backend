@@ -295,15 +295,25 @@ export default class TransferService extends WithManager {
       [TransferCategory.INACTIVE_ADMINISTRATIVE_COST]: 'inactiveAdministrativeCost',
     };
 
+    const excludeAllCategories = (q: typeof query) => {
+      for (const category of Object.values(categoryRelationMap)) {
+        q = q.leftJoin(`transfer.${category}`, category)
+          .andWhere(`${category}.id IS NULL`);
+      }
+      return q;
+    };
+
     let query = this.manager.createQueryBuilder(Transfer, 'transfer');
 
     if (filters.category !== undefined) {
       switch (filters.category) {
         case TransferCategory.MANUAL_CREATION:
-          query = query.andWhere('transfer.fromId IS NULL');
+          query = excludeAllCategories(query)
+            .andWhere('transfer.fromId IS NULL');
           break;
         case TransferCategory.MANUAL_DELETION:
-          query = query.andWhere('transfer.toId IS NULL');
+          query = excludeAllCategories(query)
+            .andWhere('transfer.toId IS NULL');
           break;
         default: {
           const rel = categoryRelationMap[filters.category];
