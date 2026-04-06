@@ -485,10 +485,9 @@ describe('TransferService', async (): Promise<void> => {
       expect(result.total.getAmount()).to.equal(expectedTotal);
     });
 
-    it('should exclude credited invoice transfers from the INVOICE category', async () => {
+    it('should return all invoice transfers for the INVOICE category', async () => {
       const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
         .innerJoin('transfer.invoice', 'invoice')
-        .where('invoice.creditTransferId IS NULL')
         .getMany();
 
       const result = await new TransferService().getTransferAggregate({ category: TransferCategory.INVOICE });

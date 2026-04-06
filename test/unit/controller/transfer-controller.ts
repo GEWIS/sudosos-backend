@@ -984,10 +984,9 @@ describe('TransferController', async (): Promise<void> => {
       expect(res.body.total.amount).to.equal(expectedTotal);
     });
 
-    it('should not count the credited invoice transfer under the invoice category', async () => {
+    it('should return all invoice transfers under the invoice category', async () => {
       const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
         .innerJoin('transfer.invoice', 'invoice')
-        .where('invoice.creditTransferId IS NULL')
         .getMany();
 
       const res = await request(app)
@@ -1057,10 +1056,9 @@ describe('TransferController', async (): Promise<void> => {
       expect(res.body.total.total.amount).to.equal(expectedTotal);
     });
 
-    it('should report credited invoices under creditInvoices, not invoices', async () => {
+    it('should report all invoice transfers under invoices and credit transfers under creditInvoices', async () => {
       const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
         .innerJoin('transfer.invoice', 'invoice')
-        .where('invoice.creditTransferId IS NULL')
         .getMany();
       const creditInvoiceTransfers = await Transfer.createQueryBuilder('transfer')
         .innerJoin('transfer.creditInvoice', 'creditInvoice')
