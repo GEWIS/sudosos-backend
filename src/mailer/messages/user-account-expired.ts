@@ -27,33 +27,68 @@
 import { UserAccountExpiredOptions } from '../../notifications/notification-options';
 import MailContentBuilder from './mail-content-builder';
 import MailMessage, { Language, MailLanguageMap } from '../mail-message';
+import Config from '../../config';
 
-const financialResponsible = process.env.FINANCIAL_RESPONSIBLE;
+function getFinancialResponsible(): string | undefined {
+  return Config.get().mail.financialResponsible?.trim() || undefined;
+}
+
+function getDutchContactHTML(): string {
+  const fr = getFinancialResponsible();
+  if (fr) {
+    return `Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie via <a href="mailto:${fr}">${fr}</a>.`;
+  }
+  return 'Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie.';
+}
+
+function getDutchContactText(): string {
+  const fr = getFinancialResponsible();
+  if (fr) {
+    return `Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie via ${fr}.`;
+  }
+  return 'Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie.';
+}
+
+function getEnglishContactHTML(): string {
+  const fr = getFinancialResponsible();
+  if (fr) {
+    return `If you would like to restore your access, please contact the Treasurer of the BAr Committee via <a href="mailto:${fr}">${fr}</a>.`;
+  }
+  return 'If you would like to restore your access, please contact the Treasurer of the BAr Committee.';
+}
+
+function getEnglishContactText(): string {
+  const fr = getFinancialResponsible();
+  if (fr) {
+    return `If you would like to restore your access, please contact the Treasurer of the BAr Committee via ${fr}.`;
+  }
+  return 'If you would like to restore your access, please contact the Treasurer of the BAr Committee.';
+}
 
 const userAccountExpiredDutch = new MailContentBuilder<UserAccountExpiredOptions>({
   getHTML: (context) => `
 <p>Wij willen u informeren dat uw account bij SudoSOS is verlopen op <strong>${context.expiryDate.toLocaleDateString('nl-NL')}</strong>.</p>
 
-<p>Uw account is nu gedeactiveerd en u heeft geen toegang meer tot SudoSOS. Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie via <a href="mailto:${financialResponsible}">${financialResponsible}</a>.</p>`,
+<p>Uw account is nu gedeactiveerd en u heeft geen toegang meer tot SudoSOS. ${getDutchContactHTML()}</p>`,
   getSubject: 'Uw SudoSOS-account is verlopen',
   getTitle: 'Account verlopen',
   getText: (context) => `
 Wij willen u informeren dat uw account bij SudoSOS is verlopen op ${context.expiryDate.toLocaleDateString('nl-NL')}.
 
-Uw account is nu gedeactiveerd en u heeft geen toegang meer tot SudoSOS. Als u uw toegang wilt herstellen, kunt u contact opnemen met de penningmeester van de BAr Commissie via ${financialResponsible}.`,
+Uw account is nu gedeactiveerd en u heeft geen toegang meer tot SudoSOS. ${getDutchContactText()}`,
 });
 
 const userAccountExpiredEnglish = new MailContentBuilder<UserAccountExpiredOptions>({
   getHTML: (context) => `
 <p>We would like to inform you that your SudoSOS account has expired on <strong>${context.expiryDate.toLocaleDateString('en-GB')}</strong>.</p>
 
-<p>Your account has been deactivated and you no longer have access to SudoSOS. If you would like to restore your access, please contact the Treasurer of the BAr Committee via <a href="mailto:${financialResponsible}">${financialResponsible}</a>.</p>`,
+<p>Your account has been deactivated and you no longer have access to SudoSOS. ${getEnglishContactHTML()}</p>`,
   getSubject: 'Your SudoSOS account has expired',
   getTitle: 'Account expired',
   getText: (context) => `
 We would like to inform you that your SudoSOS account has expired on ${context.expiryDate.toLocaleDateString('en-GB')}.
 
-Your account has been deactivated and you no longer have access to SudoSOS. If you would like to restore your access, please contact the Treasurer of the BAr Committee via ${financialResponsible}.`,
+Your account has been deactivated and you no longer have access to SudoSOS. ${getEnglishContactText()}`,
 });
 
 const mailContents: MailLanguageMap<UserAccountExpiredOptions> = {
@@ -66,4 +101,3 @@ export default class UserAccountExpired extends MailMessage<UserAccountExpiredOp
     super(options, mailContents);
   }
 }
-

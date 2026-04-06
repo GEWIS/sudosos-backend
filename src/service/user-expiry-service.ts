@@ -20,7 +20,7 @@
 
 import User, { LocalUserTypes } from '../entity/user/user';
 import WithManager from '../database/with-manager';
-import { In } from 'typeorm';
+import { In, LessThanOrEqual, Not, IsNull, And, MoreThan } from 'typeorm';
 import Notifier from '../notifications/notifier';
 import { NotificationTypes } from '../notifications/notification-types';
 import { UserAccountExpiredOptions, UserNearExpirationOptions } from '../notifications/notification-options';
@@ -35,83 +35,85 @@ import { UserAccountExpiredOptions, UserNearExpirationOptions } from '../notific
 export default class UserExpiryService extends WithManager {
   /**
    * Sets all local users whose `expiryDate` is in the past to inactive.
-   * Only affects LOCAL_USER accounts that are currently active,
-   * not deleted, and have an expiryDate set.
-   * Sends an account expired notification to each deactivated user.
+   * Only affects accounts of local user types ({@link LocalUserTypes}) that are
+   * currently active, not deleted, and have an expiryDate set.
+   * Sends an account expired notification to each deactivated user before persisting
+   * the deactivation; users whose notification fails are not deactivated so they
+   * remain eligible for the next run.
    * @returns The list of users that were set to inactive.
    */
   public async deactivateExpiredUsers(): Promise<User[]> {
     const now = new Date();
-    const activeUsers = await User.find({
+    const toDeactivate = await User.find({
       where: {
         active: true,
         deleted: false,
         type: In(LocalUserTypes),
+        expiryDate: And(Not(IsNull()), LessThanOrEqual(now)),
       },
     });
 
-    const toDeactivate = activeUsers.filter(
-      (u) => u.expiryDate != null && u.expiryDate <= now,
-    );
-
-    await Promise.all(
+    const results = await Promise.allSettled(
       toDeactivate.map(async (u) => {
+        await Notifier.getInstance().notify({
+          type: NotificationTypes.UserAccountExpired,
+          userId: u.id,
+          params: new UserAccountExpiredOptions(u.expiryDate!),
+        });
         u.active = false;
         await u.save();
+        return u;
       }),
     );
 
-    await Promise.all(
-      toDeactivate.map((u) =>
-        Notifier.getInstance().notify({
-          type: NotificationTypes.UserAccountExpired,
-          userId: u.id,
-          params: new UserAccountExpiredOptions(u.expiryDate),
-        }),
-      ),
-    );
-
-    return toDeactivate;
+    return results
+      .filter((r): r is PromiseFulfilledResult<User> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   /**
    * Sends a near-expiration notification to all active local users whose account
    * will expire within 30 days from now.
-   * Only notifies LOCAL_USER accounts that are currently active,
-   * not deleted, and have an expiryDate set.
-   * @returns The list of users that were notified.
+   * Only notifies accounts of local user types ({@link LocalUserTypes}) that are
+   * currently active, not deleted, and have an expiryDate set.
+   *
+   * The `expiryNotificationSent` flag is persisted before dispatching the
+   * notification: at-most-once delivery. If mail dispatch fails after the flag
+   * is saved, the user is not re-notified on the next run -- this is preferable
+   * to spamming users on repeated transient failures.
+   * @returns The list of users for which both the flag was persisted and the
+   *   notification was dispatched successfully.
    */
   public async notifyNearExpirationUsers(): Promise<User[]> {
     const now = new Date();
     const thirtyDaysFromNow = new Date(now);
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const activeUsers = await User.find({
+    const nearExpiration = await User.find({
       where: {
         active: true,
         deleted: false,
         expiryNotificationSent: false,
         type: In(LocalUserTypes),
+        expiryDate: And(Not(IsNull()), MoreThan(now), LessThanOrEqual(thirtyDaysFromNow)),
       },
     });
 
-    const nearExpiration = activeUsers.filter(
-      (u) => u.expiryDate != null && u.expiryDate > now && u.expiryDate <= thirtyDaysFromNow,
-    );
-
-    await Promise.all(
+    const results = await Promise.allSettled(
       nearExpiration.map(async (u) => {
+        u.expiryNotificationSent = true;
+        await u.save();
         await Notifier.getInstance().notify({
           type: NotificationTypes.UserNearExpiration,
           userId: u.id,
-          params: new UserNearExpirationOptions(u.expiryDate),
+          params: new UserNearExpirationOptions(u.expiryDate!),
         });
-        u.expiryNotificationSent = true;
-        await u.save();
+        return u;
       }),
     );
 
-    return nearExpiration;
+    return results
+      .filter((r): r is PromiseFulfilledResult<User> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 }
-

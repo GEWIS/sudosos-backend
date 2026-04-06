@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import User, { UserType } from '../entity/user/user';
+import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import BaseUserRequest, {
   AddRoleRequest,
   CreateUserRequest,
@@ -876,7 +876,7 @@ export default class UserController extends BaseController {
     }
     if (body.nickname === '') body.nickname = null;
 
-    let parsedExpiryDate: Date | null;
+    let parsedExpiryDate: Date | null | undefined = undefined;
     if (body.expiryDate !== undefined) {
       if (body.expiryDate === null) {
         parsedExpiryDate = null;
@@ -905,12 +905,18 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const { expiryDate: expiryDateString, ...bodyWithoutExpiry } = body;
-      user = { ...bodyWithoutExpiry } as User;
+      const isLocalUser = LocalUserTypes.includes(user.type);
+      if (parsedExpiryDate !== undefined && !isLocalUser) {
+        res.status(400).json('expiryDate can only be set for local user accounts');
+        return;
+      }
 
+      user = { ...body } as unknown as User;
       if (parsedExpiryDate !== undefined) {
         user.expiryDate = parsedExpiryDate;
         user.expiryNotificationSent = false;
+      } else {
+        delete (user as Partial<User>).expiryDate;
       }
 
       await User.update(parameters.id, user);

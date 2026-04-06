@@ -191,7 +191,7 @@ export default class User extends BaseEntity {
     type: 'datetime',
     nullable: true,
   })
-  public expiryDate: Date;
+  public expiryDate: Date | null;
 
   /**
    * Whether the near-expiration warning email has already been sent to this user.
