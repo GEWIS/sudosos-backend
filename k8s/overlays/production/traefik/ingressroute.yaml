@@ -29,6 +29,12 @@ spec:
       services:
         - name: backend
           port: 8080
+          sticky:
+            cookie:
+              name: sudosos_ws_sticky
+              httpOnly: true
+              secure: true
+              sameSite: lax
 
     # Docs
     - match: "Host(`sudosos.gewis.nl`) && PathPrefix(`/docs/`)"
