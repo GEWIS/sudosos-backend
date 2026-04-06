@@ -193,6 +193,17 @@ export default class User extends BaseEntity {
   })
   public expiryDate: Date;
 
+  /**
+   * Whether the near-expiration warning email has already been sent to this user.
+   * Set to `true` after the daily notification CRON sends the 30-day warning so
+   * that the user is not re-notified each day during the warning window. Reset
+   * to `false` when `expiryDate` is changed via PATCH.
+   */
+  @Column({
+    default: false,
+  })
+  public expiryNotificationSent: boolean;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
