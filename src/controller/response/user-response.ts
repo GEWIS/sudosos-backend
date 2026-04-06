@@ -61,6 +61,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {integer} memberId - The external id of the user (e.g., GEWIS member ID)
  * @property {integer} gewisId - The m-Number of the user (deprecated, use externalId instead. Will be removed after 01/06/2026)
  * @property {BasePointOfSaleInfoResponse} pos - The related Point of Sale, in case user is a POS type
+ * @property {string} expiryDate - ISO date at which the account expires (null for accounts without expiry)
  */
 export interface UserResponse extends BaseUserResponse {
   active: boolean;
@@ -76,6 +77,7 @@ export interface UserResponse extends BaseUserResponse {
   /** @deprecated Use memberId instead */
   gewisId?: number;
   pos?: BasePointOfSaleInfoResponse;
+  expiryDate?: string | null;
 }
 
 
