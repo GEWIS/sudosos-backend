@@ -27,10 +27,17 @@ export class AddExpiryToUser1770391238004 implements MigrationInterface {
       isNullable: true,
       default: null,
     }));
+    await queryRunner.addColumn('user', new TableColumn({
+      name: 'expiryNotificationSent',
+      type: 'boolean',
+      isNullable: false,
+      default: false,
+    }));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropColumn('user', 'expiryDate');
+    await queryRunner.dropColumn('user', 'expiryNotificationSent');
   }
 
 }

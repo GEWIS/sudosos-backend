@@ -930,6 +930,7 @@ export default class UserController extends BaseController {
 
       if (parsedExpiryDate !== undefined) {
         user.expiryDate = parsedExpiryDate;
+        user.expiryNotificationSent = false;
       }
 
       await User.update(parameters.id, user);

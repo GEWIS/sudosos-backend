@@ -186,6 +186,11 @@ export default class User extends BaseEntity {
   })
   public expiryDate: Date;
 
+  @Column({
+    default: false,
+  })
+  public expiryNotificationSent: boolean;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',
