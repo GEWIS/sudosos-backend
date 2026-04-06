@@ -126,6 +126,7 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     memberId: user.memberUser?.memberId,
     gewisId: user.memberUser?.memberId, // Deprecated: kept for backward compatibility
     pos: user.pointOfSale ? PointOfSaleService.toBaseInfoResponse(user.pointOfSale) : undefined,
+    expiryDate: user.expiryDate ? user.expiryDate.toISOString() : null,
   };
 }
 

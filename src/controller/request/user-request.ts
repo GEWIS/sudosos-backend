@@ -62,12 +62,14 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} active
  * @property {boolean} extensiveDataProcessing
  * @property {boolean} inactiveNotificationSend
+ * @property {string} expiryDate
  */
 export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
   deleted?: boolean;
   extensiveDataProcessing?: boolean
   inactiveNotificationSend?: boolean
+  expiryDate?: string | null;
 }
 
 
