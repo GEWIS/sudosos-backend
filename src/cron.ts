@@ -42,6 +42,8 @@ import WrappedService from './service/wrapped-service';
 import UserExpiryService from './service/user-expiry-service';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
+import Redis from 'ioredis';
+import Mailer from './mailer';
 
 class CronApplication {
   logger: Logger;
@@ -74,6 +76,13 @@ async function createCronTasks(): Promise<void> {
   // Set up monetary value configuration.
   dinero.defaultCurrency = config.currency.code as Currency;
   dinero.defaultPrecision = config.currency.precision;
+
+  const redisClient = new Redis({
+    host: config.redis.host,
+    port: config.redis.port,
+    maxRetriesPerRequest: null,
+  });
+  new Mailer(redisClient);
 
   // Initialize database-stored settings
   const store = ServerSettingsStore.getInstance();
