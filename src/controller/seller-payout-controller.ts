@@ -35,6 +35,7 @@ import { CreateSellerPayoutRequest, UpdateSellerPayoutRequest } from './request/
 import User from '../entity/user/user';
 import ReportService, { SalesReportService } from '../service/report-service';
 import { PdfError } from '../errors';
+import { PdfUrlResponse } from './response/simple-file-response';
 
 export default class SellerPayoutController extends BaseController {
   private logger: Logger = log4js.getLogger(' SellerPayoutController');
@@ -220,7 +221,7 @@ export default class SellerPayoutController extends BaseController {
       }
 
       const pdf = await sellerPayout.getOrCreatePdf(force);
-      res.status(200).json({ pdf: pdf.downloadName });
+      res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {
       this.logger.error('Could not get sales report for seller payout:', error);
       if (error instanceof PdfError) {
