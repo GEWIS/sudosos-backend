@@ -47,6 +47,7 @@ import InvoiceUser from '../entity/user/invoice-user';
 import { parseInvoiceUserToResponse } from '../helpers/revision-to-response';
 import { AppDataSource } from '../database/database';
 import { NotImplementedError, PdfError } from '../errors';
+import { PdfUrlResponse } from './response/simple-file-response';
 
 /**
  * The Invoice controller.
@@ -351,7 +352,7 @@ export default class InvoiceController extends BaseController {
    * @param {integer} id.path.required - The id of the invoice to return
    * @param {boolean} force.query - Force creation of pdf
    * @return {string} 404 - Invoice not found
-   * @return {string} 200 - The pdf location information.
+   * @return {PdfUrlResponse} 200 - The pdf location information.
    * @return {string} 500 - Internal server error
    */
   public async getInvoicePDF(req: RequestWithToken, res: Response): Promise<void> {
@@ -368,7 +369,7 @@ export default class InvoiceController extends BaseController {
 
       const pdf = await invoice.getOrCreatePdf(req.query.force === 'true');
 
-      res.status(200).json({ pdf: pdf.downloadName });
+      res.status(200).json({ pdf: pdf.downloadName } as PdfUrlResponse);
     } catch (error) {
       this.logger.error('Could get invoice PDF:', error);
       if (error instanceof PdfError) {
