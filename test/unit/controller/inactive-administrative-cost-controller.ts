@@ -620,9 +620,9 @@ describe('InactiveAdministrativeCostController', async () => {
         .query({ fromDate, toDate });
 
       expect(res.status).to.equal(200);
-      expect(res.headers['content-type']).to.include('application/pdf');
-      expect(res.headers['content-disposition']).to.include('inactive-cost-report-');
-      expect(res.headers['content-disposition']).to.include('.pdf');
+      expect(res.header['content-type']).to.include('application/pdf');
+      expect(res.header['content-disposition']).to.include('inactive-cost-report-');
+      expect(res.header['content-disposition']).to.include('.pdf');
     });
 
     it('should return 502 if pdf generation fails with PdfError', async () => {

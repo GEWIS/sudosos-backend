@@ -1188,8 +1188,8 @@ describe('TransactionController', (): void => {
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.headers['content-type']).to.include('application/pdf');
-      expect(res.headers['content-disposition']).to.include(`transaction-${testTransaction.id}.pdf`);
+      expect(res.header['content-type']).to.include('application/pdf');
+      expect(res.header['content-disposition']).to.include(`transaction-${testTransaction.id}.pdf`);
     });
 
     it('should return HTTP 404 if transaction does not exist', async () => {
