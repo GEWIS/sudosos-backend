@@ -530,8 +530,8 @@ describe('TransferController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).to.equal(200);
-      expect(res.headers['content-type']).to.include('application/pdf');
-      expect(res.headers['content-disposition']).to.include(`transfer-${transfer.id}.pdf`);
+      expect(res.header['content-type']).to.include('application/pdf');
+      expect(res.header['content-disposition']).to.include(`transfer-${transfer.id}.pdf`);
     });
 
     it('should return HTTP 404 if transfer does not exist', async () => {
