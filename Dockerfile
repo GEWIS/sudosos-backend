@@ -2,14 +2,15 @@
 FROM node:22-alpine AS build
 
 RUN apk add --no-cache python3 make g++ py3-setuptools
+RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
-COPY ./package.json ./package-lock.json ./
-RUN npm install
+COPY ./package.json ./pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY ./ ./
-RUN npm run build \
- && npm run swagger
-RUN HUSKY=0 npm ci --production
+RUN pnpm build \
+ && pnpm swagger
+RUN HUSKY=0 pnpm install --prod --frozen-lockfile
 
 # The target image that will be run
 FROM node:22-alpine AS target
