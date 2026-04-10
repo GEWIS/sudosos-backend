@@ -24,18 +24,61 @@
  * @module internal/spec/inactive-administrative-cost-spec
  */
 
-import { CreateInactiveAdministrativeCostRequest } from '../inactive-administrative-cost-request';
+import {
+  CreateInactiveAdministrativeCostRequest,
+  HandoutInactiveAdministrativeCostsRequest,
+} from '../inactive-administrative-cost-request';
 import { INVALID_USER_ID } from './validation-errors';
-import { toFail, toPass } from '../../../helpers/specification-validation';
+import {
+  Specification,
+  toFail,
+  toPass,
+  ValidationError,
+} from '../../../helpers/specification-validation';
 import User from '../../../entity/user/user';
+import { In } from 'typeorm';
 
 /**
- * Check whether the given user is a valid user
+ * Check whether the given forId belongs to a valid user.
  */
-export default async function verifyValidUserId<T extends CreateInactiveAdministrativeCostRequest>(p: T) {
+async function verifyValidUserId<T extends CreateInactiveAdministrativeCostRequest>(p: T) {
   if (p.forId == null) return toFail(INVALID_USER_ID());
 
   const user = await User.findOne({ where: { id: p.forId } });
 
   return user != undefined ? toPass(p) : toFail(INVALID_USER_ID());
+}
+
+/**
+ * Check whether all provided userIds belong to existing users.
+ */
+async function verifyAllUserIdsExist<T extends HandoutInactiveAdministrativeCostsRequest>(p: T) {
+  if (!Array.isArray(p.userIds)) {
+    return toFail(new ValidationError('userIds is not an Array.'));
+  }
+
+  const users = await User.find({ where: { id: In(p.userIds) } });
+  if (users.length !== p.userIds.length) {
+    return toFail(new ValidationError('userIds is not a valid array of user IDs'));
+  }
+
+  return toPass(p);
+}
+
+/**
+ * Specification for a CreateInactiveAdministrativeCostRequest.
+ * Validates that forId is a valid user.
+ */
+export function createInactiveAdministrativeCostRequestSpec():
+Specification<CreateInactiveAdministrativeCostRequest, ValidationError> {
+  return [verifyValidUserId];
+}
+
+/**
+ * Specification for a HandoutInactiveAdministrativeCostsRequest.
+ * Validates that all userIds belong to existing users.
+ */
+export function handoutInactiveAdministrativeCostsRequestSpec():
+Specification<HandoutInactiveAdministrativeCostsRequest, ValidationError> {
+  return [verifyAllUserIdsExist];
 }
