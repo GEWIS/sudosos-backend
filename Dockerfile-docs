@@ -1,25 +1,25 @@
 FROM node:20-alpine AS typedoc-builder
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 COPY ./ ./
 COPY tsconfig.json ./
 
-RUN npm run typedoc
+RUN yarn typedoc
 
 FROM node:20-alpine AS vitepress-builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 COPY ./docs/ ./docs
 COPY --from=typedoc-builder /app/docs/content/typedoc/ ./docs/content/typedoc/
 
-RUN npm run docs:build
+RUN yarn docs:build
 
 FROM nginx:stable-alpine AS final-stage
 

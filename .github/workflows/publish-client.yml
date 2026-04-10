@@ -27,8 +27,8 @@ jobs:
           java-version: '11'
 
       # Generate swagger spec from backend
-      - run: npm install
-      - run: npm run swagger
+      - run: yarn install --frozen-lockfile
+      - run: yarn swagger
 
       # Generate and build client
       - name: Install client dependencies

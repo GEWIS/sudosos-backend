@@ -36,8 +36,8 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
 
-      - run: npm install
-      - run: npm run swagger
+      - run: yarn install --frozen-lockfile
+      - run: yarn swagger
 
       - name: Install client dependencies
         working-directory: client
