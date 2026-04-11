@@ -896,6 +896,25 @@ export default class UserController extends BaseController {
     }
     if (body.nickname === '') body.nickname = null;
 
+    let parsedExpiryDate: Date | null;
+    if (body.expiryDate !== undefined) {
+      if (body.expiryDate === null) {
+        parsedExpiryDate = null;
+      } else {
+        parsedExpiryDate = new Date(body.expiryDate);
+        if (isNaN(parsedExpiryDate.getTime())) {
+          res.status(400).json('expiryDate is not a valid date');
+          return;
+        }
+        const cap = new Date();
+        cap.setMonth(cap.getMonth() + 18);
+        if (parsedExpiryDate > cap) {
+          res.status(400).json('expiryDate cannot be more than 18 months in the future');
+          return;
+        }
+      }
+    }
+
     try {
       const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
@@ -906,9 +925,14 @@ export default class UserController extends BaseController {
         return;
       }
 
-      user = {
-        ...body,
-      } as User;
+      const { expiryDate: expiryDateString, ...bodyWithoutExpiry } = body;
+      user = { ...bodyWithoutExpiry } as User;
+
+      if (parsedExpiryDate !== undefined) {
+        user.expiryDate = parsedExpiryDate;
+        user.expiryNotificationSent = false;
+      }
+
       await User.update(parameters.id, user);
       const updatedUser = await UserService.getSingleUser(asNumber(parameters.id));
       res.status(200).json(asUserResponse(updatedUser, true));

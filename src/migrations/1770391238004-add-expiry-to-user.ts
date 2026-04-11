@@ -17,24 +17,27 @@
  *
  *  @license
  */
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-/**
- * This is the module page of the mailer messages.
- *
- * @module internal/mailer
- */
+export class AddExpiryToUser1770391238004 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumn('user', new TableColumn({
+      name: 'expiryDate',
+      type: 'datetime(6)',
+      isNullable: true,
+      default: null,
+    }));
+    await queryRunner.addColumn('user', new TableColumn({
+      name: 'expiryNotificationSent',
+      type: 'boolean',
+      isNullable: false,
+      default: false,
+    }));
+  }
 
-export * from './changed-pin';
-export * from './forgot-event-planning';
-export * from './hello-world';
-export * from './membership-expiry-notification';
-export * from './password-reset';
-export * from './user-debt-notification';
-export * from './user-got-fined';
-export * from './user-will-get-fined';
-export * from './welcome-to-sudosos';
-export * from './welcome-with-reset';
-export * from './user-near-expiration';
-export * from './user-account-expired';
-export * from './user-type-updated';
-export * from './user-type-updated-with-reset';
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropColumn('user', 'expiryDate');
+    await queryRunner.dropColumn('user', 'expiryNotificationSent');
+  }
+
+}
