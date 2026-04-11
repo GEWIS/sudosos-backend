@@ -24,12 +24,11 @@
  * @module internal/spec/product-request-spec
  */
 
-import CreateProductParams, { BaseProductParams } from '../product-request';
+import CreateProductParams, { BaseProductParams, UpdateProductParams } from '../product-request';
 import {
   Specification,
   toFail,
   toPass,
-  validateSpecification,
   ValidationError,
 } from '../../../helpers/specification-validation';
 import ProductCategory from '../../../entity/product/product-category';
@@ -78,19 +77,13 @@ const baseProductRequestSpec: <T extends BaseProductParams>()
   [[validAlcohol], 'alcoholPercentage', new ValidationError('alcoholPercentage:')],
 ];
 
-const createProductRequestSpec: Specification<CreateProductParams, ValidationError> = [
-  ...baseProductRequestSpec<CreateProductParams>(),
-  [[ownerIsOrgan], 'ownerId', new ValidationError('ownerId:')],
-];
-
-export async function verifyProductRequest(productRequest: BaseProductParams) {
-  return Promise.resolve(await validateSpecification<BaseProductParams, ValidationError>(
-    productRequest, baseProductRequestSpec<BaseProductParams>(),
-  ));
+export function createProductRequestSpecFactory(): Specification<CreateProductParams, ValidationError> {
+  return [
+    ...baseProductRequestSpec<CreateProductParams>(),
+    [[ownerIsOrgan], 'ownerId', new ValidationError('ownerId:')],
+  ];
 }
 
-export async function verifyCreateProductRequest(productRequest: CreateProductParams) {
-  return Promise.resolve(await validateSpecification<CreateProductParams, ValidationError>(
-    productRequest, createProductRequestSpec,
-  ));
+export function updateProductRequestSpecFactory(): Specification<UpdateProductParams, ValidationError> {
+  return baseProductRequestSpec<UpdateProductParams>();
 }
