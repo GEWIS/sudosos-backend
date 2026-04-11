@@ -348,7 +348,7 @@ export default class BalanceService extends WithManager {
         + 'group by user.id '
       + ') as f on f.id = userBalance.id '
       + 'left join `member_user` mu on mu.userId = userBalance.id '
-      + `where u.type not in ("${UserType.POINT_OF_SALE}") `;
+      + `where u.type not in ('${UserType.POINT_OF_SALE}') `;
 
     if (minBalance !== undefined) query += `and userBalance.amount >= ${minBalance.getAmount()} `;
     if (maxBalance !== undefined) query += `and userBalance.amount <= ${maxBalance.getAmount()} `;
@@ -356,7 +356,7 @@ export default class BalanceService extends WithManager {
     if (hasFine === true) query += 'and f.fine is not null ';
     if (minFine !== undefined) query += `and f.fine >= ${minFine.getAmount()} `;
     if (maxFine !== undefined) query += `and f.fine <= ${maxFine.getAmount()} `;
-    if (userTypes !== undefined) query += `and u.type in (${userTypes.map((t) => `"${t}"`).join(',')}) `;
+    if (userTypes !== undefined) query += `and u.type in (${userTypes.map((t) => `'${t}'`).join(',')}) `;
     if (!allowDeleted) query += 'and u.deleted = 0 ';
     if (inactive) query += 'and u.active = 0 ';
 

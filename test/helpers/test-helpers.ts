@@ -68,8 +68,8 @@ export async function defaultBefore(): Promise<DefaultContext> {
 export async function finishTestDB(connection: DataSource) {
   await truncateAllTables(connection);
   ServerSettingsStore.deleteInstance();
-  // Only drop in sqlite. If really wanted otherwise, do the call directly on the connection.
-  if (process.env.TYPEORM_CONNECTION === 'sqlite') {
+  // Only drop in better-sqlite3. If really wanted otherwise, do the call directly on the connection.
+  if (process.env.TYPEORM_CONNECTION === 'better-sqlite3') {
     await connection.dropDatabase();
   }
   await connection.destroy();

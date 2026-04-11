@@ -228,7 +228,7 @@ function getDataSourceOptions(): DataSourceOptions {
 
 function getBootstrapDataSourceOptions(): DataSourceOptions {
   return {
-    type: 'sqlite',
+    type: 'better-sqlite3',
     database: ':memory:',
     synchronize: true,
     logging: false,
