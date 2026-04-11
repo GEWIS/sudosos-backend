@@ -64,25 +64,13 @@ Specification<T, ValidationError> = () => [
   [[rolesMustExist, rolesCannotBeSystemDefault], 'cashierRoleIds', new ValidationError('cashierRoleIds:')],
 ];
 
-/**
- * Specification of a createPointOfSaleRequest
- */
-const createPointOfSaleRequestSpec
-: () => Specification<CreatePointOfSaleParams, ValidationError> = () => [
-  ...(basePointOfSaleRequestSpec<CreatePointOfSaleParams>()),
-  [[userMustExist], 'ownerId', new ValidationError('ownerId:')],
-];
-
-export async function verifyCreatePointOfSaleRequest(createPointOfSaleRequest:
-CreatePointOfSaleParams) {
-  return Promise.resolve(await validateSpecification(
-    createPointOfSaleRequest, createPointOfSaleRequestSpec(),
-  ));
+export function createPointOfSaleRequestSpecFactory(): Specification<CreatePointOfSaleParams, ValidationError> {
+  return [
+    ...(basePointOfSaleRequestSpec<CreatePointOfSaleParams>()),
+    [[userMustExist], 'ownerId', new ValidationError('ownerId:')],
+  ];
 }
 
-export async function verifyUpdatePointOfSaleRequest(updatePointOfSaleRequest:
-UpdatePointOfSaleParams) {
-  return Promise.resolve(await validateSpecification(
-    updatePointOfSaleRequest, basePointOfSaleRequestSpec(),
-  ));
+export function updatePointOfSaleRequestSpecFactory(): Specification<UpdatePointOfSaleParams, ValidationError> {
+  return basePointOfSaleRequestSpec<UpdatePointOfSaleParams>();
 }

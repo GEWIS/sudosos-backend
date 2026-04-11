@@ -689,23 +689,31 @@ describe('PointOfSaleController', async () => {
     });
   });
 
-  function testValidationOnRoute(type: any, route: string) {
+  function testValidationOnRoute(type: any, route: string, includeOwnerTest = true, extraFields: object = {}, omitFields: string[] = []) {
     async function expectError(req: CreatePointOfSaleRequest, error: string) {
+      const body: Record<string, unknown> = { ...req, ...extraFields };
+      omitFields.forEach((f) => delete body[f]);
       // @ts-ignore
       const res = await ((request(ctx.app)[type])(route)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
-        .send(req));
+        .send(body));
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(error);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      if (error !== '') {
+        expect(res.body.errors[0]).to.include(error);
+      }
     }
     it('should verify Name', async () => {
       const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, name: '' };
       await expectError(req, 'Name: must be a non-zero length string.');
     });
-    it('should verify Owner', async () => {
-      const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
-      await expectError(req, 'ownerId: must exist.');
-    });
+    if (includeOwnerTest) {
+      it('should verify Owner', async () => {
+        const req: CreatePointOfSaleRequest = { ...ctx.validPOSRequest, ownerId: -1 };
+        await expectError(req, 'ownerId: must exist.');
+      });
+    }
     it('should verify containers exist', async () => {
       const containerId = ctx.containers.length + ctx.deletedContainers.length + 10;
       const invalidRequest = {
@@ -801,7 +809,7 @@ describe('PointOfSaleController', async () => {
   });
   describe('PATCH /pointsofsale/{id}', () => {
     describe('verifyPointOfSaleRequest Specification', async (): Promise<void> => {
-      testValidationOnRoute('post', '/pointsofsale');
+      testValidationOnRoute('patch', '/pointsofsale/1', false, { id: 1 }, ['ownerId']);
     });
     it('should patch the use authentication', async () => {
       const { id } = ctx.pointsOfSale[0];
