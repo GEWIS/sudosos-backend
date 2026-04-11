@@ -50,8 +50,8 @@ export interface UserToInactiveAdministrativeCostResponse extends BaseUserRespon
 
 /**
  * @typedef {object} PaginatedInactiveAdministrativeCostResponse
- * @property {PaginationResult} _pagination  - Pagination metadata
- * @property {Array<InactiveAdministrativeCostResponse>} records - Returned InactiveAdministrativeCost
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<InactiveAdministrativeCostResponse>} records.required - Returned InactiveAdministrativeCost
  */
 export interface PaginatedInactiveAdministrativeCostResponse {
   _pagination: PaginationResult,

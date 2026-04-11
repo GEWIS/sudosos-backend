@@ -27,8 +27,11 @@ jobs:
           java-version: '11'
 
       # Generate swagger spec from backend
-      - run: npm install
-      - run: npm run swagger
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm swagger
 
       # Generate and build client
       - name: Install client dependencies

@@ -78,7 +78,7 @@ describe('Swagger', (): void => {
 
   it('should serve HTML interface', async (): Promise<void> => {
     const res = await request(ctx.app.app)
-      .get('/api-docs');
+      .get('/api-docs/');
     expect(res).to.be.html;
   });
 

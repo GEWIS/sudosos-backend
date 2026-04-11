@@ -295,7 +295,11 @@ describe('ProductController', async (): Promise<void> => {
           .send(req);
       }
       expect(res.status).to.eq(400);
-      expect(res.body).to.eq(error);
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      if (error !== '') {
+        expect(res.body.errors[0]).to.include(error);
+      }
     }
     it('should verify Alcohol', async () => {
       const req: CreateProductRequest = {
@@ -409,7 +413,9 @@ describe('ProductController', async (): Promise<void> => {
         } as CreateProductRequest);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('vat: 5 is an invalid VAT group.');
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('vat: 5 is an invalid VAT group.');
     });
     it('should return an HTTP 400 if owner is not of type organ', async () => {
       const res = await request(ctx.app)
@@ -421,7 +427,9 @@ describe('ProductController', async (): Promise<void> => {
         } as CreateProductRequest);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('ownerId: Owner must be of type ORGAN.');
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('ownerId: Owner must be of type ORGAN.');
     });
   });
   describe('GET /products/:id', () => {
@@ -567,7 +575,9 @@ describe('ProductController', async (): Promise<void> => {
         } as CreateProductRequest);
 
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('vat: 5 is an invalid VAT group.');
+      expect(res.body.valid).to.be.false;
+      expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
+      expect(res.body.errors[0]).to.include('vat: 5 is an invalid VAT group.');
     });
   });
 

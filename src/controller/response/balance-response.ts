@@ -79,9 +79,9 @@ export interface UserTypeTotalBalanceResponse {
 /**
  * @typedef {object} TotalBalanceResponse
  * @property {string} date.required - Date at which this total balance was calculated
- * @property {number} totalPositive.required - The total amount of positive balance in SudoSOS
- * @property {number} totalNegative.required - The total amount of negative balance in SudoSOS
- * @property {UserTypeTotalBalanceResponse} userTypeBalances.required - The total balances for the different user types
+ * @property {DineroObjectResponse} totalPositive.required - The total amount of positive balance in SudoSOS
+ * @property {DineroObjectResponse} totalNegative.required - The total amount of negative balance in SudoSOS
+ * @property {Array<UserTypeTotalBalanceResponse>} userTypeBalances.required - The total balances for the different user types
  */
 export interface TotalBalanceResponse {
   date: string;
@@ -92,8 +92,8 @@ export interface TotalBalanceResponse {
 
 /**
  * @typedef {object} PaginatedBalanceResponse
- * @property {PaginationResult} _pagination - Pagination metadata
- * @property {Array<BalanceResponse>} records - Returned balance responses
+ * @property {PaginationResult} _pagination.required - Pagination metadata
+ * @property {Array<BalanceResponse>} records.required - Returned balance responses
  */
 export interface PaginatedBalanceResponse {
   _pagination: PaginationResult,

@@ -21,15 +21,16 @@ jobs:
       image: node:24
     steps:
       - uses: actions/checkout@v4
+      - run: npm install -g pnpm@10.33.0
       - name: Cache and restore node_modules
         id: cache-node
         uses: actions/cache@v4
         with:
           path: ./node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
-      - run: npm install
+          key: ${{ runner.os }}-node-${{ hashFiles('./pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
         if: steps.cache-node.outputs.cache-hit != 'true'
-      - run: npm run lint
+      - run: pnpm lint
   build:
     needs: [lint]
     runs-on: ubuntu-latest
@@ -37,16 +38,17 @@ jobs:
       image: node:24
     steps:
       - uses: actions/checkout@v4
+      - run: npm install -g pnpm@10.33.0
       - name: Cache and restore node_modules
         id: cache-node
         uses: actions/cache@v4
         with:
           path: ./node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
-      - run: npm install
+          key: ${{ runner.os }}-node-${{ hashFiles('./pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
         if: steps.cache-node.outputs.cache-hit != 'true'
-      - run: npm run build
-      - run: npm run swagger
+      - run: pnpm build
+      - run: pnpm swagger
       - name: "Compress out folder"
         run: tar -zcvf out.tar.gz out/
       - name: "Upload /out of build"
@@ -104,7 +106,7 @@ jobs:
             typeorm-password: sudosos-ci
             typeorm-database: sudosos-ci
             typeorm-synchronize: "false"
-          - typeorm-connection: sqlite
+          - typeorm-connection: better-sqlite3
             typeorm-host: ""
             typeorm-port: ""
             typeorm-username: ""
@@ -133,20 +135,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - run: npm install -g pnpm@10.33.0
       - name: Cache and restore node_modules
         id: cache-node
         uses: actions/cache@v4
         with:
           path: ./node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
-      - run: npm install
+          key: ${{ runner.os }}-node-${{ hashFiles('./pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
         if: steps.cache-node.outputs.cache-hit != 'true'
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
-      - run: npm run swagger:validate
+      - run: pnpm swagger:validate
 
-      - run: npm run coverage-ci
-        if: matrix.typeorm-connection == 'sqlite'
-      - run: npm run coverage-ci-migrate
+      - run: pnpm coverage-ci
+        if: matrix.typeorm-connection == 'better-sqlite3'
+      - run: pnpm coverage-ci-migrate
         if: matrix.typeorm-connection == 'mariadb'
 
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"

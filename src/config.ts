@@ -22,8 +22,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export type DatabaseConnection = 'sqlite' | 'postgres' | 'mariadb' | 'mysql';
-const VALID_DATABASE_CONNECTIONS: readonly string[] = ['sqlite', 'postgres', 'mariadb', 'mysql'];
+export type DatabaseConnection = 'better-sqlite3' | 'postgres' | 'mariadb' | 'mysql';
+const VALID_DATABASE_CONNECTIONS: readonly string[] = ['better-sqlite3', 'postgres', 'mariadb', 'mysql'];
 
 export type StorageMethod = 'disk';
 const VALID_STORAGE_METHODS: readonly string[] = ['disk'];
@@ -176,12 +176,12 @@ export default class Config {
     const isTest = nodeEnv === 'test';
     const defaultRedisConnectTimeoutMs = isTest ? 100 : 3000;
 
-    const rawConnection = getOptionalString('TYPEORM_CONNECTION') ?? 'sqlite';
+    const rawConnection = getOptionalString('TYPEORM_CONNECTION') ?? 'better-sqlite3';
     if (!VALID_DATABASE_CONNECTIONS.includes(rawConnection)) {
       throw new Error(`Unsupported TYPEORM_CONNECTION: '${rawConnection}'. Must be one of: ${VALID_DATABASE_CONNECTIONS.join(', ')}`);
     }
     const databaseConnection = rawConnection as DatabaseConnection;
-    const isSqlite = databaseConnection === 'sqlite';
+    const isSqlite = databaseConnection === 'better-sqlite3';
 
     const stripeKeys = {
       STRIPE_PUBLIC_KEY: getOptionalString('STRIPE_PUBLIC_KEY'),

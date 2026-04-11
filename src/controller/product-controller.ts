@@ -40,8 +40,8 @@ import Product from '../entity/product/product';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
-import { verifyCreateProductRequest, verifyProductRequest } from './request/validators/product-request-spec';
-import { isFail } from '../helpers/specification-validation';
+import { createProductRequestSpecFactory, updateProductRequestSpecFactory } from './request/validators/product-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 
@@ -58,6 +58,22 @@ export default class ProductController extends BaseController {
     super(options);
     this.configureLogger(this.logger);
     this.fileService = new FileService(PRODUCT_IMAGE_LOCATION);
+    globalAsyncValidatorRegistry.register(
+      'CreateProductRequest',
+      createProductRequestSpecFactory,
+      (req) => ({
+        ...(req.body as CreateProductRequest),
+        ownerId: (req.body as CreateProductRequest).ownerId ?? req.token.user.id,
+      }),
+    );
+    globalAsyncValidatorRegistry.register(
+      'UpdateProductRequest',
+      updateProductRequestSpecFactory,
+      (req) => ({
+        ...(req.body as UpdateProductRequest),
+        id: parseInt(req.params.id, 10),
+      }),
+    );
   }
 
   /**
@@ -159,12 +175,6 @@ export default class ProductController extends BaseController {
         ownerId: body.ownerId ?? req.token.user.id,
       };
 
-      const validation = await verifyCreateProductRequest(request);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       const revision = await ProductService.createProduct(request);
       if (!revision) {
         res.status(404).json('Product owner not found.');
@@ -202,12 +212,6 @@ export default class ProductController extends BaseController {
         ...body,
         id: productId,
       };
-
-      const validation = await verifyProductRequest(params);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const product = await Product.findOne({ where: { id: productId } });
       if (!product) {

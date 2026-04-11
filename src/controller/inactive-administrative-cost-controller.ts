@@ -30,16 +30,17 @@ import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import InactiveAdministrativeCostService, { parseInactiveAdministrativeCostFilterParameters, InactiveAdministrativeCostFilterParameters } from '../service/inactive-administrative-cost-service';
-import { isFail } from '../helpers/specification-validation';
 import {
   CreateInactiveAdministrativeCostRequest,
   HandoutInactiveAdministrativeCostsRequest,
 } from './request/inactive-administrative-cost-request';
 import { NotImplementedError } from '../errors';
-import verifyValidUserId from './request/validators/inactive-administrative-cost-request-spec';
+import {
+  createInactiveAdministrativeCostRequestSpec,
+  handoutInactiveAdministrativeCostsRequestSpec,
+} from './request/validators/inactive-administrative-cost-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import InactiveAdministrativeCost from '../entity/transactions/inactive-administrative-cost';
-import User from '../entity/user/user';
-import { In } from 'typeorm';
 import { asBoolean, asFromAndTillDate } from '../helpers/validators';
 import { PdfError } from '../errors';
 import { formatTitleDate } from '../helpers/pdf';
@@ -58,6 +59,8 @@ export default class InactiveAdministrativeCostController extends BaseController
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.configureLogger(this.logger);
+    globalAsyncValidatorRegistry.register('CreateInactiveAdministrativeCostRequest', createInactiveAdministrativeCostRequestSpec);
+    globalAsyncValidatorRegistry.register('HandoutInactiveAdministrativeCostsRequest', handoutInactiveAdministrativeCostsRequestSpec);
   }
 
   /**
@@ -208,7 +211,7 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @param {CreateInactiveAdministrativeCostRequest} request.body.required -
    * The inactive administrative cost which should be created
    * @return {InactiveAdministrativeCostResponse} 200 - The created inactive administrative cost entity
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createInactiveAdministrativeCost(req: RequestWithToken, res: Response): Promise<void> {
@@ -217,12 +220,6 @@ export default class InactiveAdministrativeCostController extends BaseController
 
     // handle request
     try {
-      const validation = await verifyValidUserId(body);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       const inactiveAdministrativeCost = await new InactiveAdministrativeCostService().createInactiveAdministrativeCost(body);
       res.json(inactiveAdministrativeCost.toResponse());
     } catch (error) {
@@ -302,22 +299,12 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @param {HandoutInactiveAdministrativeCostsRequest} request.body.required -
    * The users that should be notified
    * @return 204 - Success
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async notifyInactiveUsers(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as HandoutInactiveAdministrativeCostsRequest;
     this.logger.trace('Notify Inactive Users', body, 'by user', req.token.user);
-
-    try {
-      if (!Array.isArray(body.userIds)) throw new Error('userIds is not an Array.');
-      
-      const users = await User.find({ where: { id: In(body.userIds) } });
-      if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
-    } catch (error) {
-      res.status(400).json(error.message);
-      return ;
-    }
 
     try {
       await new InactiveAdministrativeCostService().sendInactiveNotification(body);
@@ -336,23 +323,13 @@ export default class InactiveAdministrativeCostController extends BaseController
    * @security JWT
    * @param {HandoutInactiveAdministrativeCostsRequest} request.body.required -
    * The users that should be fined
-   * @return 204 - Success
-   * @return {string} 400 - Validation error
+   * @return {InactiveAdministrativeCostResponse[]} 200 - Success
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async handoutInactiveAdministrativeCost(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as HandoutInactiveAdministrativeCostsRequest;
     this.logger.trace('Handout InactiveAdministrativeCosts', body, 'by user', req.token.user);
-
-    try {
-      if (!Array.isArray(body.userIds)) throw new Error('userIds is not an Array.');
-
-      const users = await User.find({ where: { id: In(body.userIds) } });
-      if (users.length !== body.userIds.length) throw new Error('userIds is not a valid array of user IDs');
-    } catch (error) {
-      res.status(400).json(error.message);
-      return ;
-    }
 
     try {
       const inactiveAdministrativeCosts = await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(body);
