@@ -26,7 +26,7 @@ import { finishTestDB } from '../helpers/test-helpers';
 describe('Database', async (): Promise<void> => {
   describe('#initialize', () => {
     it('should be able to synchronize schema', async function () {
-      if (process.env.TYPEORM_CONNECTION !== 'sqlite') this.skip();
+      if (process.env.TYPEORM_CONNECTION !== 'better-sqlite3') this.skip();
       const connection = await Database.initialize();
       await connection.synchronize();
       await connection.destroy();

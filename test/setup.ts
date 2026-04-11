@@ -92,10 +92,10 @@ if (!process.env.JWT_KEY_PATH) {
     try { fs.unlinkSync(jwtKeyPath); } catch { /* already removed */ }
   });
 }
-if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'sqlite' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
+if (!process.env.TYPEORM_CONNECTION || (process.env.TYPEORM_CONNECTION === 'better-sqlite3' && !(process.env.SKIP_SQLITE_DEFAULTS === 'true'))) {
   console.log('Setting sqlite defaults');
   process.env.HTTP_PORT = '3001';
-  process.env.TYPEORM_CONNECTION = 'sqlite';
+  process.env.TYPEORM_CONNECTION = 'better-sqlite3';
   process.env.TYPEORM_DATABASE = ':memory:';
   process.env.TYPEORM_SYNCHRONIZE = 'true';
 }

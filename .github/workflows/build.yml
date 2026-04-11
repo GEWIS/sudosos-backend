@@ -106,7 +106,7 @@ jobs:
             typeorm-password: sudosos-ci
             typeorm-database: sudosos-ci
             typeorm-synchronize: "false"
-          - typeorm-connection: sqlite
+          - typeorm-connection: better-sqlite3
             typeorm-host: ""
             typeorm-port: ""
             typeorm-username: ""
@@ -148,7 +148,7 @@ jobs:
       - run: pnpm swagger:validate
 
       - run: pnpm coverage-ci
-        if: matrix.typeorm-connection == 'sqlite'
+        if: matrix.typeorm-connection == 'better-sqlite3'
       - run: pnpm coverage-ci-migrate
         if: matrix.typeorm-connection == 'mariadb'
 
