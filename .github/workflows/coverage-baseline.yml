@@ -58,20 +58,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - run: npm install -g pnpm@10.33.0
       - name: Cache and restore node_modules
         id: cache-node
         uses: actions/cache@v4
         with:
           path: ./node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('./package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('./pnpm-lock.yaml') }}
 
-      - run: npm install
+      - run: pnpm install --frozen-lockfile
         if: steps.cache-node.outputs.cache-hit != 'true'
 
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
 
-      - run: npm run swagger:validate
-      - run: npm run coverage-ci-migrate
+      - run: pnpm swagger:validate
+      - run: pnpm coverage-ci-migrate
 
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 

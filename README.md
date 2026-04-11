@@ -31,6 +31,7 @@ SudoSOS Backend is a comprehensive Point of Sale (POS) and financial management 
 Before you begin, ensure you have the following installed:
 
 - **Node.js 22+** - [Download here](https://nodejs.org/)
+- **pnpm** - [Installation guide](https://pnpm.io/installation) (enabled via `corepack enable` on Node.js 16.13+)
 - **Git** - [Download here](https://git-scm.com/)
 - **OpenSSL** - Usually pre-installed on most systems
 - **Database** (choose one):
@@ -48,7 +49,7 @@ git clone https://github.com/GEWIS/sudosos-backend.git
 cd sudosos-backend
 
 # Install dependencies
-npm install
+pnpm install
 
 # Copy environment configuration
 cp .env.example .env
@@ -72,13 +73,13 @@ head -1 config/jwt.key
 
 ```bash
 # Generate swagger specification
-npm run swagger
+pnpm swagger
 
 # Build the project
-npm run build
+pnpm build
 
 # Run tests to verify everything works
-npm run test
+pnpm test
 ```
 
 ### 4. Initialize Database
@@ -92,12 +93,12 @@ npm run test
 
 ```bash
 # For SQLite (recommended for development)
-npm run init:schema
+pnpm init:schema
 ```
 
 ```bash
 # OR for MariaDB/MySQL
-npm run init:migrate
+pnpm init:migrate
 ```
 
 This command will:
@@ -111,7 +112,7 @@ This command will:
 
 ```bash
 # Start the development server with hot reload
-npm run watch
+pnpm watch
 ```
 
 The server will be available at `http://localhost:3000`
@@ -157,22 +158,22 @@ STRIPE_RETURN_URL=https://your-domain.com/return
 
 | Script                    | Description                                  |
 | ------------------------- | -------------------------------------------- |
-| `npm run build`           | Compile TypeScript to JavaScript             |
-| `npm run watch`           | Start development server with hot reload     |
-| `npm run test`            | Run all tests                                |
-| `npm run test-ci`         | Run tests with schema setup                  |
-| `npm run test-ci-migrate` | Run tests with migration setup               |
-| `npm run coverage`        | Generate test coverage report                |
-| `npm run lint`            | Run ESLint                                   |
-| `npm run lint-fix`        | Fix ESLint issues automatically              |
-| `npm run schema`          | Create/update database schema (SQLite)       |
-| `npm run migrate`         | Run database migrations (MariaDB/MySQL)      |
-| `npm run seed`            | Seed database with initial data              |
-| `npm run init:schema`     | Complete setup for SQLite development        |
-| `npm run init:migrate`    | Complete setup for MariaDB/MySQL development |
-| `npm run maintenance`     | Run maintenance tasks                        |
-| `npm run cron`            | Start cron job scheduler                     |
-| `npm run serve`           | Start production server                      |
+| `pnpm build`           | Compile TypeScript to JavaScript             |
+| `pnpm watch`           | Start development server with hot reload     |
+| `pnpm test`            | Run all tests                                |
+| `pnpm test-ci`         | Run tests with schema setup                  |
+| `pnpm test-ci-migrate` | Run tests with migration setup               |
+| `pnpm coverage`        | Generate test coverage report                |
+| `pnpm lint`            | Run ESLint                                   |
+| `pnpm lint-fix`        | Fix ESLint issues automatically              |
+| `pnpm schema`          | Create/update database schema (SQLite)       |
+| `pnpm migrate`         | Run database migrations (MariaDB/MySQL)      |
+| `pnpm seed`            | Seed database with initial data              |
+| `pnpm init:schema`     | Complete setup for SQLite development        |
+| `pnpm init:migrate`    | Complete setup for MariaDB/MySQL development |
+| `pnpm maintenance`     | Run maintenance tasks                        |
+| `pnpm cron`            | Start cron job scheduler                     |
+| `pnpm serve`           | Start production server                      |
 
 ## 📚 API Documentation
 
@@ -194,8 +195,8 @@ We welcome contributions! Please follow these guidelines:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
 3. Make your changes
-4. Run tests: `npm run test`, or `npm run test-file <path-to-test-file>` to run a single test file
-5. Run linting: `npm run lint-fix`
+4. Run tests: `pnpm test`, or `pnpm test-file <path-to-test-file>` to run a single test file
+5. Run linting: `pnpm lint-fix`
 6. Commit your changes: `git commit -m "feat: add your feature"` ([follow the conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/))
 7. Push to your branch: `git push origin feature/your-feature-name`
 8. Create a Pull Request
