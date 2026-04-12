@@ -1621,7 +1621,8 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/pin`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updatePinRequest);
-        expect(res.body).to.be.equal(INVALID_PIN().value);
+        expect(res.body.valid).to.be.false;
+        expect(res.body.errors[0]).to.include(INVALID_PIN().value);
         expect(res.status).to.equal(400);
       });
     });
@@ -1666,7 +1667,8 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateNfcRequest);
-        expect(res.body).to.be.equal(DUPLICATE_TOKEN().value);
+        expect(res.body.valid).to.be.false;
+        expect(res.body.errors[0]).to.include(DUPLICATE_TOKEN().value);
         expect(res.status).to.equal(400);
       });
     });
@@ -1704,7 +1706,8 @@ describe('UserController', (): void => {
           .put(`/users/${user.id}/authenticator/nfc`)
           .set('Authorization', `Bearer ${userToken}`)
           .send(updateNfcRequest);
-        expect(res.body).to.be.equal(ZERO_LENGTH_STRING().value);
+        expect(res.body.valid).to.be.false;
+        expect(res.body.errors[0]).to.include(ZERO_LENGTH_STRING().value);
         expect(res.status).to.equal(400);
       });
     });
