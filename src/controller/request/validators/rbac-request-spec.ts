@@ -25,6 +25,7 @@
  */
 
 import {
+  isFail,
   Specification,
   toFail,
   toPass,
@@ -44,18 +45,25 @@ const validRoleName = async (name: string) => {
   return toPass(name);
 };
 
-const updateRoleRequestSpec: () => Specification<UpdateRoleRequest, ValidationError> = () => [
-  [[...stringSpec(), validRoleName], 'name', new ValidationError('name:')],
-];
-
-export async function verifyUpdateRoleRequest(roleRequest: UpdateRoleRequest) {
-  return validateSpecification<UpdateRoleRequest, ValidationError>(roleRequest, updateRoleRequestSpec());
+export function updateRoleRequestSpecFactory(): Specification<UpdateRoleRequest, ValidationError> {
+  return [
+    [[...stringSpec(), validRoleName], 'name', new ValidationError('name:')],
+  ];
 }
 
-const createPermissionRequestSpec: Specification<CreatePermissionParams, ValidationError> = [
+const createPermissionItemSpec: () => Specification<CreatePermissionParams, ValidationError> = () => [
   [[nonEmptyArray], 'attributes', new ValidationError('attributes:')],
 ];
 
-export async function verifyCreatePermissionRequest(permRequest: CreatePermissionParams) {
-  return validateSpecification(permRequest, createPermissionRequestSpec);
+const validateAllPermissions = async (arr: CreatePermissionParams[]) => {
+  if (!Array.isArray(arr)) return toFail(new ValidationError('Body must be an array.'));
+  for (const item of arr) {
+    const result = await validateSpecification(item, createPermissionItemSpec());
+    if (isFail(result)) return toFail(result.fail);
+  }
+  return toPass(arr);
+};
+
+export function createPermissionsRequestSpecFactory(): Specification<CreatePermissionParams[], ValidationError> {
+  return [validateAllPermissions];
 }
