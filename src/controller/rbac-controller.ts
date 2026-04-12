@@ -31,8 +31,8 @@ import Policy from './policy';
 import RBACService from '../service/rbac-service';
 import { RequestWithToken } from '../middleware/token-middleware';
 import { CreatePermissionParams, UpdateRoleRequest } from './request/rbac-request';
-import { verifyCreatePermissionRequest, verifyUpdateRoleRequest } from './request/validators/rbac-request-spec';
-import { isFail } from '../helpers/specification-validation';
+import { createPermissionsRequestSpecFactory, updateRoleRequestSpecFactory } from './request/validators/rbac-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import Permission from '../entity/rbac/permission';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { asUserResponse } from '../service/user-service';
@@ -47,6 +47,8 @@ export default class RbacController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.configureLogger(this.logger);
+    globalAsyncValidatorRegistry.register('UpdateRoleRequest', updateRoleRequestSpecFactory);
+    globalAsyncValidatorRegistry.register('CreatePermissionsRequest', createPermissionsRequestSpecFactory);
   }
 
   /**
@@ -209,12 +211,6 @@ export default class RbacController extends BaseController {
     try {
       const request = { ...body } as UpdateRoleRequest;
 
-      const validation = await verifyUpdateRoleRequest(request);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       const role = await RBACService.createRole(request);
       const response = RBACService.asRoleResponse(role);
       res.json(response);
@@ -245,12 +241,6 @@ export default class RbacController extends BaseController {
     try {
       const roleId = Number(id);
       const request = { ...body } as UpdateRoleRequest;
-
-      const validation = await verifyUpdateRoleRequest(request);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       let [[role]] = await RBACService.getRoles({ roleId }, { take: 1 });
       if (!role) {
@@ -338,19 +328,7 @@ export default class RbacController extends BaseController {
         return;
       }
 
-      if (!Array.isArray(body)) {
-        res.status(404).json('Body should be an array.');
-        return;
-      }
-
       const params: CreatePermissionParams[] = [...body];
-      const validations = await Promise.all(params.map((p) => verifyCreatePermissionRequest(p)));
-      for (let validation of validations) {
-        if (isFail(validation)) {
-          res.status(404).json(validation.fail.value);
-          return;
-        }
-      }
 
       // Check for duplicates in the request body / existing permissions
       const invalidPermissions = params.filter((p, index) => {
