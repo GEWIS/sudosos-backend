@@ -45,8 +45,7 @@ import TransferService, { parseGetTransferFilters } from '../service/transfer-se
 import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import RBACService from '../service/rbac-service';
-import { isFail } from '../helpers/specification-validation';
-import verifyUpdatePinRequest from './request/validators/update-pin-request-spec';
+import { updatePinRequestSpecFactory } from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
 import UserService, {
   asUserResponse,
@@ -55,16 +54,17 @@ import UserService, {
   UserFilterParameters,
 } from '../service/user-service';
 import { asFromAndTillDate, asNumber, asReturnFileType } from '../helpers/validators';
-import { verifyCreateUserRequest } from './request/validators/user-request-spec';
+import { createUserRequestSpecFactory } from './request/validators/user-request-spec';
 import userTokenInOrgan from '../helpers/token-helper';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 import { AcceptTosRequest } from './request/accept-tos-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import UpdateLocalRequest from './request/update-local-request';
-import verifyUpdateLocalRequest from './request/validators/update-local-request-spec';
+import { updateLocalRequestSpecFactory } from './request/validators/update-local-request-spec';
 import StripeService from '../service/stripe-service';
-import verifyUpdateNfcRequest from './request/validators/update-nfc-request-spec';
+import { updateNfcRequestSpecFactory } from './request/validators/update-nfc-request-spec';
 import UpdateNfcRequest from './request/update-nfc-request';
 import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
@@ -102,6 +102,10 @@ export default class UserController extends BaseController {
     super(options);
     this.configureLogger(this.logger);
     this.tokenHandler = tokenHandler;
+    globalAsyncValidatorRegistry.register('CreateUserRequest', createUserRequestSpecFactory);
+    globalAsyncValidatorRegistry.register('UpdatePinRequest', updatePinRequestSpecFactory);
+    globalAsyncValidatorRegistry.register('UpdateNfcRequest', updateNfcRequestSpecFactory);
+    globalAsyncValidatorRegistry.register('UpdateLocalRequest', updateLocalRequestSpecFactory);
   }
 
   /**
@@ -532,12 +536,6 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const validation = await verifyUpdatePinRequest(updatePinRequest);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       await new AuthenticationService().setUserAuthenticationHash(user,
         updatePinRequest.pin.toString(), PinAuthenticator);
       res.status(204).json();
@@ -571,12 +569,6 @@ export default class UserController extends BaseController {
       // If it does not exist, return a 404 error
       if (user == null) {
         res.status(404).json('Unknown user ID.');
-        return;
-      }
-
-      const validation = await verifyUpdateNfcRequest(updateNfcRequest);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
         return;
       }
 
@@ -724,12 +716,6 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const validation = await verifyUpdateLocalRequest(updateLocalRequest);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       await new AuthenticationService().setUserAuthenticationHash(user,
         updateLocalRequest.password, LocalAuthenticator);
       res.status(204).json();
@@ -848,12 +834,6 @@ export default class UserController extends BaseController {
     this.logger.trace('Create user', body, 'by user', req.token.user);
 
     try {
-      const validation = await verifyCreateUserRequest(body);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
       const user = await UserService.createUser(body);
       res.status(201).json(asUserResponse(user, true));
     } catch (error) {
