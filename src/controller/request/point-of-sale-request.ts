@@ -46,13 +46,12 @@ export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
  * authenticate themselves before making a transaction
  * @property {Array<integer>} containers.required -
  * IDs or Requests of the containers to add to the POS
- * @property {integer} ownerId.required - ID of the user who will own the POS, if undefined it will
- *    default to the token ID.
+ * @property {integer} ownerId.required - ID of the user who will own the POS.
  * @property {Array<integer>} cashierRoleIds - Users that have at least one of the given roles
  * can create transactions in this POS (but not open/close/edit it)
  */
 export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
-  ownerId?: number,
+  ownerId: number,
 }
 
 /**

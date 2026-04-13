@@ -34,16 +34,16 @@ import ContainerService from '../service/container-service';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { asNumber } from '../helpers/validators';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
-import { isFail } from '../helpers/specification-validation';
 import {
-  CreatePointOfSaleParams, CreatePointOfSaleRequest,
+  CreatePointOfSaleRequest,
   UpdatePointOfSaleParams,
   UpdatePointOfSaleRequest,
 } from './request/point-of-sale-request';
 import {
-  verifyCreatePointOfSaleRequest,
-  verifyUpdatePointOfSaleRequest,
+  createPointOfSaleRequestSpecFactory,
+  updatePointOfSaleRequestSpecFactory,
 } from './request/validators/point-of-sale-request-spec';
+import { globalAsyncValidatorRegistry } from '../middleware/async-validator-registry';
 import userTokenInOrgan from '../helpers/token-helper';
 import TransactionService from '../service/transaction-service';
 import { PointOfSaleWithContainersResponse } from './response/point-of-sale-response';
@@ -61,6 +61,18 @@ export default class PointOfSaleController extends BaseController {
   public constructor(options: BaseControllerOptions) {
     super(options);
     this.configureLogger(this.logger);
+    globalAsyncValidatorRegistry.register(
+      'CreatePointOfSaleRequest',
+      createPointOfSaleRequestSpecFactory,
+    );
+    globalAsyncValidatorRegistry.register(
+      'UpdatePointOfSaleRequest',
+      updatePointOfSaleRequestSpecFactory,
+      (req) => ({
+        ...(req.body as UpdatePointOfSaleRequest),
+        id: parseInt(req.params.id, 10),
+      }),
+    );
   }
 
   /**
@@ -136,7 +148,7 @@ export default class PointOfSaleController extends BaseController {
    * The point of sale which should be created
    * @security JWT
    * @return {PointOfSaleWithContainersResponse} 200 - The created point of sale entity
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async createPointOfSale(req: RequestWithToken, res: Response): Promise<void> {
@@ -145,19 +157,7 @@ export default class PointOfSaleController extends BaseController {
 
     // handle request
     try {
-      // If no ownerId is provided we use the token user id.
-      const params: CreatePointOfSaleParams = {
-        ...body,
-        ownerId: body.ownerId ?? req.token.user.id,
-      };
-
-      const validation = await verifyCreatePointOfSaleRequest(params);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
-
-      const revision = await PointOfSaleService.createPointOfSale(params);
+      const revision = await PointOfSaleService.createPointOfSale(body);
       res.json(PointOfSaleService.revisionToResponse(revision));
     } catch (error) {
       this.logger.error('Could not create point of sale:', error);
@@ -292,7 +292,7 @@ export default class PointOfSaleController extends BaseController {
    *    The Point of Sale which should be updated
    * @security JWT
    * @return {PointOfSaleWithContainersResponse} 200 - The updated Point of Sale entity
-   * @return {string} 400 - Validation error
+   * @return {ValidationResponse} 400 - Validation error
    * @return {string} 404 - Product not found error
    * @return {string} 500 - Internal server error
    */
@@ -308,12 +308,6 @@ export default class PointOfSaleController extends BaseController {
         ...body,
         id: pointOfSaleId,
       };
-
-      const validation = await verifyUpdatePointOfSaleRequest(params);
-      if (isFail(validation)) {
-        res.status(400).json(validation.fail.value);
-        return;
-      }
 
       const pointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId } });
       if (!pointOfSale) {
