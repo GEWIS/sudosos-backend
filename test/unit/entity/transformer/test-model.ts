@@ -19,7 +19,7 @@
  */
 
 import * as express from 'express';
-import { SwaggerSpecification } from 'swagger-model-validator';
+import Validator, { SwaggerSpecification } from 'swagger-model-validator';
 import Swagger from '../../../../src/start/swagger';
 
 /**
@@ -34,5 +34,29 @@ export class TestModel {
 }
 
 export async function getSpecification(app: express.Application): Promise<SwaggerSpecification> {
-  return Swagger.generateSpecification(app,  ['../../test/unit/entity/transformer/test-model.ts']);
+  // Under compiled JS, there are no .ts source files for express-jsdoc-swagger to scan,
+  // and the JSDoc @typedef comments are stripped during compilation. Build the spec inline.
+  if (__filename.endsWith('.js')) {
+    const spec: any = {
+      openapi: '3.0.0',
+      info: { title: 'Test', version: '1.0.0', description: 'Test' },
+      paths: {},
+      components: {
+        schemas: {
+          TestModel: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              value: { type: 'number' },
+            },
+            required: ['name', 'value'],
+          },
+        },
+      },
+    };
+    new Validator(spec);
+    app.use('/api-docs.json', (_: express.Request, res: express.Response) => res.json(spec));
+    return spec as SwaggerSpecification;
+  }
+  return Swagger.generateSpecification(app, ['../../test/unit/entity/transformer/test-model.ts']);
 }

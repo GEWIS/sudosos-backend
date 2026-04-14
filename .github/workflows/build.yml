@@ -49,6 +49,8 @@ jobs:
         if: steps.cache-node.outputs.cache-hit != 'true'
       - run: pnpm build
       - run: pnpm swagger
+      - name: "Copy static assets into out/"
+        run: mkdir -p out/static && cp -r static/. out/static/
       - name: "Compress out folder"
         run: tar -zcvf out.tar.gz out/
       - name: "Upload /out of build"
@@ -83,8 +85,8 @@ jobs:
         run: npm run genbuild
 
   coverage:
-    name: "coverage-${{ matrix.typeorm-connection }}"
-    needs: [lint]
+    name: "${{ matrix.job-name }}"
+    needs: [build]
     runs-on: ubuntu-latest
     container:
       image: node:24
@@ -99,14 +101,16 @@ jobs:
     strategy:
       matrix:
         include:
-          - typeorm-connection: mariadb
+          - job-name: coverage-mariadb
+            typeorm-connection: mariadb
             typeorm-host: mariadb
             typeorm-port: 3306
             typeorm-username: sudosos-ci
             typeorm-password: sudosos-ci
             typeorm-database: sudosos-ci
             typeorm-synchronize: "false"
-          - typeorm-connection: better-sqlite3
+          - job-name: test-better-sqlite3
+            typeorm-connection: better-sqlite3
             typeorm-host: ""
             typeorm-port: ""
             typeorm-username: ""
@@ -145,9 +149,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
         if: steps.cache-node.outputs.cache-hit != 'true'
       - run: openssl genrsa -out ./config/jwt.key 2048 && chmod 0777 ./config/jwt.key
-      - run: pnpm swagger:validate
 
-      - run: pnpm coverage-ci
+      - name: Download build artifact
+        if: matrix.typeorm-connection == 'better-sqlite3'
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+      - name: Extract build artifact
+        if: matrix.typeorm-connection == 'better-sqlite3'
+        run: tar -xzf out.tar.gz
+
+      - run: pnpm swagger:validate
+        if: matrix.typeorm-connection == 'mariadb'
+
+      - run: pnpm test-js-ci
         if: matrix.typeorm-connection == 'better-sqlite3'
       - run: pnpm coverage-ci-migrate
         if: matrix.typeorm-connection == 'mariadb'
