@@ -319,9 +319,6 @@ export default class TransferService extends WithManager {
           const rel = categoryRelationMap[filters.category];
           if (!rel) throw new Error(`Unsupported transfer category: ${filters.category}`);
           query = query.innerJoin(`transfer.${rel}`, rel);
-          if (filters.category === TransferCategory.INVOICE) {
-            query = query.andWhere('invoice.creditTransferId IS NULL');
-          }
         }
       }
     }
