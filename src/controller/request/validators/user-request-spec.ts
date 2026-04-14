@@ -25,7 +25,7 @@
  */
 
 import {
-  Specification, toFail, toPass, validateSpecification, ValidationError,
+  Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import { maxLength, nonZeroString } from './string-spec';
 import { UserType } from '../../../entity/user/user';
@@ -74,10 +74,6 @@ const createUserSpec: () => Specification<CreateUserRequest, ValidationError> = 
   validUserType,
 ];
 
-export async function verifyCreateUserRequest(createUserRequest: CreateUserRequest) {
-  return Promise.resolve(await validateSpecification(createUserRequest, createUserSpec()));
-}
-
-export async function verifyUpdateUserRequest(createUserRequest: CreateUserRequest) {
-  return Promise.resolve(await validateSpecification(createUserRequest, updateUserSpec()));
+export function createUserRequestSpecFactory(): Specification<CreateUserRequest, ValidationError> {
+  return createUserSpec();
 }

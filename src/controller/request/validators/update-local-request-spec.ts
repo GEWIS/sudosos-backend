@@ -26,7 +26,7 @@
 
 import validator from 'validator';
 import {
-  Specification, toFail, toPass, validateSpecification, ValidationError,
+  Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import UpdateLocalRequest from '../update-local-request';
 import { WEAK_PASSWORD } from './validation-errors';
@@ -44,18 +44,8 @@ const validPassword = async (p: string) => {
  * We make it a function since we use a SubSpecification
  *    Otherwise it reuses the validationerror internal in memory.
  */
-const updateLocalRequestSpec: () => Specification<UpdateLocalRequest, ValidationError> = () => [
-  [[validPassword], 'password', new ValidationError('')],
-];
-
-/**
- * Logical validation of the updateLocalRequest
- * @param updateLocalRequest - Request to validate
- */
-async function verifyUpdateLocalRequest(updateLocalRequest: UpdateLocalRequest) {
-  return Promise.resolve(await validateSpecification<UpdateLocalRequest, ValidationError>(
-    updateLocalRequest, updateLocalRequestSpec(),
-  ));
+export function updateLocalRequestSpecFactory(): Specification<UpdateLocalRequest, ValidationError> {
+  return [
+    [[validPassword], 'password', new ValidationError('')],
+  ];
 }
-
-export default verifyUpdateLocalRequest;

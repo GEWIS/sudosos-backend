@@ -25,7 +25,7 @@
  */
 
 import {
-  Specification, toFail, toPass, validateSpecification, ValidationError,
+  Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import UpdateNfcRequest from '../update-nfc-request';
 import NfcAuthenticator from '../../../entity/authenticator/nfc-authenticator';
@@ -46,18 +46,8 @@ const validNfc = async (p: string) => {
  * We make it a function since we use a SubSpecification
  *    Otherwise it reuses the validationerror internal in memory.
  */
-const updateNfcRequestSpec: () => Specification<UpdateNfcRequest, ValidationError> = () => [
-  [[validNfc], 'nfcCode', new ValidationError('')],
-];
-
-/**
- * Logical validation of the updateNFCRequest
- * @param updateNFCRequest - Request to validate
- */
-async function verifyUpdateNFCRequest(updateNFCRequest: UpdateNfcRequest) {
-  return Promise.resolve(await validateSpecification<UpdateNfcRequest, ValidationError>(
-    updateNFCRequest, updateNfcRequestSpec(),
-  ));
+export function updateNfcRequestSpecFactory(): Specification<UpdateNfcRequest, ValidationError> {
+  return [
+    [[validNfc], 'nfcCode', new ValidationError('')],
+  ];
 }
-
-export default verifyUpdateNFCRequest;

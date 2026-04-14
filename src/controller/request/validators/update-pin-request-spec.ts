@@ -25,7 +25,7 @@
  */
 
 import {
-  Specification, toFail, toPass, validateSpecification, ValidationError,
+  Specification, toFail, toPass, ValidationError,
 } from '../../../helpers/specification-validation';
 import UpdatePinRequest from '../update-pin-request';
 import { INVALID_PIN } from './validation-errors';
@@ -45,18 +45,8 @@ const validPin = async (p: string) => {
  * We make it a function since we use a SubSpecification
  *    Otherwise it reuses the validationerror internal in memory.
  */
-const updatePinRequestSpec: () => Specification<UpdatePinRequest, ValidationError> = () => [
-  [[validPin], 'pin', new ValidationError('')],
-];
-
-/**
- * Logical validation of the updatePinRequest
- * @param updatePinRequest - Request to validate
- */
-async function verifyUpdatePinRequest(updatePinRequest: UpdatePinRequest) {
-  return Promise.resolve(await validateSpecification<UpdatePinRequest, ValidationError>(
-    updatePinRequest, updatePinRequestSpec(),
-  ));
+export function updatePinRequestSpecFactory(): Specification<UpdatePinRequest, ValidationError> {
+  return [
+    [[validPin], 'pin', new ValidationError('')],
+  ];
 }
-
-export default verifyUpdatePinRequest;
