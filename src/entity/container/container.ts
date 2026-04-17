@@ -19,7 +19,32 @@
  */
 
 /**
- * This is the module page of container.
+ * A `container` is a group of products of a single seller, offered together at one or more points of sale.
+ * Typical containers are a bar fridge, a committee snack shelf, or a single event's stock.
+ *
+ * ### Seller and revenue
+ * The container's `owner` is the **seller** for every purchase of its products. Money from a
+ * {@link transactions/sub-transactions!SubTransaction | SubTransaction} flows to this user — not
+ * to the point of sale operator, and not to the product's creator. This is how a single purchase
+ * can be split across multiple organs: each
+ * {@link transactions/sub-transactions!SubTransaction | SubTransaction} is tied to one container,
+ * and therefore to one seller.
+ *
+ * ### Revisions
+ * `Container` is paired with {@link ContainerRevision}. Each edit (name, product list) produces
+ * a new revision; `currentRevision` points at the live one. Past purchases keep referencing the
+ * revision that was current at the time, so price and composition history stays intact.
+ * {@link ContainerRevision} is immutable — attempting to update one throws.
+ *
+ * Containers are soft-deleted via `deletedAt`; the rows remain so that historical
+ * {@link transactions/sub-transactions!SubTransaction | SubTransaction} references stay valid.
+ *
+ * ### Visibility
+ * - `public: true` — any user may include the container on their own point of sale.
+ * - `public: false` — the container can only be attached to points of sale by users with explicit
+ *   permission (typically the owner or an admin).
+ *
+ * For API interactions, refer to the [Swagger Documentation](https://sudosos.gewis.nl/api/api-docs/#/containers).
  *
  * @module catalogue/containers
  * @mergeTarget
