@@ -41,6 +41,6 @@ export default class PayoutRequestStatus extends BaseEntity {
   @ManyToOne(() => PayoutRequest, (pr) => pr.payoutRequestStatus, { nullable: false })
   public payoutRequest: PayoutRequest;
 
-  @Column()
+  @Column({ type: 'varchar' })
   public state: PayoutRequestState;
 }

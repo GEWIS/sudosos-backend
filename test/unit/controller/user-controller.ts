@@ -19,12 +19,12 @@
  */
 
 import express, { Application } from 'express';
-import chai, { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import { describe } from 'mocha';
 import UserController from '../../../src/controller/user-controller';
 import TransactionController from '../../../src/controller/transaction-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
@@ -89,6 +89,8 @@ import Wrapped from '../../../src/entity/wrapped';
 import Redis from 'ioredis';
 import Mailer from '../../../src/mailer';
 
+const { expect, request } = chai;
+
 chai.use(deepEqualInAnyOrder);
 
 describe('UserController', (): void => {
@@ -122,7 +124,7 @@ describe('UserController', (): void => {
 
   let redis: Redis;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     ctx = { connection } as any; // on timeout forces connection to close
@@ -235,7 +237,7 @@ describe('UserController', (): void => {
     }
   });
 
-  after(async () => {
+  afterAll(async () => {
     Mailer.reset();
     if (redis) await redis.quit();
     await finishTestDB(ctx.connection);
@@ -1511,7 +1513,7 @@ describe('UserController', (): void => {
       extensiveDataProcessing: true,
     };
 
-    before(async () => {
+    beforeAll(async () => {
       userNotAccepted = await (await UserFactory({
         firstName: 'TestUser1',
         lastName: 'TestUser1',

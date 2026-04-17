@@ -61,7 +61,7 @@ export default class EventShiftAnswer extends BaseEntityWithoutId {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   public availability: Availability | null;
 
   @Column({ default: false })

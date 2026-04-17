@@ -84,7 +84,7 @@ describe('TransactionSubscriber', () => {
 
   let env: string;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -152,7 +152,7 @@ describe('TransactionSubscriber', () => {
     sandbox = sinon.createSandbox();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
     sandbox.restore();
 

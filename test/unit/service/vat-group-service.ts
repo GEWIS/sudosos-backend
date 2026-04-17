@@ -47,7 +47,7 @@ describe('VatGroupService', () => {
     validVatCreateReq: VatGroupRequest,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const users = await new UserSeeder().seed();
@@ -73,7 +73,7 @@ describe('VatGroupService', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -237,7 +237,7 @@ describe('VatGroupService', () => {
       }
     };
 
-    before(() => async () => {
+    beforeAll(async () => {
       let extraVatGroup = Object.assign(new VatGroup(), {
         name: 'ExtraEmptyVatGroup',
         percentage: 10,

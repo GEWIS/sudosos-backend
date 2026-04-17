@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import Stripe from 'stripe';
 import sinon from 'sinon';
 import Database from '../../../src/database/database';
@@ -36,8 +37,12 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { DepositSeeder, UserSeeder } from '../../seed';
 
-describe('StripeWebhookController', async (): Promise<void> => {
-  let shouldSkip: boolean;
+const { expect, request } = chai;
+
+const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+  || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+
+describe.skipIf(shouldSkipStripe)('StripeWebhookController', async (): Promise<void> => {
   let originalName: string;
 
   let ctx: {
@@ -59,12 +64,7 @@ describe('StripeWebhookController', async (): Promise<void> => {
     });
   }
 
-  // eslint-disable-next-line func-names
-  before(async function () {
-    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
-      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
-    if (shouldSkip) this.skip();
-
+  beforeAll(async () => {
     originalName = process.env.NAME;
     const serviceName = 'sudosos-stripe-webhook-test-suite';
     process.env.NAME = serviceName;
@@ -114,15 +114,12 @@ describe('StripeWebhookController', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
-    if (shouldSkip) return;
-
+  afterAll(async () => {
     process.env.NAME = originalName;
     await finishTestDB(ctx.connection);
   });
 
   afterEach(() => {
-    if (shouldSkip) return;
     stubs.forEach((stub) => stub.restore());
     stubs.splice(0, stubs.length);
   });

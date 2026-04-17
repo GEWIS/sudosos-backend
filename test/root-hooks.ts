@@ -20,7 +20,6 @@
 
 import sinon from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
-import { AppDataSource } from '../src/database/database';
 import { Queue, Worker } from 'bullmq';
 
 /**
@@ -37,51 +36,42 @@ export let rootStubs: {
   queueAdd: sinon.SinonStub;
 } | undefined;
 
-export const mochaHooks: Mocha.RootHookObject = {
-  beforeAll() {
-    sinon.stub(Queue.prototype, 'on').returns({} as any);
-    sinon.stub(Worker.prototype, 'on').returns({} as any);
+beforeAll(() => {
+  sinon.stub(Queue.prototype, 'on').returns({} as any);
+  sinon.stub(Worker.prototype, 'on').returns({} as any);
 
-    Object.defineProperty(Queue.prototype, 'client', {
-      get: () => Promise.resolve({}),
-      configurable: true,
-    });
-  },
+  Object.defineProperty(Queue.prototype, 'client', {
+    get: () => Promise.resolve({}),
+    configurable: true,
+  });
+});
 
-  beforeEach() {
-    const sendMailSpy = sinon.spy();
-    const mailStub = sinon.stub(nodemailer, 'createTransport').returns({
-      sendMail: sendMailSpy,
-    } as any as Transporter);
+beforeEach(() => {
+  const sendMailSpy = sinon.spy();
+  const mailStub = sinon.stub(nodemailer, 'createTransport').returns({
+    sendMail: sendMailSpy,
+  } as any as Transporter);
 
-    let queueAddStub: sinon.SinonStub;
-    if ((Queue.prototype.add as any).restore) {
-      queueAddStub = Queue.prototype.add as sinon.SinonStub;
-    } else {
-      queueAddStub = sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
-    }
+  let queueAddStub: sinon.SinonStub;
+  if ((Queue.prototype.add as any).restore) {
+    queueAddStub = Queue.prototype.add as sinon.SinonStub;
+  } else {
+    queueAddStub = sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
+  }
 
-    queueAddStub.resetHistory();
+  queueAddStub.resetHistory();
 
-    rootStubs = {
-      mail: mailStub,
-      queueAdd: queueAddStub,
-    };
-  },
+  rootStubs = {
+    mail: mailStub,
+    queueAdd: queueAddStub,
+  };
+});
 
-  afterEach() {
-    rootStubs?.mail.restore();
-    rootStubs = undefined;
-  },
+afterEach(() => {
+  rootStubs?.mail.restore();
+  rootStubs = undefined;
+});
 
-  afterAll() {
-    sinon.restore();
-  },
-};
-
-
-export const closeDBHook = {
-  after: async () => {
-    await AppDataSource.destroy();
-  },
-};
+afterAll(() => {
+  sinon.restore();
+});

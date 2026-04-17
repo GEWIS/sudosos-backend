@@ -155,11 +155,13 @@ export default class User extends BaseEntity {
   public deleted: boolean;
 
   @Column({
+    type: 'varchar',
     nullable: false,
   })
   public type: UserType;
 
   @Column({
+    type: 'varchar',
     nullable: false, default: TermsOfServiceStatus.NOT_ACCEPTED,
   })
   public acceptedToS: TermsOfServiceStatus;

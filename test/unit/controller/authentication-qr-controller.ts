@@ -21,13 +21,16 @@
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/authenticator/qr-authenticator';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { QRCodeResponse, QRStatusResponse } from '../../../src/controller/response/authentication-qr-response';
 import AuthenticationQRController from '../../../src/controller/authentication-qr-controller';
 import { json } from 'body-parser';
 import { QRAuthenticatorSeeder, UserSeeder } from '../../seed';
 import QRService from '../../../src/service/qr-service';
 import sinon from 'sinon';
+
+const { expect, request } = chai;
 
 function qrStatusResponseEq(a: QRAuthenticator, b: QRStatusResponse): boolean {
   return a.status === b.status;
@@ -38,7 +41,7 @@ describe('AuthenticationQRController', () => {
     qrAuthenticators: QRAuthenticator[];
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
     await truncateAllTables(c.connection);
 
@@ -52,7 +55,7 @@ describe('AuthenticationQRController', () => {
     ctx = { ...c,  qrAuthenticators };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

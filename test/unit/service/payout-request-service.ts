@@ -55,7 +55,7 @@ describe('PayoutRequestService', () => {
     };
   }
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -75,7 +75,7 @@ describe('PayoutRequestService', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

@@ -60,7 +60,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     categories: ProductCategory[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -78,7 +78,7 @@ describe('ProductCategoryService', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

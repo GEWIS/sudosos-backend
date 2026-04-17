@@ -40,7 +40,7 @@ describe('POS Relation Helper', () => {
   let posOwner: User;
   let stubs: sinon.SinonStub[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -91,7 +91,7 @@ describe('POS Relation Helper', () => {
     stubs = [];
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(connection);
   });
 

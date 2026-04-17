@@ -43,7 +43,7 @@ export interface ISettings {
  */
 @Entity()
 export default class ServerSetting<T extends keyof ISettings = keyof ISettings> extends BaseEntity {
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   public key: T;
 
   /**

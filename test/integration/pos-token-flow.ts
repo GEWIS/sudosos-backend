@@ -20,7 +20,8 @@
 
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import TransactionController from '../../src/controller/transaction-controller';
@@ -49,6 +50,8 @@ import Product from '../../src/entity/product/product';
 import ProductRevision from '../../src/entity/product/product-revision';
 import { ProductSeeder, ContainerSeeder, PointOfSaleSeeder, VatGroupSeeder, ProductCategorySeeder } from '../seed';
 
+const { expect, request } = chai;
+
 describe('POS Token Flow Integration Tests', (): void => {
   let ctx: {
     app: Application,
@@ -71,7 +74,7 @@ describe('POS Token Flow Integration Tests', (): void => {
     posUserToken: string,
   };
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     ctx = {
       app: express(),
       connection: await Database.initialize(),
@@ -229,7 +232,7 @@ describe('POS Token Flow Integration Tests', (): void => {
     ctx.app.use('/transactions', transactionController.getRouter());
   });
 
-  after(async (): Promise<void> => {
+  afterAll(async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 

@@ -18,7 +18,6 @@
  *  @license
  */
 
-import { describe } from 'mocha';
 import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import BannerService, { BannerFilterParameters } from '../../../src/service/banner-service';
@@ -35,7 +34,7 @@ describe('BannerService', () => {
   };
 
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       ...(await defaultBefore()),
     } as any;
@@ -57,7 +56,7 @@ describe('BannerService', () => {
     ctx.users = [adminUser];
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

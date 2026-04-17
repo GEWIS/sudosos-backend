@@ -20,7 +20,8 @@
 
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import log4js, { Logger } from 'log4js';
@@ -45,6 +46,9 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+import { PdfError } from '../../../src/errors';
+
+const { expect, request } = chai;
 
 describe('TransactionController', (): void => {
   let ctx: {
@@ -66,8 +70,7 @@ describe('TransactionController', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
     const logger: Logger = log4js.getLogger('TransactionControllerTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
@@ -158,7 +161,7 @@ describe('TransactionController', (): void => {
     ctx.app.use('/transactions', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -1160,7 +1163,7 @@ describe('TransactionController', (): void => {
     let createPdfStub: sinon.SinonStub;
     let testTransaction: Transaction;
 
-    before(async () => {
+    beforeAll(async () => {
       // Create a transaction for testing
       const createRes = await request(ctx.app)
         .post('/transactions')
@@ -1206,7 +1209,6 @@ describe('TransactionController', (): void => {
 
     it('should return HTTP 400 if PDF generation fails with PdfError', async () => {
       createPdfStub.restore();
-      const { PdfError } = require('../../../src/errors');
       createPdfStub = sinon.stub(Transaction.prototype, 'createPdf').rejects(new PdfError('Transaction missing required relations'));
 
       expect(testTransaction).to.not.be.null;

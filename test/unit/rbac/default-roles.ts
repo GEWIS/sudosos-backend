@@ -36,13 +36,13 @@ describe('DefaultRoles', () => {
     connection: DataSource,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       connection: await database.initialize(),
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

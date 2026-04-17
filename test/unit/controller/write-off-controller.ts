@@ -23,7 +23,8 @@ import { truncateAllTables } from '../../setup';
 import WriteOff from '../../../src/entity/transactions/write-off';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { WriteOffResponse } from '../../../src/controller/response/write-off-response';
 import WriteOffController from '../../../src/controller/write-off-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
@@ -37,6 +38,8 @@ import sinon from 'sinon';
 import { Client } from 'pdf-generator-client';
 import { WRITE_OFF_PDF_LOCATION } from '../../../src/files/storage';
 import fs from 'fs';
+
+const { expect, request } = chai;
 
 function writeOffEq(a: WriteOff, b: WriteOffResponse): Boolean {
   return a.to.id === b.to.id
@@ -52,7 +55,7 @@ describe('WriteOffController', () => {
     token: string;
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
     await truncateAllTables(c.connection);
 
@@ -78,7 +81,7 @@ describe('WriteOffController', () => {
     ctx = { ...c, adminToken, token, writeOffs: await new WriteOffSeeder().seed() };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -208,7 +211,7 @@ describe('WriteOffController', () => {
     });
   });
   describe('POST /writeoffs', () => {
-    before(async () => {
+    beforeAll(async () => {
       const vg = await VatGroup.findOne({ where: { percentage: 21 } });
       if (!vg) await VatGroup.create({ percentage: 21, name: 'High VAT', deleted: false, hidden: false }).save();
     });

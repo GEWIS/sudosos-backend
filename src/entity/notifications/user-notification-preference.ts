@@ -51,10 +51,10 @@ export default class UserNotificationPreference extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
-  @Column({ nullable: false })
+  @Column({ type: 'varchar', nullable: false })
   public type: NotificationTypes;
 
-  @Column({ nullable: false })
+  @Column({ type: 'varchar', nullable: false })
   public channel: NotificationChannels;
 
   @Column({ nullable: false })

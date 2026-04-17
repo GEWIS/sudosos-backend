@@ -19,7 +19,8 @@
  */
 
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
@@ -46,6 +47,8 @@ import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory'
 import BannerSeeder from '../../seed/banner-seeder';
 import { bannerEq } from '../../helpers/banner-helpers';
 
+const { expect, request } = chai;
+
 describe('BannerController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
@@ -65,7 +68,7 @@ describe('BannerController', async (): Promise<void> => {
   const stubs: sinon.SinonStub[] = [];
 
   // initialize context
-  before(async () => {
+  beforeAll(async () => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -150,7 +153,7 @@ describe('BannerController', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

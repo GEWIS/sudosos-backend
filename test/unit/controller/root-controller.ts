@@ -19,7 +19,8 @@
  */
 
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import RootController from '../../../src/controller/root-controller';
 import { BannerResponse } from '../../../src/controller/response/banner-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
@@ -34,13 +35,15 @@ import BannerSeeder from '../../seed/banner-seeder';
 import TermsOfServiceService from '../../../src/service/terms-of-service-service';
 import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
 
+const { expect, request } = chai;
+
 describe('RootController', async (): Promise<void> => {
   let ctx: DefaultContext & {
     controller: RootController,
     banners: Banner[]
   };
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       ...(await defaultContext()),
     } as any;
@@ -63,7 +66,7 @@ describe('RootController', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
     ServerSettingsStore.deleteInstance();
   });

@@ -82,7 +82,7 @@ describe('GewisDBSyncService', () => {
   let serverSettingsStore: ServerSettingsStore;
   let redis: Redis;
 
-  before(async () => {
+  beforeAll(async () => {
 
     redis = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
@@ -112,7 +112,7 @@ describe('GewisDBSyncService', () => {
     sandbox = sinon.createSandbox();
   });
 
-  after(async () => {
+  afterAll(async () => {
     Mailer.reset();
     if (redis) await redis.quit();
     await finishTestDB(ctx.connection);

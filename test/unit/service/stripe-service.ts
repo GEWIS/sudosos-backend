@@ -33,9 +33,10 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { DepositSeeder, UserSeeder } from '../../seed';
 
-describe('StripeService', async (): Promise<void> => {
-  let shouldSkip: boolean;
+const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+  || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
 
+describe.skipIf(shouldSkipStripe)('StripeService', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     users: User[],
@@ -44,12 +45,7 @@ describe('StripeService', async (): Promise<void> => {
     dineroTransformer: DineroTransformer,
   };
 
-  // eslint-disable-next-line func-names
-  before(async function () {
-    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
-      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
-    if (shouldSkip) this.skip();
-
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -68,8 +64,7 @@ describe('StripeService', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
-    if (shouldSkip) return;
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

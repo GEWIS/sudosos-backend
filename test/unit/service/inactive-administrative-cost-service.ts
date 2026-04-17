@@ -103,8 +103,7 @@ describe('InactiveAdministrativeCostService', () => {
   let sandbox: SinonSandbox;
   let redis: Redis;
 
-  before(async function test(): Promise<void> {
-    this.timeout(30000);
+  beforeAll(async function test(): Promise<void> {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -189,7 +188,7 @@ describe('InactiveAdministrativeCostService', () => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
 
     Mailer.reset();

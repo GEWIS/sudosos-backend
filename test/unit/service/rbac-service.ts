@@ -45,7 +45,7 @@ describe('RBACService', () => {
     assignments: AssignedRole[];
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await database.initialize();
     const users = await new UserSeeder().seed();
 
@@ -94,7 +94,7 @@ describe('RBACService', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

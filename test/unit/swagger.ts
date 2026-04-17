@@ -18,24 +18,27 @@
  *  @license
  */
 
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import express from 'express';
 import createApp, { Application } from '../../src';
 import Swagger from '../../src/start/swagger';
+
+const { expect, request } = chai;
 
 describe('Swagger', (): void => {
   let ctx: {
     app: Application,
   };
 
-  before('create app', async () => {
+  beforeAll(async () => {
     process.env.ENABLE_LDAP = undefined;
     ctx = {
       app: await createApp(),
     };
   });
 
-  after('stop app', async () => {
+  afterAll(async () => {
     await ctx.app.stop();
     // Verify webSocketService was closed
     expect(ctx.app.webSocketService).to.not.be.undefined;

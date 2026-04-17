@@ -19,9 +19,12 @@
  */
 
 import express, { Application, Response } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import PolicyMiddleware from '../../../src/middleware/policy-middleware';
 import sinon from 'sinon';
+
+const { expect, request } = chai;
 
 describe('PolicyMiddleware', (): void => {
   let ctx: {
@@ -31,7 +34,7 @@ describe('PolicyMiddleware', (): void => {
     error: boolean,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     // Initialize context
     ctx = {
       app: express(),

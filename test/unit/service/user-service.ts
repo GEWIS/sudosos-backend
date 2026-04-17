@@ -17,7 +17,6 @@
  *
  *  @license
  */
-import { describe } from 'mocha';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { DataSource } from 'typeorm';
@@ -61,7 +60,7 @@ describe('UserService', async (): Promise<void> => {
   let sendStub: sinon.SinonStub;
   let createResetTokenStub: sinon.SinonStub;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -114,7 +113,7 @@ describe('UserService', async (): Promise<void> => {
     sinon.restore();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

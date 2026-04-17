@@ -19,7 +19,8 @@
  */
 
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
@@ -47,6 +48,8 @@ import { DineroObjectRequest } from '../../../src/controller/request/dinero-requ
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 /**
  * Compares VoucherGroupParams against a VoucherGroupResponse (HTTP response format).
