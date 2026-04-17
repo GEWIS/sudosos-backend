@@ -67,6 +67,10 @@ interface VatDeclarationParams {
   year: number;
 }
 
+/**
+ * Return whether a VAT group may be soft-deleted. A group is only deletable once no products
+ * reference it, since a referenced group would leave `ProductRevision.vat` dangling.
+ */
 export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boolean> {
   const [products] = await ProductService.getProducts({
     vatGroupId,
@@ -74,6 +78,9 @@ export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boole
   return products.length === 0;
 }
 
+/**
+ * Parse VAT group filter parameters from the query string of an HTTP GET request.
+ */
 export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterParameters {
   return {
     vatGroupId: asNumber(req.query.transactionId),
@@ -83,6 +90,10 @@ export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterP
   };
 }
 
+/**
+ * Parse VAT declaration parameters (`year` and `period`) from the query string of an HTTP GET
+ * request. The resulting values feed `VatGroupService.calculateVatDeclaration`.
+ */
 export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDeclarationParams {
   return {
     period: asVatDeclarationPeriod(req.query.period),
@@ -90,6 +101,9 @@ export function parseGetVatCalculationValuesParams(req: RequestWithToken): VatDe
   };
 }
 
+/**
+ * Service class for the `vat group` entity.
+ */
 export default class VatGroupService {
   public static toBaseResponse(vatGroup: VatGroup): BaseVatGroupResponse {
     return {
