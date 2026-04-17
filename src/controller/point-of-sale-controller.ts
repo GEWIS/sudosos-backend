@@ -51,6 +51,9 @@ import UserService, { asUserResponse } from '../service/user-service';
 import OrganMembership from '../entity/organ/organ-membership';
 import { parseUserToResponse } from '../helpers/revision-to-response';
 
+/**
+ * Controller for managing all routes related to the `point of sale` entity.
+ */
 export default class PointOfSaleController extends BaseController {
   private logger: Logger = log4js.getLogger('PointOfSaleController');
 

@@ -77,6 +77,9 @@ export interface PointOfSaleParameters {
   public?: boolean;
 }
 
+/**
+ * Service class for the `point of sale` entity.
+ */
 export default class PointOfSaleService {
 
   public static toBaseInfoResponse(pos: PointOfSale): BasePointOfSaleInfoResponse {
