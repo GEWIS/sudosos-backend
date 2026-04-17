@@ -34,6 +34,25 @@ Our code structure differs from the layout we want in the documentation. The `ty
 
 This setup ensures that the generated documentation is intuitive and reflects how the modules interact within the codebase.
 
+### Linking across modules
+
+Within a single module, `{@link SymbolName}` works. Across modules you must qualify the link with the target module name, otherwise TypeDoc cannot resolve it:
+
+```ts
+/**
+ * See {@link transactions/sub-transactions!SubTransaction | SubTransaction} for details.
+ * See {@link internal/services!AuthenticationService.LDAPAuthentication | AuthenticationService.LDAPAuthentication}.
+ */
+```
+
+The syntax is `{@link <moduleName>!<SymbolName> | <display text>}`:
+
+- `<moduleName>` — the value of the target file's `@module` tag (e.g. `transactions/sub-transactions`, `users`, `internal/services`).
+- `<SymbolName>` — the exported symbol. Use `Class.method` for members, not `Class#method`.
+- `| <display text>` — optional. Omit it and the rendered link text becomes the ugly raw reference (`transactions/sub-transactions!SubTransaction`), so always provide a clean label.
+
+If the symbol is in the same `@module` as the file you are writing in, the short form `{@link SymbolName}` is enough.
+
 ---
 
 ### `typedoc-vitepress-theme` and `typedoc-plugin-markdown`
