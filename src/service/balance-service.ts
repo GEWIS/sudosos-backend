@@ -206,21 +206,14 @@ export default class BalanceService extends WithManager {
   }
 
   /**
-   * Get balance of users with given IDs
-   * @param ids ids of users to get balance of
-   * @param date date at which the "balance snapshot" should be taken
-   * @param minBalance return only balances which are at least this amount
-   * @param maxBalance return only balances which are at most this amount
-   * @param hasFine return only balances which do (not) have a fine
-   * @param minFine return only balances which have at least this fine
-   * @param maxFine return only balances which have at most this fine
-   * @param userTypes array of types of users
-   * @param orderDirection column to order result at
-   * @param orderBy order direction
-   * @param allowDeleted allow balances of deleted users to be returned
-   * @param inactive only return inactive users
-   * @param pagination pagination options
-   * @returns {Promise<[BalanceResponse[], number]>} the balances and total count
+   * Get balance of users matching the given filters.
+   *
+   * See {@link GetBalanceParameters} for the full list of filter fields (user ids, date snapshot,
+   * min/max balance and fine, user types, ordering, `allowDeleted`, `inactive`).
+   *
+   * @param params - filter fields; see {@link GetBalanceParameters}.
+   * @param pagination - pagination options.
+   * @returns the balances and the total count.
    */
   public async getBalances({
     ids, date, minBalance, maxBalance, hasFine, minFine, maxFine, userTypes, orderDirection, orderBy, allowDeleted, inactive,

@@ -225,7 +225,6 @@ export default class AuthenticationController extends BaseController {
    * @param pin - Provided PIN code
    * @param userId - Provided User
    * @param posId - Optional POS identifier (only used by secure endpoints)
-   * @constructor
    */
   public static PINLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
     pin: string, userId: number, posId?: number) {
@@ -293,7 +292,6 @@ export default class AuthenticationController extends BaseController {
 
   /**
    * Constructor for the LDAP function to make it easily adaptable.
-   * @constructor
    */
   public static LDAPLoginConstructor(roleManager: RoleManager, tokenHandler: TokenHandler,
     onNewUser: (ADUser: LDAPUser) => Promise<User>) {

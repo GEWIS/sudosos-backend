@@ -72,7 +72,7 @@ export default class InvoiceController extends BaseController {
   }
 
   /**
-    * @inhertidoc
+    * @inheritDoc
     */
   getPolicy(): Policy {
     return {
