@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import TokenHandler from '../../../src/authentication/token-handler';
 import AuthenticationSecureController from '../../../src/controller/authentication-secure-controller';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -53,6 +54,8 @@ import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticato
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
 
+const { expect, request } = chai;
+
 describe('AuthenticationSecureController', () => {
   let ctx: {
     connection: DataSource,
@@ -72,7 +75,7 @@ describe('AuthenticationSecureController', () => {
     qrAuthenticators: QRAuthenticator[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -128,7 +131,7 @@ describe('AuthenticationSecureController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -621,7 +624,7 @@ describe('AuthenticationSecureController', () => {
     let posUserToken: string;
     let memberUserWithPin: User;
 
-    before(async () => {
+    beforeAll(async () => {
       // Set up PIN authenticator for a member user
       memberUserWithPin = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
       await new AuthenticationService().setUserAuthenticationHash(memberUserWithPin, '1234', PinAuthenticator);
@@ -764,7 +767,7 @@ describe('AuthenticationSecureController', () => {
     let posUserToken: string;
     let memberUserWithNfc: User;
 
-    before(async () => {
+    beforeAll(async () => {
       // Set up NFC authenticator for a member user
       memberUserWithNfc = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
       const nfcAuth = new NfcAuthenticator();
@@ -864,7 +867,7 @@ describe('AuthenticationSecureController', () => {
     let posUserToken: string;
     let memberUserWithEan: User;
 
-    before(async () => {
+    beforeAll(async () => {
       // Set up EAN authenticator for a member user
       memberUserWithEan = ctx.users.find((u) => u.type === UserType.MEMBER && u.id !== ctx.memberUser.id) || ctx.memberUser;
       const eanAuth = new EanAuthenticator();

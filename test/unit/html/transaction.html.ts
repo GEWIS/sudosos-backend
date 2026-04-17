@@ -19,21 +19,9 @@
  */
 
 import { expect } from 'chai';
-import sinon from 'sinon';
-import * as baseHtmlModule from '../../../src/html/base.html';
 import { createTransactionPdf, ITransactionPdf } from '../../../src/html/transaction.html';
 
 describe('transaction.html', () => {
-  let createBasePdfStub: sinon.SinonStub;
-
-  beforeEach(() => {
-    createBasePdfStub = sinon.stub(baseHtmlModule, 'createBasePdf').returns('<html>Mock PDF</html>');
-  });
-
-  afterEach(() => {
-    sinon.restore();
-  });
-
   describe('createTransactionPdf', () => {
     it('should generate HTML for transaction with single item', () => {
       const options: ITransactionPdf = {
@@ -59,16 +47,14 @@ describe('transaction.html', () => {
       const html = createTransactionPdf(options);
 
       expect(html).to.be.a('string');
-      expect(createBasePdfStub).to.have.been.calledOnce;
-      const callArgs = createBasePdfStub.getCall(0).args[0];
-      expect(callArgs.pageTitle).to.equal('Transaction PDF');
-      expect(callArgs.headerTitle).to.equal('Transaction Info');
-      expect(callArgs.headerRightTitle).to.equal('Transaction ID');
-      expect(callArgs.headerRightSub).to.equal('123');
-      expect(callArgs.serviceEmail).to.equal('test@example.com');
-      expect(callArgs.meta).to.include('John Doe');
-      expect(callArgs.meta).to.include('Jane Smith');
-      expect(callArgs.details).to.include('Test Product');
+      expect(html).to.include('Transaction PDF');
+      expect(html).to.include('Transaction Info');
+      expect(html).to.include('Transaction ID');
+      expect(html).to.include('123');
+      expect(html).to.include('test@example.com');
+      expect(html).to.include('John Doe');
+      expect(html).to.include('Jane Smith');
+      expect(html).to.include('Test Product');
     });
 
     it('should generate HTML for transaction with multiple items and different VAT rates', () => {
@@ -109,13 +95,11 @@ describe('transaction.html', () => {
       const html = createTransactionPdf(options);
 
       expect(html).to.be.a('string');
-      expect(createBasePdfStub).to.have.been.calledOnce;
-      const callArgs = createBasePdfStub.getCall(0).args[0];
-      expect(callArgs.details).to.include('Product A');
-      expect(callArgs.details).to.include('Product B');
-      expect(callArgs.details).to.include('Product C');
-      expect(callArgs.details).to.include('21%');
-      expect(callArgs.details).to.include('9%');
+      expect(html).to.include('Product A');
+      expect(html).to.include('Product B');
+      expect(html).to.include('Product C');
+      expect(html).to.include('21%');
+      expect(html).to.include('9%');
     });
 
     it('should calculate VAT groups correctly', () => {
@@ -149,8 +133,7 @@ describe('transaction.html', () => {
       const html = createTransactionPdf(options);
 
       expect(html).to.be.a('string');
-      const callArgs = createBasePdfStub.getCall(0).args[0];
-      expect(callArgs.details).to.include('21%');
+      expect(html).to.include('21%');
     });
 
     it('should handle empty items array', () => {
@@ -169,7 +152,8 @@ describe('transaction.html', () => {
       const html = createTransactionPdf(options);
 
       expect(html).to.be.a('string');
-      expect(createBasePdfStub).to.have.been.calledOnce;
+      // With no items, subtotal and totals render as zero.
+      expect(html).to.include('0,00');
     });
 
     it('should format currency correctly in Dutch locale', () => {
@@ -196,9 +180,7 @@ describe('transaction.html', () => {
       const html = createTransactionPdf(options);
 
       expect(html).to.be.a('string');
-      const callArgs = createBasePdfStub.getCall(0).args[0];
-      expect(callArgs.details).to.include('€');
+      expect(html).to.include('€');
     });
   });
 });
-

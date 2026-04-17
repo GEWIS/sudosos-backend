@@ -20,7 +20,8 @@
 
 import express, { Application, Response } from 'express';
 import { DataSource } from 'typeorm';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import RestrictionMiddleware from '../../../src/middleware/restriction-middleware';
 import Database from '../../../src/database/database';
 import { UserFactory } from '../../helpers/user-factory';
@@ -31,6 +32,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import sinon from 'sinon';
+
+const { expect, request } = chai;
 
 describe('RestrictionMiddleware', (): void => {
   let ctx: {
@@ -46,7 +49,7 @@ describe('RestrictionMiddleware', (): void => {
     availableDuringMaintenance?: boolean,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const userNotAccepted = await (await UserFactory({
@@ -109,7 +112,7 @@ describe('RestrictionMiddleware', (): void => {
     ctx.acceptTOS = undefined;
   });
 
-  after(async () => {
+  afterAll(async () => {
     ServerSettingsStore.deleteInstance();
     await finishTestDB(ctx.connection);
   });

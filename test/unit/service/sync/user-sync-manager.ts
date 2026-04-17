@@ -117,11 +117,11 @@ describe('UserSyncManager', (): void => {
   let testService1: TestSyncService;
   let testService2: TestSyncService;
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     ctx = await defaultBefore();
   });
 
-  after(async (): Promise<void> => {
+  afterAll(async (): Promise<void> => {
     await defaultAfter(ctx);
   });
 

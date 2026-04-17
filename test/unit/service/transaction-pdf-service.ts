@@ -36,7 +36,7 @@ describe('TransactionPdfService', () => {
   let compileHtmlStub: SinonStub;
   let transaction: Transaction;
 
-  before(async () => {
+  beforeAll(async () => {
     connection = await Database.initialize();
     await truncateAllTables(connection);
     
@@ -50,7 +50,7 @@ describe('TransactionPdfService', () => {
     transaction = transactions[0];
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(connection);
   });
 

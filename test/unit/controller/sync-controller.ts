@@ -21,10 +21,13 @@
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import { ADMIN_USER, UserFactory, ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import SyncController from '../../../src/controller/sync-controller';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
+
+const { expect, request } = chai;
 
 describe('SyncController', () => {
   let ctx: DefaultContext & {
@@ -32,7 +35,7 @@ describe('SyncController', () => {
     userToken: string;
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
     await truncateAllTables(c.connection);
 
@@ -53,7 +56,7 @@ describe('SyncController', () => {
     ctx = { ...c, adminToken, userToken };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

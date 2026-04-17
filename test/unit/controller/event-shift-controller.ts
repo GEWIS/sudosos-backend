@@ -32,7 +32,8 @@ import { json } from 'body-parser';
 import fileUpload from 'express-fileupload';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import {
   EventPlanningSelectedCount,
   EventShiftResponse,
@@ -40,13 +41,14 @@ import {
 } from '../../../src/controller/response/event-response';
 import { EventShiftRequest } from '../../../src/controller/request/event-request';
 import EventShiftController from '../../../src/controller/event-shift-controller';
-import { describe } from 'mocha';
 import Event, { EventType } from '../../../src/entity/event/event';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { EventSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 describe('EventShiftController', () => {
   let ctx: {
@@ -65,7 +67,7 @@ describe('EventShiftController', () => {
     roles: AssignedRole[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -129,7 +131,7 @@ describe('EventShiftController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -173,7 +175,7 @@ describe('EventShiftController', () => {
   describe('POST /eventshifts', () => {
     let req: EventShiftRequest;
 
-    before(() => {
+    beforeAll(() => {
       req = {
         name: 'Zitten',
         roles: ['BAC', 'Bestuur'],
@@ -254,7 +256,7 @@ describe('EventShiftController', () => {
     let originalShift: EventShift;
     let newRole: Role;
 
-    before(async () => {
+    beforeAll(async () => {
       newRole = await Role.save({
         name: 'Oud-BAC',
       });
@@ -266,7 +268,7 @@ describe('EventShiftController', () => {
       originalShift = await EventShift.findOne({ where: { id: ctx.eventShifts[0].id } });
     });
 
-    after(async () => {
+    afterAll(async () => {
       await originalShift.save();
       await Role.delete(newRole.id);
     });
@@ -335,7 +337,7 @@ describe('EventShiftController', () => {
   describe('GET /eventshifts/{id}/counts', () => {
     let answersSelected: EventShiftAnswer[];
 
-    before(async () => {
+    beforeAll(async () => {
       expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
 
       const users = Array.from(new Set(ctx.eventShiftAnswers.map((a) => a.userId))).slice(0, 2);
@@ -347,7 +349,7 @@ describe('EventShiftController', () => {
       }));
     });
 
-    after(async () => {
+    afterAll(async () => {
       await Promise.all(answersSelected.map(async (a) => {
         a.selected = false;
         return a.save();

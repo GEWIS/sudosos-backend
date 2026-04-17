@@ -56,8 +56,7 @@ describe('BalanceService', (): void => {
     spec: SwaggerSpecification,
   };
 
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -81,7 +80,7 @@ describe('BalanceService', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

@@ -192,6 +192,7 @@ export default class VatGroupController extends BaseController {
 
     if (body.deleted) {
       res.status(400).json('Don\'t already soft delete a new VAT group, that\'s stupid.');
+      return;
     }
 
     try {
@@ -271,6 +272,7 @@ export default class VatGroupController extends BaseController {
 
     if (params.year === undefined || params.period === undefined) {
       res.status(400).send('Missing year or period.');
+      return;
     }
 
     try {

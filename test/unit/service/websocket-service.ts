@@ -28,6 +28,16 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import User from '../../../src/entity/user/user';
 
+// Bridges socket.io's callback-style flow (e.g. `clientSocket.on('event', () => done())`)
+// into Promises. Vitest hooks/tests must return a Promise — it doesn't support
+// Mocha's `done` callback API.
+const asPromise = (
+  body: (done: (err?: any) => void) => void,
+): (() => Promise<void>) => () => new Promise<void>((resolve, reject) => {
+  const done = (err?: any): void => (err ? reject(err) : resolve());
+  body(done);
+});
+
 describe('WebSocketService', () => {
   const ORIGINAL_ENV = process.env;
   let serverSettingsMock: any;
@@ -42,7 +52,7 @@ describe('WebSocketService', () => {
     return (server?.address() as any)?.port;
   };
 
-  before((done) => {
+  beforeAll(asPromise((done) => {
     // Save original process.env and set test environment
     process.env = {
       ...ORIGINAL_ENV,
@@ -80,9 +90,9 @@ describe('WebSocketService', () => {
         done();
       });
     }
-  });
+  }));
 
-  beforeEach((done) => {
+  beforeEach(asPromise((done) => {
     // Reset mocks before each test
     serverSettingsMock.getSettingFromDatabase.reset();
     verifyTokenStub.resetBehavior();
@@ -120,7 +130,7 @@ describe('WebSocketService', () => {
       clientSocket.removeAllListeners('connect');
       done(new Error(`Client connection failed: ${error.message}`));
     });
-  });
+  }));
 
   afterEach(() => {
     // Disconnect client after each test
@@ -129,7 +139,7 @@ describe('WebSocketService', () => {
     }
   });
 
-  after(async () => {
+  afterAll(async () => {
     // Clean up all resources
     try {
       await webSocketService.close();
@@ -162,7 +172,7 @@ describe('WebSocketService', () => {
   });
 
   describe('client room subscription', () => {
-    it('should allow clients to subscribe to system room', (done) => {
+    it('should allow clients to subscribe to system room', asPromise((done) => {
       // Configure ServerSettingsStore mock to return 'false' for maintenance mode
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(false);
       
@@ -183,9 +193,9 @@ describe('WebSocketService', () => {
           done(new Error('Did not receive maintenance mode event after subscription'));
         }
       }, 500);
-    });
+    }));
 
-    it('should allow clients to unsubscribe from rooms', (done) => {
+    it('should allow clients to unsubscribe from rooms', asPromise((done) => {
       // Client is already connected in beforeEach
       let receivedAfterUnsubscribe = false;
       
@@ -209,9 +219,9 @@ describe('WebSocketService', () => {
           }, 200);
         }, 100);
       }, 200);
-    });
+    }));
 
-    it('should send current maintenance mode status when client subscribes to system room', (done) => {
+    it('should send current maintenance mode status when client subscribes to system room', asPromise((done) => {
       // Configure ServerSettingsStore mock to return 'true' for maintenance mode
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(true);
 
@@ -225,9 +235,9 @@ describe('WebSocketService', () => {
 
       // Subscribe to system room
       clientSocket.emit('subscribe', 'system');
-    });
+    }));
 
-    it('should handle errors when retrieving maintenance mode status', (done) => {
+    it('should handle errors when retrieving maintenance mode status', asPromise((done) => {
       // Configure ServerSettingsStore mock to throw an error
       const testError = new Error('Database connection failed');
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').rejects(testError);
@@ -245,11 +255,11 @@ describe('WebSocketService', () => {
         });
         WebSocketService.emitMaintenanceMode(true);
       }, 200);
-    });
+    }));
   });
 
   describe('emitMaintenanceMode function', () => {
-    it('should emit maintenance-mode event to subscribed clients', (done) => {
+    it('should emit maintenance-mode event to subscribed clients', asPromise((done) => {
       // Configure ServerSettingsStore mock to return 'true' for maintenance mode
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(true);
 
@@ -267,9 +277,9 @@ describe('WebSocketService', () => {
       setTimeout(() => {
         WebSocketService.emitMaintenanceMode(true);
       }, 100);
-    });
+    }));
 
-    it('should send maintenance mode to subscribed clients', (done) => {
+    it('should send maintenance mode to subscribed clients', asPromise((done) => {
       // Configure mock to return false for maintenance mode
       serverSettingsMock.getSettingFromDatabase.withArgs('maintenanceMode').resolves(false);
       
@@ -287,7 +297,7 @@ describe('WebSocketService', () => {
       setTimeout(() => {
         WebSocketService.emitMaintenanceMode(false);
       }, 300);
-    });
+    }));
   });
 
   describe('environment handling', () => {
@@ -387,7 +397,7 @@ describe('WebSocketService', () => {
   });
 
   describe('room authorization', () => {
-    it('should reject subscription to unregistered room', (done) => {
+    it('should reject subscription to unregistered room', asPromise((done) => {
       // Client is already connected in beforeEach
       let errorReceived = false;
       
@@ -406,9 +416,9 @@ describe('WebSocketService', () => {
           done(new Error('Expected error event was not received'));
         }
       }, 1000);
-    });
+    }));
 
-    it('should require authentication for registered rooms', (done) => {
+    it('should require authentication for registered rooms', asPromise((done) => {
       // Create unauthenticated client
       const unauthenticatedClient = io(`http://localhost:${getPort()}`, {
         query: {}, // No token
@@ -425,9 +435,9 @@ describe('WebSocketService', () => {
         // Try to subscribe to a registered room without authentication
         unauthenticatedClient.emit('subscribe', 'pos:1:transactions');
       });
-    });
+    }));
 
-    it('should reject subscription when policy check fails', (done) => {
+    it('should reject subscription when policy check fails', asPromise((done) => {
       // Register a room with a policy that always returns false
       webSocketService.registerRoom({
         pattern: 'test:{id}:denied',
@@ -454,11 +464,11 @@ describe('WebSocketService', () => {
 
         testClient.emit('subscribe', 'test:123:denied');
       });
-    });
+    }));
   });
 
   describe('QR session handling', () => {
-    it('should emit QR confirmed event to subscribed clients', (done) => {
+    it('should emit QR confirmed event to subscribed clients', asPromise((done) => {
       const mockQR = { sessionId: 'test-session-123' } as any;
       const mockToken = { user: { id: 1 } } as any;
 
@@ -476,9 +486,9 @@ describe('WebSocketService', () => {
       setTimeout(() => {
         webSocketService.emitQRConfirmed(mockQR, mockToken);
       }, 200);
-    });
+    }));
 
-    it('should not emit QR confirmed to unsubscribed clients', (done) => {
+    it('should not emit QR confirmed to unsubscribed clients', asPromise((done) => {
       const mockQR = { sessionId: 'test-session-456' } as any;
       const mockToken = { user: { id: 1 } } as any;
 
@@ -501,7 +511,7 @@ describe('WebSocketService', () => {
           done();
         }, 100);
       }, 100);
-    });
+    }));
   });
 
   describe('static methods', () => {
@@ -692,7 +702,7 @@ describe('WebSocketService', () => {
   });
 
   describe('authentication handling', () => {
-    it('should allow connection without token', (done) => {
+    it('should allow connection without token', asPromise((done) => {
       const unauthenticatedClient = io(`http://localhost:${getPort()}`, {
         query: {},
         reconnection: false,
@@ -709,13 +719,13 @@ describe('WebSocketService', () => {
       unauthenticatedClient.on('connect_error', (error) => {
         done(new Error(`Connection failed: ${error.message}`));
       });
-    });
+    }));
   });
 
   describe('authenticated subscribe', () => {
     const tokenString = 'test-token';
 
-    it('should allow authenticated client to subscribe when policy passes', (done) => {
+    it('should allow authenticated client to subscribe when policy passes', asPromise((done) => {
       const port = getPort();
       const token = { user: { id: 1 }, roles: [] } as any;
       verifyTokenStub.resolves(token);
@@ -751,9 +761,9 @@ describe('WebSocketService', () => {
       });
 
       authClient.once('connect_error', (error: Error) => cleanup(new Error(`Client connection failed: ${error.message}`)));
-    });
+    }));
 
-    it('should reject authenticated client subscribe when policy fails', (done) => {
+    it('should reject authenticated client subscribe when policy fails', asPromise((done) => {
       const port = getPort();
       const token = { user: { id: 1 }, roles: [] } as any;
       verifyTokenStub.resolves(token);
@@ -792,11 +802,11 @@ describe('WebSocketService', () => {
       });
 
       authClient.once('connect_error', (error: Error) => cleanup(new Error(`Client connection failed: ${error.message}`)));
-    });
+    }));
   });
 
   describe('unsubscribe handling', () => {
-    it('should handle unsubscribe from room', (done) => {
+    it('should handle unsubscribe from room', asPromise((done) => {
       // Subscribe first
       clientSocket.emit('subscribe', 'system');
 
@@ -809,9 +819,9 @@ describe('WebSocketService', () => {
           done();
         }, 100);
       }, 100);
-    });
+    }));
 
-    it('should handle unsubscribe from QR session', (done) => {
+    it('should handle unsubscribe from QR session', asPromise((done) => {
       // Subscribe first
       clientSocket.emit('subscribe-qr-session', 'test-session-123');
 
@@ -824,7 +834,7 @@ describe('WebSocketService', () => {
           done();
         }, 100);
       }, 100);
-    });
+    }));
   });
 
 

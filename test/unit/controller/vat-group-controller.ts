@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import VatGroupController from '../../../src/controller/vat-group-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -47,6 +48,8 @@ import {
 } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
+const { expect, request } = chai;
+
 describe('VatGroupController', () => {
   let ctx: {
     connection: DataSource,
@@ -62,7 +65,7 @@ describe('VatGroupController', () => {
     validUpdateVatGroupReq: UpdateVatGroupRequest,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -123,7 +126,7 @@ describe('VatGroupController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

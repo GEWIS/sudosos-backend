@@ -33,14 +33,14 @@ describe('UserSyncServiceFactory', (): void => {
   let roleManager: RoleManager;
   let originalEnv: { [key: string]: string | undefined };
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     ctx = await defaultBefore();
     roleManager = ctx.roleManager;
     factory = new UserSyncServiceFactory();
     originalEnv = storeLDAPEnv();
   });
 
-  after(async (): Promise<void> => {
+  afterAll(async (): Promise<void> => {
     restoreLDAPEnv(originalEnv);
     await defaultAfter(ctx);
   });

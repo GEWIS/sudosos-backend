@@ -18,7 +18,6 @@
  *  @license
  */
 
-import { describe } from 'mocha';
 import { expect } from 'chai';
 import { DataSource } from 'typeorm';
 import QRService from '../../../src/service/qr-service';
@@ -36,7 +35,7 @@ describe('QRService', (): void => {
     qrAuthenticators: QRAuthenticator[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -51,7 +50,7 @@ describe('QRService', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

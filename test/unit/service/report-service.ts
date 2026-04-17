@@ -33,7 +33,7 @@ describe('ReportService', () => {
 
   let EMPTY_TRANSACTIONS: { tId: number, amount: number }[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       ...(await defaultBefore()),
     } as any;
@@ -48,7 +48,7 @@ describe('ReportService', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

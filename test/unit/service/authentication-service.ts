@@ -69,8 +69,7 @@ describe('AuthenticationService', (): void => {
 
   let ldapEnvVariables: { [key: string]: any; } = {};
 
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
 
     ldapEnvVariables = storeLDAPEnv();
 
@@ -125,7 +124,7 @@ describe('AuthenticationService', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     restoreLDAPEnv(ldapEnvVariables);
     await finishTestDB(ctx.connection);
   });

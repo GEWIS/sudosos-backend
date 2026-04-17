@@ -46,7 +46,7 @@ describe('WriteOffService', () => {
     writeOffs: WriteOff[];
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
     await truncateAllTables(c.connection);
 
@@ -58,7 +58,7 @@ describe('WriteOffService', () => {
     ctx = { ...c, writeOffs: await new WriteOffSeeder().seed() };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

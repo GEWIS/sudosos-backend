@@ -37,7 +37,8 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { json } from 'body-parser';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import Swagger from '../../../src/start/swagger';
 import {
   InactiveAdministrativeCostResponse,
@@ -54,6 +55,8 @@ import VatGroup from '../../../src/entity/vat-group';
 import { InactiveAdministrativeCostReport } from '../../../src/entity/report/inactive-administrative-cost-report';
 import { PdfError } from '../../../src/errors';
 import Redis from 'ioredis';
+
+const { expect, request } = chai;
 
 describe('InactiveAdministrativeCostController', async () => {
   let ctx: {
@@ -75,7 +78,7 @@ describe('InactiveAdministrativeCostController', async () => {
   let sandbox: SinonSandbox;
   let redis: Redis;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -181,7 +184,7 @@ describe('InactiveAdministrativeCostController', async () => {
     sandbox = sinon.createSandbox();
   });
 
-  after(async () => {
+  afterAll(async () => {
     Mailer.reset();
     if (redis) await redis.quit();
 

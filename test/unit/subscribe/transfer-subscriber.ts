@@ -45,7 +45,7 @@ describe('TransferSubscriber', (): void => {
     transfers: Transfer[];
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -65,7 +65,7 @@ describe('TransferSubscriber', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

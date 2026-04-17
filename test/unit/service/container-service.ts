@@ -93,7 +93,7 @@ describe('ContainerService', async (): Promise<void> => {
     pointOfSaleRevisions: PointOfSaleRevision[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -122,7 +122,7 @@ describe('ContainerService', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

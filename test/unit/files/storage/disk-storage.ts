@@ -42,7 +42,7 @@ describe('Disk Storage', async () => {
 
   const stubs: sinon.SinonStub[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -83,7 +83,7 @@ describe('Disk Storage', async () => {
     stubs.splice(0, stubs.length);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

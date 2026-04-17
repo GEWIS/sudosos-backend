@@ -61,6 +61,7 @@ export default class UserSetting<T extends keyof IUserSettings = keyof IUserSett
   public user: User;
 
   @Column({
+    type: 'varchar',
     length: 64,
     nullable: false,
   })

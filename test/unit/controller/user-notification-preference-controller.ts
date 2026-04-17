@@ -41,11 +41,14 @@ import {
 } from '../../../src/controller/request/user-notification-preference-request';
 import UserNotificationController from '../../../src/controller/user-notification-preference-controller';
 import { NotificationTypes } from '../../../src/notifications/notification-types';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import {
   BaseUserNotificationPreferenceResponse,
 } from '../../../src/controller/response/user-notification-preference-response';
+
+const { expect, request } = chai;
 
 describe('user-notification-preference-controller',  async (): Promise<void> => {
   let ctx: {
@@ -62,7 +65,7 @@ describe('user-notification-preference-controller',  async (): Promise<void> => 
     updateRequest: UserNotificationPreferenceUpdateRequest,
   };
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -135,7 +138,7 @@ describe('user-notification-preference-controller',  async (): Promise<void> => 
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

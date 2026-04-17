@@ -23,7 +23,8 @@ import { ContainerSeeder, PointOfSaleSeeder, TransactionSeeder, UserSeeder } fro
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import Container from '../../../src/entity/container/container';
 import Transaction from '../../../src/entity/transactions/transaction';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import User, { UserType } from '../../../src/entity/user/user';
 import {
   ContainerSummaryResponse,
@@ -31,6 +32,8 @@ import {
 import { json } from 'body-parser';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TransactionController from '../../../src/controller/transaction-controller';
+
+const { expect, request } = chai;
 
 describe('TransactionSummaryController', () => {
   let ctx: DefaultContext & {
@@ -43,7 +46,7 @@ describe('TransactionSummaryController', () => {
     transactions: Transaction[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const d = await defaultBefore();
 
     const users = await new UserSeeder().seed();
@@ -78,7 +81,7 @@ describe('TransactionSummaryController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

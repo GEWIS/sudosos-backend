@@ -19,7 +19,8 @@
  */
 
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import RbacController from '../../../src/controller/rbac-controller';
@@ -28,7 +29,6 @@ import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
-import { after, beforeEach } from 'mocha';
 import { finishTestDB } from '../../helpers/test-helpers';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import Role from '../../../src/entity/rbac/role';
@@ -41,6 +41,8 @@ import PermissionResponse from '../../../src/controller/response/rbac/permission
 import Permission from '../../../src/entity/rbac/permission';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 describe('RbacController', async (): Promise<void> => {
   let ctx: {
@@ -57,7 +59,7 @@ describe('RbacController', async (): Promise<void> => {
   };
 
   // initialize context
-  before(async () => {
+  beforeAll(async () => {
     // start app
     const connection = await database.initialize();
     const app = express();
@@ -107,7 +109,7 @@ describe('RbacController', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

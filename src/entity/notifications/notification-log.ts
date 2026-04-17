@@ -42,9 +42,9 @@ export default class NotificationLog extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   public user: User;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   public handler: NotificationChannels;
 
-  @Column({ nullable: false })
+  @Column({ type: 'varchar', nullable: false })
   public type: NotificationTypes;
 }

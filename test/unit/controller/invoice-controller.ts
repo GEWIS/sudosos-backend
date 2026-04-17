@@ -22,7 +22,8 @@ import { DataSource, In, Not } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
@@ -62,6 +63,8 @@ import { createTransactionRequest, requestToTransaction } from '../../helpers/tr
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
+const { expect, request } = chai;
+
 describe('InvoiceController', async () => {
   let ctx: {
     connection: DataSource,
@@ -78,7 +81,7 @@ describe('InvoiceController', async () => {
     invoices: Invoice[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -191,7 +194,7 @@ describe('InvoiceController', async () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -645,8 +648,7 @@ describe('InvoiceController', async () => {
     it('should return the file name of the pdf', async () => {
       let invoice = (await Invoice.find())[0];
 
-      const hash = require('../../../src/helpers/hash');
-      const stub = sinon.stub(hash, 'hashJSON').returns('fake_hash');
+      const stub = sinon.stub(Invoice.prototype, 'validatePdfHash').resolves(true);
 
       const pdf = Object.assign(new InvoicePdf(), {
         downloadName: 'test-file.pdf',

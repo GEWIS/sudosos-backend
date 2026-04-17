@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
 import ProductCategoryController from '../../../src/controller/product-category-controller';
 import { ProductCategoryResponse } from '../../../src/controller/response/product-category-response';
@@ -38,6 +39,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ProductCategorySeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 /**
  * Tests if a productCategory response is equal to the request.
@@ -63,7 +66,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
   };
 
   // Initialize context
-  before(async () => {
+  beforeAll(async () => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -139,7 +142,7 @@ describe('ProductCategoryController', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
