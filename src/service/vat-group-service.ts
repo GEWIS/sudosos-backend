@@ -83,7 +83,7 @@ export async function canSetVatGroupToDeleted(vatGroupId: number): Promise<boole
  */
 export function parseGetVatGroupsFilters(req: RequestWithToken): VatGroupFilterParameters {
   return {
-    vatGroupId: asNumber(req.query.transactionId),
+    vatGroupId: asNumber(req.query.vatGroupId),
     name: req.query.name as string,
     percentage: asNumber(req.query.percentage),
     deleted: asBoolean(req.query.deleted),
