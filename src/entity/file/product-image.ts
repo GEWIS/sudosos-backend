@@ -28,6 +28,8 @@ import { Entity } from 'typeorm';
 import BaseFile from './base-file';
 
 /**
+ * `BaseFile` entity for the image attached to a `Product`. The image data lives in file storage;
+ * this row stores its metadata and location.
  * @typedef {BaseFile} ProductImage
  */
 @Entity()

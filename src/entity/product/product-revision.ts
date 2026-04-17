@@ -39,6 +39,10 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 import ContainerRevision from '../container/container-revision';
 
 /**
+ * TypeORM entity for the `product_revisions` table.
+ * Immutable snapshot of a `Product` at a specific revision; each edit to a product produces
+ * a new row so historical transactions keep pointing at the revision that was live at the time
+ * (preserving the price, VAT rate, and category that were in effect).
  * @typedef {BaseEntityWithoutId} ProductRevision
  * @property {Product.model} product.required - The product the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
