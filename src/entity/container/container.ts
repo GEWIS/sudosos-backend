@@ -59,6 +59,7 @@ import BaseEntity from '../base-entity';
 import User from '../user/user';
 
 /**
+ * TypeORM entity for the `containers` table.
  * @typedef {BaseEntity} Container
  * @property {integer} currentRevision - The current revision of the container. Can be null if no
  * revision exists.

@@ -44,6 +44,9 @@ import {
 } from './request/container-request';
 import userTokenInOrgan from '../helpers/token-helper';
 
+/**
+ * Controller for managing all routes related to the `container` entity.
+ */
 export default class ContainerController extends BaseController {
   private logger: Logger = log4js.getLogger('ContainerController');
 
