@@ -45,14 +45,14 @@ describe('TransferPdfService', () => {
   let users: User[];
   let compileHtmlStub: SinonStub;
 
-  before(async () => {
+  beforeAll(async () => {
     connection = await Database.initialize();
     await truncateAllTables(connection);
     users = await new UserSeeder().seed();
     service = new TransferPdfService(connection.manager);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(connection);
   });
 

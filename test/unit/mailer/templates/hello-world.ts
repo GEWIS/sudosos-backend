@@ -33,7 +33,7 @@ describe('HelloWorldTemplate', () => {
     user: User,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await database.initialize();
     const user = await (await UserFactory({
       firstName: 'Samuel',
@@ -48,7 +48,7 @@ describe('HelloWorldTemplate', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

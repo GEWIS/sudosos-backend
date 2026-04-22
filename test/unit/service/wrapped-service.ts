@@ -59,7 +59,7 @@ describe('WrappedService', (): void => {
     wrappedYear: number,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -275,7 +275,7 @@ describe('WrappedService', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

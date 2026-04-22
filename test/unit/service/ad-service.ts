@@ -91,8 +91,7 @@ describe('AD Service', (): void => {
 
   let ldapEnvVariables: { [key: string]: any; } = {};
 
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
 
     ldapEnvVariables = storeLDAPEnv();
     setDefaultLDAPEnv();
@@ -116,7 +115,7 @@ describe('AD Service', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     restoreLDAPEnv(ldapEnvVariables);
     await finishTestDB(ctx.connection);
   });

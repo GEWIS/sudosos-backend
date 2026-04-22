@@ -19,7 +19,8 @@
  */
 
 import express, { Application, Request } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import { DataSource } from 'typeorm';
@@ -34,6 +35,8 @@ import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/u
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+
+const { expect, request } = chai;
 
 class TestController extends BaseController {
   // eslint-disable-next-line class-methods-use-this
@@ -100,7 +103,7 @@ describe('BaseController', (): void => {
     userTokenRestricted: string,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     // Initialize context
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -145,7 +148,7 @@ describe('BaseController', (): void => {
     ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], posId: 123 }, '39');
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

@@ -19,7 +19,8 @@
  */
 
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
@@ -39,6 +40,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles } from '../../helpers/user-factory';
 
+const { expect, request } = chai;
+
 describe('MemberAuthenticationController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
@@ -51,7 +54,7 @@ describe('MemberAuthenticationController', async (): Promise<void> => {
     memberUser1: MemberUser,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -104,7 +107,7 @@ describe('MemberAuthenticationController', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

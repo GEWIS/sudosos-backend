@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import StripeController from '../../../src/controller/stripe-controller';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
@@ -41,8 +42,12 @@ import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { DepositSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
-describe('StripeController', async (): Promise<void> => {
-  let shouldSkip: boolean;
+const { expect, request } = chai;
+
+const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+  || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+
+describe.skipIf(shouldSkipStripe)('StripeController', async (): Promise<void> => {
   let originalName: string;
 
   let ctx: {
@@ -62,12 +67,7 @@ describe('StripeController', async (): Promise<void> => {
     maximumStripeRequest: StripeRequest;
   };
 
-  // eslint-disable-next-line func-names
-  before(async function () {
-    shouldSkip = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
-      || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
-    if (shouldSkip) this.skip();
-
+  beforeAll(async () => {
     originalName = process.env.NAME;
     const serviceName = 'sudosos-stripe-test-suite';
     process.env.NAME = serviceName;
@@ -151,9 +151,7 @@ describe('StripeController', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
-    if (shouldSkip) return;
-
+  afterAll(async () => {
     process.env.NAME = originalName;
     await finishTestDB(ctx.connection);
   });

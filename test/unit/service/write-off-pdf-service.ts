@@ -48,8 +48,7 @@ describe('WriteOffPdfService', () => {
     pdfParams: PdfParams,
   };
   
-  before(async function t(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function t(): Promise<void> {
     const defaultContext = await defaultBefore();
     
     const writeOffs = await new WriteOffSeeder().seed();
@@ -71,7 +70,7 @@ describe('WriteOffPdfService', () => {
     };
   });
   
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
   

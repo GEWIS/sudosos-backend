@@ -28,6 +28,7 @@ import {
   storeLDAPEnv,
 } from '../../../helpers/test-helpers';
 import LdapSyncService from '../../../../src/service/sync/user/ldap-sync-service';
+import Config from '../../../../src/config';
 import { expect } from 'chai';
 import LDAPAuthenticator from '../../../../src/entity/authenticator/ldap-authenticator';
 import sinon from 'sinon';
@@ -81,7 +82,7 @@ describe('LdapSyncService', () => {
 
   let ldapEnvVariables: { [key: string]: any; } = {};
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       ...(await defaultBefore()),
     };
@@ -90,7 +91,7 @@ describe('LdapSyncService', () => {
     setDefaultLDAPEnv();
   });
 
-  after(async () => {
+  afterAll(async () => {
     restoreLDAPEnv(ldapEnvVariables);
     await defaultAfter(ctx);
   });
@@ -142,11 +143,11 @@ describe('LdapSyncService', () => {
   describe('ldap functions', () => {
     let ldapSyncService: LdapSyncService;
 
-    before(async () => {
+    beforeAll(async () => {
       ldapSyncService = new LdapSyncService(ctx.roleManager);
     });
 
-    after(async () => {
+    afterAll(async () => {
       await ldapSyncService.post();
     });
 
@@ -504,7 +505,7 @@ describe('LdapSyncService', () => {
           // @ts-ignore
           await ldapSyncService.fetchServiceAccounts();
 
-          expect(mockAdService.getLDAPGroupMembers.calledOnceWith(sinon.match.any, process.env.LDAP_SERVICE_ACCOUNT_FILTER)).to.be.true;
+          expect(mockAdService.getLDAPGroupMembers.calledOnceWith(sinon.match.any, Config.get().ldap.serviceAccountFilter)).to.be.true;
           expect(mockAdService.toServiceAccount.calledWith(ldapResults[0] as unknown as LDAPUser)).to.be.false;
           expect(mockAdService.toServiceAccount.calledWith(ldapResults[1] as unknown as LDAPUser)).to.be.false;
           expect(mockAdService.toServiceAccount.calledWith(ldapResults[2] as unknown as LDAPUser)).to.be.true;

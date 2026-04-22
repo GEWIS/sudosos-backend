@@ -59,7 +59,7 @@ describe('DebtorService', (): void => {
   let sandbox: SinonSandbox;
   let sendNotifyFake: SinonSpy;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -105,7 +105,7 @@ describe('DebtorService', (): void => {
     } as any);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -683,7 +683,7 @@ describe('DebtorService', (): void => {
    * table. It therefore destroys the initial state
    */
   describe('handOutFines', async () => {
-    before(async () => {
+    beforeAll(async () => {
       await clearFines();
       const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
       expect(fineTransfers.length).to.equal(0);
@@ -865,7 +865,7 @@ describe('DebtorService', (): void => {
 
   describe('getFineReport', () => {
 
-    before(async () => {
+    beforeAll(async () => {
       await clearFines();
     });
 

@@ -19,7 +19,8 @@
  */
 
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import sinon from 'sinon';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TermsOfServiceController from '../../../src/controller/terms-of-service-controller';
@@ -28,6 +29,8 @@ import { TermsOfServiceResponse } from '../../../src/controller/response/terms-o
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import { ADMIN_USER, ensureProductionRoles, signTokenFor, UserFactory } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 describe('TermsOfServiceController', () => {
   let ctx: DefaultContext & {
@@ -38,7 +41,7 @@ describe('TermsOfServiceController', () => {
 
   const stubs: sinon.SinonStub[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
     await truncateAllTables(c.connection);
 
@@ -59,7 +62,7 @@ describe('TermsOfServiceController', () => {
     ctx = { ...c, controller, adminToken, userToken };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

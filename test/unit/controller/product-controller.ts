@@ -22,7 +22,8 @@ import {
   DataSource, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
-import { request, expect } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import fileUpload from 'express-fileupload';
@@ -51,6 +52,8 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { ProductSeeder, VatGroupSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 /**
  * Tests if a product response is equal to the request.
@@ -95,7 +98,7 @@ describe('ProductController', async (): Promise<void> => {
   const stubs: sinon.SinonStub[] = [];
 
   // Initialize context
-  before(async () => {
+  beforeAll(async () => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -203,7 +206,7 @@ describe('ProductController', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -282,6 +285,14 @@ describe('ProductController', async (): Promise<void> => {
   });
 
   function testValidationOnRoute(type: any, route: string) {
+    function buildReq(overrides: Partial<CreateProductRequest>): CreateProductRequest {
+      const base: CreateProductRequest = { ...ctx.validCreateProductReq, ...overrides };
+      if (type === 'patch') {
+        const { ownerId: _o, ...rest } = base; // eslint-disable-line @typescript-eslint/naming-convention
+        return rest as CreateProductRequest;
+      }
+      return base;
+    }
     async function expectError(req: CreateProductRequest, error: string) {
       // @ts-ignore
       let res;
@@ -302,54 +313,28 @@ describe('ProductController', async (): Promise<void> => {
       }
     }
     it('should verify Alcohol', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        alcoholPercentage: -1,
-      };
-      await expectError(req, 'Alcohol percentage must be non-negative');
+      await expectError(buildReq({ alcoholPercentage: -1 }), 'Alcohol percentage must be non-negative');
     });
     it('should verify Category', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        category: -1,
-      };
-      await expectError(req, '-1 is an invalid product category.');
+      await expectError(buildReq({ category: -1 }), '-1 is an invalid product category.');
     });
     it('should verify Price', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        priceInclVat: {
-          amount: -72,
-          currency: 'EUR',
-          precision: 2,
-        },
-      };
-      await expectError(req, 'Price must be greater than zero');
+      await expectError(buildReq({
+        priceInclVat: { amount: -72, currency: 'EUR', precision: 2 },
+      }), 'Price must be greater than zero');
     });
     it('should verify Name', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        name: '',
-      };
-      await expectError(req, 'Name must be a non-zero length string.');
+      await expectError(buildReq({ name: '' }), 'must be a non-zero length string.');
     });
     it('should verify Vat group', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        vat: 9999999,
-      };
-      await expectError(req, '');
+      await expectError(buildReq({ vat: 9999999 }), '');
     });
-    it('should verify Owner', async () => {
-      const req: CreateProductRequest = {
-        ...ctx.validCreateProductReq,
-        ownerId: ctx.localUser.id,
-      };
-      await expectError(req, '');
+    it.skipIf(type === 'patch')('should verify Owner', async () => {
+      await expectError(buildReq({ ownerId: ctx.localUser.id }), '');
     });
   }
   describe('POST /products', () => {
-    it('should verifyProductRequest Specification', async (): Promise<void> => {
+    describe('verifyProductRequest Specification', () => {
       testValidationOnRoute('post', '/products');
     });
 
@@ -499,7 +484,7 @@ describe('ProductController', async (): Promise<void> => {
     });
   });
   describe('PATCH /products/:id', () => {
-    it('should verifyProductRequest Specification', async (): Promise<void> => {
+    describe('verifyProductRequest Specification', () => {
       testValidationOnRoute('patch', '/products/1');
     });
 

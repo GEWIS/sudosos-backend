@@ -19,11 +19,14 @@
  */
 
 import express, { Application, Response } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import RequestValidatorMiddleware from '../../../src/middleware/request-validator-middleware';
 import { getSpecification, TestModel } from '../entity/transformer/test-model';
+
+const { expect, request } = chai;
 
 describe('RequestValidatorMiddleware', (): void => {
   let ctx: {
@@ -32,7 +35,7 @@ describe('RequestValidatorMiddleware', (): void => {
     specification: SwaggerSpecification,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     // Initialize context
     ctx = {
       app: express(),

@@ -19,7 +19,8 @@
  */
 
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
@@ -58,6 +59,8 @@ import { ensureProductionRoles } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 
+const { expect, request } = chai;
+
 describe('AuthenticationController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
@@ -73,7 +76,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     request: AuthenticationMockRequest,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -156,7 +159,7 @@ describe('AuthenticationController', async (): Promise<void> => {
     ctx.app.use(json());
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

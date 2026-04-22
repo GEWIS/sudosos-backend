@@ -57,7 +57,7 @@ describe('TransferService', async (): Promise<void> => {
     sellerPayouts: SellerPayout[],
     vatGroups: VatGroup[],
   };
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -101,7 +101,7 @@ describe('TransferService', async (): Promise<void> => {
       transfers: transfers2.concat(fineTransfers),
     };
   });
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
   describe('getTransfers function', async (): Promise<void> => {
@@ -580,7 +580,7 @@ describe('TransferService', async (): Promise<void> => {
     let creditInvoiceTransfer: Transfer;
     let originalInvoiceTransfer: Transfer;
 
-    before(async () => {
+    beforeAll(async () => {
       const user = ctx.users[0];
 
       originalInvoiceTransfer = await Transfer.save(Object.assign(new Transfer(), {

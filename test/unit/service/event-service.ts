@@ -18,7 +18,6 @@
  *  @license
  */
 
-import { describe } from 'mocha';
 import { DataSource } from 'typeorm';
 import User from '../../../src/entity/user/user';
 import Event, { EventType } from '../../../src/entity/event/event';
@@ -48,7 +47,7 @@ describe('eventService', () => {
     roles: AssignedRole[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -87,7 +86,7 @@ describe('eventService', () => {
     expect(actual.name).to.equal(expected.name);
   };
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -475,14 +474,14 @@ describe('eventService', () => {
     let originalEvent: Event;
     let newShift: EventShift;
 
-    before(async () => {
+    beforeAll(async () => {
       originalEvent = await Event.findOne({
         where: { answers: { shift: { deletedAt: null } } },
         relations: ['answers', 'answers.shift'],
       });
     });
 
-    after(async () => {
+    afterAll(async () => {
       await EventService.updateEvent(originalEvent.id, {
         name: originalEvent.name,
         startDate: originalEvent.startDate,
@@ -542,10 +541,10 @@ describe('eventService', () => {
       });
 
     });
-    it('should correctly update shiftIds by removing a shift', async function () {
+    it('should correctly update shiftIds by removing a shift', async (testCtx) => {
       // Skip this test case if newShift is undefined, i.e. we did not run the previous test case
       if (newShift == null) {
-        this.skip();
+        testCtx.skip();
         return;
       }
 
@@ -619,13 +618,13 @@ describe('eventService', () => {
   describe('updateShift', () => {
     let originalShift: EventShift;
 
-    before(async () => {
+    beforeAll(async () => {
       originalShift = await EventShift.findOne({
         where: { id: ctx.eventShifts[0].id },
       });
     });
 
-    after(async () => {
+    afterAll(async () => {
       await originalShift.save();
     });
 
@@ -668,7 +667,7 @@ describe('eventService', () => {
   describe('updateEventShiftAnswer', () => {
     let originalAnswer: EventShiftAnswer;
 
-    before(async () => {
+    beforeAll(async () => {
       const answer = ctx.eventShiftAnswers.find((a) => a.availability === null && a.selected === false);
       expect(answer).to.not.be.undefined;
 
@@ -678,7 +677,7 @@ describe('eventService', () => {
       } });
     });
 
-    after(async () => {
+    afterAll(async () => {
       await EventShiftAnswer.update({
         userId: ctx.eventShiftAnswers[0].userId,
         shiftId: ctx.eventShiftAnswers[0].shiftId,
@@ -739,7 +738,7 @@ describe('eventService', () => {
   describe('getShiftSelectedCount', () => {
     let answersSelected: EventShiftAnswer[];
 
-    before(async () => {
+    beforeAll(async () => {
       expect(await EventShiftAnswer.count({ where: { selected: true } })).to.equal(0);
 
       const users = Array.from(new Set(ctx.eventShiftAnswers.map((a) => a.userId))).slice(0, 2);
@@ -751,7 +750,7 @@ describe('eventService', () => {
       }));
     });
 
-    after(async () => {
+    afterAll(async () => {
       await Promise.all(answersSelected.map(async (a) => {
         a.selected = false;
         return a.save();

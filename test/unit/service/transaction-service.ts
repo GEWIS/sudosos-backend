@@ -70,7 +70,7 @@ describe('TransactionService', (): void => {
   };
 
   // eslint-disable-next-line func-names
-  before(async () => {
+  beforeAll(async () => {
     const logger: Logger = log4js.getLogger('TransactionServiceTest');
     logger.level = 'ALL';
     const connection = await Database.initialize();
@@ -136,7 +136,7 @@ describe('TransactionService', (): void => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

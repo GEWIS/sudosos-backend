@@ -21,12 +21,15 @@
 import * as util from 'util';
 import jwt from 'jsonwebtoken';
 import express, { Application, Response } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import TokenHandler from '../../../src/authentication/token-handler';
 import User from '../../../src/entity/user/user';
 import { generateKeys } from '../../setup';
 import TokenMiddleware, { RequestWithToken } from '../../../src/middleware/token-middleware';
 import JsonWebToken from '../../../src/authentication/json-web-token';
+
+const { expect, request } = chai;
 
 describe('TokenMiddleware', (): void => {
   let ctx: {
@@ -39,7 +42,7 @@ describe('TokenMiddleware', (): void => {
     req: RequestWithToken,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     // Generate RSA keypair
     const { publicKey, privateKey } = await generateKeys();
 

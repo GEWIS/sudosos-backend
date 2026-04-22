@@ -43,7 +43,7 @@ describe('RoleManager', (): void => {
     roles: SeededRole[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     // Initialize context
     ctx = {
       connection: await database.initialize(),
@@ -85,7 +85,7 @@ describe('RoleManager', (): void => {
     ctx.manager = await new RoleManager().initialize();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
