@@ -24,6 +24,9 @@
  * @module catalogue/point-of-sale
  */
 
+/**
+ * Base parameters shared between point-of-sale create and update requests.
+ */
 export interface BasePointOfSaleParams {
   containers: number[],
   name: string,
@@ -31,15 +34,22 @@ export interface BasePointOfSaleParams {
   cashierRoleIds?: number[],
 }
 
+/**
+ * Parameters for creating a new `point of sale`.
+ */
 export interface CreatePointOfSaleParams extends BasePointOfSaleParams {
   ownerId: number,
 }
 
+/**
+ * Parameters for updating an existing `point of sale`.
+ */
 export interface UpdatePointOfSaleParams extends BasePointOfSaleParams {
   id: number,
 }
 
 /**
+ * API Request for creating a `point of sale` entity.
  * @typedef {object} CreatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to
@@ -55,6 +65,7 @@ export interface CreatePointOfSaleRequest extends BasePointOfSaleParams {
 }
 
 /**
+ * API Request for updating a `point of sale` entity.
  * @typedef {object} UpdatePointOfSaleRequest
  * @property {string} name.required - Name of the POS
  * @property {boolean} useAuthentication.required - Whether this POS requires users to

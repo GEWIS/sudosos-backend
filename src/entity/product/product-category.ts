@@ -19,7 +19,27 @@
  */
 
 /**
- * This is the module page of the product-category.
+ * `Product categories` classify products taxonomically — e.g. "Beer", "Soda", "Snacks".
+ * Every {@link catalogue/products!ProductRevision | ProductRevision} belongs to exactly one
+ * category, so a product's category is part of its revision history and can change when the
+ * product is edited.
+ *
+ * ### Hierarchy
+ * Categories form a tree: each category may have a `parent`, and root categories have
+ * `parent: null`. This lets a broad category like "Drinks" contain narrower children like
+ * "Beer" and "Non-Alcoholic". The tree is stored as a TypeORM `closure-table` so descendants
+ * at any depth stay queryable.
+ *
+ * ### Usage
+ * - Reports group revenue and purchases by category, so categorisation drives financial
+ *   breakdowns (see {@link internal/reports!ReportService | ReportService}).
+ * - Category `name` is unique and capped at 64 characters.
+ *
+ * Unlike containers and points of sale, `ProductCategory` is **not revisioned** — the category
+ * table itself is mutable. Historical transactions reference the category indirectly, via the
+ * {@link catalogue/products!ProductRevision | ProductRevision} that was in effect at the time.
+ *
+ * For API interactions, refer to the [Swagger Documentation](https://sudosos.gewis.nl/api/api-docs/#/productCategories).
  *
  * @module catalogue/product-categories
  * @mergeTarget
@@ -31,6 +51,9 @@ import {
 import BaseEntity from '../base-entity';
 
 /**
+ * TypeORM entity for the `product_categories` table.
+ * Stored as a closure-table tree via TypeORM's `@Tree`, so each row may have a parent and
+ * descendants at any depth remain queryable.
  * @typedef {BaseEntity} ProductCategory
  * @property {string} name.required - The unique name of the productCategory.
  */

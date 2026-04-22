@@ -123,6 +123,11 @@ export interface ProductFilterParameters {
 }
 
 // TODO Add filtering to get products query
+/**
+ * Parse product filter parameters from the query string of an HTTP GET request. Throws when
+ * `productRevision` is provided without a `productId`, since filtering by revision requires
+ * knowing which product's revision history to look in.
+ */
 export function parseGetProductFilters(req: RequestWithToken): ProductFilterParameters {
   if (req.query.productRevision && !req.query.productId) {
     throw new Error('Cannot filter on a revision, when there is no id given');
@@ -148,7 +153,7 @@ export function parseGetProductFilters(req: RequestWithToken): ProductFilterPara
 }
 
 /**
- * Wrapper for all Product related logic.
+ * Service class for the `product` entity.
  */
 export default class ProductService {
 

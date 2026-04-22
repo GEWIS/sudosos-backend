@@ -32,6 +32,7 @@ import { DineroObjectResponse } from './dinero-response';
 import { BaseVatGroupResponse } from './vat-group-response';
 
 /**
+ * Base API Response for the `product` entity.
  * @typedef {allOf|BaseResponse} BaseProductResponse
  * @property {string} name.required - The name of the product.
  * @property {integer} revision.required - The product revision ID
@@ -46,6 +47,7 @@ export interface BaseProductResponse extends BaseResponse {
 }
 
 /**
+ * API Response for the `product` entity.
  * @typedef {allOf|BaseProductResponse} ProductResponse
  * @property {BaseUserResponse} owner.required - The owner of the product.
  * @property {ProductCategoryResponse} category.required -
@@ -71,6 +73,7 @@ export interface ProductResponse extends BaseProductResponse {
 }
 
 /**
+ * Paginated API Response for the `product` entity.
  * @typedef {object} PaginatedProductResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<ProductResponse>} records.required - Returned products

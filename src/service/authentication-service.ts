@@ -309,7 +309,6 @@ export default class AuthenticationService extends WithManager {
    * @param authenticator - The stored authentication
    * @param context - AuthenticationContext to use
    * @param posId - Optional POS identifier. If provided, creates a lesser token (restricted access).
-   * @constructor
    */
   public async HashAuthentication<T extends HashBasedAuthenticationMethod>(pass: string,
     authenticator: T, context: AuthenticationContext, posId?: number)
@@ -334,7 +333,6 @@ export default class AuthenticationService extends WithManager {
    * @param uid - The AD account name.
    * @param password - The password user for authentication.
    * @param onNewUser - Callback function when user does not exist in local system.
-   * @constructor
    */
   public async LDAPAuthentication(uid: string, password: string,
     onNewUser: (ADUser: LDAPUser) => Promise<User>): Promise<User | undefined> {
@@ -416,7 +414,6 @@ export default class AuthenticationService extends WithManager {
    * Gives the array of users membership to the organ.
    * Used for shared accounts. Note that this replaces the
    * existing memberships for this organ.
-   * @param manager - EntityManager used for single transaction.
    * @param users - The users that gain membership.
    * @param organ - The organ account that the users become members of.
    */

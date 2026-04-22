@@ -28,9 +28,11 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
+ * API Response for the `product category` entity. Includes a nested `parent` so the full
+ * ancestor chain can be walked client-side.
  * @typedef {allOf|BaseResponse} ProductCategoryResponse
  * @property {string} name.required - The name of the productCategory.
- * @property {ProductCategoryResponse} parent - The name of the productCategory.
+ * @property {ProductCategoryResponse} parent - The parent category, or omitted for root categories.
  */
 export interface ProductCategoryResponse extends BaseResponse {
   name: string,
@@ -38,6 +40,7 @@ export interface ProductCategoryResponse extends BaseResponse {
 }
 
 /**
+ * Paginated API Response for the `product category` entity.
  * @typedef {object} PaginatedProductCategoryResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<ProductCategoryResponse>} records.required - Returned product categories

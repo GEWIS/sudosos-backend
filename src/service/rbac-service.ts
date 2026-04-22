@@ -162,9 +162,8 @@ export default class RBACService {
   /**
    * Get a tuple with a list of all roles and the total number of
    * roles matching the parameters
-   * @param params
-   * @param take
-   * @param skip
+   * @param params - filter parameters (e.g. `roleId`, `returnPermissions`).
+   * @param pagination - pagination options (`take`, `skip`).
    */
   public static async getRoles(params: RoleFilterParameters = {}, { take, skip }: PaginationParameters = {}): Promise<[Role[], number]> {
     const options = this.getOptions(params);
@@ -173,9 +172,8 @@ export default class RBACService {
 
   /**
    * Gets all users which are assigned to a certain role
-   * @param roleId
-   * @param take
-   * @param skip
+   * @param roleId - id of the role to list users for.
+   * @param pagination - pagination options (`take`, `skip`).
    */
   public static async getRoleUsers(roleId: number, { take, skip }: PaginationParameters = {}): Promise<[User[], number]> {
     const assignedRoles = await AssignedRole.find({ where: { roleId }, take, skip });

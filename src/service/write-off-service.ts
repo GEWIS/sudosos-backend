@@ -126,7 +126,6 @@ export default class WriteOffService extends WithManager {
 
   /**
    * Creates a write-off for the given user
-   * @param manager - The entity manager to use
    * @param user - The user to create the write-off for
    */
   public async createWriteOff(user: User): Promise<WriteOff> {

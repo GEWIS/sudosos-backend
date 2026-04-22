@@ -31,6 +31,7 @@ import { PaginationResult } from '../../helpers/pagination';
 import RoleResponse from './rbac/role-response';
 
 /**
+ * Minimal API Response for the `point of sale` entity, carrying only the id and revision.
  * @typedef {allOf|BaseResponse} BasePointOfSaleInfoResponse
  * @property {number} revision.required - Revision of the POS
  */
@@ -39,6 +40,7 @@ export interface BasePointOfSaleInfoResponse extends BaseResponse {
 }
 
 /**
+ * Base API Response for the `point of sale` entity.
  * @typedef {allOf|BaseResponse} BasePointOfSaleResponse
  * @property {string} name.required - The name of the point-of-sale.
  * @property {number} revision.required - Revision of the POS
@@ -51,6 +53,7 @@ export interface BasePointOfSaleResponse extends BaseResponse {
   useAuthentication: boolean,
 }
 /**
+ * API Response for the `point of sale` entity.
  * @typedef {allOf|BasePointOfSaleResponse} PointOfSaleResponse
  * @property {BaseUserResponse} owner - The owner of the point-of-sale.
  * @property {number} revision.required - Revision of the POS
@@ -67,6 +70,7 @@ export interface PointOfSaleResponse extends BasePointOfSaleResponse {
 }
 
 /**
+ * Paginated API Response for the `point of sale` entity.
  * @typedef {object} PaginatedPointOfSaleResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<PointOfSaleResponse>} records.required - Returned points of sale
@@ -77,6 +81,7 @@ export interface PaginatedPointOfSaleResponse {
 }
 
 /**
+ * API Response for the `point of sale` entity, including its containers and their products.
  * @typedef {allOf|PointOfSaleResponse} PointOfSaleWithContainersResponse
  * @property {Array<ContainerWithProductsResponse>} containers.required - The containers
  * in the point-of-sale.
@@ -86,6 +91,8 @@ export interface PointOfSaleWithContainersResponse extends PointOfSaleResponse {
 }
 
 /**
+ * A `BaseUserResponse` augmented with a stable position index, used to keep ordered user lists
+ * (e.g. POS owner members) rendering in a consistent order across requests.
  * @typedef {object} UserWithIndex
  * @property {number} index.required - Stable position index for sorting
  */
@@ -94,6 +101,8 @@ export interface UserWithIndex extends BaseUserResponse {
 }
 
 /**
+ * API Response describing who is associated with a `point of sale`: its owner, the owner's
+ * organ members, and the cashier users (users holding at least one of the POS's cashier roles).
  * @typedef {object} PointOfSaleAssociateUsersResponse
  * @property {BaseUserResponse} owner.required - Owner of the POS
  * @property {Array.<UserWithIndex>} ownerMembers.required - Members that belong to the owner with stable indices

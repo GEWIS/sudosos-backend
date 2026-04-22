@@ -146,10 +146,9 @@ export default class DebtorService extends WithManager {
   /**
    * Return all users that had at most -5 euros balance both now and on the reference date
    * For all these users, also return their fine based on the reference date.
-   * @param userTypes List of all user types fines should be calculated for
-   * @param userIds List of all user IDs fines should be calculated for
-   * @param referenceDates Dates at which a user needs to have a negative balance. The first
-   * date will be used to determine the size of the fine
+   * @param params - the filter fields (see {@link CalculateFinesParams}): `userTypes` and `userIds`
+   * narrow which users are considered; `referenceDates` lists the dates on which the user must
+   * have a negative balance (the first date determines the size of the fine).
    */
   public async calculateFinesOnDate({ userTypes, userIds, referenceDates }: CalculateFinesParams): Promise<UserToFineResponse[]> {
     if (referenceDates.length === 0) throw new Error('No reference dates given.');
@@ -178,9 +177,9 @@ export default class DebtorService extends WithManager {
 
   /**
    * Write fines in a single database transaction to database for all given user ids.
-   * @param referenceDate Date to base fines on
-   * @param userIds Ids of all users to fine
-   * @param createdBy User handing out fines
+   * @param params - see {@link HandOutFinesParams}: `referenceDate` is the date the fines are
+   * based on; `userIds` are the users to fine.
+   * @param createdBy - user handing out the fines.
    */
   public async handOutFines({
     referenceDate, userIds,
@@ -355,8 +354,7 @@ export default class DebtorService extends WithManager {
    * date (in this order if one is undefined). However, users only receive an email when they have a debt both on the
    * reference date and now.
    * If a user has no debt, they will be skipped and not sent an email.
-   * @param referenceDate
-   * @param userIds
+   * @param params - see {@link HandOutFinesParams} for `referenceDate` and `userIds`.
    */
   public async sendFineWarnings({
     referenceDate, userIds,

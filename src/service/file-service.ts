@@ -150,12 +150,11 @@ export default class FileService {
 
 
   /**
-   * Upload a pdf file
+   * Upload a pdf file. The hash of the file params is derived from the entity itself.
    * @param entity - The entity that has the pdf property
    * @param PdfType - The pdf type, must be manually specified since the entities pdf can be undefined
    * @param fileData - The file data
    * @param createdBy - The user that created the file
-   * @param hash - The hash of the file params
    */
   public async uploadPdf<T extends IPdfAble<S>, S extends Pdf>(entity: T, PdfType: new () => S, fileData: Buffer, createdBy: User): Promise<S> {
     let pdf = entity.pdf;

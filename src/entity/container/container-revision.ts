@@ -37,6 +37,10 @@ import PointOfSaleRevision from '../point-of-sale/point-of-sale-revision';
 import BaseEntityWithoutId from '../base-entity-without-id';
 
 /**
+ * TypeORM entity for the `container_revisions` table.
+ * Immutable snapshot of a `Container` at a specific revision; each edit to a container
+ * produces a new row so historical transactions keep pointing at the revision that was
+ * live at the time.
  * @typedef {BaseEntityWithoutId} ContainerRevision
  * @property {Container.model} container.required - The container the revision belongs to.
  * @property {integer} revision.required - The revision number of this revision.
