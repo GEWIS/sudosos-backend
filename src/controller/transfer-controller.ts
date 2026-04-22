@@ -204,9 +204,13 @@ export default class TransferController extends BaseController {
    * @security JWT
    * @param {string} fromDate.query - Start date for selected transfers (inclusive)
    * @param {string} tillDate.query - End date for selected transfers (exclusive)
+   * @param {integer} fromId.query - Filter transfers from this user ID
+   * @param {integer} toId.query - Filter transfers to this user ID
+   * @param {string} category.query - Restrict to a specific transfer category: deposit, payoutRequest, sellerPayout, invoice, creditInvoice, fine, waivedFines, writeOff, inactiveAdministrativeCost, manualCreation, manualDeletion
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
    * @return {Array.<TransferResponse>} 200 - All existing transfers
+   * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
   public async returnAllTransfers(req: RequestWithToken, res: Response): Promise<void> {

@@ -309,6 +309,66 @@ describe('TransferController', async (): Promise<void> => {
       expect(records.length).to.be.greaterThan(0);
       records.forEach((t) => expect(t.to.id).to.equal(toId));
     });
+
+    it('should return 400 for an invalid category', async () => {
+      const res = await request(app)
+        .get('/transfers')
+        .query({ category: 'notARealCategory' })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(400);
+    });
+
+    it('should filter transfers by deposit category', async () => {
+      const depositTransfer = await Transfer.save({
+        fromId: null,
+        toId: ctx.users[0].id,
+        amountInclVat: DineroTransformer.Instance.from(300),
+        description: 'Deposit category filter test',
+        version: 1,
+      });
+
+      const stripePaymentIntent = await StripePaymentIntent.save({
+        stripeId: 'pi_category_filter_test',
+        amount: DineroTransformer.Instance.from(300),
+        paymentIntentStatuses: [],
+        version: 1,
+      });
+
+      const deposit = await StripeDeposit.save({
+        transfer: depositTransfer,
+        to: ctx.users[0],
+        stripePaymentIntent,
+        version: 1,
+      });
+
+      depositTransfer.deposit = deposit;
+      await Transfer.save(depositTransfer);
+
+      const allDeposits = await Transfer.createQueryBuilder('transfer')
+        .innerJoin('transfer.deposit', 'deposit')
+        .getMany();
+
+      const res = await request(app)
+        .get('/transfers')
+        .query({ category: 'deposit', take: 100 })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const records = res.body.records as TransferResponse[];
+      expect(records.length).to.equal(allDeposits.length);
+      records.forEach((r) => expect(r.deposit).to.not.be.null);
+    });
+
+    it('should return empty list for a category with no matching transfers', async () => {
+      const res = await request(app)
+        .get('/transfers')
+        .query({ category: 'inactiveAdministrativeCost', take: 100 })
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).to.equal(200);
+      expect((res.body.records as TransferResponse[]).length).to.equal(0);
+    });
   });
 
   describe('GET /transfers/:id', () => {
