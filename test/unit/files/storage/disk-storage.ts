@@ -50,17 +50,17 @@ describe('Disk Storage', async () => {
 
     const files: BaseFile[] = [
       Object.assign(new BaseFile(), {
-        location: path.join(__dirname, '/../../../..', workdir, 'file0.txt'),
+        location: path.resolve(workdir, 'file0.txt'),
         downloadName: 'testfile0.txt',
         createdBy: users[0],
       }),
       Object.assign(new BaseFile(), {
-        location: path.join(__dirname, '/../../../..', workdir, 'file1.txt'),
+        location: path.resolve(workdir, 'file1.txt'),
         downloadName: 'testfile0.txt',
         createdBy: users[0],
       }),
       Object.assign(new BaseFile(), {
-        location: path.join(__dirname, '/../../../..', workdir, 'file2.txt'),
+        location: path.resolve(workdir, 'file2.txt'),
         downloadName: 'testfile0.txt',
         createdBy: users[0],
       }),
@@ -96,7 +96,7 @@ describe('Disk Storage', async () => {
     it('should correctly save the file with given filename', async () => {
       const fileName = 'test.txt';
       const fileData = Buffer.from('text content');
-      const expLocation = path.join(__dirname, '/../../../../imaginary/directory/randomName.txt');
+      const expLocation = path.resolve('./imaginary/directory', 'randomName.txt');
 
       const writeFileStub = sinon.stub(DiskStorage, 'writeFile' as any).returns(expLocation);
       stubs.push(writeFileStub);

@@ -236,6 +236,144 @@ describe('TransferService', async (): Promise<void> => {
       expect(records[0].fine).to.not.be.null;
     });
 
+    describe('category filter', async () => {
+      it('should return only invoice transfers for INVOICE category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.invoice', 'invoice')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.INVOICE });
+        expect(count).to.equal(expected.length);
+        const expectedIds = new Set(expected.map((t) => t.id));
+        records.forEach((r) => expect(expectedIds.has(r.id)).to.be.true);
+      });
+
+      it('should return only deposit transfers for DEPOSIT category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.deposit', 'deposit')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.DEPOSIT });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => expect(r.deposit).to.not.be.null);
+      });
+
+      it('should return only payout request transfers for PAYOUT_REQUEST category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.payoutRequest', 'payoutRequest')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.PAYOUT_REQUEST });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => expect(r.payoutRequest).to.not.be.null);
+      });
+
+      it('should return only seller payout transfers for SELLER_PAYOUT category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.sellerPayout', 'sellerPayout')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.SELLER_PAYOUT });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => expect(r.sellerPayout).to.not.be.null);
+      });
+
+      it('should return only fine transfers for FINE category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.fine', 'fine')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.FINE });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => expect(r.fine).to.not.be.null);
+      });
+
+      it('should return only manual creation transfers for MANUAL_CREATION category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .leftJoin('transfer.deposit', 'deposit')
+          .leftJoin('transfer.payoutRequest', 'payoutRequest')
+          .leftJoin('transfer.sellerPayout', 'sellerPayout')
+          .leftJoin('transfer.invoice', 'invoice')
+          .leftJoin('transfer.creditInvoice', 'creditInvoice')
+          .leftJoin('transfer.fine', 'fine')
+          .leftJoin('transfer.waivedFines', 'waivedFines')
+          .leftJoin('transfer.writeOff', 'writeOff')
+          .leftJoin('transfer.inactiveAdministrativeCost', 'inactiveAdministrativeCost')
+          .where('deposit.id IS NULL')
+          .andWhere('payoutRequest.id IS NULL')
+          .andWhere('sellerPayout.id IS NULL')
+          .andWhere('invoice.id IS NULL')
+          .andWhere('creditInvoice.id IS NULL')
+          .andWhere('fine.id IS NULL')
+          .andWhere('waivedFines.id IS NULL')
+          .andWhere('writeOff.id IS NULL')
+          .andWhere('inactiveAdministrativeCost.id IS NULL')
+          .andWhere('transfer.fromId IS NULL')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.MANUAL_CREATION });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => {
+          expect(r.invoice).to.be.null;
+          expect(r.deposit).to.be.null;
+          expect(r.from).to.be.null;
+        });
+      });
+
+      it('should return only manual deletion transfers for MANUAL_DELETION category', async () => {
+        const expected = await Transfer.createQueryBuilder('transfer')
+          .leftJoin('transfer.deposit', 'deposit')
+          .leftJoin('transfer.payoutRequest', 'payoutRequest')
+          .leftJoin('transfer.sellerPayout', 'sellerPayout')
+          .leftJoin('transfer.invoice', 'invoice')
+          .leftJoin('transfer.creditInvoice', 'creditInvoice')
+          .leftJoin('transfer.fine', 'fine')
+          .leftJoin('transfer.waivedFines', 'waivedFines')
+          .leftJoin('transfer.writeOff', 'writeOff')
+          .leftJoin('transfer.inactiveAdministrativeCost', 'inactiveAdministrativeCost')
+          .where('deposit.id IS NULL')
+          .andWhere('payoutRequest.id IS NULL')
+          .andWhere('sellerPayout.id IS NULL')
+          .andWhere('invoice.id IS NULL')
+          .andWhere('creditInvoice.id IS NULL')
+          .andWhere('fine.id IS NULL')
+          .andWhere('waivedFines.id IS NULL')
+          .andWhere('writeOff.id IS NULL')
+          .andWhere('inactiveAdministrativeCost.id IS NULL')
+          .andWhere('transfer.toId IS NULL')
+          .getMany();
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.MANUAL_DELETION });
+        expect(count).to.equal(expected.length);
+        expect(count).to.be.greaterThan(0);
+        records.forEach((r) => {
+          expect(r.invoice).to.be.null;
+          expect(r.deposit).to.be.null;
+          expect(r.to).to.be.null;
+        });
+      });
+
+      it('should combine category filter with toId filter', async () => {
+        const invoiceTransfers = await Transfer.createQueryBuilder('transfer')
+          .innerJoin('transfer.invoice', 'invoice')
+          .getMany();
+        const toId = invoiceTransfers.find((t) => t.toId != null)?.toId;
+        expect(toId).to.not.be.undefined;
+        const expected = invoiceTransfers.filter((t) => t.toId === toId);
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.INVOICE, toId });
+        expect(count).to.equal(expected.length);
+        records.forEach((r) => {
+          expect(r.invoice).to.not.be.null;
+          expect(r.to?.id).to.equal(toId);
+        });
+      });
+
+      it('should return empty list for category with no matching transfers', async () => {
+        // Use INACTIVE_ADMINISTRATIVE_COST which seeder never creates
+        const [records, count] = await new TransferService().getTransfers({ category: TransferCategory.INACTIVE_ADMINISTRATIVE_COST });
+        expect(count).to.equal(0);
+        expect(records).to.be.empty;
+      });
+    });
+
     it('should return corresponding waived fines if transfer has any', async () => {
       const user = ctx.users.find((u) => u.currentFines != null);
       const userFineGroup = user.currentFines;

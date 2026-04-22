@@ -25,7 +25,7 @@
  */
 
 import dinero, { Dinero } from 'dinero.js';
-import { FindManyOptions, FindOptionsWhere, Raw } from 'typeorm';
+import { FindManyOptions, FindOptionsWhere, Raw, SelectQueryBuilder } from 'typeorm';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import Transfer from '../entity/transactions/transfer';
 import { TransferResponse } from '../controller/response/transfer-response';
@@ -54,6 +54,7 @@ export interface TransferFilterParameters {
   toId?: number
   fromDate?: Date,
   tillDate?: Date,
+  category?: TransferCategory,
 }
 
 export enum TransferCategory {
@@ -107,12 +108,17 @@ export interface TransferAggregateFilterParameters {
 }
 
 export function parseGetTransferFilters(req: RequestWithToken): TransferFilterParameters {
+  const { category } = req.query;
+  if (category !== undefined && !Object.values(TransferCategory).includes(category as TransferCategory)) {
+    throw new Error(`Invalid category '${category}'. Must be one of: ${Object.values(TransferCategory).join(', ')}`);
+  }
   return {
     id: asNumber(req.query.id),
     fromId: asNumber(req.query.fromId),
     toId: asNumber(req.query.toId),
     fromDate: asDate(req.query.fromDate),
     tillDate: asDate(req.query.tillDate),
+    category: category as TransferCategory | undefined,
   };
 }
 
@@ -219,6 +225,11 @@ export default class TransferService extends WithManager {
         ),
       };
     }
+    if (filters.category !== undefined) {
+      const subQuery = this.buildCategorySubQuery(filters.category).getQuery();
+      whereClause = { ...whereClause, id: Raw(alias => `${alias} IN (${subQuery})`) };
+    }
+
     let whereOptions: any = [];
 
     // Apparently this is how you make a and-or clause in typeorm without a query builder.
@@ -257,6 +268,48 @@ export default class TransferService extends WithManager {
     ]);
   }
 
+  private static readonly CATEGORY_RELATION_MAP: Partial<Record<TransferCategory, string>> = {
+    [TransferCategory.DEPOSIT]: 'deposit',
+    [TransferCategory.PAYOUT_REQUEST]: 'payoutRequest',
+    [TransferCategory.SELLER_PAYOUT]: 'sellerPayout',
+    [TransferCategory.INVOICE]: 'invoice',
+    [TransferCategory.CREDIT_INVOICE]: 'creditInvoice',
+    [TransferCategory.FINE]: 'fine',
+    [TransferCategory.WAIVED_FINES]: 'waivedFines',
+    [TransferCategory.WRITE_OFF]: 'writeOff',
+    [TransferCategory.INACTIVE_ADMINISTRATIVE_COST]: 'inactiveAdministrativeCost',
+  };
+
+  private static applyCategoryFilter(
+    query: SelectQueryBuilder<Transfer>,
+    alias: string,
+    category: TransferCategory,
+  ): SelectQueryBuilder<Transfer> {
+    const map = TransferService.CATEGORY_RELATION_MAP;
+    switch (category) {
+      case TransferCategory.MANUAL_CREATION:
+      case TransferCategory.MANUAL_DELETION: {
+        for (const rel of Object.values(map)) {
+          query = query.leftJoin(`${alias}.${rel}`, rel).andWhere(`${rel}.id IS NULL`);
+        }
+        return query.andWhere(
+          category === TransferCategory.MANUAL_CREATION ? `${alias}.fromId IS NULL` : `${alias}.toId IS NULL`,
+        );
+      }
+      default: {
+        const rel = map[category];
+        if (!rel) throw new Error(`Unsupported transfer category: ${category}`);
+        return query.innerJoin(`${alias}.${rel}`, rel);
+      }
+    }
+  }
+
+  private buildCategorySubQuery(category: TransferCategory): SelectQueryBuilder<Transfer> {
+    const query = this.manager.createQueryBuilder(Transfer, 'subTransfer')
+      .select('subTransfer.id');
+    return TransferService.applyCategoryFilter(query, 'subTransfer', category);
+  }
+
   public async postTransfer(request: TransferRequest) : Promise<Transfer> {
     const transfer = await this.createTransfer(request);
     if (transfer.from != undefined && transfer.from.inactiveNotificationSend == true) {
@@ -283,44 +336,10 @@ export default class TransferService extends WithManager {
    * @param filters - Optional filters to narrow the set of transfers
    */
   public async getTransferAggregate(filters: TransferAggregateFilterParameters = {}): Promise<TransferAggregateResult> {
-    const categoryRelationMap: Partial<Record<TransferCategory, string>> = {
-      [TransferCategory.DEPOSIT]: 'deposit',
-      [TransferCategory.PAYOUT_REQUEST]: 'payoutRequest',
-      [TransferCategory.SELLER_PAYOUT]: 'sellerPayout',
-      [TransferCategory.INVOICE]: 'invoice',
-      [TransferCategory.CREDIT_INVOICE]: 'creditInvoice',
-      [TransferCategory.FINE]: 'fine',
-      [TransferCategory.WAIVED_FINES]: 'waivedFines',
-      [TransferCategory.WRITE_OFF]: 'writeOff',
-      [TransferCategory.INACTIVE_ADMINISTRATIVE_COST]: 'inactiveAdministrativeCost',
-    };
-
-    const excludeAllCategories = (q: typeof query) => {
-      for (const category of Object.values(categoryRelationMap)) {
-        q = q.leftJoin(`transfer.${category}`, category)
-          .andWhere(`${category}.id IS NULL`);
-      }
-      return q;
-    };
-
     let query = this.manager.createQueryBuilder(Transfer, 'transfer');
 
     if (filters.category !== undefined) {
-      switch (filters.category) {
-        case TransferCategory.MANUAL_CREATION:
-          query = excludeAllCategories(query)
-            .andWhere('transfer.fromId IS NULL');
-          break;
-        case TransferCategory.MANUAL_DELETION:
-          query = excludeAllCategories(query)
-            .andWhere('transfer.toId IS NULL');
-          break;
-        default: {
-          const rel = categoryRelationMap[filters.category];
-          if (!rel) throw new Error(`Unsupported transfer category: ${filters.category}`);
-          query = query.innerJoin(`transfer.${rel}`, rel);
-        }
-      }
+      query = TransferService.applyCategoryFilter(query, 'transfer', filters.category);
     }
 
     if (filters.fromId !== undefined) {

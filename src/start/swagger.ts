@@ -134,8 +134,13 @@ export default class Swagger {
    */
   public static async initialize(app: express.Application): Promise<SwaggerSpecification> {
     const config = Config.get();
-    if (config.app.isProduction) {
-      // Serve pre-generated Swagger specification in production environments.
+    // When running compiled JS (not ts-node), there are no .ts source files for the spec
+    // generator to scan, so we must always import a pre-generated spec. In ts-node mode,
+    // only do so in production so developers get a live-generated spec locally.
+    const isCompiledJs = __filename.endsWith('.js');
+    if (isCompiledJs || config.app.isProduction) {
+      // Import a pre-generated spec when running in production or when running compiled JS
+      // (where ts-node is not available to scan .ts source files on the fly).
       const specification = await Swagger.importSpecification();
       specification.info = {
         version: process.env.npm_package_version ? process.env.npm_package_version : 'v1.0.0',

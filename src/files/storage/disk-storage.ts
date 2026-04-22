@@ -47,8 +47,9 @@ export default class DiskStorage implements FileStorage {
 
   public validateFileLocation(location: string): void {
     const directory = path.dirname(location);
-    if (path.join(__dirname, '/../../..', this.workdir) !== directory) {
-      throw new TypeError(`Given file is not located in the directory: ${directory}`);
+    const expected = path.resolve(this.workdir);
+    if (expected !== directory) {
+      throw new TypeError(`Given file is not located in the expected directory. Expected: ${expected}, actual: ${directory}`);
     }
   }
 
@@ -71,7 +72,7 @@ export default class DiskStorage implements FileStorage {
   async saveFile(fileName: string, fileData: Buffer): Promise<string> {
     const fileExtension = path.extname(fileName);
     const randomFileName = `${DiskStorage.getRandomName()}${fileExtension}`;
-    const fileLocation = path.join(__dirname, '/../../..', this.workdir, randomFileName);
+    const fileLocation = path.resolve(this.workdir, randomFileName);
 
     DiskStorage.writeFile(fileLocation, fileData);
     return Promise.resolve(fileLocation);
