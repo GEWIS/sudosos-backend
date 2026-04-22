@@ -275,6 +275,33 @@ describe('UserService', async (): Promise<void> => {
       expect(result.memberId).to.equal(12345);
       expect(result.gewisId).to.equal(12345);
     });
+
+    it('should include expiryDate as ISO string when set', () => {
+      const expiryDate = new Date('2027-01-01T00:00:00.000Z');
+      const user = Object.assign(new User(), {
+        id: 1,
+        firstName: 'John',
+        type: UserType.LOCAL_USER,
+        expiryDate,
+      });
+
+      const result = asUserResponse(user);
+
+      expect(result.expiryDate).to.equal(expiryDate.toISOString());
+    });
+
+    it('should return null for expiryDate when not set', () => {
+      const user = Object.assign(new User(), {
+        id: 1,
+        firstName: 'John',
+        type: UserType.MEMBER,
+        expiryDate: null,
+      });
+
+      const result = asUserResponse(user);
+
+      expect(result.expiryDate).to.be.null;
+    });
   });
 
   describe('getRelations', () => {
@@ -568,6 +595,44 @@ describe('UserService', async (): Promise<void> => {
 
       const user = await User.findOne({ where: { id: result.id } });
       expect(user.lastName).to.equal('');
+    });
+
+    it('should set expiryDate to ~18 months from now for local user types', async () => {
+      for (const type of LocalUserTypes) {
+        const before = new Date();
+        const result = await UserService.createUser({
+          type,
+          email: `test-${type}@local.com`,
+          firstName: 'Test',
+          lastName: 'User',
+          canGoIntoDebt: false,
+          ofAge: true,
+        } as any);
+
+        const user = await User.findOne({ where: { id: result.id } });
+        expect(user.expiryDate).to.not.be.null;
+
+        const expectedExpiry = new Date(before);
+        expectedExpiry.setMonth(expectedExpiry.getMonth() + 18);
+
+        // Allow a few seconds of drift for test execution time.
+        const drift = Math.abs(user.expiryDate.getTime() - expectedExpiry.getTime());
+        expect(drift).to.be.lessThan(5000);
+      }
+    });
+
+    it('should not set expiryDate for non-local user types', async () => {
+      const result = await UserService.createUser({
+        type: UserType.MEMBER,
+        email: 'test@member.com',
+        firstName: 'Test',
+        lastName: 'User',
+        canGoIntoDebt: false,
+        ofAge: true,
+      } as any);
+
+      const user = await User.findOne({ where: { id: result.id } });
+      expect(user.expiryDate).to.be.null;
     });
   });
 

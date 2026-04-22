@@ -62,6 +62,8 @@ export enum NotificationTypes {
   TransactionNotificationChargedByOther = 'TransactionNotificationChargedByOther',
   UserTypeUpdated = 'UserTypeUpdated',
   UserTypeUpdatedWithReset = 'UserTypeUpdatedWithReset',
+  UserNearExpiration = 'UserNearExpiration',
+  UserAccountExpired = 'UserAccountExpired',
 }
 
 export interface NotificationType<P extends TemplateOptions = any> {

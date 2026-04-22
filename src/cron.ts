@@ -39,8 +39,11 @@ import getAppLogger from './helpers/logging';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import UserNotificationPreferenceService from './service/user-notification-preference-service';
 import WrappedService from './service/wrapped-service';
+import UserExpiryService from './service/user-expiry-service';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
+import Redis from 'ioredis';
+import Mailer from './mailer';
 
 class CronApplication {
   logger: Logger;
@@ -73,6 +76,13 @@ async function createCronTasks(): Promise<void> {
   // Set up monetary value configuration.
   dinero.defaultCurrency = config.currency.code as Currency;
   dinero.defaultPrecision = config.currency.precision;
+
+  const redisClient = new Redis({
+    host: config.redis.host,
+    port: config.redis.port,
+    maxRetriesPerRequest: null,
+  });
+  new Mailer(redisClient);
 
   // Initialize database-stored settings
   const store = ServerSettingsStore.getInstance();
@@ -122,8 +132,24 @@ async function createCronTasks(): Promise<void> {
       logger.error('Could not sync user notification preferences.', error);
     });
   });
+  const deactivateExpiredUsers = cron.schedule('45 2 * * *', () => {
+    logger.debug('Deactivating expired users.');
+    new UserExpiryService().deactivateExpiredUsers().then(() => {
+      logger.debug('Deactivated expired users.');
+    }).catch((error) => {
+      logger.error('Could not deactivate expired users.', error);
+    });
+  });
+  const notifyNearExpirationUsers = cron.schedule('45 3 * * *', () => {
+    logger.debug('Notifying near-expiration users.');
+    new UserExpiryService().notifyNearExpirationUsers().then(() => {
+      logger.debug('Notified near-expiration users.');
+    }).catch((error) => {
+      logger.error('Could not notify near-expiration users.', error);
+    });
+  });
 
-  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
+  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences, deactivateExpiredUsers, notifyNearExpirationUsers];
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();
