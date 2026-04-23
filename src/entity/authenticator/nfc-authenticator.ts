@@ -37,11 +37,14 @@ import AuthenticationMethod from './authentication-method';
  * This provides fast authentication suitable for point-of-sale scenarios.
  *
  * ## NFC Authentication Flow
- * 1. **User** taps their NFC card against an NFC reader.
- * 2. **Reader** captures the NFC UID and sends it to `/authentication/nfc`.
- * 3. **Authentication Controller** looks up the NfcAuthenticator by the provided UID.
+ * 1. **User** taps their NFC card against an NFC reader at a point of sale.
+ * 2. **POS client** captures the NFC UID and calls `/authentication/nfc-secure` as an
+ *    authenticated POS user, including its POS JWT and the target `posId`.
+ * 3. **Authentication Controller** validates the POS JWT/`posId` context and looks up the
+ *    NfcAuthenticator by the provided UID.
  * 4. **Authentication Controller** retrieves the associated user.
- * 5. **Authentication Controller** returns a JWT token if the NFC code is valid.
+ * 5. **Authentication Controller** returns a JWT token for the authenticated user; when a
+ *    `posId` is provided, this is a scoped ("lesser") JWT.
  *
  * ## Security Considerations
  * - NFC codes are stored in plain text (not hashed) for fast lookup

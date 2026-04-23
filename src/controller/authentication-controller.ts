@@ -37,14 +37,9 @@ import RoleManager from '../rbac/role-manager';
 import { LDAPUser } from '../helpers/ad';
 import AuthenticationLocalRequest from './request/authentication-local-request';
 import PinAuthenticator from '../entity/authenticator/pin-authenticator';
-import AuthenticationPinRequest from './request/authentication-pin-request';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
 import ResetLocalRequest from './request/reset-local-request';
 import AuthenticationResetTokenRequest from './request/authentication-reset-token-request';
-import AuthenticationEanRequest from './request/authentication-ean-request';
-import EanAuthenticator from '../entity/authenticator/ean-authenticator';
-import AuthenticationNfcRequest from './request/authentication-nfc-request';
-import NfcAuthenticator from '../entity/authenticator/nfc-authenticator';
 import AuthenticationKeyRequest from './request/authentication-key-request';
 import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import { AppDataSource } from '../database/database';
@@ -106,20 +101,6 @@ export default class AuthenticationController extends BaseController {
           handler: this.LDAPLogin.bind(this),
         },
       },
-      '/pin': {
-        POST: {
-          body: { modelName: 'AuthenticationPinRequest' },
-          policy: async () => true,
-          handler: this.PINLogin.bind(this),
-        },
-      },
-      '/nfc': {
-        POST: {
-          body: { modelName: 'AuthenticationNfcRequest' },
-          policy: async () => true,
-          handler: this.nfcLogin.bind(this),
-        },
-      },
       '/key': {
         POST: {
           body: { modelName: 'AuthenticationKeyRequest' },
@@ -145,13 +126,6 @@ export default class AuthenticationController extends BaseController {
           body: { modelName: 'ResetLocalRequest' },
           policy: async () => true,
           handler: this.createResetToken.bind(this),
-        },
-      },
-      '/ean': {
-        POST: {
-          body: { modelName: 'AuthenticationEanRequest' },
-          policy: async () => true,
-          handler: this.eanLogin.bind(this),
         },
       },
     };
@@ -189,30 +163,6 @@ export default class AuthenticationController extends BaseController {
       res.json(publicKey);
     } catch (error) {
       this.logger.error('Could not get JWT public key:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * POST /authentication/pin
-   * @deprecated Use /authentication/pin-secure instead
-   * @summary PIN login and hand out token
-   * @operationId pinAuthentication
-   * @tags authenticate - Operations of authentication controller
-   * @param {AuthenticationPinRequest} request.body.required - The PIN login.
-   * @return {AuthenticationResponse} 200 - The created json web token.
-   * @return {string} 400 - Validation error.
-   * @return {string} 403 - Authentication error.
-   */
-  public async PINLogin(req: Request, res: Response): Promise<void> {
-    const body = req.body as AuthenticationPinRequest;
-    this.logger.trace('PIN authentication for user', body.userId);
-
-    try {
-      await (AuthenticationController.PINLoginConstructor(this.roleManager,
-        this.tokenHandler, body.pin, body.userId))(req, res);
-    } catch (error) {
-      this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');
     }
   }
@@ -458,94 +408,6 @@ export default class AuthenticationController extends BaseController {
       res.status(500).json('Internal server error.');
     }
   }
-
-  /**
-   * POST /authentication/nfc
-   * @deprecated Use /authentication/nfc-secure instead
-   * @summary NFC login and hand out token
-   * @operationId nfcAuthentication
-   * @tags authenticate - Operations of authentication controller
-   * @param {AuthenticationNfcRequest} request.body.required - The NFC login.
-   * @return {AuthenticationResponse} 200 - The created json web token.
-   * @return {string} 403 - Authentication error.
-   */
-  public async nfcLogin(req: Request, res: Response): Promise<void> {
-    const body = req.body as AuthenticationNfcRequest;
-    this.logger.trace('Atempted NFC authentication with NFC length, ', body.nfcCode.length);
-
-    try {
-      const authenticator = await NfcAuthenticator.findOne({
-        where: { nfcCode: body.nfcCode },
-        relations: UserService.getRelations<NfcAuthenticator>(),
-      });
-      if (authenticator == null || authenticator.user == null) {
-        res.status(403).json({
-          message: 'Invalid credentials.',
-        });
-        return;
-      }
-
-      const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      };
-
-      this.logger.trace('Succesfull NFC authentication for user ', authenticator.user);
-
-      const result = await new AuthenticationService().getSaltedToken({
-        user: authenticator.user,
-        context,
-      });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
-    } catch (error) {
-      this.logger.error('Could not authenticate using NFC:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
-  /**
-   * POST /authentication/ean
-   * @deprecated Use /authentication/ean-secure instead
-   * @summary EAN login and hand out token
-   * @operationId eanAuthentication
-   * @tags authenticate - Operations of authentication controller
-   * @param {AuthenticationEanRequest} request.body.required - The EAN login.
-   * @return {AuthenticationResponse} 200 - The created json web token.
-   * @return {string} 403 - Authentication error.
-   */
-  public async eanLogin(req: Request, res: Response): Promise<void> {
-    const body = req.body as AuthenticationEanRequest;
-    this.logger.trace('EAN authentication for ean', body.eanCode);
-
-    try {
-      const { eanCode } = body;
-      const authenticator = await EanAuthenticator.findOne({
-        where: { eanCode },
-        relations: UserService.getRelations<EanAuthenticator>(),
-      });
-      if (authenticator == null || authenticator.user == null) {
-        res.status(403).json({
-          message: 'Invalid credentials.',
-        });
-        return;
-      }
-
-      const context: AuthenticationContext = {
-        roleManager: this.roleManager,
-        tokenHandler: this.tokenHandler,
-      };
-
-      const result = await new AuthenticationService().getSaltedToken({
-        user: authenticator.user,
-        context,
-      });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
-    } catch (error) {
-      this.logger.error('Could not authenticate using EAN:', error);
-      res.status(500).json('Internal server error.');
-    }
-  }
-
 
   /**
    * POST /authentication/key

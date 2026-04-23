@@ -68,7 +68,6 @@ import RootController from './controller/root-controller';
 import VatGroupController from './controller/vat-group-controller';
 import TestController from './controller/test-controller';
 import AuthenticationSecureController from './controller/authentication-secure-controller';
-import MemberAuthenticationController from './controller/member-authentication-controller';
 import MemberAuthenticationSecureController from './controller/member-authentication-secure-controller';
 import DebtorController from './controller/debtor-controller';
 import EventController from './controller/event-controller';
@@ -178,16 +177,6 @@ async function setupAuthentication(tokenHandler: TokenHandler, application: Appl
     config.gewis.gewiswebJwtSecret,
   );
   application.app.use('/v1/authentication', gewisController.getRouter());
-
-  // Define member authentication controller and bind before middleware.
-  const memberController = new MemberAuthenticationController(
-    {
-      specification: application.specification,
-      roleManager: application.roleManager,
-    },
-    tokenHandler,
-  );
-  application.app.use('/v1/authentication', memberController.getRouter());
 
   // Define QR authentication controller and bind before middleware.
   const qrController = new AuthenticationQRController(
