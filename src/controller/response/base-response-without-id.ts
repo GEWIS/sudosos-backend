@@ -23,15 +23,21 @@
  * @module
  */
 
-import BaseResponseWithoutId from './base-response-without-id';
-
 /**
- * @typedef {object} BaseResponse
- * @property {integer} id.required - The unique id of the entity.
+ * Standard timestamp/version fields every response shares, without an `id`.
+ * Responses that key on a UUID (or any non-integer identifier) extend this
+ * and add their own `id` field. Responses keyed on an integer id extend
+ * `BaseResponse` instead, which adds `id: number`.
+ *
+ * Parallel to `BaseEntityWithoutId` on the entity side.
+ *
+ * @typedef {object} BaseResponseWithoutId
  * @property {string} createdAt - The creation Date of the entity.
  * @property {string} updatedAt - The last update Date of the entity.
  * @property {integer} version - The version of the entity.
  */
-export default interface BaseResponse extends BaseResponseWithoutId {
-  id: number,
+export default interface BaseResponseWithoutId {
+  createdAt?: string,
+  updatedAt?: string,
+  version?: number,
 }

@@ -61,6 +61,8 @@ import SimpleFileController from './controller/simple-file-controller';
 import initializeDiskStorage from './files/initialize';
 import StripeController from './controller/stripe-controller';
 import StripeWebhookController from './controller/stripe-webhook-controller';
+import PaymentRequestController from './controller/payment-request-controller';
+import PaymentRequestPublicController from './controller/payment-request-public-controller';
 import { extractRawBody } from './helpers/raw-body';
 import InvoiceController from './controller/invoice-controller';
 import PayoutRequestController from './controller/payout-request-controller';
@@ -262,6 +264,10 @@ export default async function createApp(): Promise<Application> {
   };
   if (config.stripe.enabled) {
     application.app.use('/v1/stripe', new StripeWebhookController(options).getRouter());
+    // Public share-link surface for PaymentRequest. Mounted BEFORE
+    // setupAuthentication so the `async () => true` policies are reachable
+    // without a JWT.
+    application.app.use('/v1/payment-requests-public', new PaymentRequestPublicController(options).getRouter());
   }
 
   const tokenHandler = await createTokenHandler();
@@ -389,6 +395,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/fines', new DebtorController(options).getRouter());
   if (config.stripe.enabled) {
     application.app.use('/v1/stripe', new StripeController(options).getRouter());
+    application.app.use('/v1/payment-requests', new PaymentRequestController(options).getRouter());
   }
   application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());
