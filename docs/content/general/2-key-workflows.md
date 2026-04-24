@@ -87,6 +87,40 @@ flowchart TD
 - event routing: only accept events intended for this service
 - idempotency: the same Stripe event may be delivered multiple times
 
+## Payment request (shareable payment link)
+
+**Trigger + actor**
+- Treasurer (or a user for themself) creates a fixed-amount top-up request with an expiry. The recipient opens a share link (no login), pays via Stripe, and the money is credited to the linked user's balance.
+
+**API surface**
+- `POST /payment-requests` (create; admin can create for anyone, regular users only for themselves)
+- `GET /payment-requests` and `GET /payment-requests/:id` (read; admin sees all, user sees own)
+- `POST /payment-requests/:id/cancel` (cancel a PENDING request)
+- `POST /payment-requests/:id/start` (authenticated: start a Stripe session)
+- `POST /payment-requests/:id/mark-fulfilled` (admin escape hatch for out-of-band payment)
+- `GET /payment-requests-public/:id` (unauthenticated: fetch a trimmed view via share link)
+- `POST /payment-requests-public/:id/start` (unauthenticated: start a Stripe session via share link)
+
+**Entities touched**
+- `PaymentRequest` (UUID pk, immutable amount, derived status)
+- `StripePaymentIntent.paymentRequest?` — one request can have many intents (retries)
+- on success: the standard Stripe deposit `Transfer` (void → user) already created by the deposit flow also settles the payment request
+
+**Lifecycle (derived status)**
+- `PENDING` → `PAID` when a linked Stripe intent succeeds.
+- `PENDING` → `CANCELLED` when an authorized user cancels.
+- `PENDING` → `EXPIRED` when `expiresAt` passes without payment.
+- Status is derived from `paidAt` / `cancelledAt` / `expiresAt`; precedence is `PAID` > `CANCELLED` > `EXPIRED` > `PENDING`.
+
+**Critical checks**
+- amount is fixed at creation — a corrected amount means cancelling and creating a fresh request
+- `startPayment` rejects non-`PENDING` requests
+- the Stripe webhook flow idempotently calls `markPaid`: already-paid requests are left unchanged, cancelled requests refuse to flip, and expired-but-settled requests still become `PAID` (the money arrived, the clock is secondary)
+
+**Invoices vs. payment requests**
+- Invoices create their own credit transfer on behalf of the user (a "paper-trail top-up").
+- Payment requests do not pre-create a credit transfer — the Stripe deposit is the single settlement event. A future "invoice via payment link" flow will compose by leaving the settlement to the payment request.
+
 ## Payout request (withdraw balance)
 
 **Trigger + actor**
