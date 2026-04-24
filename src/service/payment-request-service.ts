@@ -41,6 +41,12 @@ import TransferService from './transfer-service';
 import WithManager from '../database/with-manager';
 import { PaginationParameters } from '../helpers/pagination';
 import { toMySQLString } from '../helpers/timestamps';
+import { RequestWithToken } from '../middleware/token-middleware';
+import {
+  BasePaymentRequestResponse,
+  PublicPaymentRequestResponse,
+} from '../controller/response/payment-request-response';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 /**
  * User types that are **never** allowed to be the beneficiary of a PaymentRequest.
@@ -116,6 +122,47 @@ export class IllegalPaymentRequestTransitionError extends Error {
 }
 
 /**
+ * Parse a list-PaymentRequests query into {@link PaymentRequestFilterParameters}.
+ * Throws on any malformed value so the controller can return 400 — same
+ * strictness as the inline parser this replaced.
+ */
+export function parseGetPaymentRequestsFilters(
+  req: RequestWithToken,
+): PaymentRequestFilterParameters {
+  const q = req.query || {};
+  const filters: PaymentRequestFilterParameters = {};
+  if (typeof q.forId === 'string') {
+    const forId = parseInt(q.forId, 10);
+    if (Number.isNaN(forId)) throw new Error('Invalid forId');
+    filters.forId = forId;
+  }
+  if (typeof q.createdById === 'string') {
+    const createdById = parseInt(q.createdById, 10);
+    if (Number.isNaN(createdById)) throw new Error('Invalid createdById');
+    filters.createdById = createdById;
+  }
+  if (typeof q.status === 'string' && q.status.length > 0) {
+    const allowed = Object.values(PaymentRequestStatus) as string[];
+    const tokens = q.status.split(',').map((s) => s.trim().toUpperCase());
+    for (const t of tokens) {
+      if (!allowed.includes(t)) throw new Error(`Invalid status: ${t}`);
+    }
+    filters.status = tokens as PaymentRequestStatus[];
+  }
+  if (typeof q.fromDate === 'string') {
+    const d = new Date(q.fromDate);
+    if (Number.isNaN(d.getTime())) throw new Error('Invalid fromDate');
+    filters.fromDate = d;
+  }
+  if (typeof q.tillDate === 'string') {
+    const d = new Date(q.tillDate);
+    if (Number.isNaN(d.getTime())) throw new Error('Invalid tillDate');
+    filters.tillDate = d;
+  }
+  return filters;
+}
+
+/**
  * Service layer for {@link stripe/payment-request!PaymentRequest | PaymentRequest}.
  *
  * ## Creation & validation
@@ -174,6 +221,45 @@ export default class PaymentRequestService extends WithManager {
         `user type ${user.type} cannot be a payment-request beneficiary`,
       );
     }
+  }
+
+  /**
+   * Convert a PaymentRequest entity into the standard authenticated response.
+   */
+  public static asBasePaymentRequestResponse(request: PaymentRequest): BasePaymentRequestResponse {
+    return {
+      id: request.id,
+      createdAt: request.createdAt.toISOString(),
+      updatedAt: request.updatedAt.toISOString(),
+      version: request.version,
+      for: parseUserToBaseResponse(request.for, false),
+      createdBy: parseUserToBaseResponse(request.createdBy, false),
+      amount: request.amount.toObject(),
+      expiresAt: request.expiresAt.toISOString(),
+      paidAt: request.paidAt ? request.paidAt.toISOString() : null,
+      cancelledAt: request.cancelledAt ? request.cancelledAt.toISOString() : null,
+      cancelledBy: request.cancelledBy ? parseUserToBaseResponse(request.cancelledBy, false) : null,
+      fulfilledBy: request.fulfilledBy ? parseUserToBaseResponse(request.fulfilledBy, false) : null,
+      description: request.description,
+      status: request.status,
+    };
+  }
+
+  /**
+   * Convert a PaymentRequest entity into the trimmed unauthenticated response
+   * served from the public share-link surface.
+   */
+  public static asPublicPaymentRequestResponse(
+    request: PaymentRequest,
+  ): PublicPaymentRequestResponse {
+    return {
+      id: request.id,
+      forDisplayName: User.fullName(request.for),
+      amount: request.amount.toObject(),
+      expiresAt: request.expiresAt.toISOString(),
+      description: request.description,
+      status: request.status,
+    };
   }
 
   /**
