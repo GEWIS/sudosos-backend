@@ -25,11 +25,13 @@
  */
 
 import BaseEntity from '../base-entity';
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import StripePaymentIntentStatus from './stripe-payment-intent-status';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import StripeDeposit from './stripe-deposit';
+// eslint-disable-next-line import/no-cycle
+import PaymentRequest from '../payment-request/payment-request';
 
 @Entity()
 export default class StripePaymentIntent extends BaseEntity {
@@ -50,4 +52,16 @@ export default class StripePaymentIntent extends BaseEntity {
 
   @OneToOne(() => StripeDeposit, (s) => s.stripePaymentIntent, { nullable: true })
   public deposit: StripeDeposit | null;
+
+  /**
+   * Optional back-reference to a {@link stripe/payment-request!PaymentRequest | PaymentRequest}
+   * that initiated this intent. Set when the intent is created via
+   * `PaymentRequestService.startPayment` (directly or via the public start
+   * endpoint). When set, the Stripe webhook hook in
+   * `StripeService.createNewPaymentIntentStatus` will mark the linked
+   * PaymentRequest as paid on `SUCCEEDED`.
+   */
+  @ManyToOne(() => PaymentRequest, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'paymentRequestId' })
+  public paymentRequest?: PaymentRequest | null;
 }

@@ -19,19 +19,23 @@
  */
 
 /**
- * @hidden
- * @module
+ * @module stripe/payment-request
  */
-
-import BaseResponseWithoutId from './base-response-without-id';
 
 /**
- * @typedef {object} BaseResponse
- * @property {integer} id.required - The unique id of the entity.
- * @property {string} createdAt - The creation Date of the entity.
- * @property {string} updatedAt - The last update Date of the entity.
- * @property {integer} version - The version of the entity.
+ * Derived status of a {@link PaymentRequest}.
+ *
+ * The status is **not stored** on the entity — it is computed from the
+ * combination of `paidAt`, `cancelledAt`, and `expiresAt` against the
+ * current clock. See {@link PaymentRequest.status}.
  */
-export default interface BaseResponse extends BaseResponseWithoutId {
-  id: number,
+export enum PaymentRequestStatus {
+  /** Awaiting payment, not yet expired or cancelled. */
+  PENDING = 'PENDING',
+  /** A linked StripeDeposit succeeded and the credit Transfer was created. */
+  PAID = 'PAID',
+  /** `expiresAt` has passed without payment. */
+  EXPIRED = 'EXPIRED',
+  /** Explicitly cancelled by an authorized user. */
+  CANCELLED = 'CANCELLED',
 }

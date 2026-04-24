@@ -91,6 +91,18 @@ An **invoice** is best understood as a **top-up with a paper trail**.
 
 **VAT note**: the invoice transfer itself is **not** VAT-applicable. VAT is handled by the underlying transactions and shows up in the relevant seller payouts.
 
+## Payment requests (shareable payment links)
+
+A **payment request** is a fixed-amount, time-bounded invitation to top up a specific user's balance. End-users recognise it as a "payment link": an email with an amount and a URL that anyone (including the user themselves from a different device) can open to pay via Stripe.
+
+- The request is created in `PENDING` state and carries an `expiresAt` plus an immutable `amount`.
+- A user can retry: one request can spawn many `StripePaymentIntent` rows. The request becomes `PAID` when one of those intents succeeds.
+- A successful payment **always credits the recipient's balance** via the standard Stripe deposit transfer (void → user). It is a pure top-up primitive.
+- Cancellation is explicit and audit-tracked (`cancelledBy`, `cancelledAt`). To "change the amount", cancel and create a new one.
+- An admin escape hatch marks a request fulfilled out-of-band (e.g. bank transfer) — this creates the credit transfer manually.
+
+Payment requests and **invoices** overlap conceptually (both top up a balance) but differ in who owns settlement: invoices pre-create their own credit transfer, payment requests delegate to the Stripe deposit. A future "invoice via payment link" flow will compose them by having the invoice skip pre-creating a transfer when a payment request is attached.
+
 ## Seller payouts (settling sellers and recording VAT)
 
 A **seller payout** is a payout transfer for a seller over a time range:
