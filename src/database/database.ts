@@ -109,6 +109,11 @@ import {
   RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
 } from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 import { AddLastSeenToUser1769000095806 } from '../migrations/1769000095806-add-last-seen-to-user';
+import PaymentRequest from '../entity/payment-request/payment-request';
+import { PaymentRequest1777010230727 } from '../migrations/1777010230727-payment-request';
+import {
+  StripePaymentIntentPaymentRequest1777010230751,
+} from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
 
 function getDataSourceOptions(): DataSourceOptions {
@@ -145,6 +150,8 @@ function getDataSourceOptions(): DataSourceOptions {
       UserSetting1768697568707,
       RemoveCreditTransferFromInactiveAdministrativeCost1769005123365,
       AddLastSeenToUser1769000095806,
+      PaymentRequest1777010230727,
+      StripePaymentIntentPaymentRequest1777010230751,
     ],
     extra: {
       authPlugins: {
@@ -216,6 +223,7 @@ function getDataSourceOptions(): DataSourceOptions {
       NotificationLog,
       UserNotificationPreference,
       UserSetting,
+      PaymentRequest,
     ],
     subscribers: [
       TransactionSubscriber,
