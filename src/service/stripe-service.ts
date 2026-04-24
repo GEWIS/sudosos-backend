@@ -41,6 +41,10 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
+// eslint-disable-next-line import/no-cycle
+import PaymentRequest from '../entity/payment-request/payment-request';
+// eslint-disable-next-line import/no-cycle
+import PaymentRequestService from './payment-request-service';
 import WithManager from '../database/with-manager';
 import Config from '../config';
 
@@ -154,13 +158,21 @@ export default class StripeService extends WithManager {
   }
 
   /**
-   * Create a payment intent and save it to the database
-   * @param user User that wants to deposit some money into their account
+   * Create a payment intent and save it to the database.
+   *
+   * When `paymentRequest` is supplied, the resulting {@link StripePaymentIntent}
+   * carries a back-reference to the request so that the webhook flow in
+   * {@link #createNewPaymentIntentStatus} can flip the request to `PAID` on
+   * SUCCEEDED. The Stripe-side `metadata.paymentRequestId` mirror is purely
+   * informational (helps debugging in the Stripe dashboard).
+   *
+   * @param user User that wants to deposit money into their account
    * @param amount The amount to be deposited
+   * @param paymentRequest Optional linked PaymentRequest that initiated this intent
    * @returns The created deposit entity and the Stripe client secret
    */
   public async createStripePaymentIntent(
-    user: User, amount: Dinero,
+    user: User, amount: Dinero, paymentRequest?: PaymentRequest,
   ): Promise<{ deposit: StripeDeposit, clientSecret: string }> {
     const config = Config.get();
     const paymentIntent = await this.stripe.paymentIntents.create({
@@ -171,6 +183,7 @@ export default class StripeService extends WithManager {
       metadata: {
         'service': config.app.name,
         'userId': user.id,
+        ...(paymentRequest ? { 'paymentRequestId': paymentRequest.id } : {}),
       },
     });
 
@@ -178,6 +191,7 @@ export default class StripeService extends WithManager {
       stripeId: paymentIntent.id,
       amount,
       paymentIntentStatuses: [],
+      paymentRequest: paymentRequest ?? null,
     });
     const deposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
@@ -215,7 +229,10 @@ export default class StripeService extends WithManager {
     paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
     const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true } });
+      .findOne({
+        where: { id: paymentIntentId },
+        relations: { deposit: true, paymentRequest: true },
+      });
 
     const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
     if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
@@ -238,6 +255,33 @@ export default class StripeService extends WithManager {
       });
 
       await this.manager.save(paymentIntent.deposit);
+
+      // If the intent was initiated by a PaymentRequest, flip the request to
+      // PAID. This runs *after* the credit Transfer is saved so that a
+      // successful settlement is the single observable event.
+      //
+      // Best-effort: Stripe settlement has already succeeded and the credit
+      // Transfer is persisted. A PaymentRequest state-machine conflict
+      // (e.g. admin cancelled the request after the intent was created)
+      // must not roll back the deposit — log and continue. The user is
+      // credited either way; reconciling the PaymentRequest state is a
+      // secondary concern.
+      if (paymentIntent.paymentRequest) {
+        try {
+          await new PaymentRequestService(this.manager).markPaidFromStripeIntent(paymentIntent);
+        } catch (error) {
+          this.logger.error(
+            'Failed to mark PaymentRequest as PAID for succeeded Stripe payment intent; '
+            + 'the credit Transfer was still created and the user has been credited.',
+            {
+              paymentIntentId: paymentIntent.id,
+              stripeId: paymentIntent.stripeId,
+              paymentRequestId: paymentIntent.paymentRequest.id,
+              error,
+            },
+          );
+        }
+      }
     }
 
     return depositStatus;
