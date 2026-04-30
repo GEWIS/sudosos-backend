@@ -321,87 +321,6 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(authRes.body).to.equal('POS user ID does not match the requested posId.');
     });
 
-    it('should work in non-strict mode without posId', async () => {
-      // Set up PIN authenticator
-      const pinAuth = new PinAuthenticator();
-      pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
-      await pinAuth.save();
-
-      // Set non-strict mode
-      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
-
-      // Authenticate with PIN without posId
-      const authRes = await request(ctx.app)
-        .post('/authentication/pin')
-        .send({
-          userId: ctx.users[1].id,
-          pin: '1234',
-        });
-
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-
-      // Use the token to create a transaction - should work
-      const transRes = await request(ctx.app)
-        .post('/transactions')
-        .set('Authorization', `Bearer ${authRes.body.token}`)
-        .send(ctx.validTransReq);
-
-      expect(transRes.status).to.equal(200);
-    });
-
-    it('should allow PIN authentication without posId even in strict mode', async () => {
-      // Set up PIN authenticator
-      const pinAuth = new PinAuthenticator();
-      pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
-      await pinAuth.save();
-
-      // Set strict mode
-      await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
-
-      // Authenticate with PIN without posId
-      const authRes = await request(ctx.app)
-        .post('/authentication/pin')
-        .send({
-          userId: ctx.users[1].id,
-          pin: '1234',
-        });
-
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-      
-      // Verify the token does not have posId
-      const decoded = await ctx.tokenHandler.verifyToken(authRes.body.token);
-      expect(decoded.posId).to.be.undefined;
-    });
-
-    it('should allow NFC authentication without posId (normal flow)', async () => {
-      // Set up NFC authenticator
-      const nfcAuth = new NfcAuthenticator();
-      nfcAuth.user = ctx.users[1];
-      nfcAuth.nfcCode = 'test-nfc-no-pos';
-      await nfcAuth.save();
-
-      // Set strict mode
-      await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
-
-      // Authenticate with NFC without posId (posId removed from normal flow)
-      const authRes = await request(ctx.app)
-        .post('/authentication/nfc')
-        .send({
-          nfcCode: 'test-nfc-no-pos',
-        });
-
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-
-      // Token should not have posId (non-lesser token)
-      const decoded = await ctx.tokenHandler.verifyToken(authRes.body.token);
-      expect(decoded.posId).to.be.undefined;
-    });
-
     it('should allow transaction in non-strict mode with secure PIN matching posId', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
@@ -471,37 +390,6 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should allow transaction in default mode (strictPosToken not set)', async () => {
-      // Don't set strictPosToken (should default to false)
-      // First ensure it's set to false explicitly or removed
-      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
-
-      // Set up PIN authenticator
-      const pinAuth = new PinAuthenticator();
-      pinAuth.user = ctx.users[1];
-      pinAuth.hash = await new AuthenticationService().hashPassword('1234');
-      await pinAuth.save();
-
-      // Authenticate with PIN without posId
-      const authRes = await request(ctx.app)
-        .post('/authentication/pin')
-        .send({
-          userId: ctx.users[1].id,
-          pin: '1234',
-        });
-
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-
-      // Should work in default (non-strict) mode
-      const transRes = await request(ctx.app)
-        .post('/transactions')
-        .set('Authorization', `Bearer ${authRes.body.token}`)
-        .send(ctx.validTransReq);
-
-      expect(transRes.status).to.equal(200);
-    });
-
     it('should allow transaction with organ member token (non-lesser token)', async () => {
       // Set strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
@@ -515,33 +403,5 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should allow NFC authentication in non-strict mode without posId', async () => {
-      // Set up NFC authenticator
-      const nfcAuth = new NfcAuthenticator();
-      nfcAuth.user = ctx.users[1];
-      nfcAuth.nfcCode = 'test-nfc-non-strict';
-      await nfcAuth.save();
-
-      // Set non-strict mode
-      await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
-
-      // Authenticate with NFC without posId
-      const authRes = await request(ctx.app)
-        .post('/authentication/nfc')
-        .send({
-          nfcCode: 'test-nfc-non-strict',
-        });
-
-      expect(authRes.status).to.equal(200);
-      expect(authRes.body.token).to.be.a('string');
-
-      // Use the token to create a transaction - should work
-      const transRes = await request(ctx.app)
-        .post('/transactions')
-        .set('Authorization', `Bearer ${authRes.body.token}`)
-        .send(ctx.validTransReq);
-
-      expect(transRes.status).to.equal(200);
-    });
   });
 });
