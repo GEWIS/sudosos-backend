@@ -37,7 +37,8 @@ import RoleManager from '../../src/rbac/role-manager';
 import Swagger from '../../src/start/swagger';
 import { json } from 'body-parser';
 import TokenMiddleware from '../../src/middleware/token-middleware';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import ProductCategory from '../../src/entity/product/product-category';
 import { CreateProductRequest, UpdateProductRequest } from '../../src/controller/request/product-request';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../src/controller/request/container-request';
@@ -45,6 +46,8 @@ import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-
 import { truncateAllTables } from '../setup';
 import { finishTestDB } from '../helpers/test-helpers';
 import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../seed';
+
+const { expect, request } = chai;
 
 describe('Propagation between products, containers, POSs', () => {
   let ctx: {
@@ -66,7 +69,7 @@ describe('Propagation between products, containers, POSs', () => {
     posRequest: CreatePointOfSaleRequest,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -185,7 +188,7 @@ describe('Propagation between products, containers, POSs', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -263,9 +266,9 @@ describe('Propagation between products, containers, POSs', () => {
   });
 
   describe('Propagate updates to parent entities', () => {
-    it('should propagate product update to container and POS', async function () {
+    it('should propagate product update to container and POS', async (testCtx) => {
       if (ctx.products.length === 0 && ctx.containers.length === 0 && ctx.pointsOfSale.length === 0) {
-        this.skip();
+        testCtx.skip();
         return;
       }
 
@@ -311,9 +314,9 @@ describe('Propagation between products, containers, POSs', () => {
         expect(p.priceInclVat.amount).to.equal(productUpdate.priceInclVat.amount);
       });
     });
-    it('should propagate container update to POS', async function () {
+    it('should propagate container update to POS', async (testCtx) => {
       if (ctx.containers.length === 0 && ctx.pointsOfSale.length === 0) {
-        this.skip();
+        testCtx.skip();
         return;
       }
 

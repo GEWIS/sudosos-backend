@@ -31,7 +31,7 @@ describe('ServerSettingsStore', () => {
     connection: DataSource,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       connection: await database.initialize(),
     };
@@ -42,7 +42,7 @@ describe('ServerSettingsStore', () => {
     await ServerSetting.clear();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

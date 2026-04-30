@@ -22,7 +22,8 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import PayoutRequestController from '../../../src/controller/payout-request-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
@@ -43,6 +44,8 @@ import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import { ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';
 import { PayoutRequestSeeder, UserSeeder } from '../../seed';
+
+const { expect, request } = chai;
 
 describe('PayoutRequestController', () => {
   let ctx: {
@@ -73,7 +76,7 @@ describe('PayoutRequestController', () => {
     };
   }
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -120,7 +123,7 @@ describe('PayoutRequestController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

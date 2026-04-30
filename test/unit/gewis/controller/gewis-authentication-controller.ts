@@ -19,7 +19,8 @@
  */
 
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import { json } from 'body-parser';
@@ -44,6 +45,8 @@ import { truncateAllTables } from '../../../setup';
 import { finishTestDB } from '../../../helpers/test-helpers';
 import { RbacSeeder } from '../../../seed';
 
+const { expect, request } = chai;
+
 describe('GewisAuthenticationController', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
@@ -59,7 +62,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     secret: string,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -123,7 +126,7 @@ describe('GewisAuthenticationController', async (): Promise<void> => {
     ctx.app.use('/authentication', ctx.controller.getRouter());
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

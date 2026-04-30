@@ -20,7 +20,8 @@
 
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -47,6 +48,8 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
+const { expect, request } = chai;
+
 describe('BalanceController', (): void => {
   let ctx: {
     connection: DataSource,
@@ -63,8 +66,7 @@ describe('BalanceController', (): void => {
     userFineGroups: UserFineGroup[],
   };
 
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const app = express();
@@ -386,7 +388,7 @@ describe('BalanceController', (): void => {
     });
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

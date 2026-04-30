@@ -33,7 +33,7 @@ describe('TransactionSummaryService', () => {
     transactions: Transaction[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const d = await defaultBefore();
 
     const users = await new UserSeeder().seed();
@@ -49,7 +49,7 @@ describe('TransactionSummaryService', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

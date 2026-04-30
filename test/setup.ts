@@ -39,8 +39,8 @@ import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 import '../src/database/database';
 import Config from '../src/config';
 
-// Root hooks
-export { mochaHooks, closeDBHook } from './root-hooks';
+// Root hooks (registers Vitest beforeAll/beforeEach/afterEach/afterAll globally)
+import './root-hooks';
 
 use(chaiAsPromised);
 use(chaiHttp);

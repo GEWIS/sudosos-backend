@@ -66,7 +66,7 @@ describe('FileService', async (): Promise<void> => {
 
   const stubs: sinon.SinonStub[] = [];
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -114,7 +114,7 @@ describe('FileService', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

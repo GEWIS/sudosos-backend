@@ -69,6 +69,7 @@ export default class Event extends BaseEntity {
   public endDate: Date;
 
   @Column({
+    type: 'varchar',
     nullable: false,
   })
   public type: EventType;

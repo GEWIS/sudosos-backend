@@ -24,7 +24,8 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import SellerPayout from '../../../src/entity/transactions/payout/seller-payout';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
 import SellerPayoutController from '../../../src/controller/seller-payout-controller';
@@ -50,6 +51,8 @@ import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory'
 import { SELLER_PAYOUT_PDF_LOCATION } from '../../../src/files/storage';
 import fs from 'fs';
 
+const { expect, request } = chai;
+
 describe('SellerPayoutController', () => {
   let ctx: DefaultContext & {
     users: User[];
@@ -63,7 +66,7 @@ describe('SellerPayoutController', () => {
     userToken: string;
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
 
     const users = await new UserSeeder().seed();
@@ -102,7 +105,7 @@ describe('SellerPayoutController', () => {
     expect(sellerPayouts.length).to.be.at.least(2);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -332,7 +335,7 @@ describe('SellerPayoutController', () => {
     let organ: User;
     let req: CreateSellerPayoutRequest;
 
-    before(() => {
+    beforeAll(() => {
       organ = ctx.users.find((u) => u.type === UserType.ORGAN
         && calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfers).amount.getAmount() > 0);
       // Sanity check

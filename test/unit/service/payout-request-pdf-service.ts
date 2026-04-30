@@ -51,8 +51,7 @@ describe('PayoutRequestPdfService', async () => {
     client: Client,
   };
 
-  before(async function test(): Promise<void> {
-    this.timeout(50000);
+  beforeAll(async function test(): Promise<void> {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -86,7 +85,7 @@ describe('PayoutRequestPdfService', async () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

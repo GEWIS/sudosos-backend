@@ -43,7 +43,7 @@ describe('SellerPayoutService', () => {
     sellerPayouts: SellerPayout[];
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await database.initialize();
     const users = await new UserSeeder().seed();
 
@@ -65,7 +65,7 @@ describe('SellerPayoutService', () => {
     expect(sellerPayouts.length).to.be.at.least(2);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

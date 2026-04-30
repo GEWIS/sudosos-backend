@@ -19,7 +19,6 @@
  */
 
 import { expect } from 'chai';
-import { describe, it, before, after, beforeEach, afterEach } from 'mocha';
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -34,13 +33,13 @@ describe('POSTokenVerifier', (): void => {
   let settingsStore: ServerSettingsStore;
   let connection: DataSource;
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     connection = await database.initialize();
     ServerSettingsStore.deleteInstance();
     settingsStore = await ServerSettingsStore.getInstance().initialize();
   });
 
-  after(async (): Promise<void> => {
+  afterAll(async (): Promise<void> => {
     await finishTestDB(connection);
   });
 

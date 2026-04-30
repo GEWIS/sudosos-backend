@@ -34,7 +34,8 @@ import { json } from 'body-parser';
 import fileUpload from 'express-fileupload';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import {
   BaseEventAnswerResponse,
   BaseEventResponse,
@@ -46,6 +47,8 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { EventSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 describe('EventController', () => {
   let ctx: {
@@ -64,7 +67,7 @@ describe('EventController', () => {
     roles: AssignedRole[],
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -128,7 +131,7 @@ describe('EventController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -295,7 +298,7 @@ describe('EventController', () => {
   describe('POST /events', () => {
     let req: EventRequest;
 
-    before(() => {
+    beforeAll(() => {
       req = {
         name: 'Vergadering',
         startDate: new Date(new Date().getTime() + 1000 * 60 * 60).toISOString(),
@@ -711,7 +714,7 @@ describe('EventController', () => {
     let req: EventRequest;
     let originalEvent: Event;
 
-    before(async () => {
+    beforeAll(async () => {
       req = {
         name: 'Vergadering',
         startDate: new Date((new Date(new Date().setMilliseconds(0))).getTime() + 1000 * 60 * 60).toISOString(),
@@ -726,7 +729,7 @@ describe('EventController', () => {
       });
     });
 
-    after(async () => {
+    afterAll(async () => {
       await EventService.updateEvent(originalEvent.id, {
         name: originalEvent.name,
         startDate: originalEvent.startDate,

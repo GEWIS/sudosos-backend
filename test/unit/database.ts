@@ -25,8 +25,7 @@ import { finishTestDB } from '../helpers/test-helpers';
 
 describe('Database', async (): Promise<void> => {
   describe('#initialize', () => {
-    it('should be able to synchronize schema', async function () {
-      if (process.env.TYPEORM_CONNECTION !== 'better-sqlite3') this.skip();
+    it.skipIf(process.env.TYPEORM_CONNECTION !== 'better-sqlite3')('should be able to synchronize schema', async () => {
       const connection = await Database.initialize();
       await connection.synchronize();
       await connection.destroy();
@@ -35,11 +34,11 @@ describe('Database', async (): Promise<void> => {
   describe('#generate', async () => {
     let dataSource: DataSource;
 
-    before(async function () {
+    beforeAll(async function () {
       dataSource = await Database.initialize();
     });
 
-    after(async () => {
+    afterAll(async () => {
       await finishTestDB(dataSource);
     });
 
@@ -53,6 +52,7 @@ describe('Database', async (): Promise<void> => {
         'bigint': ['bigint'],
         'float': ['real', 'float'],
         'integer': ['integer', 'int'],
+        'int': ['integer', 'int'],
       };
 
       if (typeof type === 'function') {

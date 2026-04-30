@@ -20,7 +20,8 @@
 
 import { DataSource, IsNull, Not } from 'typeorm';
 import { json } from 'body-parser';
-import chai, { expect, request } from 'chai';
+import chai from 'chai';
+
 import PointOfSaleController from '../../../src/controller/point-of-sale-controller';
 import User, { UserType } from '../../../src/entity/user/user';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
@@ -61,6 +62,8 @@ import { ContainerSeeder, PointOfSaleSeeder, UserSeeder } from '../../seed';
 import Role from '../../../src/entity/rbac/role';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+
+const { expect, request } = chai;
 
 chai.use(deepEqualInAnyOrder);
 
@@ -109,7 +112,7 @@ describe('PointOfSaleController', async () => {
     organMemberToken: string,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     const app = express();
     const specification = await Swagger.initialize(app);
@@ -191,7 +194,7 @@ describe('PointOfSaleController', async () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -431,7 +434,7 @@ describe('PointOfSaleController', async () => {
   describe('GET /pointsofsale/:id/associates', () => {
     let pointOfSale: PointOfSaleWithContainersResponse;
 
-    before(async () => {
+    beforeAll(async () => {
       const revision = await PointOfSaleService.createPointOfSale({
         ...ctx.validPOSRequest,
         ownerId: ctx.organUser.id,
@@ -439,7 +442,7 @@ describe('PointOfSaleController', async () => {
       pointOfSale = PointOfSaleService.revisionToResponse(revision) as PointOfSaleWithContainersResponse;
     });
 
-    after(async () => {
+    afterAll(async () => {
       await PointOfSaleRevision.delete({ pointOfSaleId: pointOfSale.id });
       await PointOfSale.delete({ id: pointOfSale.id });
     });

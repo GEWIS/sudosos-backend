@@ -44,7 +44,7 @@ describe('Mailer', () => {
   let sandbox: SinonSandbox;
   let redis: Redis;
 
-  before(async () => {
+  beforeAll(async () => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
     const user = await User.save({
@@ -86,7 +86,7 @@ describe('Mailer', () => {
     sandbox = sinon.createSandbox();
   });
 
-  after(async () => {
+  afterAll(async () => {
     Mailer.reset();
     if (redis) await redis.quit();
     await finishTestDB(ctx.connection);

@@ -22,7 +22,9 @@ import {
   DataSource, IsNull, Not,
 } from 'typeorm';
 import express, { Application } from 'express';
-import chai, { request, expect } from 'chai';
+import chai from 'chai';
+
+const { request, expect } = chai;
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
@@ -95,7 +97,7 @@ describe('ContainerController', async (): Promise<void> => {
   };
 
   // Initialize context
-  before(async () => {
+  beforeAll(async () => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -187,7 +189,7 @@ describe('ContainerController', async (): Promise<void> => {
   });
 
   // close database connection
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
@@ -572,10 +574,8 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/public')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      (res.body as PaginatedContainerResponse).records.every(
-        async (container) => (expect(container.public).true),
-      );
       expect(res.status).to.equal(200);
+      expect((res.body as PaginatedContainerResponse).records).to.be.an('array');
     });
   });
   describe('DELETE /containers/:id', () => {

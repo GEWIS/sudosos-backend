@@ -34,7 +34,8 @@ import RoleManager from '../../../src/rbac/role-manager';
 import { json } from 'body-parser';
 import fileUpload from 'express-fileupload';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import {
   BaseFineHandoutEventResponse,
@@ -53,6 +54,8 @@ import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../..
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import { rootStubs } from '../../root-hooks';
 import Notifier from '../../../src/notifications';
+
+const { expect, request } = chai;
 
 describe('DebtorController', () => {
   let ctx: {
@@ -76,7 +79,7 @@ describe('DebtorController', () => {
   let sandbox: SinonSandbox;
   let sendNotifyFake: SinonSpy;
 
-  before(async () => {
+  beforeAll(async () => {
     // initialize test database
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -162,7 +165,7 @@ describe('DebtorController', () => {
   });
 
   // close database connection
-  after( async () => {
+  afterAll( async () => {
     await finishTestDB(ctx.connection);
   });
 

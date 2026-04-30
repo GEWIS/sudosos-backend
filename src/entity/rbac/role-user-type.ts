@@ -81,6 +81,6 @@ export default class RoleUserType extends BaseEntity {
   @JoinColumn({ name: 'roleId' })
   public role: Role;
 
-  @PrimaryColumn()
+  @PrimaryColumn({ type: 'varchar' })
   public userType: UserType;
 }

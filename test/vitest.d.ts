@@ -18,31 +18,4 @@
  *  @license
  */
 
-/**
- * This is the module page of the stripe-payment-intent-status.
- *
- * @module stripe
- */
-
-import {
-  Column, Entity, ManyToOne,
-} from 'typeorm';
-// eslint-disable-next-line import/no-cycle
-import BaseEntity from '../base-entity';
-import StripePaymentIntent from './stripe-payment-intent';
-
-export enum StripePaymentIntentState {
-  CREATED = 1,
-  PROCESSING = 2,
-  SUCCEEDED = 3,
-  FAILED = 4,
-}
-
-@Entity()
-export default class StripePaymentIntentStatus extends BaseEntity {
-  @ManyToOne(() => StripePaymentIntent, (intent) => intent.paymentIntentStatuses, { nullable: false })
-  public stripePaymentIntent: StripePaymentIntent;
-
-  @Column({ type: 'int' })
-  public state: StripePaymentIntentState;
-}
+/// <reference types="vitest/globals" />

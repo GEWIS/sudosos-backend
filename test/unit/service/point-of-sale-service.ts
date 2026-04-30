@@ -92,8 +92,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     bestuur1: User,
   };
 
-  before(async function before() {
-    this.timeout(5000);
+  beforeAll(async function beforeAll() {
 
     const connection = await Database.initialize();
     await truncateAllTables(connection);
@@ -150,7 +149,7 @@ describe('PointOfSaleService', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

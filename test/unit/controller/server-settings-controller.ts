@@ -24,13 +24,16 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { json } from 'body-parser';
 import ServerSettingsController from '../../../src/controller/server-settings-controller';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { expect, request } from 'chai';
+import chai from 'chai';
+
 import sinon from 'sinon';
 import { UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import WebSocketService from '../../../src/service/websocket-service';
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
+
+const { expect, request } = chai;
 
 describe('ServerSettingsController', () => {
   let ctx: DefaultContext & {
@@ -40,7 +43,7 @@ describe('ServerSettingsController', () => {
     userToken: string,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const c = { ...await defaultContext() };
 
     const users = await new UserSeeder().seed();
@@ -81,7 +84,7 @@ describe('ServerSettingsController', () => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
     ServerSettingsStore.deleteInstance();
   });

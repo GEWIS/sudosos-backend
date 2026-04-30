@@ -34,7 +34,7 @@ describe('UserSettingsStore', () => {
     user2: User,
   };
 
-  before(async () => {
+  beforeAll(async () => {
     ctx = {
       connection: await database.initialize(),
       user1: undefined,
@@ -65,7 +65,7 @@ describe('UserSettingsStore', () => {
     await UserSetting.clear();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 

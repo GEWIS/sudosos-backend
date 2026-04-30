@@ -55,6 +55,6 @@ export default class InvoiceStatus extends BaseEntity {
   @ManyToOne(() => User, { nullable: false, eager: true })
   public changedBy: User;
 
-  @Column()
+  @Column({ type: 'int' })
   public state: InvoiceState;
 }

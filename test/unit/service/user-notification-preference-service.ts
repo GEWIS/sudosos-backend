@@ -49,7 +49,7 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
     userNotificationPreferences: UserNotificationPreference[],
   };
 
-  before(async (): Promise<void> => {
+  beforeAll(async (): Promise<void> => {
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -71,7 +71,7 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
     };
   });
 
-  after(async () => {
+  afterAll(async () => {
     await finishTestDB(ctx.connection);
   });
 
