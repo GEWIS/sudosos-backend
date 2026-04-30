@@ -30,6 +30,7 @@ import VatGroup, { VatDeclarationPeriod } from '../../entity/vat-group';
 import BaseResponse from './base-response';
 
 /**
+ * Base API Response for the `vat group` entity.
  * @typedef {allOf|BaseResponse} BaseVatGroupResponse
  * @property {number} percentage.required - Percentage of VAT
  * @property {boolean} hidden.required - Whether VAT should be hidden
@@ -40,6 +41,7 @@ export interface BaseVatGroupResponse extends BaseResponse {
 }
 
 /**
+ * API Response for the `vat group` entity.
  * @typedef {allOf|BaseVatGroupResponse} VatGroupResponse
  * @property {string} name.required - Name of the VAT group
  * @property {boolean} deleted.required - Whether this group is soft-deleted
@@ -50,6 +52,7 @@ export interface VatGroupResponse extends BaseVatGroupResponse {
 }
 
 /**
+ * Paginated API Response for the `vat group` entity.
  * @typedef {object} PaginatedVatGroupResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<VatGroupResponse>} records.required - Returned VAT groups
@@ -60,6 +63,7 @@ export interface PaginatedVatGroupResponse {
 }
 
 /**
+ * One row of a VAT declaration — the VAT collected for a single group, broken down by period.
  * @typedef {object} VatDeclarationRow
  * @property {number} id.required - ID of the VAT group
  * @property {string} name.required - Name of the VAT group
@@ -75,6 +79,8 @@ export interface VatDeclarationRow {
 }
 
 /**
+ * API Response for a complete VAT declaration — one result table for a given year and period,
+ * containing one {@link VatDeclarationRow} per VAT group.
  * @typedef {object} VatDeclarationResponse
  * @property {number} calendarYear.required - Calendar year of this result table
  * @property {string} period.required - The used VAT declaration period the rows below are based upon

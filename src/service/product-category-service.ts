@@ -57,7 +57,7 @@ export interface ProductCategoryFilterParameters {
 }
 
 /**
- * Wrapper for all Product related logic.
+ * Service class for the `product category` entity.
  */
 export default class ProductCategoryService extends WithManager {
   /**

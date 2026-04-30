@@ -48,6 +48,9 @@ function verifyVatGroup(vr: VatGroupRequest): boolean {
     && vr.percentage >= 0;
 }
 
+/**
+ * Controller for managing all routes related to the `vat group` entity.
+ */
 export default class VatGroupController extends BaseController {
   private logger: Logger = log4js.getLogger('VatGroupController');
 

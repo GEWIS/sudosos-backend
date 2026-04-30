@@ -24,20 +24,32 @@
  * @module catalogue/containers
  */
 
+/**
+ * Base parameters shared between container create and update requests.
+ */
 export interface BaseContainerParams {
   products: number[],
   public: boolean,
   name: string,
 }
 
+/**
+ * Parameters for creating a new `container`.
+ */
 export interface CreateContainerParams extends BaseContainerParams {
   ownerId: number,
 }
 
+/**
+ * Parameters for updating an existing `container`.
+ */
 export interface UpdateContainerParams extends BaseContainerParams {
   id: number
 }
 
+/**
+ * Union of create and update container params.
+ */
 export type ContainerParams = UpdateContainerParams | CreateContainerParams;
 
 // These are definitions only used by the endpoints since we need the OwnerID
@@ -45,6 +57,7 @@ export type ContainerParams = UpdateContainerParams | CreateContainerParams;
 // strict type checker later down the line.
 
 /**
+ * API Request for creating a `container` entity.
  * @typedef {object} CreateContainerRequest
  * @property {string} name.required - Name of the container
  * @property {Array<integer>} products.required -
@@ -57,6 +70,7 @@ export interface CreateContainerRequest extends BaseContainerParams {
 }
 
 /**
+ * API Request for updating a `container` entity.
  * @typedef {object} UpdateContainerRequest
  * @property {string} name.required - Name of the container
  * @property {Array<integer>} products.required -

@@ -19,7 +19,42 @@
  */
 
 /**
- * This is the module page of the point-of-sale.
+ * A `point of sale` (POS) is the surface on which SudoSOS transactions are created. Typical
+ * examples are the bar terminal during a drink, a committee's order form, or an app instance
+ * on an event laptop. A POS is not an organ — it is the *place where* people buy things.
+ *
+ * ### Owner, cashiers, and user
+ * A POS has three user roles tied to it:
+ * - `owner` — the user (typically an organ) that runs the POS. The owner can always open, edit,
+ *   and create transactions on it.
+ * - `user` — the dedicated "POS user" that the POS authenticates *as*. Tokens issued to the
+ *   POS carry this user, so buyers charged through this POS show up under it.
+ * - `cashierRoles` — any user that holds at least one of these roles can create transactions
+ *   on this POS (but cannot open/edit/close it). Useful for shared bar shifts where many people
+ *   need to ring up purchases but only the organ board manages the POS itself.
+ *
+ * ### Containers and products
+ * A POS exposes its products indirectly: it holds a set of
+ * {@link catalogue/containers!ContainerRevision | ContainerRevisions}, each of which groups the
+ * products of one seller. This is how a single purchase through one POS can split across multiple
+ * organs via {@link transactions/sub-transactions!SubTransaction | SubTransactions}. Display order
+ * within a POS is controlled by {@link ProductOrdering}.
+ *
+ * ### Revisions
+ * `PointOfSale` is paired with {@link PointOfSaleRevision}. Each edit (name, container list,
+ * authentication flag) produces a new revision; `currentRevision` points at the live one. Past
+ * transactions keep referencing the revision that was current at the time, so history stays
+ * intact. {@link PointOfSaleRevision} is immutable — attempting to update one throws.
+ *
+ * POSs are soft-deleted via `deletedAt`; the rows remain so that historical
+ * {@link transactions/sub-transactions!SubTransaction | SubTransaction} references stay valid.
+ *
+ * ### Authentication
+ * If `useAuthentication` is `true`, buyers must present a PIN (or equivalent) before a transaction
+ * can be recorded — used on public terminals. If `false`, the POS can ring up purchases without
+ * buyer-side authentication (typical for trusted cashier setups).
+ *
+ * For API interactions, refer to the [Swagger Documentation](https://sudosos.gewis.nl/api/api-docs/#/pointofsales).
  *
  * @module catalogue/point-of-sale
  * @mergeTarget
@@ -35,6 +70,7 @@ import User from '../user/user';
 import Role from '../rbac/role';
 
 /**
+ * TypeORM entity for the `point_of_sales` table.
  * @typedef {BaseEntity} PointOfSale
  * @property {integer} currentRevision - The current revision of the pointOfSale.
  * Can be null if no revision exists.

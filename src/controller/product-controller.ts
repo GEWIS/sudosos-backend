@@ -45,6 +45,9 @@ import { globalAsyncValidatorRegistry } from '../middleware/async-validator-regi
 import { asNumber } from '../helpers/validators';
 import userTokenInOrgan from '../helpers/token-helper';
 
+/**
+ * Controller for managing all routes related to the `product` entity.
+ */
 export default class ProductController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductController');
 

@@ -30,6 +30,7 @@ import { BaseUserResponse } from './user-response';
 import { PaginationResult } from '../../helpers/pagination';
 
 /**
+ * Base API Response for the `container` entity.
  * @typedef {allOf|BaseResponse} BaseContainerResponse
  * @property {string} name.required - The name of the container.
  * @property {boolean} public - Public status of the container.
@@ -42,6 +43,7 @@ export interface BaseContainerResponse extends BaseResponse {
 }
 
 /**
+ * API Response for the `container` entity.
  * @typedef {allOf|BaseContainerResponse} ContainerResponse
  * @property {BaseUserResponse} owner.required - The owner of the container.
  */
@@ -50,6 +52,7 @@ export interface ContainerResponse extends BaseContainerResponse {
 }
 
 /**
+ * Paginated API Response for the `container` entity.
  * @typedef {object} PaginatedContainerResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<ContainerResponse>} records.required - Returned containers
@@ -60,6 +63,7 @@ export interface PaginatedContainerResponse {
 }
 
 /**
+ * Paginated API Response for the `container` entity, with each container's products inlined.
  * @typedef {object} PaginatedContainerWithProductResponse
  * @property {PaginationResult} _pagination.required - Pagination metadata
  * @property {Array<ContainerWithProductsResponse>} records.required - Returned containers
@@ -70,6 +74,7 @@ export interface PaginatedContainerWithProductResponse {
 }
 
 /**
+ * API Response for the `container` entity, including its products.
  * @typedef {allOf|ContainerResponse} ContainerWithProductsResponse
  * @property {Array<ProductResponse>} products.required - The products in the container.
  */

@@ -26,6 +26,9 @@
 
 import { DineroObjectRequest } from './dinero-request';
 
+/**
+ * Base parameters shared between product create and update requests.
+ */
 export interface BaseProductParams {
   priceInclVat: DineroObjectRequest;
   vat: number;
@@ -37,17 +40,27 @@ export interface BaseProductParams {
   priceList?: boolean;
 }
 
+/**
+ * Parameters for creating a new `product`.
+ */
 export default interface CreateProductParams extends BaseProductParams {
   ownerId: number;
 }
 
+/**
+ * Parameters for updating an existing `product`.
+ */
 export interface UpdateProductParams extends BaseProductParams {
   id: number;
 }
 
+/**
+ * Union of create and update product params.
+ */
 export type ProductRequest = UpdateProductParams | CreateProductParams;
 
 /**
+ * API Request for creating a `product` entity.
  * @typedef {object} CreateProductRequest
  * @property {string} name.required - Name of the product
  * @property {DineroObjectRequest} priceInclVat.required - Price of the product
@@ -64,6 +77,7 @@ export interface CreateProductRequest extends BaseProductParams {
 }
 
 /**
+ * API Request for updating a `product` entity.
  * @typedef {object} UpdateProductRequest
  * @property {string} name.required - Name of the product
  * @property {DineroObjectRequest} priceInclVat.required - Price of the product

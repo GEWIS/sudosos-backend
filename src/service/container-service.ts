@@ -87,6 +87,9 @@ export interface ContainerFilterParameters {
   returnPointsOfSale?: boolean;
 }
 
+/**
+ * Service class for the `container` entity.
+ */
 export default class ContainerService {
 
   public static revisionToBaseResponse(revision: ContainerRevision): BaseContainerResponse {

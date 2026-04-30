@@ -34,6 +34,9 @@ import Product from '../product/product';
 import PointOfSale from './point-of-sale';
 
 /**
+ * TypeORM entity for the `product_orderings` table.
+ * Stores the display order of each product within a `PointOfSale`, so the POS UI can render
+ * its product grid in a consistent, owner-controlled sequence.
  * @typedef ProductOrdering
  * @property {PointOfSale.model} pos.required - The pointOfSale the ordering belongs to.
  * @property {Product.model} product.required - The product that should be in the ordering.

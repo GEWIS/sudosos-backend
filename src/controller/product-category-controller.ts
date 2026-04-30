@@ -33,6 +33,9 @@ import ProductCategoryService from '../service/product-category-service';
 import ProductCategoryRequest from './request/product-category-request';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
 
+/**
+ * Controller for managing all routes related to the `product category` entity.
+ */
 export default class ProductCategoryController extends BaseController {
   private logger: Logger = log4js.getLogger('ProductCategoryController');
 

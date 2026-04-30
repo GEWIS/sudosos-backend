@@ -29,7 +29,7 @@ import AuthenticationMethod from './authentication-method';
 
 /**
  * The EAN Authenticator is used to authenticate users using EAN codes.
- * These are only used by "voucher" accounts, see {@link User}.
+ * These are only used by "voucher" accounts, see {@link users!User | User}.
  *
  * @typedef {AuthenticationMethod} EanAuthenticator
  * @property {string} eanCode.required - The EAN code

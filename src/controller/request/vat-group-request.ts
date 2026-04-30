@@ -25,6 +25,8 @@
  */
 
 /**
+ * API Request for updating an existing `vat group` entity. Only mutable fields; the rate itself
+ * cannot change on an existing group.
  * @typedef {object} UpdateVatGroupRequest
  * @property {string} name.required - Name of the VAT group
  * @property {boolean} deleted.required - Whether this group should be hidden
@@ -39,6 +41,8 @@ export interface UpdateVatGroupRequest {
 }
 
 /**
+ * API Request for creating a new `vat group` entity. Adds the immutable `percentage` on top of
+ * the mutable fields in {@link UpdateVatGroupRequest}.
  * @typedef {allOf|UpdateVatGroupRequest} VatGroupRequest
  * @property {number} percentage.required - VAT percentage
  */

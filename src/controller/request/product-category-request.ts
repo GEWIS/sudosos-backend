@@ -27,6 +27,7 @@
 import ProductCategory from '../../entity/product/product-category';
 
 /**
+ * API Request for creating or updating a `product category` entity.
  * @typedef {object} ProductCategoryRequest
  * @property {string} name.required - Name/label of the productCategory
  * @property {integer} parentCategoryId - ID of the parent product category

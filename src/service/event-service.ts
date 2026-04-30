@@ -490,10 +490,8 @@ export default class EventService {
 
   /**
    * Get amount of times a user was selected for the given shift in the given time interval
-   * @param shiftId
-   * @param eventType
-   * @param afterDate
-   * @param beforeDate
+   * @param shiftId - id of the shift to count selections for.
+   * @param params - see {@link ShiftSelectedCountParams} for `eventType`, `afterDate` and `beforeDate`.
    */
   public static async getShiftSelectedCount(
     shiftId: number, { eventType, afterDate, beforeDate }: ShiftSelectedCountParams = {},
