@@ -209,7 +209,7 @@ export default class TransferController extends BaseController {
    * @param {string} category.query - Restrict to a specific transfer category: deposit, payoutRequest, sellerPayout, invoice, creditInvoice, fine, waivedFines, writeOff, inactiveAdministrativeCost, manualCreation, manualDeletion
    * @param {integer} take.query - How many transfers the endpoint should return
    * @param {integer} skip.query - How many transfers should be skipped (for pagination)
-   * @return {Array.<TransferResponse>} 200 - All existing transfers
+   * @return {PaginatedTransferResponse} 200 - All existing transfers
    * @return {string} 400 - Validation error
    * @return {string} 500 - Internal server error
    */
