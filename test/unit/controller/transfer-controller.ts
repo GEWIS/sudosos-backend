@@ -174,7 +174,7 @@ describe('TransferController', async (): Promise<void> => {
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).to.equal(200);
       expect(specification.validateModel(
-        'Array<TransferResponse>',
+        'PaginatedTransferResponse',
         res.body,
         false,
         true,
