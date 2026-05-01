@@ -42,6 +42,7 @@ import PointOfSaleService from '../service/point-of-sale-service';
 import TransactionService, { parseGetTransactionsFilters } from '../service/transaction-service';
 import ContainerService from '../service/container-service';
 import TransferService, { parseGetTransferFilters } from '../service/transfer-service';
+import PaymentRequestService, { parseGetPaymentRequestsFilters } from '../service/payment-request-service';
 import AuthenticationService from '../service/authentication-service';
 import TokenHandler from '../authentication/token-handler';
 import RBACService from '../service/rbac-service';
@@ -339,6 +340,14 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'Transfer', ['*'],
           ),
           handler: this.getUsersTransfers.bind(this),
+        },
+      },
+      '/:id(\\d+)/payment-requests': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'PaymentRequest', ['*'],
+          ),
+          handler: this.getUsersPaymentRequests.bind(this),
         },
       },
       '/:id(\\d+)/financialmutations': {
@@ -1446,6 +1455,58 @@ export default class UserController extends BaseController {
       res.json(toResponse(records, count, { take, skip }));
     } catch (error) {
       this.logger.error('Could not return user transfers', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/{id}/payment-requests
+   * @summary Get the PaymentRequests where the given user is the beneficiary.
+   *   Regular users can hit this for their own id; admins can hit it for any user.
+   * @operationId getUsersPaymentRequests
+   * @tags users - Operations of user controller
+   * @param {integer} id.path.required - The id of the beneficiary user.
+   * @param {integer} createdById.query - Filter by creator user id.
+   * @param {string} status.query - enum:PENDING,PAID,EXPIRED,CANCELLED - Comma-separated list of derived statuses.
+   * @param {string} fromDate.query - Filter requests created on or after this ISO date (inclusive).
+   * @param {string} tillDate.query - Filter requests created strictly before this ISO date (exclusive).
+   * @param {integer} take.query - How many rows the endpoint should return
+   * @param {integer} skip.query - How many rows to skip (for pagination)
+   * @security JWT
+   * @return {PaginatedBasePaymentRequestResponse} 200 - Payment requests for the user
+   * @return {string} 400 - Validation error
+   * @return {string} 404 - Unknown user id
+   */
+  public async getUsersPaymentRequests(req: RequestWithToken, res: Response): Promise<void> {
+    const { id } = req.params;
+    this.logger.trace("Get user's payment requests", id, 'by user', req.token.user);
+
+    let filters;
+    let pagination;
+    try {
+      filters = parseGetPaymentRequestsFilters(req);
+      pagination = parseRequestPagination(req);
+    } catch (e) {
+      res.status(400).send(e instanceof Error ? e.message : String(e));
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ where: { id: parseInt(id, 10), deleted: false } });
+      if (user == null) {
+        res.status(404).json('Unknown user ID.');
+        return;
+      }
+
+      // forId comes from the URL — any forId in the query is ignored by design.
+      const service = new PaymentRequestService();
+      const [rows, count] = await service.getPaymentRequests(
+        { ...filters, forId: user.id }, pagination,
+      );
+      const records = rows.map((r) => PaymentRequestService.asBasePaymentRequestResponse(r));
+      res.json(toResponse(records, count, pagination));
+    } catch (e) {
+      this.logger.error('Could not return user payment requests', e);
       res.status(500).json('Internal server error.');
     }
   }
