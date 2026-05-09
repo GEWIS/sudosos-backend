@@ -466,6 +466,15 @@ describe('PayoutRequestController', () => {
       expect(await PayoutRequest.count()).to.equal(countBefore + 1);
     });
 
+    it('should return 400 if forId does not exist', async () => {
+      const UNKNOWN_USER_ID = 999999;
+      const res = await request(ctx.app)
+        .post('/payoutrequests')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ ...ctx.validPayoutRequestRequest, forId: UNKNOWN_USER_ID });
+      expect(res.status).to.equal(400);
+    });
+
     it('should return 403 if user without PayoutRequest permission tries to create', async () => {
       const res = await request(ctx.app)
         .post('/payoutrequests')
