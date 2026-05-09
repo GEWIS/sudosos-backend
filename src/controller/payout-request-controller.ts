@@ -179,6 +179,7 @@ export default class PayoutRequestController extends BaseController {
    * @security JWT
    * @return {PayoutRequestResponse} 200 - The created payout request.
    * @return {string} 400 - Validation error
+   * @return {string} 400 - User does not exist
    */
   public async createPayoutRequest(req: RequestWithToken, res: Response): Promise<void> {
     const body = req.body as PayoutRequestRequest;
@@ -186,8 +187,8 @@ export default class PayoutRequestController extends BaseController {
 
     try {
       const user = await User.findOne({ where: { id: body.forId } });
-      if (user === undefined) {
-        res.status(404).json('Unknown user ID.');
+      if (!user) {
+        res.status(400).json('Unknown user ID.');
         return;
       }
 
