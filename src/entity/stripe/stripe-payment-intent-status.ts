@@ -38,6 +38,11 @@ export enum StripePaymentIntentState {
   FAILED = 4,
 }
 
+/**
+ * @typedef {BaseEntity} StripePaymentIntentStatus
+ * @property {StripePaymentIntent.model} stripePaymentIntent.required
+ * @property {int} state.required
+ */
 @Entity()
 export default class StripePaymentIntentStatus extends BaseEntity {
   @ManyToOne(() => StripePaymentIntent, (intent) => intent.paymentIntentStatuses, { nullable: false })

@@ -120,6 +120,10 @@ import TermsOfServiceAcceptance from '../entity/user/terms-of-service-acceptance
 import log4js, { Logger } from 'log4js';
 import { applyConfiguredLogLevel } from '../helpers/logging';
 import { TermsOfServiceVersioning1781691836923 } from '../migrations/1781691836923-terms-of-service-versioning';
+import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
+import TmpSubTransaction from '../entity/transactions/terminal/tmp-sub-transaction';
+import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
+import TmpSubTransactionRow from '../entity/transactions/terminal/tmp-sub-transaction-row';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -194,6 +198,10 @@ function getDataSourceOptions(): DataSourceOptions {
       StripeDeposit,
       StripePaymentIntent,
       StripePaymentIntentStatus,
+      TerminalPayment,
+      TmpTransaction,
+      TmpSubTransaction,
+      TmpSubTransactionRow,
       PayoutRequest,
       PayoutRequestPdf,
       PayoutRequestStatus,
