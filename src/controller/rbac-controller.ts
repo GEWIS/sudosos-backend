@@ -37,6 +37,13 @@ import Permission from '../entity/rbac/permission';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import { asUserResponse } from '../service/user-service';
 
+/**
+ * Controller for the `rbac` module. Read/write surface for {@link rbac!Role | Role} records
+ * and their {@link rbac!Permission | Permission} rows; assigning a role to a specific user
+ * happens through {@link rbac!AssignedRole | AssignedRole} writes elsewhere or falls out of
+ * the `UserType` -> `RoleUserType` mapping. See the {@link rbac | module page} for the
+ * permission tuple, dev-mode bypass, and the list of production roles.
+ */
 export default class RbacController extends BaseController {
   private logger: Logger = log4js.getLogger('RbacController');
 
