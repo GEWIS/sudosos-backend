@@ -31,8 +31,7 @@ import Swagger from '../../../src/start/swagger';
 import AuthenticationService from '../../../src/service/authentication-service';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
-import { UserResponse } from '../../../src/controller/response/user-response';
-import { isNumber } from '../../../src/helpers/validators';
+import userIsAsExpected from '../../helpers/authentication-helpers';
 import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
@@ -44,15 +43,6 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
 import bcrypt from 'bcrypt';
-
-export default function userIsAsExpected(user: User | UserResponse, ADResponse: any) {
-  expect(user.firstName).to.equal(ADResponse.givenName);
-  expect(user.lastName).to.equal(ADResponse.sn);
-  if (isNumber(user.type)) expect(user.type).to.equal(1);
-  expect(user.active).to.equal(true);
-  expect(user.deleted).to.equal(false);
-  expect(user.canGoIntoDebt).to.equal(true);
-}
 
 describe('AuthenticationService', (): void => {
   let ctx: {

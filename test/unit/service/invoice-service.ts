@@ -45,6 +45,7 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import InvoiceUser from '../../../src/entity/user/invoice-user';
 import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { createInvoiceWithTransfers } from '../../helpers/invoice-helpers';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
@@ -64,40 +65,6 @@ export type T = InvoiceResponse | BaseInvoiceResponse | Invoice;
 
 function returnsAll(response: T[], superset: Invoice[], mapping: any) {
   expect(response.map(mapping)).to.deep.equalInAnyOrder(superset.map(mapping));
-}
-
-export async function
-createInvoiceWithTransfers(debtorId: number, creditorId: number,
-  transactionCount: number) {
-  const { transactions, total } = await createTransactions(debtorId, creditorId, transactionCount);
-
-  const createInvoiceRequest: CreateInvoiceParams = {
-    city: 'city',
-    country: 'country',
-    postalCode: 'postalCode',
-    street: 'street',
-    reference: 'BAC-41',
-    byId: creditorId,
-    addressee: 'Addressee',
-    description: 'Description',
-    forId: debtorId,
-    date: new Date(),
-    transactionIDs: transactions.map((t) => t.tId),
-    amount: {
-      amount: total,
-      currency: 'EUR',
-      precision: 2,
-    },
-  };
-
-  const creditorBalance = await new BalanceService().getBalance(creditorId);
-
-  const invoice = await AppDataSource.manager.transaction(async (manager) => {
-    return new InvoiceService(manager).createInvoice(createInvoiceRequest);
-  });
-  expect((await new BalanceService().getBalance(debtorId)).amount.amount).is.equal(0);
-  expect((await new BalanceService().getBalance(creditorId)).amount.amount).is.equal(creditorBalance.amount.amount);
-  return invoice;
 }
 
 describe('InvoiceService', () => {

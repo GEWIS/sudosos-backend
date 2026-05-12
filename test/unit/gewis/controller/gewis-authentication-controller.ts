@@ -38,7 +38,7 @@ import GewisAuthenticationController from '../../../../src/gewis/controller/gewi
 import GewiswebToken from '../../../../src/gewis/gewisweb-token';
 import MemberUser from '../../../../src/entity/user/member-user';
 import AuthenticationLDAPRequest from '../../../../src/controller/request/authentication-ldap-request';
-import userIsAsExpected from '../../service/authentication-service';
+import userIsAsExpected from '../../../helpers/authentication-helpers';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
 import { truncateAllTables } from '../../../setup';

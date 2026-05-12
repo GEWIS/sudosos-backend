@@ -30,7 +30,7 @@ import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
 import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authenticator';
 import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
-import userIsAsExpected from './authentication-service';
+import userIsAsExpected from '../../helpers/authentication-helpers';
 import { finishTestDB, restoreLDAPEnv, setDefaultLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
 import { truncateAllTables } from '../../setup';
 import { UserSeeder } from '../../seed';

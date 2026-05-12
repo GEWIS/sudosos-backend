@@ -37,7 +37,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import AuthenticationResponse from '../../../src/controller/response/authentication-response';
 import { AuthenticationResult } from '../../../src/service/authentication-service';
 import AuthenticationLDAPRequest from '../../../src/controller/request/authentication-ldap-request';
-import userIsAsExpected from '../service/authentication-service';
+import userIsAsExpected from '../../helpers/authentication-helpers';
 import AuthenticationLocalRequest from '../../../src/controller/request/authentication-local-request';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import ResetLocalRequest from '../../../src/controller/request/reset-local-request';
