@@ -34,12 +34,12 @@ import User from '../entity/user/user';
 import PointOfSale from '../entity/point-of-sale/point-of-sale';
 import { UserType } from '../entity/user/user';
 import AuthenticationController from './authentication-controller';
-import MemberAuthenticationSecurePinRequest from './request/member-authentication-secure-pin-request';
+import MemberAuthenticationPinRequest from './request/member-authentication-pin-request';
 import MemberUser from '../entity/user/member-user';
 import UserService from '../service/user-service';
 
 /**
- * Handles authenticated-only member authentication endpoints for secure PIN authentication.
+ * Handles authenticated-only member authentication endpoints for PIN authentication.
  * All endpoints require valid JWT tokens and build upon existing authentication.
  *
  * @promote
@@ -68,10 +68,10 @@ export default class MemberAuthenticationSecureController extends BaseController
    */
   public getPolicy(): Policy {
     return {
-      '/member/pin-secure': {
+      '/member/pin': {
         POST: {
           policy: async () => Promise.resolve(true),
-          handler: this.secureMemberPINLogin.bind(this),
+          handler: this.memberPINLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
@@ -79,25 +79,25 @@ export default class MemberAuthenticationSecureController extends BaseController
   }
 
   /**
-   * POST /authentication/member/pin-secure
-   * @summary Secure member PIN authentication that requires POS user authentication
-   * @operationId secureMemberPINAuthentication
+   * POST /authentication/member/pin
+   * @summary Member PIN authentication that requires POS user authentication
+   * @operationId memberPINAuthentication
    * @tags authenticate - Operations of authentication controller
    * @security JWT
-   * @param {MemberAuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
+   * @param {MemberAuthenticationPinRequest} request.body.required - The PIN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
    * @return {string} 500 - Internal server error
    */
-  private async secureMemberPINLogin(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as MemberAuthenticationSecurePinRequest;
-    this.logger.trace('Secure member PIN authentication for memberId', body.memberId, 'by POS user', req.token.user.id);
+  private async memberPINLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as MemberAuthenticationPinRequest;
+    this.logger.trace('Member PIN authentication for memberId', body.memberId, 'by POS user', req.token.user.id);
 
     try {
       // Verify the caller is a POS user
       const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
-        res.status(403).json('Only POS users can use secure member PIN authentication.');
+        res.status(403).json('Only POS users can use member PIN authentication.');
         return;
       }
 
@@ -125,7 +125,7 @@ export default class MemberAuthenticationSecureController extends BaseController
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
         this.tokenHandler, body.pin, memberUser.user.id, body.posId))(req, res);
     } catch (error) {
-      this.logger.error('Could not authenticate using secure member PIN:', error);
+      this.logger.error('Could not authenticate using member PIN:', error);
       res.status(500).json('Internal server error.');
     }
   }

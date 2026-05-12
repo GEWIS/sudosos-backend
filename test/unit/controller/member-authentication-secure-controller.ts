@@ -34,7 +34,7 @@ import AuthenticationResponse from '../../../src/controller/response/authenticat
 import MemberAuthenticationSecureController from '../../../src/controller/member-authentication-secure-controller';
 import MemberUser from '../../../src/entity/user/member-user';
 import AuthenticationService from '../../../src/service/authentication-service';
-import MemberAuthenticationSecurePinRequest from '../../../src/controller/request/member-authentication-secure-pin-request';
+import MemberAuthenticationPinRequest from '../../../src/controller/request/member-authentication-pin-request';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import { truncateAllTables } from '../../setup';
@@ -139,8 +139,8 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 
-  describe('POST /authentication/member/pin-secure', () => {
-    const validSecurePinRequest: MemberAuthenticationSecurePinRequest = {
+  describe('POST /authentication/member/pin', () => {
+    const validPinRequest: MemberAuthenticationPinRequest = {
       memberId: 12345,
       pin: '1234',
       posId: 0, // Will be set to actual POS ID in tests
@@ -148,12 +148,12 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
 
     it('should return HTTP 200 and token when valid POS user authenticates with correct PIN', async () => {
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -176,27 +176,27 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
 
     it('should return HTTP 403 when caller is not a POS user', async () => {
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.memberUserToken}`)
         .send(requestBody);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.equal('Only POS users can use secure member PIN authentication.');
+      expect(res.body).to.equal('Only POS users can use member PIN authentication.');
     });
 
     it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         posId: ctx.pointOfSale.id + 999, // Wrong POS ID
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -206,13 +206,13 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
 
     it('should return HTTP 403 when member user does not exist', async () => {
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         memberId: 99999, // Non-existent member ID
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -222,13 +222,13 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
 
     it('should return HTTP 403 when PIN is incorrect', async () => {
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         pin: '9999', // Wrong PIN
         posId: ctx.pointOfSale.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
@@ -257,7 +257,7 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/member/pin-secure')
+        .post('/authentication/member/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send(requestBody);
 
