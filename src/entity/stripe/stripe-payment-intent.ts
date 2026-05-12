@@ -31,7 +31,17 @@ import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import StripeDeposit from './stripe-deposit';
 import PaymentRequest from '../payment-request/payment-request';
+import TerminalPayment from '../transactions/terminal/terminal-payment';
 
+/**
+ * @typedef {BaseEntity} StripePaymentIntent
+ * @property {Array.<StripePaymentIntentStatus>} paymentIntentStatuses.required - The
+ * status updates belonging to this intent. The newest status is the current
+ * status.
+ * @property {string} stripeId.required - The ID of the transaction on Stripe's side
+ * @property {Dinero.model} amount.required - The amount to be paid
+ * @property {StripeDeposit.model} deposit - The deposit belonging to this intent
+ */
 @Entity()
 export default class StripePaymentIntent extends BaseEntity {
   @OneToMany(() => StripePaymentIntentStatus,
@@ -66,4 +76,7 @@ export default class StripePaymentIntent extends BaseEntity {
   @ManyToOne(() => PaymentRequest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'paymentRequestId' })
   public paymentRequest?: PaymentRequest | null;
+
+  @OneToOne(() => TerminalPayment, (t) => t.stripePaymentIntent, { nullable: true })
+  public terminalPayment?: TerminalPayment | null;
 }

@@ -116,6 +116,10 @@ import {
 } from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
 import { AddExpiryToUser1778681972323 } from '../migrations/1778681972323-add-expiry-to-user';
+import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
+import TmpSubTransaction from '../entity/transactions/terminal/tmp-sub-transaction';
+import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
+import TmpSubTransactionRow from '../entity/transactions/terminal/tmp-sub-transaction-row';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -176,6 +180,10 @@ function getDataSourceOptions(): DataSourceOptions {
       StripeDeposit,
       StripePaymentIntent,
       StripePaymentIntentStatus,
+      TerminalPayment,
+      TmpTransaction,
+      TmpSubTransaction,
+      TmpSubTransactionRow,
       PayoutRequest,
       PayoutRequestPdf,
       PayoutRequestStatus,
