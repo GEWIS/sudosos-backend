@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the module page of balance-controller.
- *
  * @module balance
  */
 
@@ -36,6 +34,11 @@ import { asArrayOfUserTypes, asBoolean, asDate, asDinero } from '../helpers/vali
 import { asOrderingDirection } from '../helpers/ordering';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
 
+/**
+ * Controller for the `balance` module. All endpoints are reads -- you cannot mutate a balance
+ * directly; record a transaction or a transfer and the next read picks it up. See the
+ * {@link balance | module page} for how balances are computed.
+ */
 export default class BalanceController extends BaseController {
   private logger: Logger = log4js.getLogger('BalanceController');
 
