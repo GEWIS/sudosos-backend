@@ -36,9 +36,9 @@ import { ISettings } from '../entity/server-setting';
 import { QRAuthenticatorStatus } from '../entity/authenticator/qr-authenticator';
 import WebSocketService from '../service/websocket-service';
 import QRService from '../service/qr-service';
-import AuthenticationSecurePinRequest from './request/authentication-secure-pin-request';
-import AuthenticationSecureNfcRequest from './request/authentication-secure-nfc-request';
-import AuthenticationSecureEanRequest from './request/authentication-secure-ean-request';
+import AuthenticationPinRequest from './request/authentication-pin-request';
+import AuthenticationNfcRequest from './request/authentication-nfc-request';
+import AuthenticationEanRequest from './request/authentication-ean-request';
 import { UserType } from '../entity/user/user';
 import AuthenticationController from './authentication-controller';
 import AuthenticationService from '../service/authentication-service';
@@ -103,24 +103,24 @@ export default class AuthenticationSecureController extends BaseController {
           restrictions: { lesser: false },
         },
       },
-      '/pin-secure': {
+      '/pin': {
         POST: {
           policy: async () => Promise.resolve(true),
-          handler: this.securePINLogin.bind(this),
+          handler: this.pinLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
-      '/nfc-secure': {
+      '/nfc': {
         POST: {
           policy: async () => Promise.resolve(true),
-          handler: this.secureNfcLogin.bind(this),
+          handler: this.nfcLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
-      '/ean-secure': {
+      '/ean': {
         POST: {
           policy: async () => Promise.resolve(true),
-          handler: this.secureEanLogin.bind(this),
+          handler: this.eanLogin.bind(this),
           restrictions: { lesser: false },
         },
       },
@@ -270,25 +270,25 @@ export default class AuthenticationSecureController extends BaseController {
   }
 
   /**
-   * POST /authentication/pin-secure
-   * @summary Secure PIN authentication that requires POS user authentication
-   * @operationId securePINAuthentication
+   * POST /authentication/pin
+   * @summary PIN authentication that requires POS user authentication
+   * @operationId pinAuthentication
    * @tags authenticate - Operations of authentication controller
    * @security JWT
-   * @param {AuthenticationSecurePinRequest} request.body.required - The PIN login request with posId
+   * @param {AuthenticationPinRequest} request.body.required - The PIN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
    * @return {string} 500 - Internal server error
    */
-  private async securePINLogin(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as AuthenticationSecurePinRequest;
-    this.logger.trace('Secure PIN authentication for user', body.userId, 'by POS user', req.token.user.id);
+  private async pinLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationPinRequest;
+    this.logger.trace('PIN authentication for user', body.userId, 'by POS user', req.token.user.id);
 
     try {
       // Verify the caller is a POS user
       const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
-        res.status(403).json('Only POS users can use secure PIN authentication.');
+        res.status(403).json('Only POS users can use PIN authentication.');
         return;
       }
 
@@ -303,31 +303,31 @@ export default class AuthenticationSecureController extends BaseController {
       await (AuthenticationController.PINLoginConstructor(this.roleManager,
         this.tokenHandler, body.pin, body.userId, body.posId))(req, res);
     } catch (error) {
-      this.logger.error('Could not authenticate using secure PIN:', error);
+      this.logger.error('Could not authenticate using PIN:', error);
       res.status(500).json('Internal server error.');
     }
   }
 
   /**
-   * POST /authentication/nfc-secure
-   * @summary Secure NFC authentication that requires POS user authentication
-   * @operationId secureNfcAuthentication
+   * POST /authentication/nfc
+   * @summary NFC authentication that requires POS user authentication
+   * @operationId nfcAuthentication
    * @tags authenticate - Operations of authentication controller
    * @security JWT
-   * @param {AuthenticationSecureNfcRequest} request.body.required - The NFC login request with posId
+   * @param {AuthenticationNfcRequest} request.body.required - The NFC login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
    * @return {string} 500 - Internal server error
    */
-  private async secureNfcLogin(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as AuthenticationSecureNfcRequest;
-    this.logger.trace('Secure NFC authentication for nfcCode', body.nfcCode, 'by POS user', req.token.user.id);
+  private async nfcLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationNfcRequest;
+    this.logger.trace('NFC authentication for nfcCode', body.nfcCode, 'by POS user', req.token.user.id);
 
     try {
       // Verify the caller is a POS user
       const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
-        res.status(403).json('Only POS users can use secure NFC authentication.');
+        res.status(403).json('Only POS users can use NFC authentication.');
         return;
       }
 
@@ -355,7 +355,7 @@ export default class AuthenticationSecureController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      this.logger.trace('Successful secure NFC authentication for user', authenticator.user);
+      this.logger.trace('Successful NFC authentication for user', authenticator.user);
 
       const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
@@ -364,31 +364,31 @@ export default class AuthenticationSecureController extends BaseController {
       });
       res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
-      this.logger.error('Could not authenticate using secure NFC:', error);
+      this.logger.error('Could not authenticate using NFC:', error);
       res.status(500).json('Internal server error.');
     }
   }
 
   /**
-   * POST /authentication/ean-secure
-   * @summary Secure EAN authentication that requires POS user authentication
-   * @operationId secureEanAuthentication
+   * POST /authentication/ean
+   * @summary EAN authentication that requires POS user authentication
+   * @operationId eanAuthentication
    * @tags authenticate - Operations of authentication controller
    * @security JWT
-   * @param {AuthenticationSecureEanRequest} request.body.required - The EAN login request with posId
+   * @param {AuthenticationEanRequest} request.body.required - The EAN login request with posId
    * @return {AuthenticationResponse} 200 - The created json web token
    * @return {string} 403 - Authentication error (invalid POS user or credentials)
    * @return {string} 500 - Internal server error
    */
-  private async secureEanLogin(req: RequestWithToken, res: Response): Promise<void> {
-    const body = req.body as AuthenticationSecureEanRequest;
-    this.logger.trace('Secure EAN authentication for eanCode', body.eanCode, 'by POS user', req.token.user.id);
+  private async eanLogin(req: RequestWithToken, res: Response): Promise<void> {
+    const body = req.body as AuthenticationEanRequest;
+    this.logger.trace('EAN authentication for eanCode', body.eanCode, 'by POS user', req.token.user.id);
 
     try {
       // Verify the caller is a POS user
       const tokenUser = await User.findOne(UserService.getOptions({ id: req.token.user.id, allowPos: true }));
       if (!tokenUser || tokenUser.type !== UserType.POINT_OF_SALE) {
-        res.status(403).json('Only POS users can use secure EAN authentication.');
+        res.status(403).json('Only POS users can use EAN authentication.');
         return;
       }
 
@@ -416,7 +416,7 @@ export default class AuthenticationSecureController extends BaseController {
         tokenHandler: this.tokenHandler,
       };
 
-      this.logger.trace('Successful secure EAN authentication for user', authenticator.user);
+      this.logger.trace('Successful EAN authentication for user', authenticator.user);
 
       const result = await new AuthenticationService().getSaltedToken({
         user: authenticator.user,
@@ -425,7 +425,7 @@ export default class AuthenticationSecureController extends BaseController {
       });
       res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
     } catch (error) {
-      this.logger.error('Could not authenticate using secure EAN:', error);
+      this.logger.error('Could not authenticate using EAN:', error);
       res.status(500).json('Internal server error.');
     }
   }
