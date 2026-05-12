@@ -82,6 +82,7 @@
   },
   "devDependencies": {
     "@apidevtools/swagger-cli": "4.0.4",
+    "@braintree/sanitize-url": "^7.1.2",
     "@commitlint/cli": "20.5.3",
     "@commitlint/config-conventional": "20.5.3",
     "@swc/core": "1.15.33",
@@ -113,6 +114,10 @@
     "chai-http": "4.4.0",
     "chai-sorted": "0.2.0",
     "chai-swag": "0.1.9",
+    "cytoscape": "^3.33.3",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "dayjs": "^1.11.20",
+    "debug": "^4.4.3",
     "deep-equal-in-any-order": "2.2.0",
     "eslint": "8.57.0",
     "eslint-config-airbnb-typescript": "18.0.0",
