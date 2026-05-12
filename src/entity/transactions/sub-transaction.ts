@@ -19,9 +19,40 @@
  */
 
 /**
- * This is the module page of the sub-transaction.
+ * A `SubTransaction` is one seller's slice of a {@link transactions!Transaction | Transaction}.
+ * Where the parent transaction records "this user spent money at this POS", the sub-transaction
+ * records "and this much of it goes to this organ". A transaction with one container in the
+ * basket has one sub-transaction; a basket that mixes containers from three organs has three.
+ *
+ * ### Roles on the sub-transaction
+ * - `to` is the user being credited -- the
+ *   {@link catalogue/containers!Container | Container} owner (typically a GEWIS organ).
+ * - `container` is the
+ *   {@link catalogue/containers!ContainerRevision | ContainerRevision} the products were
+ *   bought from. It is a revision so historical sub-transactions keep resolving even after
+ *   the container is edited.
+ * - `transaction` is the parent {@link transactions!Transaction | Transaction}; cascading
+ *   delete on the parent removes the sub-transaction with it.
+ *
+ * ### Rows
+ * Product lines live on {@link SubTransactionRow}: one row per product, with an `amount`
+ * (quantity) and a {@link catalogue/products!ProductRevision | ProductRevision} reference.
+ * The revision pins price (incl. VAT), VAT group, and category at the moment of sale.
+ *
+ * ### Invoicing
+ * A row can carry an `invoiceId` linking it to an {@link invoicing!Invoice | Invoice}. That
+ * marks the row as "billed to the invoiced customer" rather than charged directly to the
+ * buyer's balance. {@link balance | Balance} reads treat invoiced rows the same as any other
+ * row when computing the seller side; the invoice flow handles the buyer side separately.
+ *
+ * ### Why it exists
+ * Splitting per-seller lets a single POS purchase pay multiple organs in one ring-up. Without
+ * sub-transactions you would need either one transaction per organ (and the cashier ringing
+ * up the same basket three times) or a denormalised seller field on each row (with reports
+ * gathering and grouping on the fly).
  *
  * @module transactions/sub-transactions
+ * @mergeTarget
  */
 
 /* eslint-disable import/no-cycle */
@@ -35,6 +66,8 @@ import ContainerRevision from '../container/container-revision';
 import SubTransactionRow from './sub-transaction-row';
 
 /**
+ * TypeORM entity for the `sub_transaction` table. One per (transaction, container) pair: the
+ * portion of a transaction that credits a single container owner.
  * @typedef {BaseEntityWithoutId} SubTransaction
  * @property {User.model} to.required - The account that the transaction is added to.
  * @property {Container.model} container.required - The container from which all products in the
