@@ -123,7 +123,7 @@ export default class UserSeeder extends WithManager {
     return users;
   }
 
-  private BCRYPT_ROUNDS = 12;
+  private BCRYPT_ROUNDS = 4;
 
   private async hashPassword(password: string, callback: (encrypted: string) => any) {
     return bcrypt.hash(password, this.BCRYPT_ROUNDS).then(callback);

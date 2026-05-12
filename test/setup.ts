@@ -72,6 +72,12 @@ if (process.env.SMTP_USERNAME && !process.env.SMTP_PASSWORD) {
 if (process.env.SMTP_PASSWORD && !process.env.SMTP_USERNAME) {
   process.env.SMTP_USERNAME = 'test-user';
 }
+if (!process.env.BCRYPT_ROUNDS) {
+  process.env.BCRYPT_ROUNDS = '4';
+}
+if (!process.env.BCRYPT_ROUNDS_PIN) {
+  process.env.BCRYPT_ROUNDS_PIN = '1';
+}
 if (!process.env.JWT_KEY_PATH) {
   const { privateKey } = generateKeyPairSync('rsa', {
     modulusLength: 2048,
