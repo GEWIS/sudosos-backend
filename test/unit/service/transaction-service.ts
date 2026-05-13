@@ -46,7 +46,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
-import { createInvoiceWithTransfers } from './invoice-service';
+import { createInvoiceWithTransfers } from '../../helpers/invoice-helpers';
 import { truncateAllTables } from '../../setup';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { calculateBalance } from '../../helpers/balance';

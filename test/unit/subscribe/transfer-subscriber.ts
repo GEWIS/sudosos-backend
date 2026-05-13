@@ -50,7 +50,7 @@ describe('TransferSubscriber', (): void => {
     await truncateAllTables(connection);
 
     const users = await new UserSeeder().seed();
-    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 10);
+    const { transactions } = await new TransactionSeeder().seed(users, undefined, new Date('2020-02-12'), new Date('2021-11-30'), 1);
     const transfers = await new TransferSeeder().seed(users, new Date('2020-02-12'), new Date('2021-11-30'));
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));

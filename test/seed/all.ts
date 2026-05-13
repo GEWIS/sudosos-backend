@@ -98,8 +98,10 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     users.filter((u) => u.type !== UserType.ORGAN),
     [users.filter((u) => u.type === UserType.ORGAN)[0]],
   );
-  const pinUsers = await new UserSeeder().seedHashAuthenticator(users, PinAuthenticator);
-  const localUsers = await new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator);
+  const [pinUsers, localUsers] = await Promise.all([
+    new UserSeeder().seedHashAuthenticator(users, PinAuthenticator),
+    new UserSeeder().seedHashAuthenticator(users, LocalAuthenticator),
+  ]);
   const gewisUsers = await seedMemberUsers(users);
   const categories = await new ProductCategorySeeder().seed();
   const vatGroups = await new VatGroupSeeder().seed();

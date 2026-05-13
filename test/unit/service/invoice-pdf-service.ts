@@ -38,7 +38,7 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
 import { InvoiceSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import InvoiceService from '../../../src/service/invoice-service';
-import { createInvoiceWithTransfers } from './invoice-service';
+import { createInvoiceWithTransfers } from '../../helpers/invoice-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
 import { subTransactionRowToProduct } from '../../../src/helpers/pdf';
