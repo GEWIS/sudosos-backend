@@ -14,7 +14,5 @@ Base: [{{base_ref}}@{{base_short_commit_sha}}]({{base_commit_link}})
 <summary>Details (changed files)</summary>
 {{changed_files_coverage_table}}
 </details>
-<details>
-<summary>Details (all files)</summary>
-{{files_coverage_table}}
-</details>
+
+The full per-file breakdown is omitted to stay under GitHub's 65,536-character comment limit. Download the `coverage` artifact from this workflow run for the complete report, or view it on [Coveralls](https://coveralls.io/github/GEWIS/sudosos-backend).
