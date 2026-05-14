@@ -126,6 +126,7 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     memberId: user.memberUser?.memberId,
     gewisId: user.memberUser?.memberId, // Deprecated: kept for backward compatibility
     pos: user.pointOfSale ? PointOfSaleService.toBaseInfoResponse(user.pointOfSale) : undefined,
+    expiryDate: user.expiryDate ? user.expiryDate.toISOString() : null,
   };
 }
 
@@ -342,10 +343,18 @@ export default class UserService {
   public static async createUser(createUserRequest: CreateUserRequest): Promise<User | undefined> {
     // Check if user needs to accept TOS.
     const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
+
+    let expiryDate: Date | undefined;
+    if (LocalUserTypes.includes(createUserRequest.type)) {
+      expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 18);
+    }
+
     const user = await User.save({
       ...createUserRequest,
       lastName: createUserRequest.lastName || '',
       acceptedToS,
+      expiryDate,
     } as User);
 
     // Local users will receive a reset link.

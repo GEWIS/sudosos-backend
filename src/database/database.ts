@@ -115,6 +115,7 @@ import {
   StripePaymentIntentPaymentRequest1777010230751,
 } from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
+import { AddExpiryToUser1778681972323 } from '../migrations/1778681972323-add-expiry-to-user';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -152,6 +153,7 @@ function getDataSourceOptions(): DataSourceOptions {
       AddLastSeenToUser1769000095806,
       PaymentRequest1777010230727,
       StripePaymentIntentPaymentRequest1777010230751,
+      AddExpiryToUser1778681972323,
     ],
     extra: {
       authPlugins: {
