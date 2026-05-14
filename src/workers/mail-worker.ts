@@ -24,40 +24,71 @@ import { ConnectionOptions, Job, Worker } from 'bullmq';
 import Redis from 'ioredis';
 
 const logger = log4js.getLogger('MailWorker');
-const transporter = createSMTPTransporter();
+
+let defaultTransporter: Mail | undefined;
+const getDefaultTransporter = (): Mail => {
+  if (!defaultTransporter) {
+    defaultTransporter = createSMTPTransporter();
+  }
+  return defaultTransporter;
+};
+
+/**
+ * BullMQ job processor for the mail queue. Hands the job payload off to the
+ * SMTP transporter and re-throws so BullMQ can mark the job as failed.
+ *
+ * Exposed as a standalone function so it can be unit tested with a stubbed
+ * transporter; production code calls it via {@link startMailWorker}.
+ */
+export const processMailJob = async (
+  job: Job<Mail.Options>,
+  mailTransporter: Pick<Mail, 'sendMail'> = getDefaultTransporter(),
+): Promise<unknown> => {
+  logger.info(`Processing job ${job.id} for ${job.data.to}`);
+
+  try {
+    const info = await mailTransporter.sendMail(job.data);
+
+    return info;
+  } catch (error) {
+    logger.error(
+      { jobId: job.id, to: job.data.to, error: error.message },
+      'Failed to send email via transporter',
+    );
+
+    throw error;
+  }
+};
+
+/**
+ * Event handler invoked when a mail job completes.
+ */
+export const handleJobCompleted = (job: Job<Mail.Options>): void => {
+  logger.info(`Job ${job.id} completed successfully`);
+};
+
+/**
+ * Event handler invoked when a mail job fails after all retries.
+ */
+export const handleJobFailed = (
+  job: Job<Mail.Options> | undefined,
+  err: Error,
+): void => {
+  logger.error(`Job ${job?.id} failed: ${err.message}`);
+};
 
 export const startMailWorker = (redisConnection: Redis) => {
   const worker = new Worker<Mail.Options>(
     'mail-queue',
-    async (job: Job<Mail.Options>) => {
-      logger.info(`Processing job ${job.id} for ${job.data.to}`);
-
-      try {
-        const info = await transporter.sendMail(job.data);
-
-        return info;
-      } catch (error) {
-        logger.error(
-          { jobId: job.id, to: job.data.to, error: error.message },
-          'Failed to send email via transporter',
-        );
-
-        throw error;
-      }
-    },
+    (job) => processMailJob(job),
     {
       connection: redisConnection as unknown as ConnectionOptions,
-      concurrency: 5, 
+      concurrency: 5,
     },
   );
 
-  worker.on('completed', (job) => {
-    logger.info(`Job ${job.id} completed successfully`);
-  });
-
-  worker.on('failed', (job, err) => {
-    logger.error(`Job ${job?.id} failed: ${err.message}`);
-  });
+  worker.on('completed', handleJobCompleted);
+  worker.on('failed', handleJobFailed);
 
   logger.info('Mail Worker is running and listening for jobs...');
 
