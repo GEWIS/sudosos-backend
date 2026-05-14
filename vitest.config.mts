@@ -56,7 +56,24 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'cobertura', 'html', 'json-summary', 'lcov'],
       reportsDirectory: './reports/coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.d.ts', 'src/declaration/**', 'src/migrations/**'],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/declaration/**',
+        'src/migrations/**',
+        // Pure interface/type files; no runtime code, but v8 lists them as 0%.
+        'src/controller/request/*.ts',
+        'src/controller/response/**',
+        'src/gewis/controller/request/**',
+        'src/controller/policy.ts',
+        'src/gewis/gewisweb-token.ts',
+        'src/rbac/role-definitions.ts',
+        'src/rbac/permission-rule.ts',
+        // CLI entry points; exercised by the deployed app, not the unit-test suite.
+        'src/cron.ts',
+        'src/maintenance.ts',
+        'src/database/schema.ts',
+        'src/database/migrate.ts',
+      ],
     },
   },
 });
