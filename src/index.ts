@@ -85,10 +85,15 @@ import InactiveAdministrativeCostController from './controller/inactive-administ
 import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
 import { startMailWorker } from './workers/mail-worker';
+import { startTaskWorker } from './workers/task-worker';
+import { startTaskPoller, TaskPoller } from './workers/task-poller';
 import { Worker } from 'bullmq';
 import Mailer from './mailer';
 import Redis from 'ioredis';
 import TermsOfServiceController from './controller/terms-of-service-controller';
+import TaskController from './controller/task-controller';
+import TaskService from './service/task-service';
+import { registerAllTasks } from './tasks';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
 import { initRedisConnection } from './helpers/redis-connection';
@@ -114,6 +119,8 @@ export class Application {
 
   redisConnection: Redis | undefined;
 
+  taskPoller: TaskPoller | undefined;
+
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
     await util.promisify(this.server.close).bind(this.server)();
@@ -121,7 +128,11 @@ export class Application {
       await this.webSocketService.close();
     }
     this.tasks.forEach((task) => task.stop());
+    if (this.taskPoller) {
+      this.taskPoller.stop();
+    }
     this.workers.forEach((worker) => worker.close());
+    TaskService.reset();
     if (this.redisConnection) {
       await this.redisConnection.quit();
     }
@@ -282,6 +293,9 @@ export default async function createApp(): Promise<Application> {
 
   new Mailer(application.redisConnection);
 
+  registerAllTasks();
+  TaskService.init(application.redisConnection);
+
   application.tasks = [];
 
   // REMOVE LATER
@@ -317,6 +331,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   application.app.use('/v1/sync', new SyncController(options).getRouter());
   application.app.use('/v1/terms-of-service', new TermsOfServiceController(options).getRouter());
+  application.app.use('/v1/tasks', new TaskController(options).getRouter());
   if (config.app.isDevelopment) {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
@@ -324,9 +339,15 @@ export default async function createApp(): Promise<Application> {
 
   webSocketService.initiateWebSocket();
 
-  application.workers = application.redisConnection
-    ? [startMailWorker(application.redisConnection)]
-    : [];
+  if (application.redisConnection) {
+    application.workers = [
+      startMailWorker(application.redisConnection),
+      startTaskWorker(application.redisConnection),
+    ];
+  } else {
+    application.workers = [];
+    application.taskPoller = startTaskPoller();
+  }
 
   // Start express application.
   logger.info(`Server listening on port ${config.app.httpPort}.`);
