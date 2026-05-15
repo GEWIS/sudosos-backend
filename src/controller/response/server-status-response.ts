@@ -27,7 +27,9 @@
 /**
  * @typedef {object} ServerStatusResponse
  * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
+ * @property {integer} failedTaskCount.required - Number of background tasks currently in failed state
  */
 export interface ServerStatusResponse {
   maintenanceMode: boolean;
+  failedTaskCount: number;
 }
