@@ -42,6 +42,12 @@ import InvoiceService from '../service/invoice-service';
 import POSTokenVerifier from '../helpers/pos-token-verifier';
 import { PdfError } from '../errors';
 
+/**
+ * Controller for the `transactions` module. Exposes the buyer-facing CRUD for transactions,
+ * a validate-before-create endpoint, the invoices-touching-this-transaction lookup, and a
+ * PDF receipt. See the {@link transactions | module page} for how a transaction relates to
+ * its sub-transactions.
+ */
 export default class TransactionController extends BaseController {
   private logger: Logger = log4js.getLogger('TransactionController');
 
