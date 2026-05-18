@@ -91,6 +91,7 @@ import Redis from 'ioredis';
 import TermsOfServiceController from './controller/terms-of-service-controller';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
+import { initRedisConnection } from './helpers/redis-connection';
 
 export class Application {
   app: express.Express;
@@ -277,79 +278,7 @@ export default async function createApp(): Promise<Application> {
   });
   application.webSocketService = webSocketService;
 
-  // Try to connect to Redis. If it is unreachable (common in local dev
-  // environments) we fall back to direct SMTP sending instead of crashing.
-  // In production we always require Redis and re-throw to prevent silent
-  // degradation of email delivery semantics.
-  //
-  // The connect timeout defaults to 100 ms in test environments (to avoid
-  // slowing down suites that run without Redis) and 3 s otherwise.
-  // Override via REDIS_CONNECT_TIMEOUT_MS if needed.
-  let redisClient: Redis | undefined;
-  try {
-    redisClient = new Redis({
-      host: config.redis.host,
-      port: config.redis.port,
-      maxRetriesPerRequest: null,
-      // Give up quickly so startup is not delayed when Redis is absent.
-      // We intentionally omit retryStrategy so that once the connection is
-      // established, ioredis uses its default reconnection behaviour on drop.
-      connectTimeout: config.redis.connectTimeoutMs,
-    });
-
-    // Wait for the connection to be established (or fail).
-    // Named handlers are used so each one can remove the other, preventing
-    // a stale listener from hiding subsequent errors or firing unexpectedly.
-    await new Promise<void>((resolve, reject) => {
-      // Declare first so each handler can reference the other without
-      // triggering the no-use-before-define lint rule.
-      let handleReady: () => void;
-      let handleError: (err: Error) => void;
-
-      handleReady = () => {
-        redisClient.removeListener('error', handleError);
-        resolve();
-      };
-      handleError = (err: Error) => {
-        redisClient.removeListener('ready', handleReady);
-        reject(err);
-      };
-
-      redisClient.once('ready', handleReady);
-      redisClient.once('error', handleError);
-    });
-
-    // Attach a persistent error handler so any post-startup Redis errors are
-    // logged rather than crashing the process with an unhandled error event.
-    redisClient.on('error', (err: Error) => {
-      logger.error(`Redis client error: ${err.message}`);
-    });
-
-    application.redisConnection = redisClient;
-    logger.info('Redis connection established.');
-  } catch (err) {
-    // Clean up any lingering sockets / timers on the failed client so the
-    // event loop is not kept alive unnecessarily.
-    if (redisClient) {
-      redisClient.removeAllListeners();
-      redisClient.disconnect();
-    }
-    application.redisConnection = undefined;
-
-    if (config.app.isProduction) {
-      // In production a Redis outage must be an explicit, loud failure rather
-      // than a silent fallback that changes email delivery semantics.
-      throw new Error(
-        `Redis is required in production but could not be reached: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-
-    logger.warn(
-      `Could not connect to Redis (${err instanceof Error ? err.message : String(err)}). `
-      + 'Email queueing will be disabled – emails will be sent directly via SMTP. '
-      + 'Start Redis or set REDIS_HOST / REDIS_PORT to enable queued sending.',
-    );
-  }
+  application.redisConnection = await initRedisConnection(logger);
 
   new Mailer(application.redisConnection);
 

@@ -29,7 +29,7 @@ import log4js, { Logger } from 'log4js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
-import User, { UserType } from '../entity/user/user';
+import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import BaseUserRequest, {
   AddRoleRequest,
   CreateUserRequest,
@@ -876,6 +876,25 @@ export default class UserController extends BaseController {
     }
     if (body.nickname === '') body.nickname = null;
 
+    let parsedExpiryDate: Date | null | undefined = undefined;
+    if (body.expiryDate !== undefined) {
+      if (body.expiryDate === null) {
+        parsedExpiryDate = null;
+      } else {
+        parsedExpiryDate = new Date(body.expiryDate);
+        if (isNaN(parsedExpiryDate.getTime())) {
+          res.status(400).json('expiryDate is not a valid date');
+          return;
+        }
+        const cap = new Date();
+        cap.setMonth(cap.getMonth() + 18);
+        if (parsedExpiryDate > cap) {
+          res.status(400).json('expiryDate cannot be more than 18 months in the future');
+          return;
+        }
+      }
+    }
+
     try {
       const id = parseInt(parameters.id, 10);
       // Get the user object if it exists
@@ -886,9 +905,20 @@ export default class UserController extends BaseController {
         return;
       }
 
-      user = {
-        ...body,
-      } as User;
+      const isLocalUser = LocalUserTypes.includes(user.type);
+      if (parsedExpiryDate !== undefined && !isLocalUser) {
+        res.status(400).json('expiryDate can only be set for local user accounts');
+        return;
+      }
+
+      user = { ...body } as unknown as User;
+      if (parsedExpiryDate !== undefined) {
+        user.expiryDate = parsedExpiryDate;
+        user.expiryNotificationSent = false;
+      } else {
+        delete (user as Partial<User>).expiryDate;
+      }
+
       await User.update(parameters.id, user);
       const updatedUser = await UserService.getSingleUser(asNumber(parameters.id));
       res.status(200).json(asUserResponse(updatedUser, true));

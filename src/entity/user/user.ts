@@ -182,6 +182,28 @@ export default class User extends BaseEntity {
   })
   public lastSeen: Date | null;
 
+  /**
+   * Date at which this account is scheduled to expire. When the date is in the past,
+   * the daily expiry CRON deactivates the user. Only set for local user types
+   * (see {@link LocalUserTypes}); `null` for all other user types.
+   */
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  public expiryDate: Date | null;
+
+  /**
+   * Whether the near-expiration warning email has already been sent to this user.
+   * Set to `true` after the daily notification CRON sends the 30-day warning so
+   * that the user is not re-notified each day during the warning window. Reset
+   * to `false` when `expiryDate` is changed via PATCH.
+   */
+  @Column({
+    default: false,
+  })
+  public expiryNotificationSent: boolean;
+
   @OneToOne(() => UserFineGroup, {
     nullable: true,
     onDelete: 'SET NULL',

@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../../src/database/with-manager';
-import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import User, { LocalUserTypes, TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import MemberUser from '../../src/entity/user/member-user';
 import InvoiceUser from '../../src/entity/user/invoice-user';
 import bcrypt from 'bcrypt';
@@ -27,6 +27,16 @@ import HashBasedAuthenticationMethod from '../../src/entity/authenticator/hash-b
 import OrganMembership from '../../src/entity/organ/organ-membership';
 import LocalAuthenticator from '../../src/entity/authenticator/local-authenticator';
 import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
+
+/**
+ * Returns the default expiry date for a newly-seeded local user (18 months from now),
+ * matching the default applied by `UserService.createUser`.
+ */
+function defaultExpiry(): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 18);
+  return d;
+}
 
 export interface DevUsers {
   admin: User;
@@ -87,6 +97,7 @@ export default class UserSeeder extends WithManager {
         inactiveNotificationSend: nr % 3 === 0,
         extensiveDataProcessing: true,
         email: type === UserType.LOCAL_USER || type === UserType.LOCAL_ADMIN ? `user${start + nr}@example.com` : '',
+        expiryDate: LocalUserTypes.includes(type) ? defaultExpiry() : null,
       }) as User);
     }
     return users;
@@ -170,6 +181,7 @@ export default class UserSeeder extends WithManager {
         ofAge: true,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
         extensiveDataProcessing: true,
+        expiryDate: defaultExpiry(),
       }),
       Object.assign(new User(), {
         firstName: 'Local',
@@ -180,6 +192,7 @@ export default class UserSeeder extends WithManager {
         ofAge: true,
         acceptedToS: TermsOfServiceStatus.ACCEPTED,
         extensiveDataProcessing: true,
+        expiryDate: defaultExpiry(),
       }),
       Object.assign(new User(), {
         firstName: 'Alice',
