@@ -20,8 +20,9 @@
 
 /**
  * This is the module page of the transaction.
+ * @todo Document the flow
  *
- * @module transactions
+ * @module stripe/terminal-payment
  * @mergeTarget
  */
 
