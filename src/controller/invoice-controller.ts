@@ -508,7 +508,7 @@ export default class InvoiceController extends BaseController {
    * @param {integer} forId.query.required - Filter on Id of the debtor
    * @param {string} fromDate.query.required - Start date for selected transactions (inclusive)
    * @param {string} tillDate.query - End date for selected transactions (exclusive)
-   * @return {TransactionResponse} 200 - The eligible transactions
+   * @return {Array.<TransactionResponse>} 200 - The eligible transactions
    * @return {string} 500 - Internal server error
    */
   public async getEligibleTransactions(req: RequestWithToken, res: Response): Promise<void> {
