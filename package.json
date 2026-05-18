@@ -49,7 +49,7 @@
     "@socket.io/pm2": "5.3.0",
     "@socket.io/sticky": "1.0.4",
     "bcrypt": "5.1.1",
-    "better-sqlite3": "12.9.0",
+    "better-sqlite3": "12.10.0",
     "body-parser": "1.20.5",
     "bullmq": "5.76.10",
     "commander": "12.1.0",
