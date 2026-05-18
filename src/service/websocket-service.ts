@@ -31,6 +31,7 @@ import JsonWebToken from '../authentication/json-web-token';
 import User from '../entity/user/user';
 import UserService from './user-service';
 import { TransactionResponse } from '../controller/response/transaction-response';
+import { TaskResponse } from '../controller/response/task-response';
 import { parseRoom } from './websocket/room-parser';
 import {
   RoomPolicyRegistry,
@@ -208,6 +209,19 @@ export default class WebSocketService {
       ),
     });
 
+    // Register global background-task room. Same policy as the task list
+    // endpoint -- anyone who can `get:all:Task` can watch the queue.
+    this.registerRoom({
+      pattern: 'tasks:all',
+      policy: async (context) => this.roleManager.can(
+        context.token.roles,
+        'get',
+        'all',
+        'Task',
+        ['*'],
+      ),
+    });
+
 
     // Register transaction:created event handler
     this.eventRegistry.register<TransactionResponse>('transaction:created', {
@@ -247,6 +261,14 @@ export default class WebSocketService {
             return false;
         }
       },
+    });
+
+    // Background tasks are emitted to a single global room. There is no
+    // per-task ACL: the room policy already gated subscription on
+    // `get:all:Task`.
+    this.eventRegistry.register<TaskResponse>('task:updated', {
+      resolver: () => [{ roomName: 'tasks:all', entityId: null }],
+      guard: async () => true,
     });
   }
 
@@ -538,6 +560,15 @@ export default class WebSocketService {
   }
 
   /**
+   * Emits a task lifecycle update (status change, retry, completion) to the
+   * `tasks:all` room so subscribed admins refresh without polling.
+   * @param task - The task response to broadcast.
+   */
+  public async emitTaskUpdated(task: TaskResponse): Promise<void> {
+    await this.emit('task:updated', task);
+  }
+
+  /**
    * Static method for backward compatibility.
    * Delegates to the singleton instance.
    * @throws Error if WebSocketService has not been initialized.
@@ -562,6 +593,15 @@ export default class WebSocketService {
    */
   public static async emitTransactionCreated(transaction: TransactionResponse): Promise<void> {
     await this.getInstance().emitTransactionCreated(transaction);
+  }
+
+  /**
+   * Static method for backward compatibility.
+   * Delegates to the singleton instance.
+   * @throws Error if WebSocketService has not been initialized.
+   */
+  public static async emitTaskUpdated(task: TaskResponse): Promise<void> {
+    await this.getInstance().emitTaskUpdated(task);
   }
 
   /**

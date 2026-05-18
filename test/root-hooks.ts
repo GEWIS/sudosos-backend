@@ -21,6 +21,9 @@
 import sinon from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
 import { Queue, Worker } from 'bullmq';
+import { registerAllTasks } from '../src/tasks';
+import TaskService from '../src/service/task-service';
+import Task from '../src/entity/task';
 
 /**
  * Object containing all global stubs that are set before each test case.
@@ -44,9 +47,14 @@ beforeAll(() => {
     get: () => Promise.resolve({}),
     configurable: true,
   });
+
+  // Register production task handlers globally. Tests that need to swap
+  // handlers can reset the registry and restore it via registerAllTasks() in
+  // their own teardown.
+  registerAllTasks();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   const sendMailSpy = sinon.spy();
   const mailStub = sinon.stub(nodemailer, 'createTransport').returns({
     sendMail: sendMailSpy,
@@ -60,6 +68,21 @@ beforeEach(() => {
   }
 
   queueAddStub.resetHistory();
+
+  // Bring TaskService up fresh per test with a fake Redis connection. The
+  // BullMQ Queue prototype is fully stubbed in beforeAll, so the fake
+  // connection is never actually used -- it just lets tests assert that
+  // `Queue.prototype.add` was called by the dispatch path.
+  TaskService.init({} as any);
+
+  // Drop any task rows that earlier tests may have created so each test
+  // starts with an empty queue. Skipped when the DB is not yet initialised
+  // (some unit tests run without a real connection).
+  try {
+    await Task.createQueryBuilder().delete().execute();
+  } catch {
+    // No DB / table yet; ignore.
+  }
 
   rootStubs = {
     mail: mailStub,

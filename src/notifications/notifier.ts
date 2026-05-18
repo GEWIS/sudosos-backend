@@ -32,6 +32,8 @@ import User from '../entity/user/user';
 import UserNotificationPreference, { NotificationChannels } from '../entity/notifications/user-notification-preference';
 import NotificationLog from '../entity/notifications/notification-log';
 import { applyConfiguredLogLevel } from '../helpers/logging';
+import TaskService from '../service/task-service';
+import { SEND_NOTIFICATION_TASK_TYPE } from '../tasks/send-notification-task';
 
 /**
  * This is the module page of the notifier.
@@ -67,7 +69,53 @@ export default class Notifier {
     return this.instance;
   }
 
+  /**
+   * Enqueue a notification for asynchronous delivery. The actual rendering and
+   * channel dispatch happens inside the task worker via `notifySync`. This
+   * keeps request handlers fast even when a notification fans out to many
+   * users (e.g. fine-notify).
+   *
+   * We resolve channels synchronously here so a notification that has no
+   * eligible delivery channel (mandatory off + no user prefs) fails fast
+   * without polluting the task table with a no-op task. The worker re-checks
+   * at run time, so a user changing their prefs between dispatch and
+   * processing is still handled correctly.
+   */
   async notify<P extends TemplateOptions>(payload: NotificationPayload<P>): Promise<void> {
+    const notifyType = NotificationTypeRegistry.get<P>(payload.type);
+    if (!notifyType) {
+      this.logger.error(`Could not get notify type: ${payload.type}`);
+      return;
+    }
+
+    const user = await User.findOne({ where: { id: payload.userId } });
+    if (!user) {
+      throw new Error('Could not find user');
+    }
+
+    const channelPrefs = new Set<string>();
+    if (notifyType.isMandatory) {
+      channelPrefs.add(NotificationChannels.EMAIL);
+    }
+    const userPrefs = await this.getPreferences(user, notifyType.type);
+    userPrefs.forEach(pref => channelPrefs.add(pref));
+
+    const channelsToUse = this.channels.filter(ch => channelPrefs.has(ch.name));
+    if (channelsToUse.length === 0) {
+      await this.noChannelLog(user, payload.type);
+      throw new Error('No channel found to send for.');
+    }
+
+    await TaskService.dispatch(SEND_NOTIFICATION_TASK_TYPE, payload);
+  }
+
+  /**
+   * Synchronous send. Originally the body of `notify`; now invoked from the
+   * `send-notification` task handler. Tests that need to bypass the queue
+   * (and most direct usages of the Notifier outside the task pipeline) can
+   * call this directly.
+   */
+  async notifySync<P extends TemplateOptions>(payload: NotificationPayload<P>): Promise<void> {
     const notifyType = NotificationTypeRegistry.get<P>(payload.type);
 
     if (!notifyType) {

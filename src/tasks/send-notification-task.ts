@@ -19,17 +19,26 @@
  */
 
 /**
- * This is the module page of the server-status-response.
+ * This is the module page of the send-notification task.
  *
- * @module internal/server-status
+ * @module tasks
  */
 
-/**
- * @typedef {object} ServerStatusResponse
- * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
- * @property {integer} failedTaskCount.required - Number of background tasks currently in failed state
- */
-export interface ServerStatusResponse {
-  maintenanceMode: boolean;
-  failedTaskCount: number;
+import Notifier from '../notifications/notifier';
+import { NotificationTypes, TemplateOptions } from '../notifications/notification-types';
+import { TaskHandler } from './task-registry';
+
+export const SEND_NOTIFICATION_TASK_TYPE = 'send-notification';
+
+export interface SendNotificationTaskPayload {
+  type: NotificationTypes;
+  userId: number;
+  params: TemplateOptions;
 }
+
+export const sendNotificationTask: TaskHandler<SendNotificationTaskPayload> = {
+  type: SEND_NOTIFICATION_TASK_TYPE,
+  async handle(payload: SendNotificationTaskPayload): Promise<void> {
+    await Notifier.getInstance().notifySync(payload);
+  },
+};
