@@ -19,6 +19,7 @@
  */
 
 import { DataSource } from 'typeorm';
+import Task from '../../../src/entity/task';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import InactiveAdministrativeCostController from '../../../src/controller/inactive-administrative-cost-controller';
@@ -54,7 +55,6 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import VatGroup from '../../../src/entity/vat-group';
 import { InactiveAdministrativeCostReport } from '../../../src/entity/report/inactive-administrative-cost-report';
 import { PdfError } from '../../../src/errors';
-import Redis from 'ioredis';
 
 const { expect, request } = chai;
 
@@ -76,7 +76,6 @@ describe('InactiveAdministrativeCostController', async () => {
   };
 
   let sandbox: SinonSandbox;
-  let redis: Redis;
 
   beforeAll(async () => {
     const connection = await Database.initialize();
@@ -146,13 +145,7 @@ describe('InactiveAdministrativeCostController', async () => {
       forId: localUser.id,
     };
 
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      maxRetriesPerRequest: null,
-    });
-
-    const mailer = new Mailer(redis);
+    const mailer = new Mailer();
 
     ctx = {
       connection,
@@ -178,7 +171,7 @@ describe('InactiveAdministrativeCostController', async () => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer(redis);
+      new Mailer();
     }
 
     sandbox = sinon.createSandbox();
@@ -186,7 +179,6 @@ describe('InactiveAdministrativeCostController', async () => {
 
   afterAll(async () => {
     Mailer.reset();
-    if (redis) await redis.quit();
 
     await finishTestDB(ctx.connection);
   });
@@ -425,7 +417,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(204);
 
-      expect(rootStubs.queueAdd.called).to.be.true;
+      expect(await Task.count({ where: { type: 'send-notification' } })).to.be.greaterThan(0);
     });
     it('should return 403 if user is not an admin', async () => {
       const res = await request(ctx.app)
@@ -479,7 +471,7 @@ describe('InactiveAdministrativeCostController', async () => {
         .send({ userIds: ctx.users.map((u) => u.id) });
       expect(res.status).to.equal(200);
 
-      expect(rootStubs.queueAdd.called).to.be.true;
+      expect(await Task.count({ where: { type: 'send-notification' } })).to.be.greaterThan(0);
       expect(await InactiveAdministrativeCost.count()).to.be.equal(count + (ctx.users.map((u) => u.id)).length);
     });
     it('should return 403 if user is not an admin', async () => {

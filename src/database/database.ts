@@ -130,6 +130,8 @@ import { PaymentRequestAttempt1784877357000 } from '../migrations/1784877357000-
 import {
   AddProductSelfServiceToUser1785401380818,
 } from '../migrations/1785401380818-add-product-self-service-to-user';
+import Task from '../entity/task';
+import { TaskQueue1778769232000 } from '../migrations/1778769232000-task-queue';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -181,6 +183,7 @@ function getDataSourceOptions(): DataSourceOptions {
       PaymentRequest1777010230727,
       StripePaymentIntentPaymentRequest1777010230751,
       AddExpiryToUser1778681972323,
+      TaskQueue1778769232000,
       TermsOfServiceVersioning1781691836923,
       TerminalPayment1782294145719,
       PaymentRequestAttempt1784877357000,
@@ -263,6 +266,7 @@ function getDataSourceOptions(): DataSourceOptions {
       PaymentRequest,
       PaymentRequestAttempt,
       TermsOfServiceAcceptance,
+      Task,
     ],
     subscribers: [
       TransactionSubscriber,

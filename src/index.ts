@@ -86,14 +86,13 @@ import WebSocketService from './service/websocket-service';
 import InactiveAdministrativeCostController from './controller/inactive-administrative-cost-controller';
 import './notifications';
 import UserNotificationController from './controller/user-notification-preference-controller';
-import { startMailWorker } from './workers/mail-worker';
-import { Worker } from 'bullmq';
+import { startTaskRunner, TaskRunner } from './workers/task-runner';
 import Mailer from './mailer';
-import Redis from 'ioredis';
 import TermsOfServiceController from './controller/terms-of-service-controller';
+import TaskService from './service/task-service';
+import { registerAllTasks } from './tasks';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
-import { initRedisConnection } from './helpers/redis-connection';
 import TerminalPaymentController from './controller/terminal-payment-controller';
 
 export class Application {
@@ -107,15 +106,13 @@ export class Application {
 
   connection: DataSource;
 
-  workers: Worker[];
-
   logger: Logger;
 
   tasks: cron.ScheduledTask[];
 
   webSocketService: WebSocketService;
 
-  redisConnection: Redis | undefined;
+  taskRunner: TaskRunner | undefined;
 
   public async stop(): Promise<void> {
     this.logger.info('Stopping application instance...');
@@ -124,10 +121,10 @@ export class Application {
       await this.webSocketService.close();
     }
     this.tasks.forEach((task) => task.stop());
-    this.workers.forEach((worker) => worker.close());
-    if (this.redisConnection) {
-      await this.redisConnection.quit();
+    if (this.taskRunner) {
+      await this.taskRunner.stop();
     }
+    TaskService.reset();
     await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
@@ -283,9 +280,10 @@ export default async function createApp(): Promise<Application> {
   });
   application.webSocketService = webSocketService;
 
-  application.redisConnection = await initRedisConnection(logger);
+  new Mailer();
 
-  new Mailer(application.redisConnection);
+  registerAllTasks();
+  TaskService.init();
 
   application.tasks = [];
 
@@ -331,9 +329,7 @@ export default async function createApp(): Promise<Application> {
 
   webSocketService.initiateWebSocket();
 
-  application.workers = application.redisConnection
-    ? [startMailWorker(application.redisConnection)]
-    : [];
+  application.taskRunner = startTaskRunner();
 
   // Start express application.
   logger.info(`Server listening on port ${config.app.httpPort}.`);

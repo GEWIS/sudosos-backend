@@ -42,9 +42,9 @@ import WrappedService from './service/wrapped-service';
 import UserExpiryService from './service/user-expiry-service';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
-import Redis from 'ioredis';
-import Mailer from './mailer';
-import { initRedisConnection } from './helpers/redis-connection';
+import './notifications';
+import { registerAllTasks } from './tasks';
+import TaskService from './service/task-service';
 
 class CronApplication {
   logger: Logger;
@@ -55,13 +55,8 @@ class CronApplication {
 
   roleManager: RoleManager;
 
-  redisConnection: Redis | undefined;
-
   public async stop(): Promise<void> {
     this.tasks.forEach((task) => task.stop());
-    if (this.redisConnection) {
-      await this.redisConnection.quit();
-    }
     await this.connection.destroy();
     this.logger.info('Application stopped.');
   }
@@ -74,6 +69,8 @@ async function createCronTasks(): Promise<void> {
   application.logger = log4js.getLogger('Application');
   applyConfiguredLogLevel(application.logger);
   application.logger.info('Starting cron tasks...');
+  registerAllTasks();
+  TaskService.init();
 
   const logger = getAppLogger('Console (cron)');
   applyConfiguredLogLevel(logger);
@@ -82,10 +79,6 @@ async function createCronTasks(): Promise<void> {
   // Set up monetary value configuration.
   dinero.defaultCurrency = config.currency.code as Currency;
   dinero.defaultPrecision = config.currency.precision;
-
-  application.redisConnection = await initRedisConnection(logger);
-
-  new Mailer(application.redisConnection);
 
   // Initialize database-stored settings
   const store = ServerSettingsStore.getInstance();
