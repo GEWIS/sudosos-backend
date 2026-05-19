@@ -34,6 +34,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import BannerSeeder from '../../seed/banner-seeder';
 import TermsOfServiceService, { TermsOfService } from '../../../src/service/terms-of-service-service';
 import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
+import Task, { TaskStatus } from '../../../src/entity/task';
 
 const { expect, request } = chai;
 
@@ -128,17 +129,32 @@ describe('RootController', async (): Promise<void> => {
       let res = await request(ctx.app)
         .get('/ping');
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal({ maintenanceMode: false });
+      expect(res.body).to.deep.equal({ maintenanceMode: false, failedTaskCount: 0 });
 
       await ServerSettingsStore.getInstance().setSetting('maintenanceMode', true);
 
       res = await request(ctx.app)
         .get('/ping');
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal({ maintenanceMode: true });
+      expect(res.body).to.deep.equal({ maintenanceMode: true, failedTaskCount: 0 });
 
       // Cleanup
       await ServerSettingsStore.getInstance().setSetting('maintenanceMode', false);
+    });
+    it('should include failed background tasks', async () => {
+      await Task.save({
+        type: 'failed-test-task',
+        payload: '{}',
+        status: TaskStatus.FAILED,
+        attempts: 3,
+        maxAttempts: 3,
+      } as Task);
+
+      const res = await request(ctx.app)
+        .get('/ping');
+
+      expect(res.status).to.equal(200);
+      expect(res.body.failedTaskCount).to.equal(1);
     });
     it('should return an HTTP 500 if database error', async () => {
       const stub = sinon.stub(ServerSettingsStore.prototype, 'getSettingFromDatabase')

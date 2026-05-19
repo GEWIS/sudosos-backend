@@ -89,6 +89,7 @@ import UserNotificationController from './controller/user-notification-preferenc
 import { startTaskRunner, TaskRunner } from './workers/task-runner';
 import Mailer from './mailer';
 import TermsOfServiceController from './controller/terms-of-service-controller';
+import TaskController from './controller/task-controller';
 import TaskService from './service/task-service';
 import { registerAllTasks } from './tasks';
 import Config from './config';
@@ -322,6 +323,7 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/server-settings', new ServerSettingsController(options).getRouter());
   application.app.use('/v1/sync', new SyncController(options).getRouter());
   application.app.use('/v1/terms-of-service', new TermsOfServiceController(options).getRouter());
+  application.app.use('/v1/tasks', new TaskController(options).getRouter());
   if (config.app.isDevelopment) {
     application.app.use('/v1/files', new SimpleFileController(options).getRouter());
     application.app.use('/v1/test', new TestController(options).getRouter());
