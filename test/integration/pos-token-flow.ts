@@ -34,7 +34,7 @@ import RoleManager from '../../src/rbac/role-manager';
 import { TransactionRequest } from '../../src/controller/request/transaction-request';
 import { UserFactory } from '../helpers/user-factory';
 import ServerSettingsStore from '../../src/server-settings/server-settings-store';
-import { truncateAllTables } from '../setup';
+import { truncateAllTables } from '../helpers/database-helpers';
 import { finishTestDB } from '../helpers/test-helpers';
 import { RbacSeeder } from '../seed';
 import AuthenticationController from '../../src/controller/authentication-controller';

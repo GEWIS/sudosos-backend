@@ -27,7 +27,7 @@ import { VatGroupRequest } from '../../../src/controller/request/vat-group-reque
 import Database from '../../../src/database/database';
 import VatGroupService from '../../../src/service/vat-group-service';
 import { VatDeclarationResponse } from '../../../src/controller/response/vat-group-response';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import {
   ContainerSeeder,

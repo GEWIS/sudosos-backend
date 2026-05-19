@@ -27,7 +27,7 @@ import Transfer from '../../../src/entity/transactions/transfer';
 import User, { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import VoucherGroup from '../../../src/entity/user/voucher-group';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 
 export function bkgEq(req: VoucherGroupParams, voucherGroup: VoucherGroup, users: User[]): void {

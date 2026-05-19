@@ -29,7 +29,7 @@ import DineroTransformer from '../../../src/entity/transformer/dinero-transforme
 import { StripePaymentIntentState } from '../../../src/entity/stripe/stripe-payment-intent-status';
 import BalanceResponse from '../../../src/controller/response/balance-response';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { DepositSeeder, UserSeeder } from '../../seed';
 

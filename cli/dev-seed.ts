@@ -36,7 +36,6 @@ import dinero, { Currency } from 'dinero.js';
 import Database from '../src/database/database';
 import { Application } from '../src';
 import initializeDiskStorage from '../src/files/initialize';
-import { truncateAllTables } from '../test/setup';
 import DefaultRoles from '../src/rbac/default-roles';
 import UserSeeder from '../test/seed/user-seeder';
 import VatGroupSeeder from '../test/seed/catalogue/vat-group-seeder';
@@ -115,7 +114,6 @@ async function createApp() {
   application.logger.info('Starting dev seed...');
 
   application.connection = await Database.initialize();
-  await truncateAllTables(application.connection);
 
   dinero.defaultCurrency = config.currency.code as Currency;
   dinero.defaultPrecision = config.currency.precision;

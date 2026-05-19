@@ -46,7 +46,7 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
 import KeyAuthenticator from '../../../src/entity/authenticator/key-authenticator';
 import AuthenticationKeyRequest from '../../../src/controller/request/authentication-key-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { UserSeeder } from '../../seed';
 import { ensureProductionRoles } from '../../helpers/user-factory';

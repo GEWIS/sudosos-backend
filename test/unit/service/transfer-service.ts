@@ -32,7 +32,7 @@ import TransferService, { TransferCategory } from '../../../src/service/transfer
 import Invoice from '../../../src/entity/invoices/invoice';
 import Swagger from '../../../src/start/swagger';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import VatGroup from '../../../src/entity/vat-group';
 import {

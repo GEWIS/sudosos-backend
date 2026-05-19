@@ -19,7 +19,7 @@
  */
 
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/authenticator/qr-authenticator';
 import chai from 'chai';
 

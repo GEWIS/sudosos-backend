@@ -34,7 +34,7 @@ import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import Swagger from '../../../src/start/swagger';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { UserSeeder, ContainerSeeder, ProductSeeder, TransactionSeeder } from '../../seed';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import ContainerRevision from '../../../src/entity/container/container-revision';

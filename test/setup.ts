@@ -18,9 +18,16 @@
  *  @license
  */
 
-/* eslint-disable import/prefer-default-export */
-import * as util from 'util';
-import { generateKeyPair, generateKeyPairSync } from 'crypto';
+/**
+ * Vitest setup file.
+ *
+ * Loaded once per test run via `setupFiles` in `vitest.config.mts`. This
+ * file is intentionally side-effect-only and must NOT be imported by
+ * non-test code. Pure utilities (truncateAllTables, generateKeys) live in
+ * `test/helpers/`.
+ */
+
+import { generateKeyPairSync } from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -34,8 +41,6 @@ import dinero from 'dinero.js';
 import log4js from 'log4js';
 import sinonChai from 'sinon-chai';
 import { config } from 'dotenv';
-import { DataSource } from 'typeorm';
-import { PERSISTENT_TEST_DATABASES } from '../src/helpers/database';
 import '../src/database/database';
 import Config from '../src/config';
 
@@ -131,65 +136,3 @@ dinero.defaultPrecision = 2;
 const logger = log4js.getLogger('Console');
 logger.level = process.env.LOG_LEVEL;
 console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
-
-/**
- * Generates a basic RSA keypair.
- */
-export async function generateKeys(): Promise<{ publicKey: string, privateKey: string }> {
-  return util.promisify(generateKeyPair).bind(null, 'rsa', {
-    modulusLength: 2048,
-    publicKeyEncoding: {
-      type: 'spki',
-      format: 'pem',
-    },
-    privateKeyEncoding: {
-      type: 'pkcs8',
-      format: 'pem',
-    },
-  })();
-}
-
-/**
- * @returns The __filename converted to the TypeScript source file
- */
-export function sourceFile(file: string) {
-  return file.replace('out/test/', 'test/').replace('.js', '.ts');
-}
-
-
-// We should only ever truncate in test.
-// For non-persistent databases (sqlite) we can just drop them.
-function shouldTruncate(): boolean {
-  if (process.env.NODE_ENV !== 'test') return false;
-  return PERSISTENT_TEST_DATABASES.has(process.env.TYPEORM_CONNECTION);
-}
-
-export async function truncateAllTables(dataSource: DataSource): Promise<void> {
-  if (!shouldTruncate()) return;
-
-  console.log('Starting truncation of all tables...');
-  const queryRunner = dataSource.createQueryRunner();
-
-  await queryRunner.connect();
-
-  try {
-    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 0;'); // Disable FK checks to avoid issues
-
-    // Retrieve all table names except for system tables (if any)
-    const tables = await queryRunner.query('SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\';');
-
-    for (const table of tables) {
-      const tableName = table[Object.keys(table)[0]]; // Gets table name dynamically
-      console.log(`Truncating table: ${tableName}`);
-      await queryRunner.query(`TRUNCATE TABLE \`${tableName}\`;`);
-    }
-
-    await queryRunner.query('SET FOREIGN_KEY_CHECKS = 1;'); // Re-enable FK checks
-    console.log('All tables truncated successfully.');
-  } catch (err) {
-    console.error('Failed to truncate tables:', err);
-    throw err;
-  } finally {
-    await queryRunner.release();
-  }
-}

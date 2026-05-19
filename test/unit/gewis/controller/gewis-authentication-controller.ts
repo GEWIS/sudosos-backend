@@ -41,7 +41,7 @@ import AuthenticationLDAPRequest from '../../../../src/controller/request/authen
 import userIsAsExpected from '../../../helpers/authentication-helpers';
 import AuthenticationService from '../../../../src/service/authentication-service';
 import PinAuthenticator from '../../../../src/entity/authenticator/pin-authenticator';
-import { truncateAllTables } from '../../../setup';
+import { truncateAllTables } from '../../../helpers/database-helpers';
 import { finishTestDB } from '../../../helpers/test-helpers';
 import { RbacSeeder } from '../../../seed';
 

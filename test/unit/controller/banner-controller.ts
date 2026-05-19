@@ -41,7 +41,7 @@ import Swagger from '../../../src/start/swagger';
 import BannerImage from '../../../src/entity/file/banner-image';
 import { DiskStorage } from '../../../src/files/storage';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import BannerSeeder from '../../seed/banner-seeder';

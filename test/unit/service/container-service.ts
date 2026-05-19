@@ -42,7 +42,7 @@ import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import { CreatePointOfSaleParams } from '../../../src/controller/request/point-of-sale-request';
 import AuthenticationService from '../../../src/service/authentication-service';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import sinon from 'sinon';

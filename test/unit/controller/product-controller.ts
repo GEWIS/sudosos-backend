@@ -47,7 +47,7 @@ import ProductController from '../../../src/controller/product-controller';
 import { DineroObjectRequest } from '../../../src/controller/request/dinero-request';
 import { DiskStorage } from '../../../src/files/storage';
 import VatGroup from '../../../src/entity/vat-group';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import ProductRevision from '../../../src/entity/product/product-revision';
 import { ProductSeeder, VatGroupSeeder } from '../../seed';

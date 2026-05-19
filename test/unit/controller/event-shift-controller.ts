@@ -42,7 +42,7 @@ import {
 import { EventShiftRequest } from '../../../src/controller/request/event-request';
 import EventShiftController from '../../../src/controller/event-shift-controller';
 import Event, { EventType } from '../../../src/entity/event/event';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { EventSeeder, UserSeeder } from '../../seed';

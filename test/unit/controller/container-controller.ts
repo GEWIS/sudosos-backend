@@ -46,7 +46,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { BaseContainerParams, CreateContainerRequest, UpdateContainerRequest } from '../../../src/controller/request/container-request';
 import { INVALID_ORGAN_ID, INVALID_PRODUCT_ID } from '../../../src/controller/request/validators/validation-errors';
 import ContainerRevision from '../../../src/entity/container/container-revision';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Product from '../../../src/entity/product/product';
 import { ContainerSeeder, ProductSeeder } from '../../seed';

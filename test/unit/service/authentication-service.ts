@@ -36,7 +36,7 @@ import { finishTestDB, restoreLDAPEnv, storeLDAPEnv } from '../../helpers/test-h
 import HashBasedAuthenticationMethod from '../../../src/entity/authenticator/hash-based-authentication-method';
 import LocalAuthenticator from '../../../src/entity/authenticator/local-authenticator';
 import AuthenticationResetTokenRequest from '../../../src/controller/request/authentication-reset-token-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import RoleManager from '../../../src/rbac/role-manager';
 import TokenHandler from '../../../src/authentication/token-handler';

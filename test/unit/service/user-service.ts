@@ -27,7 +27,7 @@ import WelcomeToSudosos from '../../../src/mailer/messages/welcome-to-sudosos';
 import Mailer from '../../../src/mailer';
 import AuthenticationService from '../../../src/service/authentication-service';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import {
   UserSeeder, PointOfSaleSeeder, ContainerSeeder, ProductSeeder, VatGroupSeeder,

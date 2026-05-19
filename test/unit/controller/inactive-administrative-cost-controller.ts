@@ -28,7 +28,7 @@ import {
 } from '../../../src/controller/request/inactive-administrative-cost-request';
 import InactiveAdministrativeCost from '../../../src/entity/transactions/inactive-administrative-cost';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { TransferSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import InactiveAdministrativeCostSeeder from '../../seed/ledger/inactive-administrative-cost-seeder';

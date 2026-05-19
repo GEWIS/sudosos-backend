@@ -43,7 +43,7 @@ import ProductCategory from '../../src/entity/product/product-category';
 import { CreateProductRequest, UpdateProductRequest } from '../../src/controller/request/product-request';
 import { CreateContainerRequest, UpdateContainerRequest } from '../../src/controller/request/container-request';
 import { CreatePointOfSaleRequest } from '../../src/controller/request/point-of-sale-request';
-import { truncateAllTables } from '../setup';
+import { truncateAllTables } from '../helpers/database-helpers';
 import { finishTestDB } from '../helpers/test-helpers';
 import { ProductCategorySeeder, RbacSeeder, VatGroupSeeder } from '../seed';
 

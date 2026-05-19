@@ -46,7 +46,7 @@ import { defaultPagination, PaginationResult } from '../../../src/helpers/pagina
 import { calculateBalance, calculateFine } from '../../helpers/balance';
 import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { Client } from 'pdf-generator-client';
 import { BasePdfService } from '../../../src/service/pdf/pdf-service';

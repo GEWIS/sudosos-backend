@@ -35,7 +35,7 @@ import FileService, { StorageMethod } from '../../../src/service/file-service';
 import { DiskStorage } from '../../../src/files/storage';
 import Product from '../../../src/entity/product/product';
 import ProductImage from '../../../src/entity/file/product-image';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ProductSeeder, UserSeeder } from '../../seed';
 

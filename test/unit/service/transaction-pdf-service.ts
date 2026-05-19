@@ -26,7 +26,7 @@ import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import TransactionPdfService from '../../../src/service/pdf/transaction-pdf-service';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, TransactionSeeder, UserSeeder } from '../../seed';
 import { PdfError } from '../../../src/errors';
 

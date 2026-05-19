@@ -24,7 +24,7 @@ import QRService from '../../../src/service/qr-service';
 import QRAuthenticator, { QRAuthenticatorStatus } from '../../../src/entity/authenticator/qr-authenticator';
 import User from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { QRAuthenticatorSeeder, UserSeeder } from '../../seed';
 

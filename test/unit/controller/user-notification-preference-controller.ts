@@ -26,7 +26,7 @@ import UserNotificationPreference, {
   NotificationChannels,
 } from '../../../src/entity/notifications/user-notification-preference';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import UserNotificationSeeder from '../../seed/ledger/user-notification-seeder';

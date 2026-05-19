@@ -35,7 +35,7 @@ import TokenMiddleware from '../../../src/middleware/token-middleware';
 import { StripeRequest } from '../../../src/controller/request/stripe-request';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { StripePaymentIntentResponse } from '../../../src/controller/response/stripe-response';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';

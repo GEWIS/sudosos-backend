@@ -42,7 +42,7 @@ import { defaultPagination, maxPagination, PaginationResult } from '../../../src
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';

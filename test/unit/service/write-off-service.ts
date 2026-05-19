@@ -19,7 +19,7 @@
  */
 
 import { defaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { DataSource } from 'typeorm';
 import { Express } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';

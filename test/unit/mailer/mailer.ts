@@ -26,7 +26,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import HelloWorld from '../../../src/mailer/messages/hello-world';
 import { Language } from '../../../src/mailer/mail-message';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import fs from 'fs';
 import { rootStubs } from '../../root-hooks';

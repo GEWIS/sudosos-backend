@@ -70,7 +70,7 @@ import { TransactionReportResponse } from '../../../src/controller/response/tran
 import { TransactionFilterParameters } from '../../../src/service/transaction-service';
 import UpdateNfcRequest from '../../../src/controller/request/update-nfc-request';
 import UserFineGroup from '../../../src/entity/fine/userFineGroup';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { createTransactions, createValidTransactionRequest } from '../../helpers/transaction-factory';

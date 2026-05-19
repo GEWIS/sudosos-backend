@@ -19,7 +19,7 @@
  */
 
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import WriteOff from '../../../src/entity/transactions/write-off';
 import User from '../../../src/entity/user/user';
 import { ADMIN_USER, ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';

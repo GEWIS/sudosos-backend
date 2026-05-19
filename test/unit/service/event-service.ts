@@ -29,7 +29,7 @@ import { expect } from 'chai';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import Role from '../../../src/entity/rbac/role';
 import { EventSeeder, UserSeeder } from '../../seed';
