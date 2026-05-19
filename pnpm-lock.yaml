@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@gewis/pdf-compiler-ts':
-        specifier: 1.3.0
-        version: 1.3.0
+        specifier: 1.5.0
+        version: 1.5.0
       '@socket.io/cluster-adapter':
         specifier: 0.3.0
         version: 0.3.0(socket.io-adapter@2.5.6)
@@ -726,8 +726,8 @@ packages:
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
 
-  '@gewis/pdf-compiler-ts@1.3.0':
-    resolution: {integrity: sha512-YoenAWo6TGm6rWexZD/uFQ1gfzQJEB7Xfbpzc2MmwA62LEpafMRSQSp7VNNcA0mtnQPgAAN/JZZkXZf7xXs62Q==}
+  '@gewis/pdf-compiler-ts@1.5.0':
+    resolution: {integrity: sha512-sNAs9q86FqC7mskaASOJFtK7r1wocT+NJturP1cRQGssFCpxLKz6znZHstsBUEykpKYmgIXUj9SYMbwaF8P9jQ==}
     engines: {node: '>=22.0.0'}
 
   '@humanwhocodes/config-array@0.11.14':
@@ -6005,7 +6005,7 @@ snapshots:
       '@shikijs/types': 3.23.0
       '@shikijs/vscode-textmate': 10.0.2
 
-  '@gewis/pdf-compiler-ts@1.3.0': {}
+  '@gewis/pdf-compiler-ts@1.5.0': {}
 
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
