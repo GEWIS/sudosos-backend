@@ -34,6 +34,7 @@ import StripePaymentIntentStatus, { StripePaymentIntentState } from '../entity/s
 import {
   StripeDepositResponse,
   StripePaymentIntentStatusResponse,
+  StripePaymentTerminalResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
 import { EntityManager, FindOptionsRelations, IsNull } from 'typeorm';
@@ -41,7 +42,6 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
-import PaymentRequest from '../entity/payment-request/payment-request';
 import PaymentRequestService from './payment-request-service';
 import WithManager from '../database/with-manager';
 import Config from '../config';
@@ -74,11 +74,11 @@ export default class StripeService extends WithManager {
   public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
     const minimumTopup = Config.get().stripe.minTopupAmount;
 
-    //check for negative and zero 
+    //check for negative and zero
     if (request.amount.amount <= 0) {
       return false;
     }
-    
+
     // Check if top-up is enough
     if (request.amount.amount >= minimumTopup) return true;
     return request.amount.amount === -1 * balance.amount.amount;
@@ -164,22 +164,16 @@ export default class StripeService extends WithManager {
   }
 
   /**
-   * Create a payment intent and save it to the database.
-   *
-   * When `paymentRequest` is supplied, the resulting {@link StripePaymentIntent}
-   * carries a back-reference to the request so that the webhook flow in
-   * {@link StripeService.createNewPaymentIntentStatus} can flip the request to
-   * `PAID` on SUCCEEDED. The Stripe-side `metadata.paymentRequestId` mirror is
-   * purely informational (helps debugging in the Stripe dashboard).
-   *
-   * @param user User that wants to deposit money into their account
-   * @param amount The amount to be deposited
-   * @param paymentRequest Optional linked PaymentRequest that initiated this intent
-   * @returns The created deposit entity and the Stripe client secret
+   * Create a Stripe Payment Intent and save it to the database
+   * @param user For whom the payment intent is for
+   * @param amount The amount to be deposited/paid using Stripe
+   * @param metadata Optional extra metadata to attach to the payment intent
+   * @returns
    */
-  public async createStripePaymentIntent(
-    user: User, amount: Dinero, paymentRequest?: PaymentRequest,
-  ): Promise<{ deposit: StripeDeposit, clientSecret: string }> {
+  public async createStripePaymentIntent(user: User, amount: Dinero, metadata?: Record<string, any>): Promise<{
+    stripePaymentIntent: StripePaymentIntent,
+    clientSecret: string | null,
+  }> {
     const config = Config.get();
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: DineroTransformer.Instance.to(amount),
@@ -187,9 +181,9 @@ export default class StripeService extends WithManager {
       automatic_payment_methods: { enabled: true },
       description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
       metadata: {
+        ...metadata,
         'service': config.app.name,
         'userId': user.id,
-        ...(paymentRequest ? { 'paymentRequestId': paymentRequest.id } : {}),
       },
     });
 
@@ -197,8 +191,21 @@ export default class StripeService extends WithManager {
       stripeId: paymentIntent.id,
       amount,
       paymentIntentStatuses: [],
-      paymentRequest: paymentRequest ?? null,
     });
+    return { stripePaymentIntent, clientSecret: paymentIntent.client_secret };
+  }
+
+  /**
+   * Create deposit with a payment intent and save it to the database
+   * @param user User that wants to deposit some money into their account
+   * @param amount The amount to be deposited
+   * @param metadata Optional metadata to attach to the payment intent
+   * @returns The created deposit entity and the Stripe client secret
+   */
+  public async createStripeDeposit(
+    user: User, amount: Dinero, metadata?: Record<string, any>,
+  ): Promise<{ deposit: StripeDeposit, clientSecret: string | null }> {
+    const { stripePaymentIntent, clientSecret } = await this.createStripePaymentIntent(user, amount, metadata);
     const deposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
@@ -206,7 +213,7 @@ export default class StripeService extends WithManager {
 
     return {
       deposit,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret,
     };
   }
 
@@ -294,6 +301,28 @@ export default class StripeService extends WithManager {
     }
 
     return depositStatus;
+  }
+
+  /**
+   * Get all Stripe Payment Terminals available in Stripe
+   */
+  public async getTerminals(): Promise<StripePaymentTerminalResponse[]> {
+    const terminals = await this.stripe.terminal.readers.list();
+    return terminals.data.map((t) => ({
+      id: t.id,
+      name: t.label,
+      available: t.action?.status !== 'in_progress',
+    }));
+  }
+
+  public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
+    // @TODO: add error handling
+    const reader = await this.stripe.terminal.readers.processPaymentIntent(
+      terminalId,
+      {
+        payment_intent: paymentIntent,
+      },
+    );
   }
 
   /**

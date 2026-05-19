@@ -73,3 +73,16 @@ export interface StripeDepositResponse extends BaseResponse {
   amount: DineroObjectResponse;
   to: BaseUserResponse;
 }
+
+/**
+ * @typedef {object} StripePaymentTerminalResponse
+ * @property {string} id.required - The ID of the payment terminal
+ * @property {string} name.required - The name of the payment terminal
+ * @property {boolean} available.required - Whether the terminal is available
+ * to start processing a payment
+ */
+export interface StripePaymentTerminalResponse {
+  id: string;
+  name: string;
+  available: boolean;
+}

@@ -33,6 +33,24 @@ import Transfer from '../transfer';
 import Transaction from '../transaction';
 import TmpTransaction from './tmp-transaction';
 
+export enum TerminalPaymentState {
+  /**
+   * Transaction is created, not yet paid
+   */
+  CREATED = 'created',
+
+  /**
+   * Transaction is being paid
+   */
+  // PROCESSING = 'processing',
+
+  /**
+   * Transaction is paid
+   */
+
+  PAID = 'paid',
+}
+
 /**
  * @typedef {BaseEntity} TerminalPayment
  * @property {StripePaymentIntent.Model} stripePaymentIntent.required - The
@@ -67,4 +85,13 @@ export default class TerminalPayment extends BaseEntity {
   @OneToOne(() => TmpTransaction, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
   public temporaryTransaction?: TmpTransaction;
+
+  /**
+   * Determine the terminal payment's state based on the entity's properties
+   */
+  public getState(): TerminalPaymentState {
+    if (this.finalTransaction) return TerminalPaymentState.PAID;
+    // @todo how to determine when a transaction is being processed?
+    return TerminalPaymentState.CREATED;
+  }
 }

@@ -77,10 +77,10 @@ export default class PaymentRequestCheckoutService extends WithManager {
     }
     PaymentRequestService.validatePayable(request.for);
 
-    return new StripeService(this.manager).createStripePaymentIntent(
+    return new StripeService(this.manager).createStripeDeposit(
       request.for,
       request.amount,
-      request,
+      { paymentRequestId: request.id },
     );
   }
 }

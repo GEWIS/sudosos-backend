@@ -108,7 +108,7 @@ export interface TransactionFilterParameters {
 /**
  * Context object to cache loaded entities and calculated values during transaction processing
  */
-interface TransactionContext {
+export interface TransactionContext {
   users: Map<number, User>;
   pointOfSale?: PointOfSaleRevision;
   containers: Map<string, ContainerRevision>;
