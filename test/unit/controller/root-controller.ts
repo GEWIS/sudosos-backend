@@ -128,14 +128,14 @@ describe('RootController', async (): Promise<void> => {
       let res = await request(ctx.app)
         .get('/ping');
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal({ maintenanceMode: false });
+      expect(res.body).to.deep.equal({ maintenanceMode: false, failedTaskCount: 0 });
 
       await ServerSettingsStore.getInstance().setSetting('maintenanceMode', true);
 
       res = await request(ctx.app)
         .get('/ping');
       expect(res.status).to.equal(200);
-      expect(res.body).to.deep.equal({ maintenanceMode: true });
+      expect(res.body).to.deep.equal({ maintenanceMode: true, failedTaskCount: 0 });
 
       // Cleanup
       await ServerSettingsStore.getInstance().setSetting('maintenanceMode', false);
