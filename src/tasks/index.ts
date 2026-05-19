@@ -24,14 +24,28 @@
  * @module tasks
  */
 
+import { taskRegistry } from './task-registry';
+import { sendNotificationTask } from './send-notification-task';
+
 /**
- * Register every known task handler with the global registry.
- * The core queue does not define application-specific handlers.
+ * Register every known task handler with the global registry. Safe to call
+ * more than once: already-registered handlers are skipped so test suites can
+ * re-bootstrap the production registry.
  */
 export function registerAllTasks(): void {
-  // Handlers are registered by the feature that owns them.
+  const handlers = [sendNotificationTask];
+  for (const handler of handlers) {
+    if (!taskRegistry.has(handler.type)) {
+      taskRegistry.register(handler);
+    }
+  }
 }
 
 export { taskRegistry } from './task-registry';
 export type { TaskHandler } from './task-registry';
 export { deserializeTaskPayload, serializeTaskPayload } from './task-payload';
+export {
+  sendNotificationTask,
+  SEND_NOTIFICATION_TASK_TYPE,
+  type SendNotificationTaskPayload,
+} from './send-notification-task';

@@ -27,6 +27,7 @@ import TermsOfServiceAcceptance from '../../../src/entity/user/terms-of-service-
 import WelcomeWithReset from '../../../src/mailer/messages/welcome-with-reset';
 import WelcomeToSudosos from '../../../src/mailer/messages/welcome-to-sudosos';
 import Mailer from '../../../src/mailer';
+import TaskService from '../../../src/service/task-service';
 import AuthenticationService from '../../../src/service/authentication-service';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../helpers/database-helpers';
@@ -528,6 +529,7 @@ describe('UserService', async (): Promise<void> => {
         canGoIntoDebt: false,
         ofAge: true,
       } as any);
+      await TaskService.processNextEligible();
 
       expect(result).to.not.be.undefined;
       expect(sendStub.calledOnce).to.be.true;
@@ -547,6 +549,7 @@ describe('UserService', async (): Promise<void> => {
         canGoIntoDebt: false,
         ofAge: true,
       } as any);
+      await TaskService.processNextEligible();
 
       expect(result).to.not.be.undefined;
       expect(sendStub.calledOnce).to.be.true;
@@ -973,6 +976,7 @@ describe('UserService', async (): Promise<void> => {
         const newType = UserType.LOCAL_USER;
 
         await UserService.updateUserType(user, newType);
+        await TaskService.processNextEligible();
 
         expect(sendStub.calledOnce).to.be.true;
 
@@ -987,6 +991,7 @@ describe('UserService', async (): Promise<void> => {
         const newType = UserType.MEMBER;
 
         await UserService.updateUserType(user, newType);
+        await TaskService.processNextEligible();
 
         expect(sendStub.calledOnce).to.be.true;
 
