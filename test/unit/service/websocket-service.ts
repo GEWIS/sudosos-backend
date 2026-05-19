@@ -352,6 +352,25 @@ describe('WebSocketService', () => {
       expect(handler).to.not.be.undefined;
     });
 
+    it('should emit task updates to the global task room', async () => {
+      const task = {
+        id: 1,
+        type: 'test-task',
+        status: 'completed',
+        attempts: 1,
+        maxAttempts: 3,
+      } as any;
+
+      await webSocketService.emitTaskUpdated(task);
+
+      const handler = (webSocketService as any).eventRegistry.getHandler('task:updated');
+      expect(handler).to.not.be.undefined;
+      expect(handler.resolver(task)).to.deep.equal([
+        { roomName: 'tasks:all', entityId: null },
+      ]);
+      expect(await handler.guard(task, {})).to.be.true;
+    });
+
     it('should not emit unregistered event type', async () => {
       let eventReceived = false;
       
@@ -397,6 +416,26 @@ describe('WebSocketService', () => {
   });
 
   describe('room authorization', () => {
+    it('uses Task read permissions for the global task room', async () => {
+      const registration = (webSocketService as any)
+        .roomPolicyRegistry
+        .findRegistration('tasks:all');
+      expect(registration).to.not.be.undefined;
+
+      const authorized = await registration.policy({
+        token: { roles: ['Admin'] },
+      });
+
+      expect(authorized).to.be.true;
+      expect(roleCanStub.calledWith(
+        ['Admin'],
+        'get',
+        'all',
+        'Task',
+        ['*'],
+      )).to.be.true;
+    });
+
     it('should reject subscription to unregistered room', asPromise((done) => {
       // Client is already connected in beforeEach
       let errorReceived = false;

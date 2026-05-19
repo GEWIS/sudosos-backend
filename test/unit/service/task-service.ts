@@ -20,12 +20,14 @@
 
 import { DataSource } from 'typeorm';
 import { expect } from 'chai';
+import sinon from 'sinon';
 import TaskService from '../../../src/service/task-service';
 import Task, { TaskStatus } from '../../../src/entity/task';
 import { taskRegistry } from '../../../src/tasks/task-registry';
 import { registerAllTasks } from '../../../src/tasks';
 import { defaultBefore, finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
+import WebSocketService from '../../../src/service/websocket-service';
 
 const TEST_TASK_TYPE = 'test-task';
 
@@ -66,6 +68,21 @@ describe('TaskService', () => {
       expect(row!.status).to.equal(TaskStatus.PENDING);
       expect(row!.attempts).to.equal(0);
       expect(JSON.parse(row!.payload)).to.deep.equal({ hello: 'world' });
+    });
+
+    it('logs WebSocket delivery failures without rejecting dispatch', async () => {
+      taskRegistry.register({ type: TEST_TASK_TYPE, handle: async () => { return; } });
+      const emitTaskUpdated = sinon.stub().rejects(new Error('socket unavailable'));
+      const getInstance = sinon.stub(WebSocketService, 'getInstance').returns({
+        emitTaskUpdated,
+      } as unknown as WebSocketService);
+
+      const task = await TaskService.dispatch(TEST_TASK_TYPE, {});
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(task.status).to.equal(TaskStatus.PENDING);
+      expect(emitTaskUpdated.calledOnce).to.be.true;
+      getInstance.restore();
     });
 
     it('rejects invalid maximum attempt counts', async () => {

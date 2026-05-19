@@ -494,10 +494,11 @@ export default class TaskService {
    */
   private static emitUpdate(task: Task): void {
     try {
-      void WebSocketService.getInstance().emit(
-        'task:updated',
-        this.asTaskResponse(task),
-      );
+      void WebSocketService.getInstance()
+        .emitTaskUpdated(this.asTaskResponse(task))
+        .catch((error) => {
+          this.logger.warn({ taskId: task.id, error }, 'Could not emit task update.');
+        });
     } catch {
       // WebSocketService not initialised (e.g. test harness); skip.
     }
