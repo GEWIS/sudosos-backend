@@ -116,6 +116,8 @@ import {
 } from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
 import { AddExpiryToUser1778681972323 } from '../migrations/1778681972323-add-expiry-to-user';
+import Task from '../entity/task';
+import { TaskQueue1778769232000 } from '../migrations/1778769232000-task-queue';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -154,6 +156,7 @@ function getDataSourceOptions(): DataSourceOptions {
       PaymentRequest1777010230727,
       StripePaymentIntentPaymentRequest1777010230751,
       AddExpiryToUser1778681972323,
+      TaskQueue1778769232000,
     ],
     extra: {
       authPlugins: {
@@ -226,6 +229,7 @@ function getDataSourceOptions(): DataSourceOptions {
       UserNotificationPreference,
       UserSetting,
       PaymentRequest,
+      Task,
     ],
     subscribers: [
       TransactionSubscriber,
