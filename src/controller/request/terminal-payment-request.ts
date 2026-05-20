@@ -24,7 +24,7 @@
  * @module terminal-payment
  */
 
-import { TransactionRequest } from "./transaction-request";
+import { TransactionRequest } from './transaction-request';
 
 /**
  * @typedef {object} TerminalPaymentRequest

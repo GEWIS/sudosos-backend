@@ -31,7 +31,7 @@ import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import StripeDeposit from './stripe-deposit';
 import PaymentRequest from '../payment-request/payment-request';
-import TerminalPayment from '../transactions/terminal/terminal-payment';
+import type TerminalPayment from '../transactions/terminal/terminal-payment';
 
 /**
  * @typedef {BaseEntity} StripePaymentIntent
@@ -77,6 +77,6 @@ export default class StripePaymentIntent extends BaseEntity {
   @JoinColumn({ name: 'paymentRequestId' })
   public paymentRequest?: PaymentRequest | null;
 
-  @OneToOne(() => TerminalPayment, (t) => t.stripePaymentIntent, { nullable: true })
+  @OneToOne('TerminalPayment', (t: TerminalPayment) => t.stripePaymentIntent, { nullable: true })
   public terminalPayment?: TerminalPayment | null;
 }

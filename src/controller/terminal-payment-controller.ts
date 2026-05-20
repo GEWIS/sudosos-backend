@@ -55,7 +55,7 @@ export default class TerminalPaymentController extends BaseController {
           ),
           handler: this.createTerminalPayment.bind(this),
           body: { modelName: 'CreateTerminalPaymentRequest' },
-        }
+        },
       },
       '/:id(\\d+)': {
         GET: {
@@ -71,10 +71,10 @@ export default class TerminalPaymentController extends BaseController {
             req.token.roles, 'create', 'all', 'TerminalPayment', ['*'],
           ),
           handler: this.startTerminalPayment.bind(this),
-          body: { modelName: 'ProcessTerminalPaymentRequest' }
-        }
-      }
-    }
+          body: { modelName: 'ProcessTerminalPaymentRequest' },
+        },
+      },
+    };
   }
 
   /**

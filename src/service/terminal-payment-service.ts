@@ -24,17 +24,18 @@
  * @module terminal-payment
  */
 
-import { EntityManager } from "typeorm";
-import { CreateTerminalPaymentRequest, ProcessTerminalPaymentRequest } from "../controller/request/terminal-payment-request";
-import WithManager from "../database/with-manager";
-import TmpTransaction from "../entity/transactions/terminal/tmp-transaction";
-import TransactionService, { TransactionContext } from "./transaction-service";
-import StripeService from './StripeService';
-import DineroFactory, { DineroObject } from "dinero.js";
-import TerminalPayment from "../entity/transactions/terminal/terminal-payment";
+import { EntityManager } from 'typeorm';
+import { CreateTerminalPaymentRequest, ProcessTerminalPaymentRequest } from '../controller/request/terminal-payment-request';
+import WithManager from '../database/with-manager';
+import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
+import TransactionService, { TransactionContext } from './transaction-service';
+import StripeService from './stripe-service';
+import DineroFactory, { DineroObject } from 'dinero.js';
+import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
+
   private stripeService: StripeService;
 
   constructor(manager?: EntityManager) {

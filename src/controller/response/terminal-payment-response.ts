@@ -24,10 +24,10 @@
  * @module terminal-payment
  */
 
-import { TerminalPaymentState } from "../../entity/transactions/terminal/terminal-payment";
-import BaseResponse from "./base-response";
-import { TransactionResponse } from "./transaction-response";
-import { TransferResponse } from "./transfer-response";
+import { TerminalPaymentState } from '../../entity/transactions/terminal/terminal-payment';
+import BaseResponse from './base-response';
+import { TransactionResponse } from './transaction-response';
+import { TransferResponse } from './transfer-response';
 
 /**
  * @typedef {BaseResponse} CreateTransactionPaymentResponse

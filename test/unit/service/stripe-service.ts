@@ -90,11 +90,11 @@ describe.skipIf(shouldSkipStripe)('StripeService', async (): Promise<void> => {
     });
   });
 
-  describe('createStripePaymentIntent', () => {
+  describe('createStripeDeposit', () => {
     it('should correctly create a payment intent', async () => {
       const countBefore = await StripeDeposit.count();
 
-      const { deposit, clientSecret } = await ctx.stripeService.createStripePaymentIntent(
+      const { deposit, clientSecret } = await ctx.stripeService.createStripeDeposit(
         ctx.users[0], ctx.dineroTransformer.from(1500),
       );
 

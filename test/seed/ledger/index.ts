@@ -24,6 +24,7 @@ export { default as InvoiceSeeder } from './invoice-seeder';
 export { default as PaymentRequestSeeder } from './payment-request-seeder';
 export { default as PayoutRequestSeeder } from './payout-request-seeder';
 export { default as SellerPayoutSeeder } from './seller-payout-seeder';
+export { default as TerminalPaymentSeeder } from './terminal-payment-seeder';
 export { default as TransactionSeeder } from './transaction-seeder';
 export { default as TransferSeeder } from './transfer-seeder';
 export { default as WriteOffSeeder } from './write-off-seeder';
