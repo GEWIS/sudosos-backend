@@ -34,7 +34,7 @@ const userDebtNotificationDutch = new MailContentBuilder<UserDebtNotificationOpt
 Het gaat hierbij om een bedrag van:<br>
 <span style="color: red; font-weight: bold; font-size: 20px">${context.balance.toFormat()}</span>.</p>
 
-<p>Ga snel naar de SudoSOS website om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.</p>`,
+<p>Ga snel naar de <a href="https://sudosos.gewis.nl/" target="_blank" rel="noopener noreferrer">SudoSOS website</a> om je saldo op te hogen! Zo voorkom je dat je een boete krijgt.</p>`,
   getSubject: 'Je hebt een SudoSOS schuld!',
   getTitle: 'Schuldnotificatie',
   getText: (context) => `
@@ -51,7 +51,7 @@ const userDebtNotificationEnglish = new MailContentBuilder<UserDebtNotificationO
   getHTML: (context) => `
 <p>According to our administration, you currently have a balance of <span style="color: red; font-weight: bold">${context.balance.toFormat()}</span>.</p>
 
-<p>Go to the SudoSOS website to deposit money into your account. With this you prevent getting fined in the future.</p>`,
+<p>Go to the <a href="https://sudosos.gewis.nl/" target="_blank" rel="noopener noreferrer">SudoSOS website</a> to deposit money into your account. With this you prevent getting fined in the future.</p>`,
   getSubject: 'You have a SudoSOS debt',
   getTitle: 'Debt notification',
   getText: (context) => `
