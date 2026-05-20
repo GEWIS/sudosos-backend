@@ -117,10 +117,10 @@ export default class TerminalPaymentSeeder extends WithManager {
       }));
 
       // eslint-disable-next-line no-await-in-loop
-      const terminalPayment = await this.manager.save(TerminalPayment, {
+      const terminalPayment = await this.manager.save(TerminalPayment, Object.assign(new TerminalPayment(), {
         stripePaymentIntent,
         temporaryTransaction: tmpTransaction,
-      } as TerminalPayment);
+      }));
 
       stripePaymentIntents.push(stripePaymentIntent);
       tmpTransactions.push(tmpTransaction);

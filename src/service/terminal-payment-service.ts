@@ -58,7 +58,7 @@ export default class TerminalPaymentService extends WithManager {
    * @returns The TerminalPayment if found. Null if not found.
    */
   public async getTerminalPayment(id: number): Promise<TerminalPayment | null> {
-    return this.manager.getRepository(TerminalPayment).findOne({ where: { id } });
+    return this.manager.getRepository(TerminalPayment).findOne({ where: { id }, relations: { temporaryTransaction: true, finalTransaction: true, transfer: true, stripePaymentIntent: true } });
   }
 
   /**
@@ -84,12 +84,13 @@ export default class TerminalPaymentService extends WithManager {
 
     const { stripePaymentIntent } = await this.stripeService.createStripePaymentIntent(savedTmpTransaction.from, totalCost);
 
-    const terminalPayment = this.manager.getRepository(TerminalPayment).save({
+    const terminalPayment = await this.manager.getRepository(TerminalPayment).save({
       stripePaymentIntent,
       temporaryTransaction: savedTmpTransaction,
     } as TerminalPayment);
+    const dbTerminalPayment = await this.getTerminalPayment(terminalPayment.id);
 
-    return terminalPayment;
+    return dbTerminalPayment!;
   }
 
   /**
@@ -98,7 +99,7 @@ export default class TerminalPaymentService extends WithManager {
   public async startTerminalPayment(id: number, params: ProcessTerminalPaymentRequest): Promise<void> {
     const terminalPayment = await this.getTerminalPayment(id);
     if (!terminalPayment) {
-      throw new Error('TerminalPayment not found');
+      throw new Error(`TerminalPayment with ID "${id}" not found`);
     }
     await this.stripeService.startTerminalPayment(params.stripeTerminalId, terminalPayment.stripePaymentIntent.stripeId);
 
