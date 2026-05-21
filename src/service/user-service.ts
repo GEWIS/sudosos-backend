@@ -242,7 +242,9 @@ export default class UserService {
     if (filters.organId) {
       // This allows us to search for organ members
       const userIds = await OrganMembership
-        .find({ where: { organ: { id: filters.organId } }, relations: ['user'] });
+        .find({ where: { organ: { id: filters.organId } }, relations: {
+          user: true,
+        } });
       processedFilters.id = userIds.map((auth) => auth.user.id);
     }
     if (filters.assignedRoleIds) {
@@ -517,8 +519,12 @@ export default class UserService {
    * @param right - User to check
    */
   public static async areInSameOrgan(left: number, right: number) {
-    const leftAuth = await OrganMembership.find({ where: { user: { id: left } }, relations: ['organ'] });
-    const rightAuth = await OrganMembership.find({ where: { user: { id: right } }, relations: ['organ'] });
+    const leftAuth = await OrganMembership.find({ where: { user: { id: left } }, relations: {
+      organ: true,
+    } });
+    const rightAuth = await OrganMembership.find({ where: { user: { id: right } }, relations: {
+      organ: true,
+    } });
 
     const rightIds = leftAuth.map((u) => u.organ.id);
     const overlap = rightAuth.map((u) => u.organ.id)
@@ -547,7 +553,9 @@ export default class UserService {
         return;
       case UserType.MEMBER:
         // When an account is converted to a member account, remove local authenticator if it exists
-        const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        const localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: {
+          user: true,
+        } });
         if (localAuthenticator) {
           await localAuthenticator.remove();
         }

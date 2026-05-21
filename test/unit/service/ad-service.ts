@@ -127,7 +127,7 @@ describe('AD Service', (): void => {
 
   describe('createAccountIfNew function', () => {
     it('should create an account if GUID is unknown to DB', async () => {
-      const adUser = { ...(validADUser(await User.count() + 200)) };
+      const adUser = { ...(validADUser((await User.count()) + 200)) };
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: adUser.objectGUID } },
@@ -138,14 +138,16 @@ describe('AD Service', (): void => {
 
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
-        { where: { UUID: adUser.objectGUID }, relations: ['user'] },
+        { where: { UUID: adUser.objectGUID }, relations: {
+          user: true,
+        } },
       ));
       expect(auth).to.exist;
       const { user } = auth;
       userIsAsExpected(user, adUser);
     });
     it('should not create an account if GUID is known to DB', async () => {
-      const adUser = { ...(validADUser(await User.count() + 200)) };
+      const adUser = { ...(validADUser((await User.count()) + 200)) };
       // precondition.
       await new ADService().createAccountIfNew([adUser]);
 
@@ -166,10 +168,12 @@ describe('AD Service', (): void => {
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: organUser.objectGUID } },
       )).to.be.null;
-      await new ADService().toSharedUser(validLDAPGroup(await User.count() + 200));
+      await new ADService().toSharedUser(validLDAPGroup((await User.count()) + 200));
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
-        { where: { UUID: organUser.objectGUID }, relations: ['user'] },
+        { where: { UUID: organUser.objectGUID }, relations: {
+          user: true,
+        } },
       ));
       expect(auth).to.exist;
       organIsAsExpected(auth.user, organUser);
@@ -179,7 +183,7 @@ describe('AD Service', (): void => {
   describe('toServiceAccount function', () => {
     it('should create an INTEGRATION user', async () => {
       const userCount = await User.count();
-      const adUser = validADUser(await User.count() + 200);
+      const adUser = validADUser((await User.count()) + 200);
       // precondition.
       expect(await LDAPAuthenticator.findOne(
         { where: { UUID: adUser.objectGUID } },
@@ -187,7 +191,9 @@ describe('AD Service', (): void => {
       await new ADService().toServiceAccount(adUser);
       expect(await User.count()).to.be.equal(userCount + 1);
       const auth = (await LDAPAuthenticator.findOne(
-        { where: { UUID: adUser.objectGUID }, relations: ['user'] },
+        { where: { UUID: adUser.objectGUID }, relations: {
+          user: true,
+        } },
       ));
       expect(auth).to.exist;
       serviceAccountIsAsExpected(auth.user, adUser);
@@ -196,14 +202,16 @@ describe('AD Service', (): void => {
 
   describe('getUsers function', () => {
     it('should return only bound users if createIfNew is false', async () => {
-      const rawLdapUsers = [validADUser(await User.count() + 200), validADUser(await User.count() + 201)];
+      const rawLdapUsers = [validADUser((await User.count()) + 200), validADUser((await User.count()) + 201)];
       await new ADService().createAccountIfNew(rawLdapUsers);
-      const newLdapUsers = [validADUser(await User.count() + 200), validADUser(await User.count() + 201)];
+      const newLdapUsers = [validADUser((await User.count()) + 200), validADUser((await User.count()) + 201)];
 
       const ldapUsers: User[] = [];
       for (const ldapUser of rawLdapUsers) {
         const auth = await LDAPAuthenticator.findOne(
-          { where: { UUID: ldapUser.objectGUID }, relations: ['user'] },
+          { where: { UUID: ldapUser.objectGUID }, relations: {
+            user: true,
+          } },
         );
         expect(auth).to.exist;
         ldapUsers.push(auth.user);
@@ -216,14 +224,16 @@ describe('AD Service', (): void => {
       expect(users).to.deep.equalInAnyOrder(ldapUsers);
     });
     it('should return return all and create new users if createIfNew is true', async () => {
-      const rawLdapUsers = [validADUser(await User.count() + 200), validADUser(await User.count() + 201)];
+      const rawLdapUsers = [validADUser((await User.count()) + 200), validADUser((await User.count()) + 201)];
       await new ADService().createAccountIfNew(rawLdapUsers);
-      const newLdapUsers = [validADUser(await User.count() + 200), validADUser(await User.count() + 201)];
+      const newLdapUsers = [validADUser((await User.count()) + 200), validADUser((await User.count()) + 201)];
 
       const ldapUsers: User[] = [];
       for (const ldapUser of rawLdapUsers) {
         const auth = await LDAPAuthenticator.findOne(
-          { where: { UUID: ldapUser.objectGUID }, relations: ['user'] },
+          { where: { UUID: ldapUser.objectGUID }, relations: {
+            user: true,
+          } },
         );
         expect(auth).to.exist;
         ldapUsers.push(auth.user);
@@ -231,7 +241,9 @@ describe('AD Service', (): void => {
 
       for (const ldapUser of newLdapUsers) {
         const auth = await LDAPAuthenticator.findOne(
-          { where: { UUID: ldapUser.objectGUID }, relations: ['user'] },
+          { where: { UUID: ldapUser.objectGUID }, relations: {
+            user: true,
+          } },
         );
         expect(auth).to.not.exist;
       }
@@ -380,7 +392,7 @@ describe('AD Service', (): void => {
         });
         sinon.stub(LDAPAuthenticator, 'findOne')
         // @ts-ignore
-          .withArgs({ where: { UUID: sharedAccountMock.objectGUID }, relations: ['user'] })
+          .withArgs({ where: { UUID: sharedAccountMock.objectGUID }, relations: { user: true } })
         // @ts-ignore
           .resolves({ user: { id: 1, displayName: sharedAccountMock.displayName } });
         // @ts-ignore
@@ -405,7 +417,7 @@ describe('AD Service', (): void => {
           });
           sinon.assert.calledOnceWithExactly(LDAPAuthenticator.findOne as sinon.SinonStub, {
             where: { UUID: ldapGroup.objectGUID },
-            relations: ['user'],
+            relations: { user: true },
           });
           sinon.assert.calledOnce(adService.getUsers as sinon.SinonStub);
           sinon.assert.calledOnce(AuthenticationService.prototype.setMemberAuthenticator as sinon.SinonStub);

@@ -37,7 +37,10 @@ export async function getPointOfSaleRelation(
 ): Promise<'all' | 'organ' | 'own'> {
   const pos = await PointOfSale.findOne({
     where: { id: pointOfSaleId },
-    relations: ['owner', 'user'],
+    relations: {
+      owner: true,
+      user: true,
+    },
   });
 
   if (!pos) return 'all';

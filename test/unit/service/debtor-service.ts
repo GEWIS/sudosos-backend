@@ -237,7 +237,11 @@ describe('DebtorService', (): void => {
     it('should correctly delete a single fine', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length === 1);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
-      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: {
+        fines: {
+          transfer: true,
+        },
+      } });
       expect(dbUserFineGroup).to.not.be.null;
       expect(dbUserFineGroup.fines.length).to.equal(1);
 
@@ -259,7 +263,11 @@ describe('DebtorService', (): void => {
     it('should correctly delete a single fine in a larger fineUserGroup', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
-      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: {
+        fines: {
+          transfer: true,
+        },
+      } });
       expect(dbUserFineGroup).to.not.be.null;
       expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
 
@@ -285,7 +293,11 @@ describe('DebtorService', (): void => {
     it('should correctly delete currentFines reference when user tops up after being fined the second time', async () => {
       const userFineGroupIndex = ctx.userFineGroups.findIndex((g) => g.fines.length > 1 && calculateBalance(g.user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() < 0);
       const userFineGroup = ctx.userFineGroups[userFineGroupIndex];
-      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: ['fines', 'fines.transfer'] });
+      let dbUserFineGroup = await UserFineGroup.findOne({ where: { id: userFineGroup.id }, relations: {
+        fines: {
+          transfer: true,
+        },
+      } });
       expect(dbUserFineGroup).to.not.be.null;
       expect(dbUserFineGroup.fines.length).to.be.greaterThan(1);
       const fine = dbUserFineGroup.fines[0];
@@ -356,7 +368,11 @@ describe('DebtorService', (): void => {
       }, actor);
 
       const eventId = handoutEvent.id;
-      const dbEvent = await FineHandoutEvent.findOne({ where: { id: eventId }, relations: ['fines', 'fines.transfer'] });
+      const dbEvent = await FineHandoutEvent.findOne({ where: { id: eventId }, relations: {
+        fines: {
+          transfer: true,
+        },
+      } });
       expect(dbEvent).to.not.be.undefined;
       expect(dbEvent!.fines.length).to.equal(handoutEvent.fines.length);
 
@@ -655,7 +671,9 @@ describe('DebtorService', (): void => {
   });
 
   async function clearFines() {
-    const fines = await Fine.find({ relations: ['transfer'] });
+    const fines = await Fine.find({ relations: {
+      transfer: true,
+    } });
     const fineTransfers = fines.map((f) => f.transfer);
 
     await Fine.clear();
@@ -685,7 +703,9 @@ describe('DebtorService', (): void => {
   describe('handOutFines', async () => {
     beforeAll(async () => {
       await clearFines();
-      const fineTransfers = (await Transfer.find({ relations: ['fine'] })).filter((t) => t.fine != null);
+      const fineTransfers = (await Transfer.find({ relations: {
+        fine: true,
+      } })).filter((t) => t.fine != null);
       expect(fineTransfers.length).to.equal(0);
     });
 
@@ -731,7 +751,9 @@ describe('DebtorService', (): void => {
       if (f.amount.getAmount() > 0) {
         expect((await User.findOne({
           where: { id: f.userFineGroup.userId },
-          relations: ['currentFines'],
+          relations: {
+            currentFines: true,
+          },
         })).currentFines.id).to.equal(f.userFineGroup.id);
       }
       expect(f.fineHandoutEvent.id).to.equal(fineGroup.id);
@@ -759,7 +781,17 @@ describe('DebtorService', (): void => {
       expect(fineHandoutEvent.createdBy.id).to.equal(ctx.actor.id);
 
       const fines = await Promise.all(fineHandoutEvent.fines.map((f) => Fine
-        .findOne({ where: { id: f.id }, relations: ['transfer', 'transfer.from', 'fineHandoutEvent', 'userFineGroup', 'userFineGroup.user'] })));
+        .findOne({ where: { id: f.id }, relations: {
+          transfer: {
+            from: true,
+          },
+
+          fineHandoutEvent: true,
+
+          userFineGroup: {
+            user: true,
+          },
+        } })));
 
       await Promise.all(fines.map(async (f) => {
         const preCalcedFine = usersToFine.find((u) => u.id === f.userFineGroup.userId);
@@ -786,7 +818,9 @@ describe('DebtorService', (): void => {
       expect(user).to.not.be.undefined;
       let userFineGroups = await UserFineGroup.find({
         where: { userId: user.id },
-        relations: ['fines'],
+        relations: {
+          fines: true,
+        },
       });
       expect(userFineGroups).to.be.length(0);
 
@@ -806,7 +840,9 @@ describe('DebtorService', (): void => {
       expect(fineHandoutEvent1.fines[0].userFineGroup.userId).to.equal(fineHandoutEvent2.fines[0].userFineGroup.userId);
       userFineGroups = await UserFineGroup.find({
         where: { userId: user.id },
-        relations: ['fines'],
+        relations: {
+          fines: true,
+        },
       });
       expect(userFineGroups.length).to.equal(1);
       const collection = userFineGroups[0];
@@ -830,7 +866,9 @@ describe('DebtorService', (): void => {
     });
     it('should not set User.currentFines attribute when user gets 0.00 fine', async () => {
       const user = ctx.users.find((u) => calculateBalance(u, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount() > 0);
-      let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      let dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.be.null;
 
       const fineHandoutEvent = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.actor);
@@ -839,7 +877,9 @@ describe('DebtorService', (): void => {
       expect(fine.userFineGroup.userId).to.equal(user.id);
       expect(fine.amount.getAmount()).to.equal(0);
 
-      dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfersInclFines).amount.getAmount())
         .to.be.greaterThanOrEqual(0);
       expect(dbUser.currentFines).to.be.null;
@@ -935,7 +975,10 @@ describe('DebtorService', (): void => {
       const debtorService = new DebtorService();
       await debtorService.waiveFines(fineHandoutEvent.fines[0].userFineGroup.userId, ctx.waiveFinesParams);
 
-      const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].userFineGroup.userId } }, relations: ['fine', 'waivedFines'] });
+      const transfer = await Transfer.findOne({ where: { waivedFines: { userId: fineHandoutEvent.fines[0].userFineGroup.userId } }, relations: {
+        fine: true,
+        waivedFines: true,
+      } });
       transfer.fine = await Fine.create({
         userFineGroup: await UserFineGroup.findOne({ where: { userId: fineHandoutEvent.fines[0].userFineGroup.userId } }),
         fineHandoutEvent: await FineHandoutEvent.findOne({ where: { id: fineHandoutEvent.id } }),

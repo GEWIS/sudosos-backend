@@ -324,8 +324,8 @@ export default class TransferService extends WithManager {
     // a transfer is always at least from a valid user OR to a valid user
     // a transfer may be from null to an user, or from an user to null
     return (request.fromId || request.toId)
-        && (await this.manager.findOne(User, { where: { id: request.fromId } })
-        || await this.manager.findOne(User, { where: { id: request.toId } }))
+        && ((await this.manager.findOne(User, { where: { id: request.fromId } }))
+        || (await this.manager.findOne(User, { where: { id: request.toId } })))
         && request.amount.precision === dinero.defaultPrecision
         && request.amount.currency === dinero.defaultCurrency;
   }
@@ -393,7 +393,19 @@ export default class TransferService extends WithManager {
   public async deleteTransfer(id: number): Promise<void> {
     const transfer = await this.manager.findOne(Transfer, {
       where: { id },
-      relations: ['from', 'to', 'payoutRequest', 'sellerPayout', 'deposit', 'invoice', 'creditInvoice', 'fine', 'writeOff', 'waivedFines', 'inactiveAdministrativeCost'],
+      relations: {
+        from: true,
+        to: true,
+        payoutRequest: true,
+        sellerPayout: true,
+        deposit: true,
+        invoice: true,
+        creditInvoice: true,
+        fine: true,
+        writeOff: true,
+        waivedFines: true,
+        inactiveAdministrativeCost: true,
+      },
     });
 
     if (!transfer) {

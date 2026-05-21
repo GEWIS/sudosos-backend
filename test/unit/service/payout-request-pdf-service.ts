@@ -220,7 +220,9 @@ describe('PayoutRequestPdfService', async () => {
         status: 200,
       });
 
-      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
+      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: {
+        requestedBy: true,
+      } });
       const newPdf = Object.assign(new PayoutRequestPdf(), {
         hash: await payoutRequest.getPdfParamHash(),
         downloadName: 'test',
@@ -244,7 +246,17 @@ describe('PayoutRequestPdfService', async () => {
     it('should throw an error if PDF generation fails', async () => {
       generatePayoutRequestStub.rejects(new Error('Failed to generate PDF'));
 
-      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: ['requestedBy', 'payoutRequestStatus', 'transfer', 'transfer.to', 'transfer.from', 'pdf'] });
+      const payoutRequest = await PayoutRequest.findOne({ where: { id: 1 }, relations: {
+        requestedBy: true,
+        payoutRequestStatus: true,
+
+        transfer: {
+          to: true,
+          from: true,
+        },
+
+        pdf: true,
+      } });
       payoutRequest.pdfService = pdfService;
       await expect(payoutRequest.createPdf()).to.eventually.be.rejectedWith();
     });

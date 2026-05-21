@@ -205,7 +205,9 @@ describe('ProductService', async (): Promise<void> => {
           // eslint-disable-next-line no-await-in-loop
           const productRevision = await ProductRevision.findOne({
             where: { product: { id: p.id }, revision: p.revision },
-            relations: ['vat'],
+            relations: {
+              vat: true,
+            },
           });
           const vatGroup = productRevision!.vat;
           expect(vatGroup.hidden).to.be.true;
@@ -482,7 +484,13 @@ describe('ProductService', async (): Promise<void> => {
       const containerEntity = await Container.findOne({ where: { id: containerRev.containerId } });
       expect(containerEntity.currentRevision).to.be.eq(2);
 
-      const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: containerRev.containerId } }, relations: ['container', 'products', 'products.category'] })).products[0];
+      const productInContainer = (await ContainerRevision.findOne({ where: { revision: 2, container: { id: containerRev.containerId } }, relations: {
+        container: true,
+
+        products: {
+          category: true,
+        },
+      } })).products[0];
       expect(productInContainer.name).to.eq(update.name);
       expect(typeof productInContainer.alcoholPercentage === 'string'
         ? parseInt(productInContainer.alcoholPercentage, 10)
@@ -552,7 +560,15 @@ describe('ProductService', async (): Promise<void> => {
       };
 
       await ProductService.updateProduct(productUpdate);
-      const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: ['pointOfSale', 'containers', 'containers.products', 'containers.products.category'] })).containers[0].products[0];
+      const productFromPos = (await PointOfSaleRevision.findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: {
+        pointOfSale: true,
+
+        containers: {
+          products: {
+            category: true,
+          },
+        },
+      } })).containers[0].products[0];
 
       expect(productFromPos.name).to.eq(productUpdate.name);
       expect(productFromPos.category.id).to.eq(productUpdate.category);

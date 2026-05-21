@@ -26,7 +26,7 @@ import bcrypt from 'bcrypt';
 // @ts-ignore
 import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
-import { FindOptionsWhere, In } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, In } from 'typeorm';
 import { randomBytes } from 'crypto';
 import User, { LocalUserTypes, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
@@ -189,7 +189,9 @@ export default class AuthenticationService extends WithManager {
     });
     if (!user) return undefined;
 
-    const resetToken = await ResetToken.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+    const resetToken = await ResetToken.findOne({ where: { user: { id: user.id } }, relations: {
+      user: true,
+    } });
     if (!resetToken) return undefined;
 
     // Test if the hash matches the token
@@ -257,7 +259,10 @@ export default class AuthenticationService extends WithManager {
   public async setUserAuthenticationHash<T extends HashBasedAuthenticationMethod>(user: User,
     pass: string, Type: new () => T): Promise<T> {
     const repo = this.manager.getRepository(Type);
-    let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
+    let authenticator = await repo.findOne({
+      where: { user: { id: user.id } } as FindOptionsWhere<T>,
+      relations: { user: true } as FindOptionsRelations<T>,
+    });
 
     // Use lower rounds for PIN authenticators
     const hash = (Type as any).IS_PIN_AUTHENTICATOR === true
@@ -283,7 +288,10 @@ export default class AuthenticationService extends WithManager {
   public async setUserAuthenticationNfc<T extends NfcAuthenticator>(user: User,
     nfcCode: string, Type: new () => T): Promise<T> {
     const repo = this.manager.getRepository(Type);
-    let authenticator = await repo.findOne({ where: { user: { id: user.id } } as FindOptionsWhere<T>, relations: ['user'] });
+    let authenticator = await repo.findOne({
+      where: { user: { id: user.id } } as FindOptionsWhere<T>,
+      relations: { user: true } as FindOptionsRelations<T>,
+    });
 
     if (authenticator) {
       // We only need to update the nfcCode
@@ -403,7 +411,9 @@ export default class AuthenticationService extends WithManager {
    * @param user
    */
   public async getMemberAuthenticators(user: User): Promise<User[]> {
-    const users = (await this.manager.find(OrganMembership, { where: { user: { id: user.id } }, relations: ['organ'] }))
+    const users = (await this.manager.find(OrganMembership, { where: { user: { id: user.id } }, relations: {
+      organ: true,
+    } }))
       .map((auth) => auth.organ);
 
     users.push(user);
@@ -553,7 +563,7 @@ export default class AuthenticationService extends WithManager {
     const roleNames = roles.map((r) => r.name);
     const overrideMaintenance = await context.roleManager.can(roleNames, 'override', 'all', 'Maintenance', ['*']);
     const contents = await this.makeJsonWebToken(user, roles, organs, overrideMaintenance, posId);
-    const finalSalt = salt || await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS);
+    const finalSalt = salt || (await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS));
     const token = await context.tokenHandler.signToken(contents, finalSalt, expiry);
 
     return { user: contents.user, roles, organs: contents.organs, token };

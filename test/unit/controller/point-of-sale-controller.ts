@@ -636,7 +636,9 @@ describe('PointOfSaleController', async () => {
   });
   describe('GET /pointsofsale/:id/products', async () => {
     it('should return correct model', async () => {
-      const pos = await PointOfSale.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id } } });
+      const pos = await PointOfSale.findOne({ relations: {
+        owner: true,
+      }, where: { owner: { id: ctx.adminUser.id } } });
       expect(pos).to.not.be.null;
       const { id } = pos;
 

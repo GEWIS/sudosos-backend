@@ -441,7 +441,9 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(200);
     });
     it('should return an HTTP 200 and the product with the given id if connected via organ', async () => {
-      const product = await Product.findOne({ relations: ['owner'], where: { owner: { id: ctx.organ.id } } });
+      const product = await Product.findOne({ relations: {
+        owner: true,
+      }, where: { owner: { id: ctx.organ.id } } });
       const res = await request(ctx.app)
         .get(`/products/${product.id}`)
         .set('Authorization', `Bearer ${ctx.organMemberToken}`);
@@ -522,7 +524,7 @@ describe('ProductController', async (): Promise<void> => {
       expect(res.status).to.equal(404);
     });
     it('should return an HTTP 404 if the product with the given id does not exist', async () => {
-      const id = await Product.count({ withDeleted: true }) + 1;
+      const id = (await Product.count({ withDeleted: true })) + 1;
       const res = await request(ctx.app)
         .patch(`/products/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -582,7 +584,9 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Product.findOne({ where: { id }, relations: ['image'] })).image).to.be.not.undefined;
+      expect((await Product.findOne({ where: { id }, relations: {
+        image: true,
+      } })).image).to.be.not.undefined;
     });
     it('should update the product image if admin', async () => {
       const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
@@ -598,7 +602,9 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Product.findOne({ where: { id }, relations: ['image'] })).image.id).to.not.equal(image);
+      expect((await Product.findOne({ where: { id }, relations: {
+        image: true,
+      } })).image.id).to.not.equal(image);
     });
     it('should return 403 if not admin', async () => {
       const { id } = ctx.products.filter((product) => product.image === undefined)[1];

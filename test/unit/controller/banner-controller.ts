@@ -616,7 +616,9 @@ describe('BannerController', async (): Promise<void> => {
       // invalid code
       expect(res.status).to.equal(400);
       // check if banner is unaltered
-      const databaseBanner = await Banner.findOne({ where: { id: 1 }, relations: ['image'] });
+      const databaseBanner = await Banner.findOne({ where: { id: 1 }, relations: {
+        image: true,
+      } });
       expect(bannerEq(databaseBanner, oldBanner)).to.be.true;
 
       // check response body has validation error shape
@@ -737,7 +739,9 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Banner.findOne({ where: { id }, relations: ['image'] })).image).to.be.not.undefined;
+      expect((await Banner.findOne({ where: { id }, relations: {
+        image: true,
+      } })).image).to.be.not.undefined;
     });
     it('should update the banner image if admin', async () => {
       const stub = sinon.stub(DiskStorage.prototype, 'validateFileLocation');
@@ -753,7 +757,9 @@ describe('BannerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(204);
       expect(res.body).to.be.empty;
-      expect((await Banner.findOne({ where: { id }, relations: ['image'] })).image.id).to.not.equal(image);
+      expect((await Banner.findOne({ where: { id }, relations: {
+        image: true,
+      } })).image.id).to.not.equal(image);
     });
     it('should return 403 if not admin', async () => {
       const { id } = ctx.banners.filter((banner) => banner.image === undefined)[0];

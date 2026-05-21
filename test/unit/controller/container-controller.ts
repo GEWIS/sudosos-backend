@@ -382,7 +382,9 @@ describe('ContainerController', async (): Promise<void> => {
       body.forEach((product) => expect(deletedProductIds).to.not.include(product.id));
     });
     it('should return an HTTP 403 if container not public or own and if not admin', async () => {
-      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: true } });
+      const { id } = await Container.findOne({ relations: {
+        owner: true,
+      }, where: { owner: { id: ctx.adminUser.id }, public: true } });
       const res = await request(ctx.app)
         .get(`/containers/${id}/products`)
         .set('Authorization', `Bearer ${ctx.localUser}`);
@@ -390,7 +392,9 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(403);
     });
     it('should return an HTTP 200 and all the products in the container if public and if admin', async () => {
-      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.localUser.id }, public: true } });
+      const { id } = await Container.findOne({ relations: {
+        owner: true,
+      }, where: { owner: { id: ctx.localUser.id }, public: true } });
 
       const res = await request(ctx.app)
         .get(`/containers/${id}/products`)
@@ -529,7 +533,7 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.body.errors).to.be.an('array').with.length.greaterThan(0);
     });
     it('should return an HTTP 404 if the container with the given id does not exist', async () => {
-      const id = await Container.count({ withDeleted: true }) + 1;
+      const id = (await Container.count({ withDeleted: true })) + 1;
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)
@@ -545,7 +549,9 @@ describe('ContainerController', async (): Promise<void> => {
       expect(res.status).to.equal(404);
     });
     it('should return an HTTP 403 if not admin nor owner and not public', async () => {
-      const { id } = await Container.findOne({ relations: ['owner'], where: { owner: { id: ctx.adminUser.id }, public: false } });
+      const { id } = await Container.findOne({ relations: {
+        owner: true,
+      }, where: { owner: { id: ctx.adminUser.id }, public: false } });
 
       const res = await request(ctx.app)
         .patch(`/containers/${id}`)

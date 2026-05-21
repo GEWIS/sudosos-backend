@@ -145,12 +145,12 @@ describe.skipIf(shouldSkipStripe)('StripeService', async (): Promise<void> => {
     });
     it('should correctly create only one success status', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2 && !d.transfer))[0];
-      let deposit = await StripeService.getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
+      let deposit = await StripeService.getStripeDeposit(id, { transfer: { to: true }, to: true });
       expect(deposit.transfer).to.be.null;
 
       await testStatusCreation(id, StripePaymentIntentState.SUCCEEDED);
 
-      deposit = await StripeService.getStripeDeposit(id, ['transfer', 'transfer.to', 'to']);
+      deposit = await StripeService.getStripeDeposit(id, { transfer: { to: true }, to: true });
       // Correct transfer should have been created
       expect(deposit.transfer).to.not.be.null;
       expect(ctx.dineroTransformer.to(deposit.transfer.amountInclVat))

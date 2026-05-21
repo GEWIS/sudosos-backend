@@ -247,7 +247,9 @@ describe('PointOfSaleService', async (): Promise<void> => {
 
       expect(await PointOfSale.count()).to.equal(count + 1);
 
-      const updatedPointOfSale = await PointOfSaleRevision.findOne({ where: { pointOfSale: { id: res.id }, revision: res.revision }, relations: ['containers'] });
+      const updatedPointOfSale = await PointOfSaleRevision.findOne({ where: { pointOfSale: { id: res.id }, revision: res.revision }, relations: {
+        containers: true,
+      } });
       const containers = updatedPointOfSale.containers.map((container) => container.container.id);
       expect(ctx.validPOSParams.containers).to.deep.equalInAnyOrder(containers);
 

@@ -351,7 +351,9 @@ export default class ContainerController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const containerId = asNumber(req.params.id);
-    const container: Container = await Container.findOne({ where: { id: containerId }, relations: ['owner'] });
+    const container: Container = await Container.findOne({ where: { id: containerId }, relations: {
+      owner: true,
+    } });
 
     if (!container) return 'all';
     if (userTokenInOrgan(req, container.owner.id)) return 'organ';

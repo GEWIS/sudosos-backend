@@ -305,7 +305,9 @@ export default class ProductController extends BaseController {
 
     // handle request
     try {
-      const product = await Product.findOne({ where: { id: productId }, relations: ['image'] });
+      const product = await Product.findOne({ where: { id: productId }, relations: {
+        image: true,
+      } });
       if (product) {
         await this.fileService.uploadEntityImage(
           product, file, req.token.user,
@@ -379,7 +381,9 @@ export default class ProductController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const productId = asNumber(req.params.id);
-    const product = await Product.findOne({ where: { id: productId }, relations: ['owner'] });
+    const product = await Product.findOne({ where: { id: productId }, relations: {
+      owner: true,
+    } });
     if (product && product.owner.id === req.token.user.id) return 'own';
     if (product && userTokenInOrgan(req, product.owner.id)) return 'organ';
     return 'all';

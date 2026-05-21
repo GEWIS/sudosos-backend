@@ -153,7 +153,7 @@ export default class VoucherGroupService {
 
     const options: FindManyOptions = {
       where: QueryFilter.createFilterWhereClause(mapping, filters),
-      relations: ['vouchers.user'],
+      relations: { vouchers: { user: true } },
     };
     const bkgs: VoucherGroup[] = await VoucherGroup.find({ ...options, take, skip });
     const count = await VoucherGroup.count({ where: options.where });
@@ -225,7 +225,9 @@ export default class VoucherGroupService {
 
     let usersCurrent = (
       await UserVoucherGroup.find({
-        relations: ['user'],
+        relations: {
+          user: true,
+        },
         where: { voucherGroup: { id } },
       })
     ).map((ubkg) => ubkg.user);

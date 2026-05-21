@@ -241,7 +241,9 @@ export default class UserNotificationController extends BaseController {
 
     const preference = await UserNotificationPreference.findOne({
       where: { id: asNumber(req.params.id) },
-      relations: ['user'],
+      relations: {
+        user: true,
+      },
     });
 
     if (!preference) return 'all';

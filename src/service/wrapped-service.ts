@@ -54,7 +54,9 @@ export default class WrappedService extends WithManager {
 
     return entityManager.findOne(Wrapped, {
       where: { userId },
-      relations: ['organs'],
+      relations: {
+        organs: true,
+      },
     });
   }
 
@@ -242,8 +244,13 @@ export default class WrappedService extends WithManager {
         from: { id: In(userIds) },
         createdAt: Between(start, end),
       },
-      select: ['id', 'createdAt'],
-      relations: ['from'],
+      select: {
+        id: true,
+        createdAt: true,
+      },
+      relations: {
+        from: true,
+      },
     });
 
     // Group transactions by user id

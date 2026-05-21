@@ -56,7 +56,7 @@ describe('WriteOffController', () => {
   };
 
   beforeAll(async () => {
-    const c = { ...await defaultContext() };
+    const c = { ...(await defaultContext()) };
     await truncateAllTables(c.connection);
 
     const admin = await (await UserFactory(await ADMIN_USER())).get();
@@ -282,7 +282,9 @@ describe('WriteOffController', () => {
     it('should return HTTP 200 with the write off PDF belonging to the write off', async () => {
       fs.mkdirSync(WRITE_OFF_PDF_LOCATION, { recursive: true });
       resolveSuccessful();
-      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
+      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: {
+        to: true,
+      } });
       const res = await request(ctx.app)
         .get(`/writeoffs/${writeOff.id}/pdf`)
         .set('Authorization', `Bearer ${ctx.adminToken}`);
@@ -305,7 +307,9 @@ describe('WriteOffController', () => {
     });
     it('should return HTTP 502 if pdf generation fails', async () => {
       clientStub.generateWriteOff.rejects(new Error('Failed to generate PDF'));
-      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
+      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: {
+        to: true,
+      } });
       const res = await request(ctx.app)
         .get(`/writeoffs/${writeOff.id}/pdf`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)

@@ -176,7 +176,9 @@ describe.skipIf(shouldSkipStripe)('StripeController', async (): Promise<void> =>
       expect(await StripeDeposit.count()).to.equal(stripeDepositCount + 1);
 
       ctx.specification.validateModel('StripePaymentIntentResponse', paymentIntent);
-      const stripeDeposit = await StripeDeposit.findOne({ where: { id: paymentIntent.id }, relations: ['to'] });
+      const stripeDeposit = await StripeDeposit.findOne({ where: { id: paymentIntent.id }, relations: {
+        to: true,
+      } });
       expect(ctx.localUser.id).to.equal(stripeDeposit.to.id);
 
       const stripePaymentIntent = await ctx.stripe.paymentIntents.retrieve(paymentIntent.stripeId);

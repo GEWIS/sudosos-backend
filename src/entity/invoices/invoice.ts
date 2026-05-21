@@ -23,8 +23,11 @@
  *
  * ```ts
  * const invoice = await this.manager.findOne(Invoice, {
- *    where: { id: invoiceId }, relations: ['transfer', 'transfer.from',
- *   'invoiceStatus', 'invoiceStatus.changedBy']
+ *   where: { id: invoiceId },
+ *   relations: {
+ *     transfer: { from: true },
+ *     invoiceStatus: { changedBy: true },
+ *   },
  * });
  * ```
  *

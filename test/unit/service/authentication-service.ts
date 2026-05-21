@@ -482,12 +482,16 @@ describe('AuthenticationService', (): void => {
   describe('resetLocalUsingToken function', () => {
     it('should reset password if resetToken is correct and user has no password', async () => {
       await inUserContext(await (await UserFactory()).clone(1), async (user: User) => {
-        let localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        let localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: {
+          user: true,
+        } });
         expect(localAuthenticator).to.be.null;
 
         const tokenInfo = await new AuthenticationService().createResetToken(user);
         const auth = await new AuthenticationService().resetLocalUsingToken(tokenInfo.resetToken, tokenInfo.password, 'Password');
-        localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        localAuthenticator = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: {
+          user: true,
+        } });
         expect(localAuthenticator).to.not.be.null;
         expect(auth).to.not.be.undefined;
         await expect(new AuthenticationService().compareHash('Password', auth.hash)).to.eventually.be.true;

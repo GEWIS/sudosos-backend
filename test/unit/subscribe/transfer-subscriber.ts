@@ -81,12 +81,16 @@ describe('TransferSubscriber', (): void => {
       const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
-        relations: ['userFineGroup'],
+        relations: {
+          userFineGroup: true,
+        },
       });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
-      let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      let dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.not.be.null;
       expect(dbUser.currentFines).to.not.be.undefined;
       // Positive number to be added
@@ -98,7 +102,9 @@ describe('TransferSubscriber', (): void => {
 
       const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.equal(0);
-      dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.be.null;
     });
     it('should not set currentFines to null when debt is not fully paid', async () => {
@@ -111,12 +117,16 @@ describe('TransferSubscriber', (): void => {
       const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
-        relations: ['userFineGroup'],
+        relations: {
+          userFineGroup: true,
+        },
       });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
-      let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      let dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.not.be.null;
       expect(dbUser.currentFines).to.not.be.undefined;
       // Positive number to be added, but not enough to pay the full debt
@@ -130,7 +140,9 @@ describe('TransferSubscriber', (): void => {
 
       const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.be.lessThan(0);
-      dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.not.be.null;
     });
     it('should not set currentFines to null for negative transfers', async () => {
@@ -143,12 +155,16 @@ describe('TransferSubscriber', (): void => {
       const { fines } = await new DebtorService().handOutFines({ userIds: [user.id], referenceDate: new Date() }, ctx.users[0]);
       const fine = await Fine.findOne({
         where: { id: fines[0].id },
-        relations: ['userFineGroup'],
+        relations: {
+          userFineGroup: true,
+        },
       });
       expect(fine.userFineGroup.userId).to.equal(user.id);
       // Sanity check
 
-      let dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      let dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.not.be.null;
       expect(dbUser.currentFines).to.not.be.undefined;
       // Positive number to be added, but not enough to pay the full debt
@@ -160,7 +176,9 @@ describe('TransferSubscriber', (): void => {
 
       const newBalance = await new BalanceService().getBalance(user.id);
       expect(newBalance.amount.amount).to.be.greaterThanOrEqual(0);
-      dbUser = await User.findOne({ where: { id: user.id }, relations: ['currentFines'] });
+      dbUser = await User.findOne({ where: { id: user.id }, relations: {
+        currentFines: true,
+      } });
       expect(dbUser.currentFines).to.not.be.null;
     });
   });

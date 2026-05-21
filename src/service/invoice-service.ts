@@ -371,7 +371,9 @@ export default class InvoiceService extends WithManager {
     // Only load defaults for invoice users.
     if (!user || user.type !== UserType.INVOICE) return undefined;
 
-    const invoiceUser = await this.manager.findOne(InvoiceUser, { where: { userId }, relations: ['user'] });
+    const invoiceUser = await this.manager.findOne(InvoiceUser, { where: { userId }, relations: {
+      user: true,
+    } });
     if (!invoiceUser) return undefined;
 
     const addressee = `${user.firstName} ${user.lastName}`;

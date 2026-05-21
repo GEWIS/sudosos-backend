@@ -235,7 +235,9 @@ export default class PayoutRequestService {
   ): Promise<PayoutRequest | undefined> {
     const payoutRequest = await PayoutRequest.findOne({
       where: { id },
-      relations: ['requestedBy'],
+      relations: {
+        requestedBy: true,
+      },
     });
 
     if (payoutRequest == null) throw Error(`PayoutRequest with ID ${id} does not exist`);
