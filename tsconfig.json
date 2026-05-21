@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
-        "target": "ES2021",
+        "target": "ES2023",
         "module": "commonjs",
+        "useDefineForClassFields": false,
         "noImplicitAny": true,
         "removeComments": true,
         "preserveConstEnums": true,
