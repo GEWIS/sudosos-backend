@@ -18,21 +18,21 @@
  *  @license
  */
 
-import InvoicePdfService from '../../../src/service/pdf/invoice-pdf-service';
-import { Client } from 'pdf-generator-client';
-import sinon, { SinonStub } from 'sinon';
-import Invoice from '../../../src/entity/invoices/invoice';
 import chai, { expect } from 'chai';
-import InvoicePdf from '../../../src/entity/file/invoice-pdf';
+import sinon, { SinonStub } from 'sinon';
 import { DataSource, IsNull } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User from '../../../src/entity/user/user';
+import { json } from 'body-parser';
+import deepEqualInAnyOrder from 'deep-equal-in-any-order';
+
 import Database, { AppDataSource } from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
-import { json } from 'body-parser';
+import InvoiceHtmlPdfService from '../../../src/service/pdf/invoice-html-pdf-service';
+import Invoice from '../../../src/entity/invoices/invoice';
+import InvoicePdf from '../../../src/entity/file/invoice-pdf';
+import User from '../../../src/entity/user/user';
 import FileService from '../../../src/service/file-service';
-import deepEqualInAnyOrder from 'deep-equal-in-any-order';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { INVOICE_PDF_LOCATION } from '../../../src/files/storage';
@@ -41,11 +41,11 @@ import InvoiceService from '../../../src/service/invoice-service';
 import { createInvoiceWithTransfers } from '../../helpers/invoice-helpers';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
-import { subTransactionRowToProduct } from '../../../src/helpers/pdf';
+import { BAC } from '../../../src/files/templates/bac-letterhead';
 
 chai.use(deepEqualInAnyOrder);
 
-describe('InvoicePdfService', async (): Promise<void> => {
+describe('InvoiceHtmlPdfService', async (): Promise<void> => {
   let ctx: {
     connection: DataSource;
     app: Application;
@@ -53,8 +53,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     users: User[];
     invoices: Invoice[];
     pdfParams: any;
-    fileService: FileService,
-    client: Client,
+    fileService: FileService;
   };
 
   beforeAll(async function test(): Promise<void> {
@@ -65,7 +64,6 @@ describe('InvoicePdfService', async (): Promise<void> => {
     const { transactions } = await new TransactionSeeder().seed(users);
     const { invoices } = await new InvoiceSeeder().seed(users, transactions);
 
-    // start app
     const app = express();
     const specification = await Swagger.initialize(app);
     app.use(json());
@@ -79,7 +77,6 @@ describe('InvoicePdfService', async (): Promise<void> => {
 
     const fileService: FileService = new FileService('./data/simple', 'disk');
 
-    // initialize context
     ctx = {
       connection,
       app,
@@ -88,7 +85,6 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoices,
       pdfParams,
       fileService,
-      client: new Client('url', { fetch }),
     };
   });
 
@@ -96,22 +92,21 @@ describe('InvoicePdfService', async (): Promise<void> => {
     await finishTestDB(ctx.connection);
   });
 
-  let generateInvoiceStub: SinonStub;
-  let uploadInvoiceStub: SinonStub;
+  let compileHtmlStub: SinonStub;
+  let uploadPdfStub: SinonStub;
   let createFileStub: SinonStub;
 
-  let pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
+  let pdfService = new InvoiceHtmlPdfService(INVOICE_PDF_LOCATION);
 
   beforeEach(function () {
-    generateInvoiceStub = sinon.stub(pdfService.client, 'generateInvoice');
-    uploadInvoiceStub = sinon.stub(pdfService.fileService, 'uploadPdf');
+    compileHtmlStub = sinon.stub(pdfService, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
+    uploadPdfStub = sinon.stub(pdfService.fileService, 'uploadPdf');
     createFileStub = sinon.stub(pdfService.fileService, 'createFile');
   });
 
   afterEach(function () {
-    // Restore the original function after each test
-    generateInvoiceStub.restore();
-    uploadInvoiceStub.restore();
+    compileHtmlStub.restore();
+    uploadPdfStub.restore();
     createFileStub.restore();
   });
 
@@ -144,7 +139,7 @@ describe('InvoicePdfService', async (): Promise<void> => {
     });
   });
 
-  describe('Invoice: getOrCreatePDF', () => {
+  describe('Invoice: getOrCreatePdf', () => {
     it('should return an existing PDF if the hash matches and force is false', async () => {
       const invoice = ctx.invoices[0];
 
@@ -172,19 +167,15 @@ describe('InvoicePdfService', async (): Promise<void> => {
       invoice.pdf = pdf;
       await Invoice.save(invoice);
 
-      generateInvoiceStub.resolves({
-        data: new Blob(),
-        status: 200,
-      });
       const newPdf = Object.assign(new InvoicePdf(), {
         ...ctx.pdfParams,
         hash: await invoice.getPdfParamHash(),
       });
-      uploadInvoiceStub.resolves(newPdf);
+      uploadPdfStub.resolves(newPdf);
       invoice.pdfService = pdfService;
 
       await invoice.getOrCreatePdf();
-      expect(uploadInvoiceStub).to.have.been.calledOnce;
+      expect(uploadPdfStub).to.have.been.calledOnce;
     });
     it('should always regenerate and return a new PDF if force is true, even if the hash matches', async () => {
       const invoice = ctx.invoices[0];
@@ -202,86 +193,76 @@ describe('InvoicePdfService', async (): Promise<void> => {
       // Hash is valid
       expect(await invoice.validatePdfHash()).to.be.true;
 
-      generateInvoiceStub.resolves({
-        data: new Blob(),
-        status: 200,
-      });
       const newPdf = Object.assign(new InvoicePdf(), {
         ...ctx.pdfParams,
         hash: await invoice.getPdfParamHash(),
       });
-      uploadInvoiceStub.resolves(newPdf);
+      uploadPdfStub.resolves(newPdf);
+      invoice.pdfService = pdfService;
 
       await invoice.getOrCreatePdf(true);
 
       // Upload was still called.
-      expect(uploadInvoiceStub).to.have.been.calledOnce;
+      expect(uploadPdfStub).to.have.been.calledOnce;
     });
   });
 
-  // TODO: test invoiceToPricing and subTransactionRowToProduct
-  describe('invoiceToPricing', () => {
-    it('should return the correct pricing for an invoice', async () => {
-      const invoice = ctx.invoices[0];
-      const pricing = invoice.pdfService.invoiceToPricing(invoice);
-
-      let totalExclVat = 0, totalInclVat = 0;
-      invoice.subTransactionRows.forEach((row) => {
-        totalExclVat += Math.round(row.product.priceInclVat.getAmount() / (1 + (row.product.vat.percentage / 100))) * row.amount;
-        totalInclVat += row.product.priceInclVat.getAmount() * row.amount;
-      });
-
-      expect(pricing.exclVat).to.eq(totalExclVat);
-      expect(pricing.inclVat).to.eq(totalInclVat);
-      expect(pricing.exclVat + pricing.lowVat + pricing.highVat).to.eq(totalInclVat);
-    });
-  });
-  describe('subTransactionRowToProduct', () => {
-    it('should return the correct product for a subTransactionRow', async () => {
-      const invoice = ctx.invoices[0];
-      const subTransactionRow = invoice.subTransactionRows[0];
-
-      const product = subTransactionRowToProduct(subTransactionRow);
-      expect(product.name).to.eq(subTransactionRow.product.name);
-      expect(product.pricing.vatAmount).to.eq(subTransactionRow.product.vat.percentage);
-      expect(product.pricing.quantity).to.eq(subTransactionRow.amount);
-      expect(product.pricing.basePrice).to.eq(subTransactionRow.product.priceInclVat.getAmount());
-      expect(product.name).to.eq(subTransactionRow.product.name);
-    });
-  });
-
-
-  describe('getInvoiceParameters', () => {
+  describe('getParameters', () => {
     it('should return all required parameters for generating an invoice PDF', async () => {
       const invoice = ctx.invoices[0];
-      const params = await invoice.pdfService.getParameters(invoice);
+      const params = await pdfService.getParameters(invoice);
 
-      expect(params.reference.ourReference).to.eq(invoice.reference);
-      expect(params.reference.yourReference).to.eq(String(invoice.id));
-      expect(params.reference.costCenter).to.eq(true);
-
+      expect(params.reference).to.eq(invoice.reference);
+      expect(params.identifier).to.eq(String(invoice.id));
+      expect(params.customerNumber).to.eq(String(invoice.toId));
       expect(params.subject).to.eq(invoice.description);
-      expect(params.dates.date).to.eq(invoice.date);
-      expect(params.company.name).to.eq(invoice.addressee);
-
+      expect(params.date).to.eq(invoice.date.toLocaleDateString('nl-NL'));
+      expect(params.addressee).to.eq(invoice.addressee);
       expect(params.address.street).to.eq(invoice.street);
       expect(params.address.postalCode).to.eq(invoice.postalCode);
       expect(params.address.city).to.eq(invoice.city);
       expect(params.address.country).to.eq(invoice.country);
+
+      const expectedDue = new Date(invoice.date);
+      expectedDue.setDate(expectedDue.getDate() + BAC.paymentTermDays);
+      expect(params.dueDate).to.eq(expectedDue.toLocaleDateString('nl-NL'));
+    });
+
+    it('should aggregate totals correctly across all sub-transaction rows', async () => {
+      const invoice = ctx.invoices[0];
+      const params = await pdfService.getParameters(invoice);
+
+      let expectedExclCents = 0;
+      let expectedVatCents = 0;
+      invoice.subTransactionRows.forEach((row) => {
+        const inclCents = row.product.priceInclVat.getAmount();
+        const exclPerUnit = Math.round(inclCents / (1 + row.product.vat.percentage / 100));
+        expectedExclCents += exclPerUnit * row.amount;
+        expectedVatCents += (inclCents - exclPerUnit) * row.amount;
+      });
+
+      expect(params.subtotalExcl).to.be.closeTo(expectedExclCents / 100, 0.001);
+      expect(params.totalVat).to.be.closeTo(expectedVatCents / 100, 0.001);
+      expect(params.totalIncl).to.be.closeTo((expectedExclCents + expectedVatCents) / 100, 0.001);
+      expect(params.lineItems).to.have.length(invoice.subTransactionRows.length);
+    });
+
+    it('should sort line items by sub_transaction_row id ascending', async () => {
+      const invoice = ctx.invoices[0];
+      const params = await pdfService.getParameters(invoice);
+
+      const ids = params.lineItems.map((it) => it.id);
+      const sorted = [...ids].sort((a, b) => a - b);
+      expect(ids).to.deep.equal(sorted);
     });
   });
 
-  describe('createInvoicePDF', () => {
-    it('should generate and upload a new PDF for the given invoice ID', async () => {
-      generateInvoiceStub.resolves({
-        data: new Blob(),
-        status: 200,
-      });
-
+  describe('createPdf', () => {
+    it('should generate and upload a new PDF for the given invoice', async () => {
       const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
       const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
 
-      uploadInvoiceStub.restore();
+      uploadPdfStub.restore();
       createFileStub.resolves({
         downloadName: 'test',
         location: 'test',
@@ -295,15 +276,16 @@ describe('InvoicePdfService', async (): Promise<void> => {
       expect(invoicePdf.hash).to.eq(await invoice.getPdfParamHash());
     });
     it('should throw an error if PDF generation fails', async () => {
-      generateInvoiceStub.rejects(new Error('Failed to generate PDF'));
+      compileHtmlStub.rejects(new Error('Failed to generate PDF'));
       const options = InvoiceService.getOptions({ returnInvoiceEntries: true });
       const invoice = await Invoice.findOne({ ...options, where: { pdf: IsNull() } });
       invoice.pdfService = pdfService;
       await expect(invoice.createPdf()).to.be.rejectedWith();
     });
   });
+
   describe('PDF of deleted invoice', () => {
-    it('should return the correct PDF', async () => {
+    it('should produce the same parameters and hash before and after deletion', async () => {
       await inUserContext((await UserFactory()).clone(2), async (debtor: User, creditor: User) => {
         const invoice = await createInvoiceWithTransfers(debtor.id, creditor.id, 1);
         const hash = await invoice.getPdfParamHash();
@@ -322,6 +304,40 @@ describe('InvoicePdfService', async (): Promise<void> => {
         expect(newHash).to.deep.equal(hash);
         expect(newParams).to.deep.equal(params);
       });
+    });
+  });
+
+  describe('HTML content', () => {
+    it('should embed key anchor strings for the F6c template', async () => {
+      compileHtmlStub.restore();
+
+      const invoice = ctx.invoices[0];
+      invoice.pdfService = pdfService;
+      const html = (await pdfService.createRaw(invoice)).toString('utf-8');
+
+      expect(html).to.contain('Total including VAT');
+      expect(html).to.contain(BAC.iban);
+      expect(html).to.contain(invoice.addressee);
+    });
+
+    it('should render an Attn. line when attention is set', async () => {
+      compileHtmlStub.restore();
+
+      const invoice = Object.assign(ctx.invoices[0], { attention: 'Jan Janssen' });
+      invoice.pdfService = pdfService;
+      const html = (await pdfService.createRaw(invoice)).toString('utf-8');
+
+      expect(html).to.contain('Attn. Jan Janssen');
+    });
+
+    it('should omit the Attn. line when attention is empty', async () => {
+      compileHtmlStub.restore();
+
+      const invoice = Object.assign(ctx.invoices[0], { attention: '' });
+      invoice.pdfService = pdfService;
+      const html = (await pdfService.createRaw(invoice)).toString('utf-8');
+
+      expect(html).to.not.contain('Attn.');
     });
   });
 });

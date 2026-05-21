@@ -48,7 +48,7 @@ import InvoicePdf from '../file/invoice-pdf';
 import SubTransactionRow from '../transactions/sub-transaction-row';
 import { INVOICE_PDF_LOCATION } from '../../files/storage';
 import { PdfAble } from '../file/pdf-able';
-import InvoicePdfService from '../../service/pdf/invoice-pdf-service';
+import InvoiceHtmlPdfService from '../../service/pdf/invoice-html-pdf-service';
 
 
 @Entity()
@@ -174,7 +174,7 @@ export default class Invoice extends PdfAble(BaseEntity) {
   @JoinTable({ name: 'inv_sub_tra_row_del_inv_sub_tra_row' })
   public subTransactionRowsDeletedInvoice: SubTransactionRow[];
 
-  pdfService = new InvoicePdfService(INVOICE_PDF_LOCATION);
+  pdfService = new InvoiceHtmlPdfService(INVOICE_PDF_LOCATION);
 
   async getOwner(): Promise<User> {
     return this.to;
