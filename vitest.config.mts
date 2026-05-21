@@ -10,7 +10,7 @@ export default defineConfig({
           decorators: true,
           dynamicImport: true,
         },
-        target: 'es2021',
+        target: 'es2023',
         transform: {
           legacyDecorator: true,
           decoratorMetadata: true,
