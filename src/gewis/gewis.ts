@@ -49,7 +49,9 @@ export default class Gewis extends WithManager {
     try {
       const memberId = asNumber(ADUser.mNumber);
       // Check if Member User already exists.
-      memberUser = await MemberUser.findOne({ where: { memberId }, relations: ['user'] });
+      memberUser = await MemberUser.findOne({ where: { memberId }, relations: {
+        user: true,
+      } });
       if (memberUser) {
         // If user exists we only have to bind the AD user
         await bindUser(this.manager, ADUser, memberUser.user);

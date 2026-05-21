@@ -1029,7 +1029,11 @@ describe('TransactionService', (): void => {
 
         const authPos = await PointOfSaleRevision.findOne({
           where: { useAuthentication: true },
-          relations: ['containers', 'containers.products'],
+          relations: {
+            containers: {
+              products: true,
+            },
+          },
         });
         expect(authPos).to.not.be.null;
         const posResponse = await getPOSResponse(authPos);
@@ -1052,7 +1056,11 @@ describe('TransactionService', (): void => {
 
         const nonAuthPos = await PointOfSaleRevision.findOne({
           where: { useAuthentication: false },
-          relations: ['containers', 'containers.products'],
+          relations: {
+            containers: {
+              products: true,
+            },
+          },
         });
         expect(nonAuthPos).to.not.be.null;
         const posResponse = await getPOSResponse(nonAuthPos);
@@ -1074,7 +1082,11 @@ describe('TransactionService', (): void => {
 
         const authPos = await PointOfSaleRevision.findOne({
           where: { useAuthentication: true },
-          relations: ['containers', 'containers.products'],
+          relations: {
+            containers: {
+              products: true,
+            },
+          },
         });
         const posResponse = await getPOSResponse(authPos);
 
@@ -1104,7 +1116,11 @@ describe('TransactionService', (): void => {
 
         const authPos = await PointOfSaleRevision.findOne({
           where: { useAuthentication: true },
-          relations: ['containers', 'containers.products'],
+          relations: {
+            containers: {
+              products: true,
+            },
+          },
         });
         const posResponse = await getPOSResponse(authPos);
 

@@ -45,7 +45,10 @@ export default class TransferPdfService extends HtmlUnstoredPdfService<Transfer,
   async getParameters(entity: Transfer): Promise<ITransferPdf> {
     const transfer = await this.manager.findOne(Transfer, {
       where: { id: entity.id },
-      relations: ['from', 'to'],
+      relations: {
+        from: true,
+        to: true,
+      },
     });
 
     if (!transfer) {

@@ -38,14 +38,18 @@ export default class TransactionPdfService extends HtmlUnstoredPdfService<Transa
   async getParameters(entity: Transaction): Promise<ITransactionPdf> {
     const transaction = await this.manager.findOne(Transaction, {
       where: { id: entity.id },
-      relations: [
-        'from',
-        'createdBy',
-        'subTransactions',
-        'subTransactions.subTransactionRows',
-        'subTransactions.subTransactionRows.product',
-        'subTransactions.subTransactionRows.product.vat',
-      ],
+      relations: {
+        from: true,
+        createdBy: true,
+
+        subTransactions: {
+          subTransactionRows: {
+            product: {
+              vat: true,
+            },
+          },
+        },
+      },
     });
 
     if (!transaction) {

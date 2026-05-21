@@ -655,7 +655,9 @@ describe('TransactionController', (): void => {
 
   describe('GET /transactions/{id}', () => {
     it('should return HTTP 200 and transaction if connected via organ', async () => {
-      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[0].id } } });
+      const trans = await Transaction.findOne({ relations: {
+        from: true,
+      }, where: { from: { id: ctx.users[0].id } } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/transactions/${trans.id}`)
@@ -670,7 +672,9 @@ describe('TransactionController', (): void => {
       expect(res.body.id).to.equal(trans.id);
     });
     it('should return HTTP 200 for own transaction', async () => {
-      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[0].id } } });
+      const trans = await Transaction.findOne({ relations: {
+        from: true,
+      }, where: { from: { id: ctx.users[0].id } } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/transactions/${trans.id}`)
@@ -679,7 +683,9 @@ describe('TransactionController', (): void => {
       expect(res.body.id).to.equal(trans.id);
     });
     it('should return HTTP 403 if not admin and not connected via organ', async () => {
-      const trans = await Transaction.findOne({ relations: ['from'], where: { from: { id: ctx.users[3].id } } });
+      const trans = await Transaction.findOne({ relations: {
+        from: true,
+      }, where: { from: { id: ctx.users[3].id } } });
       expect(trans).to.not.be.undefined;
       const res = await request(ctx.app)
         .get(`/transactions/${trans.id}`)
@@ -1171,7 +1177,10 @@ describe('TransactionController', (): void => {
         .send(ctx.validTransReq);
       testTransaction = await Transaction.findOne({ 
         where: { id: createRes.body.id },
-        relations: ['from', 'createdBy'],
+        relations: {
+          from: true,
+          createdBy: true,
+        },
       });
     });
 

@@ -438,7 +438,10 @@ export default class TransactionService extends WithManager {
         revision: req.pointOfSale.revision,
         pointOfSale: { id: req.pointOfSale.id, deletedAt: IsNull() },
       },
-      relations: ['pointOfSale', 'containers'],
+      relations: {
+        pointOfSale: true,
+        containers: true,
+      },
     });
 
     if (!pointOfSale) {
@@ -463,7 +466,10 @@ export default class TransactionService extends WithManager {
             revision,
             container: { id, deletedAt: IsNull() },
           },
-          relations: ['container', 'products'],
+          relations: {
+            container: true,
+            products: true,
+          },
         });
       }),
     );
@@ -952,14 +958,29 @@ export default class TransactionService extends WithManager {
   public async getSingleTransaction(id: number): Promise<Transaction | undefined> {
     const transaction = await this.manager.findOne(Transaction, {
       where: { id },
-      relations: [
-        'from', 'createdBy', 'subTransactions', 'subTransactions.to', 'subTransactions.subTransactionRows',
-        // We query a lot here, but we will parse this later to a very simple BaseResponse
-        'pointOfSale', 'pointOfSale.pointOfSale',
-        'subTransactions.container', 'subTransactions.container.container',
-        'subTransactions.subTransactionRows.product', 'subTransactions.subTransactionRows.product.product',
-        'subTransactions.subTransactionRows.product.vat',
-      ],
+      relations: {
+        from: true,
+        createdBy: true,
+
+        subTransactions: {
+          to: true,
+
+          subTransactionRows: {
+            product: {
+              product: true,
+              vat: true,
+            },
+          },
+
+          container: {
+            container: true,
+          },
+        },
+
+        pointOfSale: {
+          pointOfSale: true,
+        },
+      },
       withDeleted: true,
     });
 
@@ -1106,17 +1127,23 @@ export default class TransactionService extends WithManager {
       where: {
         id: In(ids),
       },
-      relations: [
-        'subTransactions',
-        'from',
-        'subTransactions.to',
-        'subTransactions.subTransactionRows',
-        'subTransactions.subTransactionRows.product',
-        'subTransactions.subTransactionRows.product.category',
-        'subTransactions.subTransactionRows.product.product',
-        'subTransactions.subTransactionRows.product.vat',
-        'subTransactions.subTransactionRows.invoice',
-      ],
+      relations: {
+        subTransactions: {
+          to: true,
+
+          subTransactionRows: {
+            product: {
+              category: true,
+              product: true,
+              vat: true,
+            },
+
+            invoice: true,
+          },
+        },
+
+        from: true,
+      },
     });
 
     // Don't consider transactions from invoice accounts

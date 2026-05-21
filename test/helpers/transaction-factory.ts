@@ -86,7 +86,13 @@ function createValidSubTransactionRequest(
 
 export async function getAPOSWithProducts(index? : number):
 Promise<PointOfSaleWithContainersResponse> {
-  const posList = (await PointOfSaleRevision.find({ relations: ['pointOfSale', 'containers', 'containers.container'] })).filter((p) => p.containers.length > 0);
+  const posList = (await PointOfSaleRevision.find({ relations: {
+    pointOfSale: true,
+
+    containers: {
+      container: true,
+    },
+  } })).filter((p) => p.containers.length > 0);
   const pointOfSale = wrapGet(posList, index ?? 0);
   const [revisions] = await PointOfSaleService.getPointsOfSale(
     {
@@ -180,7 +186,11 @@ export async function createTransactions(debtorId: number, creditorId: number, t
   if (delta) {
     const promises: Promise<any>[] = [];
     const ids = transactions.transactions.map((t) => t.tId);
-    await Transaction.find({ where: { id: In(ids) }, relations: ['subTransactions', 'subTransactions.subTransactionRows'] }).then((tr) => {
+    await Transaction.find({ where: { id: In(ids) }, relations: {
+      subTransactions: {
+        subTransactionRows: true,
+      },
+    } }).then((tr) => {
       tr.forEach((t) => {
         let createdAt = new Date(t.createdAt.getTime() + delta);
         let query = `UPDATE \`transaction\` SET createdAt = '${toMySQLString(createdAt)}' WHERE id = ${t.id}`;

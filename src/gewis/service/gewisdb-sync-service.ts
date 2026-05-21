@@ -61,9 +61,11 @@ export default class GewisDBSyncService extends UserSyncService {
   }
 
   async guard(entity: User): Promise<boolean> {
-    if (!await super.guard(entity)) return false;
+    if (!(await super.guard(entity))) return false;
     
-    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: ['user'] });
+    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: {
+      user: true,
+    } });
     return !!memberUser;
   }
 
@@ -76,7 +78,9 @@ export default class GewisDBSyncService extends UserSyncService {
   }
 
   async sync(entity: User, isDryRun: boolean = false): Promise<boolean> {
-    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: ['user'] });
+    const memberUser = await this.manager.findOne(MemberUser, { where: { user: { id: entity.id } }, relations: {
+      user: true,
+    } });
     if (!memberUser) {
       throw new Error('Member User not found.');
     }
@@ -127,7 +131,7 @@ export default class GewisDBSyncService extends UserSyncService {
     // await this.manager.delete(MemberUser, memberUser);
 
     // Sync deleting a user is quite impactful, so we only do it if the setting is explicitly set.
-    if (!await GewisDBSyncService.getAllowDelete()) return;
+    if (!(await GewisDBSyncService.getAllowDelete())) return;
 
     const currentBalance = await new BalanceService().getBalance(entity.id);
     const shouldDelete = currentBalance.amount.amount === 0;

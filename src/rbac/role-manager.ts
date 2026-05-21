@@ -127,7 +127,9 @@ export default class RoleManager {
    * @param user
    */
   public async getUserOrgans(user: User) {
-    const organs = (await OrganMembership.find({ where: { user: { id: user.id } }, relations: ['organ'] })).map((organ) => organ.organ);
+    const organs = (await OrganMembership.find({ where: { user: { id: user.id } }, relations: {
+      organ: true,
+    } })).map((organ) => organ.organ);
     return organs.filter((organ) => organ.type === UserType.ORGAN);
   }
 

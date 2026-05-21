@@ -269,7 +269,9 @@ describe('InvoiceController', async () => {
     }
 
     it('should verify that all transactions are owned by the debtor', async () => {
-      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id !== ctx.adminUser.id).map((t) => t.id);
+      const transactionIDs = (await Transaction.find({ relations: {
+        from: true,
+      } })).filter((i) => i.from.id !== ctx.adminUser.id).map((t) => t.id);
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, transactionIDs };
       await expectError(req, INVALID_TRANSACTION_OWNER().value);
     });
@@ -282,7 +284,9 @@ describe('InvoiceController', async () => {
       await expectError(req, NO_TRANSACTION_IDS().value);
     });
     it('should verify that description is a valid string', async () => {
-      const transactionIDs = (await Transaction.find({ relations: ['from'] })).filter((i) => i.from.id === ctx.validInvoiceRequest.forId).map((t) => t.id);
+      const transactionIDs = (await Transaction.find({ relations: {
+        from: true,
+      } })).filter((i) => i.from.id === ctx.validInvoiceRequest.forId).map((t) => t.id);
       const req: CreateInvoiceRequest = { ...ctx.validInvoiceRequest, description: '', transactionIDs };
       await expectError(req, ZERO_LENGTH_STRING().value);
     });
@@ -314,7 +318,13 @@ describe('InvoiceController', async () => {
             },
           };
 
-          const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.invoice'] });
+          const invoiceTransactions = await Transaction.find({ where: { id: In(tIds) }, relations: {
+            subTransactions: {
+              subTransactionRows: {
+                invoice: true,
+              },
+            },
+          } });
           const subIDs: number[] = [];
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
@@ -387,7 +397,9 @@ describe('InvoiceController', async () => {
         });
     });
     it('should filter on invoice status', async () => {
-      const sent = (await Invoice.find({ where: { invoiceStatus: true }, relations: ['invoiceStatus'] }))
+      const sent = (await Invoice.find({ where: { invoiceStatus: true }, relations: {
+        invoiceStatus: true,
+      } }))
         .filter((i) => i.invoiceStatus[i.invoiceStatus.length - 1].state === InvoiceState.SENT);
       expect(sent.length).to.be.at.least(1);
       expect(sent.length).to.not.equal(await Invoice.count());
@@ -514,7 +526,9 @@ describe('InvoiceController', async () => {
   });
   describe('PATCH /invoices/{id}', () => {
     it('should return an HTTP 200 and update an invoice if admin', async () => {
-      const invoice = (await Invoice.find({ relations: ['invoiceStatus'] }))
+      const invoice = (await Invoice.find({ relations: {
+        invoiceStatus: true,
+      } }))
         .filter((i) => i.invoiceStatus[i.invoiceStatus.length - 1].state === InvoiceState.SENT)[0];
       const updateRequest: UpdateInvoiceRequest = {
         addressee: 'Updated-addressee',
@@ -558,7 +572,9 @@ describe('InvoiceController', async () => {
       expect(res.status).to.equal(403);
     });
     it('should verify that new invoice state is not the same as current', async () => {
-      const invoice = (await Invoice.find({ relations: ['invoiceStatus'] }))[0];
+      const invoice = (await Invoice.find({ relations: {
+        invoiceStatus: true,
+      } }))[0];
       const currentState = invoice.invoiceStatus[invoice.invoiceStatus.length - 1].state;
       const req: UpdateInvoiceRequest = {
         addressee: 'Updated-addressee',
@@ -693,7 +709,9 @@ describe('InvoiceController', async () => {
   describe('/invoices/users/{id}', () => {
     describe('GET /invoices/users/{id}', () => {
       it('should return an HTTP 403 if not admin', async () => {
-        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: {
+          user: true,
+        } });
         expect(invoiceUser).to.not.be.null;
 
         const res = await request(ctx.app)
@@ -704,7 +722,9 @@ describe('InvoiceController', async () => {
         expect(res.body).to.be.empty;
       });
       it('should return an HTTP 200 and the InvoiceUser if admin', async () => {
-        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: {
+          user: true,
+        } });
         expect(invoiceUser).to.not.be.null;
 
         const res = await request(ctx.app)
@@ -757,7 +777,9 @@ describe('InvoiceController', async () => {
     });
     describe('DELETE /invoices/users/{id}', () => {
       it('should return an HTTP 403 if not admin', async () => {
-        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: {
+          user: true,
+        } });
         expect(invoiceUser).to.not.be.null;
 
         const res = await request(ctx.app)
@@ -788,7 +810,9 @@ describe('InvoiceController', async () => {
             expect(res.status).to.equal(204);
             expect(res.body).to.be.empty;
 
-            const deleted = await InvoiceUser.findOne({ where: { userId: user.id }, relations: ['user'] });
+            const deleted = await InvoiceUser.findOne({ where: { userId: user.id }, relations: {
+              user: true,
+            } });
             expect(deleted).to.be.null;
           });
       });
@@ -807,7 +831,9 @@ describe('InvoiceController', async () => {
     });
     describe('PUT /invoices/users/{id}', () => {
       it('should return an HTTP 200 and the updated InvoiceUser if admin', async () => {
-        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: {
+          user: true,
+        } });
         expect(invoiceUser).to.not.be.null;
 
         const update: UpdateInvoiceUserRequest = {
@@ -893,7 +919,9 @@ describe('InvoiceController', async () => {
           });
       });
       it('should return an HTTP 403 if not admin', async () => {
-        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: ['user'] });
+        const invoiceUser = await InvoiceUser.findOne({ where: { user: { deleted: false, type: UserType.INVOICE } }, relations: {
+          user: true,
+        } });
         expect(invoiceUser).to.not.be.null;
 
         const update: UpdateInvoiceUserRequest = {

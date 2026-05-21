@@ -108,7 +108,10 @@ export default class TransferController extends BaseController {
    * @return whether transaction is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const transfer = await Transfer.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to', 'from'] });
+    const transfer = await Transfer.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: {
+      to: true,
+      from: true,
+    } });
     if (!transfer) return 'all';
     const fromId = transfer.from != null ? transfer.from.id : undefined;
     const toId = transfer.to != null ? transfer.to.id : undefined;

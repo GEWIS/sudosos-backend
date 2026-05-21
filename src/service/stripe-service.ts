@@ -36,7 +36,7 @@ import {
   StripePaymentIntentStatusResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
-import { EntityManager, IsNull } from 'typeorm';
+import { EntityManager, FindOptionsRelations, IsNull } from 'typeorm';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
@@ -132,7 +132,9 @@ export default class StripeService extends WithManager {
           },
         },
       },
-      relations: ['to'],
+      relations: {
+        to: true,
+      },
     });
 
     return deposits.filter((d) => !d.stripePaymentIntent.paymentIntentStatuses.some(
@@ -140,10 +142,16 @@ export default class StripeService extends WithManager {
         || s.state === StripePaymentIntentState.FAILED));
   }
 
-  public static async getStripeDeposit(id: number, relations: string[] = []): Promise<StripeDeposit> {
+  public static async getStripeDeposit(
+    id: number,
+    relations: FindOptionsRelations<StripeDeposit> = {},
+  ): Promise<StripeDeposit> {
     return StripeDeposit.findOne({
       where: { id },
-      relations: ['stripePaymentIntent', 'stripePaymentIntent.paymentIntentStatuses'].concat(relations),
+      relations: {
+        stripePaymentIntent: { paymentIntentStatuses: true },
+        ...relations,
+      },
     });
   }
 

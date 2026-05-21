@@ -343,7 +343,9 @@ describe('PayoutRequestService', () => {
 
       const payoutRequestRaw = await PayoutRequest.findOne({
         where: { id: payoutRequest.id },
-        relations: ['transfer'],
+        relations: {
+          transfer: true,
+        },
       });
       expect(payoutRequestRaw.transfer).to.not.be.undefined;
     });

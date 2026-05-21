@@ -109,7 +109,9 @@ export default class Notifier {
   private async getPreferences(user: User, notifyType: NotificationTypes): Promise<string[]> {
     const preferences = await UserNotificationPreference.find({
       where: { userId: user.id, type: notifyType, enabled: true },
-      select: ['channel'],
+      select: {
+        channel: true,
+      },
     });
 
     return preferences.map(p => p.channel);

@@ -204,7 +204,9 @@ describe('WriteOffPdfService', () => {
         status: 200,
       });
 
-      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to'] });
+      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: {
+        to: true,
+      } });
       const newPdf = Object.assign(new WriteOffPdf(), {
         hash: await writeOff.getPdfParamHash(),
         downloadName: 'test',
@@ -228,7 +230,10 @@ describe('WriteOffPdfService', () => {
     it('should throw an error if PDF generation fails', async () => {
       generateWriteOffStub.rejects(new Error('Failed to generate PDF'));
 
-      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: ['to', 'transfer'] });
+      const writeOff = await WriteOff.findOne({ where: { id: 1 }, relations: {
+        to: true,
+        transfer: true,
+      } });
       writeOff.pdfService = pdfService;
       await expect(writeOff.createPdf()).to.eventually.be.rejectedWith();
     });

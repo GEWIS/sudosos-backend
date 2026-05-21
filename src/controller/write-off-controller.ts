@@ -208,7 +208,9 @@ export default class WriteOffController extends BaseController {
 
     try {
       const force = !!asBoolean(req.query.force);
-      const writeOff = await WriteOff.findOne({ where: { id: writeOffId }, relations: ['transfer'] });
+      const writeOff = await WriteOff.findOne({ where: { id: writeOffId }, relations: {
+        transfer: true,
+      } });
       if (!writeOff) {
         res.status(404).json('Write Off not found.');
         return;

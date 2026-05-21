@@ -224,7 +224,7 @@ export default class PointOfSaleController extends BaseController {
     try {
       const pointOfSaleId = parseInt(id, 10);
       // Check if point of sale exists.
-      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
+      if (!(await PointOfSale.findOne({ where: { id: pointOfSaleId } }))) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
@@ -261,7 +261,7 @@ export default class PointOfSaleController extends BaseController {
       const pointOfSaleRevision = parseInt(revision, 10);
 
       // Check if point of sale exists.
-      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
+      if (!(await PointOfSale.findOne({ where: { id: pointOfSaleId } }))) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
@@ -418,7 +418,7 @@ export default class PointOfSaleController extends BaseController {
     // handle request
     try {
       // Point of sale does not exist.
-      if (!await PointOfSale.findOne({ where: { id: pointOfSaleId } })) {
+      if (!(await PointOfSale.findOne({ where: { id: pointOfSaleId } }))) {
         res.status(404).json('Point of Sale not found.');
         return;
       }
@@ -465,7 +465,9 @@ export default class PointOfSaleController extends BaseController {
       // Get organ memberships with indices
       const organMemberships = await OrganMembership.find({
         where: { organId: pos.owner.id },
-        relations: ['user'],
+        relations: {
+          user: true,
+        },
       });
 
       // Get cashiers (no indices needed)
@@ -559,7 +561,10 @@ export default class PointOfSaleController extends BaseController {
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
     const pointOfSaleId = asNumber(req.params.id);
-    const pos: PointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: ['owner', 'user'] });
+    const pos: PointOfSale = await PointOfSale.findOne({ where: { id: pointOfSaleId }, relations: {
+      owner: true,
+      user: true,
+    } });
 
     if (!pos) return 'all';
     if (userTokenInOrgan(req, pos.owner.id)) return 'organ';

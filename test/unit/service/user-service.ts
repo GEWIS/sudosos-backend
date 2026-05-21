@@ -960,12 +960,16 @@ describe('UserService', async (): Promise<void> => {
         const user = ctx.users.find((u) => u.type === UserType.LOCAL_USER);
         const newType = UserType.MEMBER;
 
-        let localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        let localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: {
+          user: true,
+        } });
         expect(localAuth).to.not.be.null;
 
         await UserService.updateUserType(user, newType);
 
-        localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: ['user'] });
+        localAuth = await LocalAuthenticator.findOne({ where: { user: { id: user.id } }, relations: {
+          user: true,
+        } });
         expect(localAuth).to.be.null;
       });
     });

@@ -62,7 +62,9 @@ function toWebResponse(memberUser: MemberUser): MemberAllAttributes {
 }
 
 async function checkUpdateAgainstDB(update: MemberAllAttributes, userId: number) {
-  const dbUser = await MemberUser.findOne({ where: { userId }, relations: ['user'] });
+  const dbUser = await MemberUser.findOne({ where: { userId }, relations: {
+    user: true,
+  } });
   expect(dbUser).to.not.be.undefined;
   expect(dbUser.user.deleted).to.eq(update.deleted);
   expect(dbUser.user.email).to.eq(update.email);
@@ -226,7 +228,9 @@ describe('GewisDBSyncService', () => {
           expect(result).to.be.true;
 
           // Check that the user was not actually updated in the database
-          const dbUser = await MemberUser.findOne({ where: { userId: memberUser.user.id }, relations: ['user'] });
+          const dbUser = await MemberUser.findOne({ where: { userId: memberUser.user.id }, relations: {
+            user: true,
+          } });
           expect(dbUser.user.firstName).to.eq(originalFirstName);
           expect(dbUser.user.lastName).to.eq(originalLastName);
           expect(dbUser.user.email).to.eq(originalEmail);
