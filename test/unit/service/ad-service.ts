@@ -32,7 +32,7 @@ import LDAPAuthenticator from '../../../src/entity/authenticator/ldap-authentica
 import { LDAPGroup, LDAPUser } from '../../../src/helpers/ad';
 import userIsAsExpected from '../../helpers/authentication-helpers';
 import { finishTestDB, restoreLDAPEnv, setDefaultLDAPEnv, storeLDAPEnv } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { UserSeeder } from '../../seed';
 import { Client } from 'ldapts';
 import RoleManager from '../../../src/rbac/role-manager';

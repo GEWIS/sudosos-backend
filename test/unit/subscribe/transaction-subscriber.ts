@@ -38,7 +38,7 @@ import { expect } from 'chai';
 import TransactionService from '../../../src/service/transaction-service';
 import { SubTransactionRequest, TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import {
   ContainerSeeder,

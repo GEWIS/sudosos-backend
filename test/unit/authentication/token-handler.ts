@@ -23,7 +23,7 @@ import { expect } from 'chai';
 import * as jwt from 'jsonwebtoken';
 import TokenHandler from '../../../src/authentication/token-handler';
 import User from '../../../src/entity/user/user';
-import { generateKeys } from '../../setup';
+import { generateKeys } from '../../helpers/crypto-helpers';
 
 describe('TokenHandler', (): void => {
   let ctx: {

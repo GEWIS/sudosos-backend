@@ -27,7 +27,7 @@ import Database from '../../../src/database/database';
 import PayoutRequestService from '../../../src/service/payout-request-service';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
 import PayoutRequestRequest from '../../../src/controller/request/payout-request-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import { PayoutRequestSeeder, UserSeeder } from '../../seed';

@@ -24,7 +24,7 @@ import Database from '../src/database/database';
 import { Application } from '../src';
 import seedDatabase from '../test/seed';
 import initializeDiskStorage from '../src/files/initialize';
-import { truncateAllTables } from '../test/setup';
+import { truncateAllTables } from '../test/helpers/database-helpers';
 import Config from '../src/config';
 import { applyConfiguredLogLevel } from '../src/helpers/logging';
 

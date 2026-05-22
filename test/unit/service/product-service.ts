@@ -45,7 +45,7 @@ import { CreatePointOfSaleParams } from '../../../src/controller/request/point-o
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import AuthenticationService from '../../../src/service/authentication-service';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import sinon from 'sinon';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';

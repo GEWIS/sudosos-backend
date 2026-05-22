@@ -21,7 +21,7 @@
 import { DataSource } from 'typeorm';
 import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import RBACService from '../../../src/service/rbac-service';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import { expect } from 'chai';

@@ -39,7 +39,7 @@ import {
 } from '../../../src/controller/response/payout-request-response';
 import { defaultPagination, PaginationResult } from '../../../src/helpers/pagination';
 import { PayoutRequestState } from '../../../src/entity/transactions/payout/payout-request-status';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import generateBalance, { finishTestDB } from '../../helpers/test-helpers';
 import BalanceService from '../../../src/service/balance-service';
 import { ensureProductionRoles, inUserContext, signTokenFor, UserFactory } from '../../helpers/user-factory';

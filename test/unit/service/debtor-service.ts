@@ -34,7 +34,7 @@ import { calculateBalance, calculateFine } from '../../helpers/balance';
 import FineHandoutEvent from '../../../src/entity/fine/fineHandoutEvent';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import Mailer from '../../../src/mailer';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import dinero from 'dinero.js';
 import TransferService from '../../../src/service/transfer-service';

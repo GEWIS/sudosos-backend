@@ -43,7 +43,7 @@ import {
 } from '../../../src/controller/response/event-response';
 import EventService from '../../../src/service/event-service';
 import { EventRequest } from '../../../src/controller/request/event-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { EventSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';

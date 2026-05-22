@@ -37,7 +37,7 @@ import AuthenticationService from '../../../src/service/authentication-service';
 import MemberAuthenticationSecurePinRequest from '../../../src/controller/request/member-authentication-secure-pin-request';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { PointOfSaleSeeder } from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';

@@ -30,7 +30,7 @@ import Database from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
 import { ADMIN_USER, UserFactory } from './user-factory';
-import { truncateAllTables } from '../setup';
+import { truncateAllTables } from './database-helpers';
 import ServerSettingsStore from '../../src/server-settings/server-settings-store';
 
 export interface DefaultContext {

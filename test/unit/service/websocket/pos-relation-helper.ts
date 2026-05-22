@@ -22,7 +22,7 @@ import { DataSource } from 'typeorm';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import Database from '../../../../src/database/database';
-import { truncateAllTables } from '../../../setup';
+import { truncateAllTables } from '../../../helpers/database-helpers';
 import { finishTestDB } from '../../../helpers/test-helpers';
 import { UserSeeder, PointOfSaleSeeder } from '../../../seed';
 import User, { UserType } from '../../../../src/entity/user/user';

@@ -39,7 +39,7 @@ import { addTransaction, addTransfer } from '../../helpers/transaction-helpers';
 import { calculateBalance } from '../../helpers/balance';
 import Fine from '../../../src/entity/fine/fine';
 import BalanceResponse, { UserTypeTotalBalanceResponse } from '../../../src/controller/response/balance-response';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { FineSeeder, PointOfSaleSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import MemberUser from '../../../src/entity/user/member-user';

@@ -26,7 +26,7 @@ import { DiskStorage } from '../../../../src/files/storage';
 import BaseFile from '../../../../src/entity/file/base-file';
 import User from '../../../../src/entity/user/user';
 import Database from '../../../../src/database/database';
-import { truncateAllTables } from '../../../setup';
+import { truncateAllTables } from '../../../helpers/database-helpers';
 import { finishTestDB } from '../../../helpers/test-helpers';
 import { UserSeeder } from '../../../seed';
 

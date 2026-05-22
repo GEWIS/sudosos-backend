@@ -19,7 +19,7 @@
  */
 
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { ADMIN_USER, UserFactory, ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import chai from 'chai';
 

@@ -25,7 +25,7 @@ import User, { UserType } from '../../../src/entity/user/user';
 import Transfer from '../../../src/entity/transactions/transfer';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import {
   ContainerSeeder,
   PointOfSaleSeeder,

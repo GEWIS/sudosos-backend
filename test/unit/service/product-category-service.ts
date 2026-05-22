@@ -27,7 +27,7 @@ import Swagger from '../../../src/start/swagger';
 import ProductCategory from '../../../src/entity/product/product-category';
 import ProductCategoryService from '../../../src/service/product-category-service';
 import ProductCategoryRequest from '../../../src/controller/request/product-category-request';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ProductCategorySeeder } from '../../seed';
 

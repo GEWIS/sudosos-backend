@@ -37,7 +37,7 @@ import { CreatePointOfSaleParams, UpdatePointOfSaleParams } from '../../../src/c
 import AuthenticationService from '../../../src/service/authentication-service';
 import OrganMembership from '../../../src/entity/organ/organ-membership';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import RbacSeeder, { SeededRole } from '../../seed/rbac-seeder';
 import { ContainerSeeder, PointOfSaleSeeder, ProductSeeder, UserSeeder } from '../../seed';

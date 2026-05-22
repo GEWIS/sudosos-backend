@@ -33,7 +33,7 @@ import TokenHandler from '../../../src/authentication/token-handler';
 import { UserFactory } from '../../helpers/user-factory';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 
 const { expect, request } = chai;

@@ -27,7 +27,7 @@ import TermsOfServiceController from '../../../src/controller/terms-of-service-c
 import TermsOfServiceService, { TermsOfService } from '../../../src/service/terms-of-service-service';
 import { TermsOfServiceResponse } from '../../../src/controller/response/terms-of-service-response';
 import { DefaultContext, defaultContext, finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { ADMIN_USER, ensureProductionRoles, signTokenFor, UserFactory } from '../../helpers/user-factory';
 
 const { expect, request } = chai;

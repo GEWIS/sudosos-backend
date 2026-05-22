@@ -30,7 +30,7 @@ import Swagger from '../../../src/start/swagger';
 import { json } from 'body-parser';
 import FileService from '../../../src/service/file-service';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import PayoutRequest from '../../../src/entity/transactions/payout/payout-request';
 import PayoutRequestPdfService from '../../../src/service/pdf/payout-request-pdf-service';

@@ -28,7 +28,7 @@ import User from '../../../src/entity/user/user';
 import TransferPdfService from '../../../src/service/pdf/transfer-pdf-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { UserSeeder } from '../../seed';
 import Invoice from '../../../src/entity/invoices/invoice';
 import WriteOff from '../../../src/entity/transactions/write-off';
