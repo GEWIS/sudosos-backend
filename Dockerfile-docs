@@ -1,5 +1,6 @@
 FROM node:20-alpine AS typedoc-builder
 
+RUN apk add --no-cache python3 make g++
 RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
@@ -13,6 +14,7 @@ RUN pnpm typedoc
 
 FROM node:20-alpine AS vitepress-builder
 
+RUN apk add --no-cache python3 make g++
 RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
