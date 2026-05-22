@@ -67,11 +67,11 @@ describe('Database', async (): Promise<void> => {
 
       const entities = dataSource.entityMetadatas;
 
+      await using queryRunner = dataSource.createQueryRunner();
+      await queryRunner.connect();
+
       for (const entity of entities) {
         const tableName = entity.tableName;
-        const queryRunner = dataSource.createQueryRunner();
-        await queryRunner.connect();
-
         const table = await queryRunner.getTable(tableName);
         const databaseColumns = table.columns.map(column => column.name);
         const entityColumns = entity.columns.map(column => column.databaseName);
@@ -89,14 +89,12 @@ describe('Database', async (): Promise<void> => {
           expect(matchedColumn.isNullable, `expect column ${entity.name}.${column.propertyName} to ${column.isNullable ? '' : 'not '}be nullable`).to.eq(column.isNullable);
           expect(matchedColumn.isPrimary, `expect column ${entity.name}.${column.propertyName} to ${column.isPrimary ? '' : 'not '}be primary`).to.eq(column.isPrimary);
         });
-
-        await queryRunner.release();
       }
     });
 
     it('should match the database relations with entity definition after migrations', async () => {
       const entities = dataSource.entityMetadatas;
-      const queryRunner = dataSource.createQueryRunner();
+      await using queryRunner = dataSource.createQueryRunner();
       await queryRunner.connect();
 
       for (const entity of entities) {
@@ -151,13 +149,11 @@ describe('Database', async (): Promise<void> => {
         const names = table.foreignKeys.map(fk => fk.name);
         expect(tableFks).to.deep.equalInAnyOrder(entityFks, names.join(','));
       }
-
-      await queryRunner.release();
     });
 
     it('should match junction table foreign keys for ManyToMany relationships', async () => {
       const entities = dataSource.entityMetadatas;
-      const queryRunner = dataSource.createQueryRunner();
+      await using queryRunner = dataSource.createQueryRunner();
       await queryRunner.connect();
 
       for (const entity of entities) {
@@ -205,8 +201,6 @@ describe('Database', async (): Promise<void> => {
           expect(junctionTableFks).to.deep.equalInAnyOrder(expectedFks, names.join(','));
         }
       }
-
-      await queryRunner.release();
     });
   });
 });

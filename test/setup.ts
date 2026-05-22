@@ -168,8 +168,7 @@ export async function truncateAllTables(dataSource: DataSource): Promise<void> {
   if (!shouldTruncate()) return;
 
   console.log('Starting truncation of all tables...');
-  const queryRunner = dataSource.createQueryRunner();
-
+  await using queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
 
   try {
@@ -189,7 +188,5 @@ export async function truncateAllTables(dataSource: DataSource): Promise<void> {
   } catch (err) {
     console.error('Failed to truncate tables:', err);
     throw err;
-  } finally {
-    await queryRunner.release();
   }
 }
