@@ -142,6 +142,17 @@ function getDataSourceOptions(): DataSourceOptions {
     } : {}),
     synchronize: config.database.synchronize,
     logging: config.database.logging,
+    // TypeORM 1.0 changed the default of `invalidWhereValuesBehavior` from
+    // "silently skip" to "throw". Two patterns in this codebase rely on the
+    // older behavior:
+    //  - `undefined`: services like QueryFilter.createFilterWhereDate return
+    //    undefined when a date param is absent, and the resulting key is
+    //    expected to be ignored.
+    //  - `null` (-> `sql-null`): TypeORM's own internal soft-delete handling
+    //    generates `deletedAt: null` predicates on relations to entities with
+    //    @DeleteDateColumn; under the new default these throw. Translating
+    //    null to SQL IS NULL preserves the original filtering semantics.
+    invalidWhereValuesBehavior: { undefined: 'ignore', null: 'sql-null' },
     migrations: [
       InitialSQLMigration1743601882766,
       QrAuthenticator1743601882766,
