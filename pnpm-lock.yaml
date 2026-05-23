@@ -33,8 +33,8 @@ importers:
         specifier: 1.20.5
         version: 1.20.5
       bullmq:
-        specifier: 5.76.10
-        version: 5.76.10
+        specifier: 5.77.1
+        version: 5.77.1
       commander:
         specifier: 12.1.0
         version: 12.1.0
@@ -2006,9 +2006,14 @@ packages:
   buffer@6.0.3:
     resolution: {integrity: sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==}
 
-  bullmq@5.76.10:
-    resolution: {integrity: sha512-LWve7SpQjYSpCP2GEsWmoyzTz2H37L8HRmSTu3YihYsTOr5kJxrfEX6aEV7m6eskEMWXSHZYTMZepX6qNaH6CQ==}
+  bullmq@5.77.1:
+    resolution: {integrity: sha512-n25H1jW3PI0vfVQ0ge6f8mP9hHPwDM2Ivqm0rAOfFFy4t6d3mE7JtX1gyWNuZKIVmlS41w7DDzv3giGgM6qo+w==}
     engines: {node: '>=12.22.0'}
+    peerDependencies:
+      redis: '>=5.0.0'
+    peerDependenciesMeta:
+      redis:
+        optional: true
 
   busboy@1.6.0:
     resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
@@ -5781,7 +5786,7 @@ snapshots:
   '@commitlint/is-ignored@20.5.0':
     dependencies:
       '@commitlint/types': 20.5.0
-      semver: 7.8.0
+      semver: 7.8.1
 
   '@commitlint/lint@20.5.3':
     dependencies:
@@ -5855,7 +5860,7 @@ snapshots:
     dependencies:
       '@simple-libs/child-process-utils': 1.0.2
       '@simple-libs/stream-utils': 1.2.0
-      semver: 7.8.0
+      semver: 7.8.1
     optionalDependencies:
       conventional-commits-parser: 6.4.0
 
@@ -6092,7 +6097,7 @@ snapshots:
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
-      semver: 7.8.0
+      semver: 7.8.1
       tar: 6.2.1
     transitivePeerDependencies:
       - encoding
@@ -6163,7 +6168,7 @@ snapshots:
 
   '@npmcli/fs@3.1.1':
     dependencies:
-      semver: 7.8.0
+      semver: 7.8.1
 
   '@npmcli/move-file@1.1.2':
     dependencies:
@@ -6903,7 +6908,7 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.9
-      semver: 7.8.0
+      semver: 7.8.1
       ts-api-utils: 1.4.3(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
@@ -7453,7 +7458,7 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
-  bullmq@5.76.10:
+  bullmq@5.77.1:
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.10.1
@@ -9403,7 +9408,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.0
+      semver: 7.8.1
 
   make-error@1.3.6: {}
 
@@ -9725,7 +9730,7 @@ snapshots:
 
   node-abi@3.92.0:
     dependencies:
-      semver: 7.8.0
+      semver: 7.8.1
 
   node-abort-controller@3.1.1: {}
 
@@ -10440,8 +10445,7 @@ snapshots:
 
   semver@7.8.0: {}
 
-  semver@7.8.1:
-    optional: true
+  semver@7.8.1: {}
 
   send@0.19.2:
     dependencies:
@@ -10565,7 +10569,7 @@ snapshots:
 
   simple-update-notifier@2.0.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.1
 
   sinon-chai@3.7.0(chai@4.5.0)(sinon@18.0.1):
     dependencies:
@@ -10818,7 +10822,7 @@ snapshots:
       methods: 1.1.2
       mime: 2.6.0
       qs: 6.15.1
-      semver: 7.8.0
+      semver: 7.8.1
     transitivePeerDependencies:
       - supports-color
 
