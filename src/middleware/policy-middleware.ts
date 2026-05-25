@@ -25,8 +25,10 @@
  */
 
 import { RequestHandler, Response } from 'express';
+import log4js, { Logger } from 'log4js';
 import { PolicyImplementation } from '../controller/policy';
 import { RequestWithToken } from './token-middleware';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 /**
  * This class is responsible for:
@@ -38,12 +40,16 @@ export default class PolicyMiddleware {
    */
   private readonly policy: PolicyImplementation;
 
+  private readonly logger: Logger;
+
   /**
    * Creates a new policy middleware instance.
    * @param policy - the policy to be used by this middleware.
    */
   public constructor(policy: PolicyImplementation) {
     this.policy = policy;
+    this.logger = log4js.getLogger('PolicyMiddleware');
+    applyConfiguredLogLevel(this.logger);
   }
 
   /**
@@ -61,7 +67,7 @@ export default class PolicyMiddleware {
       res.status(403).end('You have insufficient permissions for the requested action.');
       return;
     } catch (e) {
-      console.error(e);
+      this.logger.error(e);
       res.status(500).json('Internal server error.');
     }
   }

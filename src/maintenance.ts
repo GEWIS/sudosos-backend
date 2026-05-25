@@ -175,9 +175,8 @@ async function runMaintenance(): Promise<void> {
     await application.stop();
     
   } catch (error) {
-    console.error('❌ Maintenance failed:', error);
-    const logger = log4js.getLogger('maintenance');
-    applyConfiguredLogLevel(logger);
+    const logger = log4js.getLogger('Maintenance');
+    logger.level = process.env.LOG_LEVEL ?? 'info';
     logger.fatal('Maintenance failed:', error);
     process.exit(1);
   }

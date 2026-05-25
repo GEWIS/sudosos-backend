@@ -19,6 +19,7 @@
  */
 
 import dotenv from 'dotenv';
+import log4js from 'log4js';
 
 dotenv.config();
 
@@ -215,9 +216,10 @@ export default class Config {
         .filter(([, value]) => value == null)
         .map(([key]) => key);
       if (missingKeys.length > 0) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[Config] ENABLE_LDAP is true but the following LDAP_* environment variables are missing: ${missingKeys.join(', ')}. LDAP sync will fail at runtime.`,
+        const logger = log4js.getLogger('Config');
+        logger.level = getOptionalString('LOG_LEVEL') ?? 'info';
+        logger.warn(
+          `ENABLE_LDAP is true but the following LDAP_* environment variables are missing: ${missingKeys.join(', ')}. LDAP sync will fail at runtime.`,
         );
       }
     }

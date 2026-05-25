@@ -116,12 +116,16 @@ import {
 } from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
 import { AddExpiryToUser1778681972323 } from '../migrations/1778681972323-add-expiry-to-user';
+import log4js, { Logger } from 'log4js';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
 
   if (config.app.isTest) {
-    console.log('TYPEORM_CONNECTION:', config.database.connection);
+    const logger: Logger = log4js.getLogger('Database');
+    applyConfiguredLogLevel(logger);
+    logger.info(`TYPEORM_CONNECTION: ${config.database.connection}`);
   }
 
   const options = {

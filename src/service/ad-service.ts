@@ -26,6 +26,7 @@
 
 import { Client, EqualityFilter, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
+import log4js, { Logger } from 'log4js';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
 import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
 import { bindUser, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
@@ -34,8 +35,18 @@ import RoleManager from '../rbac/role-manager';
 import WithManager from '../database/with-manager';
 import Gewis from '../gewis/gewis';
 import Config from '../config';
+import { applyConfiguredLogLevel } from '../helpers/logging';
 
 export default class ADService extends WithManager {
+  private static loggerInstance: Logger | undefined;
+
+  private static getLogger(): Logger {
+    if (!ADService.loggerInstance) {
+      ADService.loggerInstance = log4js.getLogger('ADService');
+      applyConfiguredLogLevel(ADService.loggerInstance);
+    }
+    return ADService.loggerInstance;
+  }
 
   /**
    * Creates and binds a Shared (Organ) group to an actual User
@@ -207,7 +218,7 @@ export default class ADService extends WithManager {
       });
       return searchEntries.map((e) => (e as any) as T);
     } catch (error) {
-      console.error(error);
+      ADService.getLogger().error(error);
       return undefined;
     }
   }

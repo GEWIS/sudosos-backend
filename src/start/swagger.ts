@@ -100,7 +100,7 @@ export default class Swagger {
           JSON.stringify(swaggerObject),
           { encoding: 'utf-8' },
         ).catch((e) => {
-          console.error(e);
+          Swagger.logger.error('Failed to write Swagger specification:', e);
         });
         instance.removeAllListeners();
         resolve(swaggerObject); // Resolve the promise with the swaggerObject

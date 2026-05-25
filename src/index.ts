@@ -338,9 +338,8 @@ export default async function createApp(): Promise<Application> {
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   createApp().catch((e) => {
-    console.error(e);
     const logger = log4js.getLogger('index');
-    applyConfiguredLogLevel(logger);
+    logger.level = process.env.LOG_LEVEL ?? 'info';
     logger.fatal(e);
   });
 }

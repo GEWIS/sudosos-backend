@@ -187,9 +187,8 @@ async function createCronTasks(): Promise<void> {
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
   createCronTasks().catch((e) => {
-    console.error(e);
-    const logger = log4js.getLogger('index');
-    applyConfiguredLogLevel(logger);
+    const logger = log4js.getLogger('cron');
+    logger.level = process.env.LOG_LEVEL ?? 'info';
     logger.fatal(e);
   });
 }
