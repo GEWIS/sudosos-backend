@@ -56,7 +56,11 @@ export default async function migrate() {
 
 if (require.main === module) {
   // Only execute the application directly if this is the main execution file.
-  if (Config.get().database.isSqlite) console.warn('Migrations in sqlite most likely have no effect.');
+  if (Config.get().database.isSqlite) {
+    const logger = log4js.getLogger('Migration');
+    applyConfiguredLogLevel(logger);
+    logger.warn('Migrations in sqlite most likely have no effect.');
+  }
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   migrate();
 }
