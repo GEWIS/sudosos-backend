@@ -36,6 +36,13 @@ import { parseRequestPagination, toResponse } from '../helpers/pagination';
 import userTokenInOrgan from '../helpers/token-helper';
 import { PdfError } from '../errors';
 
+/**
+ * Controller for the `transfers` module. Exposes CRUD over transfers, aggregate and per-category
+ * summary endpoints used by treasurer dashboards, and a PDF receipt. Direct POST is reserved for
+ * privileged users; most transfers are created indirectly by the domain that owns the movement
+ * (deposits, payouts, fines, invoices, write-offs). See the {@link transfers | module page} for
+ * the full list of back-references.
+ */
 export default class TransferController extends BaseController {
   private logger: Logger = log4js.getLogger('TransferController');
 
