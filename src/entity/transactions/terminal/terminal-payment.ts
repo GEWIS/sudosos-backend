@@ -70,21 +70,21 @@ export default class TerminalPayment extends BaseEntity {
 
   @OneToOne(() => Transfer, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn()
-  public transfer?: Transfer;
+  public transfer?: Transfer | null;
 
   /**
    * Transaction that was paid with this payment
    */
   @OneToOne(() => Transaction, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
-  public finalTransaction?: Transaction;
+  public finalTransaction?: Transaction | null;
 
   /**
    * Transaction to be created when the payment is successful
    */
   @OneToOne(() => TmpTransaction, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn()
-  public temporaryTransaction?: TmpTransaction;
+  public temporaryTransaction?: TmpTransaction | null;
 
   /**
    * Determine the terminal payment's state based on the entity's properties

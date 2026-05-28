@@ -26,18 +26,68 @@ import StripePaymentIntentStatus, {
 } from '../../../src/entity/stripe/stripe-payment-intent-status';
 import TerminalPayment from '../../../src/entity/transactions/terminal/terminal-payment';
 import TmpTransaction from '../../../src/entity/transactions/terminal/tmp-transaction';
+import TmpSubTransaction from '../../../src/entity/transactions/terminal/tmp-sub-transaction';
+import TmpSubTransactionRow from '../../../src/entity/transactions/terminal/tmp-sub-transaction-row';
 import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
+import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
+import { PointOfSaleSeeder } from '../catalogue';
 
 export default class TerminalPaymentSeeder extends WithManager {
+  /**
+   * Build an in-memory, valid TmpTransaction tree for the given user and POS revision.
+   * The returned TmpTransaction has exactly one TmpSubTransaction with one
+   * TmpSubTransactionRow, picked deterministically from the first container in the
+   * POS revision that has at least one product. Throws if no such container exists.
+   */
+  private buildTmpTransaction(user: User, posRevision: PointOfSaleRevision): TmpTransaction {
+    const container = posRevision.containers.find((c) => c.products.length > 0);
+    if (!container) {
+      throw new Error(`PointOfSaleRevision ${posRevision.pointOfSaleId}-${posRevision.revision} has no container with products`);
+    }
+    const product = container.products[0];
+
+    const row = Object.assign(new TmpSubTransactionRow(), {
+      product,
+      amount: 1,
+    });
+    const subTransaction = Object.assign(new TmpSubTransaction(), {
+      to: posRevision.pointOfSale.owner,
+      container,
+      subTransactionRows: [row],
+    });
+    return Object.assign(new TmpTransaction(), {
+      from: user,
+      createdBy: user,
+      pointOfSale: posRevision,
+      subTransactions: [subTransaction],
+    });
+  }
+
+  /**
+   * Sum the total cost (price incl. VAT * amount) for every row in the given
+   * TmpTransaction.
+   */
+  private tmpTransactionCost(tmpTransaction: TmpTransaction): number {
+    let cost = 0;
+    for (const subTransaction of tmpTransaction.subTransactions) {
+      for (const row of subTransaction.subTransactionRows) {
+        cost += row.amount * row.product.priceInclVat.getAmount();
+      }
+    }
+    return cost;
+  }
+
   /**
    * Create a single TerminalPayment in the CREATED state for dev seeding.
    *
    * @param user - The user initiating the terminal payment.
+   * @param posRevision - The POS revision from which the temporary transaction is built.
    */
-  public async init(user: User): Promise<{ terminalPayment: TerminalPayment }> {
-    const amount = DineroTransformer.Instance.from(2500);
+  public async init(user: User, posRevision: PointOfSaleRevision): Promise<{ terminalPayment: TerminalPayment }> {
+    const tmpTransaction = await this.manager.save(TmpTransaction, this.buildTmpTransaction(user, posRevision));
+    const amount = DineroTransformer.Instance.from(this.tmpTransactionCost(tmpTransaction));
 
     const stripePaymentIntent = await this.manager.save(StripePaymentIntent, {
       stripeId: `FakeTerminalPaymentIntent_${user.id}`,
@@ -51,12 +101,6 @@ export default class TerminalPaymentSeeder extends WithManager {
     });
     stripePaymentIntent.paymentIntentStatuses.push(status);
 
-    const tmpTransaction = await this.manager.save(TmpTransaction, Object.assign(new TmpTransaction(), {
-      from: user,
-      createdBy: user,
-      subTransactions: [],
-    }));
-
     const terminalPayment = await this.manager.save(TerminalPayment, {
       stripePaymentIntent,
       temporaryTransaction: tmpTransaction,
@@ -69,23 +113,36 @@ export default class TerminalPaymentSeeder extends WithManager {
    * Create a set of mock TerminalPayment entries. The Stripe IDs are fake, so
    * these entries cannot be used for real Stripe API calls.
    *
-   * For every user a TerminalPayment in the CREATED state (with a TmpTransaction)
-   * is created. When transactions are supplied, every transaction is additionally
-   * converted into a PAID TerminalPayment: the TmpTransaction is replaced by a
-   * finalTransaction and a Transfer whose amount equals the total value of the
-   * transaction's sub-transaction rows.
+   * For every user a TerminalPayment in the CREATED state (with a valid
+   * TmpTransaction) is created. When transactions are supplied, every transaction
+   * is additionally converted into a PAID TerminalPayment: the TmpTransaction is
+   * replaced by a finalTransaction and a Transfer whose amount equals the total
+   * value of the transaction's sub-transaction rows.
    *
    * @param users - The users that initiate the CREATED terminal payments.
+   * @param pointsOfSale - Points of sale to build temporary transactions against.
+   * Must have containers, products and (owner) eagerly loaded. If omitted, a
+   * default catalogue is seeded with {@link PointOfSaleSeeder}.
    * @param transactions - Existing transactions to back PAID terminal payments
    * with. Must have subTransactions, subTransactionRows and products loaded so
    * the transfer total can be computed.
    */
-  public async seed(users: User[], transactions: Transaction[] = []): Promise<{
-    terminalPayments: TerminalPayment[],
-    stripePaymentIntents: StripePaymentIntent[],
-    tmpTransactions: TmpTransaction[],
-    transfers: Transfer[],
-  }> {
+  public async seed(
+    users: User[],
+    pointsOfSale?: PointOfSaleRevision[],
+    transactions: Transaction[] = [],
+  ): Promise<{
+      terminalPayments: TerminalPayment[],
+      stripePaymentIntents: StripePaymentIntent[],
+      tmpTransactions: TmpTransaction[],
+      transfers: Transfer[],
+    }> {
+    const posRevisions = pointsOfSale ?? (await new PointOfSaleSeeder().seed(users)).pointOfSaleRevisions;
+    const usablePosRevisions = posRevisions.filter((p) => p.containers.some((c) => c.products.length > 0));
+    if (usablePosRevisions.length === 0) {
+      throw new Error('TerminalPaymentSeeder.seed requires at least one PointOfSaleRevision with a container containing products');
+    }
+
     const terminalPayments: TerminalPayment[] = [];
     const stripePaymentIntents: StripePaymentIntent[] = [];
     const tmpTransactions: TmpTransaction[] = [];
@@ -93,7 +150,11 @@ export default class TerminalPaymentSeeder extends WithManager {
 
     for (let i = 0; i < users.length; i += 1) {
       const user = users[i];
-      const amount = DineroTransformer.Instance.from(1000 * (i + 1));
+      const posRevision = usablePosRevisions[i % usablePosRevisions.length];
+
+      // eslint-disable-next-line no-await-in-loop
+      const tmpTransaction = await this.manager.save(TmpTransaction, this.buildTmpTransaction(user, posRevision));
+      const amount = DineroTransformer.Instance.from(this.tmpTransactionCost(tmpTransaction));
 
       // eslint-disable-next-line no-await-in-loop
       const stripePaymentIntent = await this.manager.save(StripePaymentIntent, {
@@ -108,13 +169,6 @@ export default class TerminalPaymentSeeder extends WithManager {
         state: StripePaymentIntentState.CREATED,
       });
       stripePaymentIntent.paymentIntentStatuses.push(status);
-
-      // eslint-disable-next-line no-await-in-loop
-      const tmpTransaction = await this.manager.save(TmpTransaction, Object.assign(new TmpTransaction(), {
-        from: user,
-        createdBy: user,
-        subTransactions: [],
-      }));
 
       // eslint-disable-next-line no-await-in-loop
       const terminalPayment = await this.manager.save(TerminalPayment, Object.assign(new TerminalPayment(), {

@@ -37,6 +37,6 @@ import TmpSubTransaction from './tmp-sub-transaction';
 export default class TmpTransaction extends Transaction {
   @OneToMany(() => TmpSubTransaction,
     (subTransaction) => subTransaction.transaction,
-    { cascade: true, onUpdate: 'CASCADE' })
+    { cascade: true, onDelete: 'CASCADE' })
   public subTransactions: TmpSubTransaction[];
 }

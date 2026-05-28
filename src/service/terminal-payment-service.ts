@@ -30,8 +30,10 @@ import WithManager from '../database/with-manager';
 import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
 import TransactionService, { TransactionContext } from './transaction-service';
 import StripeService from './stripe-service';
-import DineroFactory, { DineroObject } from 'dinero.js';
-import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
+import DineroFactory from 'dinero.js';
+import TerminalPayment, { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
+import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
+import TransferService from './transfer-service';
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
@@ -58,7 +60,33 @@ export default class TerminalPaymentService extends WithManager {
    * @returns The TerminalPayment if found. Null if not found.
    */
   public async getTerminalPayment(id: number): Promise<TerminalPayment | null> {
-    return this.manager.getRepository(TerminalPayment).findOne({ where: { id }, relations: { temporaryTransaction: true, finalTransaction: true, transfer: true, stripePaymentIntent: true } });
+    return this.manager.getRepository(TerminalPayment).findOne({
+      where: { id },
+      relations: {
+        temporaryTransaction: {
+          pointOfSale: true,
+          from: true,
+          createdBy: true,
+          subTransactions: {
+            container: true,
+            to: true,
+            subTransactionRows: { product: true },
+          },
+        },
+        finalTransaction: {
+          pointOfSale: true,
+          from: true,
+          createdBy: true,
+          subTransactions: {
+            container: true,
+            to: true,
+            subTransactionRows: { product: true },
+          },
+        },
+        transfer: true,
+        stripePaymentIntent: true,
+      },
+    });
   }
 
   /**
@@ -102,6 +130,50 @@ export default class TerminalPaymentService extends WithManager {
       throw new Error(`TerminalPayment with ID "${id}" not found`);
     }
     await this.stripeService.startTerminalPayment(params.stripeTerminalId, terminalPayment.stripePaymentIntent.stripeId);
+  }
 
+  /**
+   * Create the transaction and corresponding transfer in the database
+   * @param paymentIntent PaymentIntent that has been paid
+   */
+  public async handleTerminalPaymentSuccess(paymentIntent: StripePaymentIntent) {
+    if (!paymentIntent.terminalPayment) throw new Error('Given paymentIntent does not have a TerminalPayment');
+
+    const terminalPayment = await this.getTerminalPayment(paymentIntent.terminalPayment!.id);
+    if (!terminalPayment) throw new Error(`TerminalPayment with ID "${paymentIntent.terminalPayment.id}" not found!`);
+
+    if (terminalPayment.getState() !== TerminalPaymentState.CREATED) {
+      throw new Error(`TerminalPayment has state "${terminalPayment.getState()}", but expected state "${TerminalPaymentState.CREATED}"`);
+    }
+    const { temporaryTransaction } = terminalPayment;
+    if (!temporaryTransaction) {
+      throw new Error('No temporary transaction found to convert to an actual transaction.');
+    }
+
+    // Transform the temporary transaction into an actual transaction
+    const transactionService = new TransactionService(this.manager);
+    const transactionReq = transactionService.asTransactionRequest(temporaryTransaction);
+    const { valid, context } = await transactionService.verifyTransaction(transactionReq);
+    if (!context) throw new Error('No context given');
+    terminalPayment.finalTransaction = await transactionService.createTransaction(transactionReq, context);
+
+    // Create the transfer that pays for the transaction
+    terminalPayment.transfer = await new TransferService(this.manager).createTransfer({
+      amount: paymentIntent.amount.toObject(),
+      description: `Terminal Payment for transaction "${terminalPayment.finalTransaction.id}"`,
+      toId: temporaryTransaction.from.id,
+      fromId: undefined,
+    });
+
+    // Remove the temporary transaction reference
+    terminalPayment.temporaryTransaction = null;
+
+    // Save all changes to the database
+    await this.manager.save(terminalPayment);
+
+    // Cleanup temporary transaction
+    await this.manager.getRepository(TmpTransaction).remove(temporaryTransaction);
+
+    return terminalPayment;
   }
 }

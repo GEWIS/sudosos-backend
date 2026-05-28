@@ -42,11 +42,23 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
-import PaymentRequestService from './payment-request-service';
 import WithManager from '../database/with-manager';
 import Config from '../config';
 
 export const STRIPE_API_VERSION = '2024-06-20';
+
+export class StripeFactory {
+  public static create(): Stripe {
+    const config = Config.get();
+    if (!config.stripe.privateKey) {
+      throw new Error('STRIPE_PRIVATE_KEY environment variable is not set.');
+    }
+
+    return new Stripe(config.stripe.privateKey, {
+      apiVersion: STRIPE_API_VERSION,
+    });
+  }
+}
 
 export default class StripeService extends WithManager {
   private stripe: Stripe;
@@ -55,14 +67,7 @@ export default class StripeService extends WithManager {
 
   constructor(manager?: EntityManager) {
     super(manager);
-    const config = Config.get();
-    if (!config.stripe.privateKey) {
-      throw new Error('STRIPE_PRIVATE_KEY environment variable is not set.');
-    }
-
-    this.stripe = new Stripe(config.stripe.privateKey, {
-      apiVersion: STRIPE_API_VERSION,
-    });
+    this.stripe = StripeFactory.create();
     this.logger = log4js.getLogger('StripeController');
   }
 
@@ -218,19 +223,21 @@ export default class StripeService extends WithManager {
   }
 
   /**
-   * Validate a Stripe webhook event
-   * @param body
-   * @param signature
+   * Create the transfer that belongs to the now paid paymentIntent
+   * @param paymentIntent Stripe PaymentIntent that has been successfully paid
    */
-  public async constructWebhookEvent(
-    body: any, signature: string | string[],
-  ): Promise<Stripe.Event> {
-    const webhookSecret = Config.get().stripe.webhookSecret;
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set.');
-    }
+  public async handleStripeDepositPaid(paymentIntent: StripePaymentIntent) {
+    if (!paymentIntent.deposit) throw new Error('Given paymentIntent does not have a deposit');
+    if (paymentIntent.deposit.transfer) throw new Error('Given paymentIntent\'s deposit already has a transfer attached');
 
-    return this.stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    paymentIntent.deposit.transfer = await new TransferService(this.manager).createTransfer({
+      amount: paymentIntent.amount.toObject(),
+      toId: paymentIntent.deposit.to.id,
+      description: paymentIntent.stripeId,
+      fromId: undefined,
+    });
+
+    await this.manager.save(paymentIntent.deposit);
   }
 
   /**
@@ -261,45 +268,6 @@ export default class StripeService extends WithManager {
 
     const depositStatus = await this.manager.getRepository(StripePaymentIntentStatus).save({ stripePaymentIntent: paymentIntent, state });
 
-    // If payment has succeeded, create the transfer
-    if (state === StripePaymentIntentState.SUCCEEDED && paymentIntent.deposit) {
-      paymentIntent.deposit.transfer = await new TransferService(this.manager).createTransfer({
-        amount: paymentIntent.amount.toObject(),
-        toId: paymentIntent.deposit.to.id,
-        description: paymentIntent.stripeId,
-        fromId: undefined,
-      });
-
-      await this.manager.save(paymentIntent.deposit);
-
-      // If the intent was initiated by a PaymentRequest, flip the request to
-      // PAID. This runs *after* the credit Transfer is saved so that a
-      // successful settlement is the single observable event.
-      //
-      // Best-effort: Stripe settlement has already succeeded and the credit
-      // Transfer is persisted. A PaymentRequest state-machine conflict
-      // (e.g. admin cancelled the request after the intent was created)
-      // must not roll back the deposit — log and continue. The user is
-      // credited either way; reconciling the PaymentRequest state is a
-      // secondary concern.
-      if (paymentIntent.paymentRequest) {
-        try {
-          await new PaymentRequestService(this.manager).markPaidFromStripeIntent(paymentIntent);
-        } catch (error) {
-          this.logger.error(
-            'Failed to mark PaymentRequest as PAID for succeeded Stripe payment intent; '
-            + 'the credit Transfer was still created and the user has been credited.',
-            {
-              paymentIntentId: paymentIntent.id,
-              stripeId: paymentIntent.stripeId,
-              paymentRequestId: paymentIntent.paymentRequest.id,
-              error,
-            },
-          );
-        }
-      }
-    }
-
     return depositStatus;
   }
 
@@ -323,41 +291,5 @@ export default class StripeService extends WithManager {
         payment_intent: paymentIntent,
       },
     );
-  }
-
-  /**
-   * Handle the event by making the appropriate database additions
-   * @param event {Stripe.Event} Event received from Stripe webhook
-   */
-  public async handleWebhookEvent(event: Stripe.Event) {
-    try {
-      const eventPaymentIntent = event.data.object as Stripe.PaymentIntent;
-      const paymentIntent = await StripePaymentIntent.findOne({
-        where: { stripeId: eventPaymentIntent.id },
-        relations: { deposit: { transfer: true }, paymentIntentStatuses: true },
-      });
-
-      switch (event.type) {
-        case 'payment_intent.created':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CREATED);
-          break;
-        case 'payment_intent.processing':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.PROCESSING);
-          break;
-        case 'payment_intent.succeeded':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
-          break;
-        case 'payment_intent.payment_failed':
-        case 'payment_intent.canceled':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED);
-          break;
-        default:
-          this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
-      }
-
-      this.logger.trace(`Successfully processed event "${event.type}" for payment intent "${eventPaymentIntent.id}" (ID: ${paymentIntent.id})`);
-    } catch (error) {
-      this.logger.error('Could not process Stripe webhook event with ID', event.id, error);
-    }
   }
 }

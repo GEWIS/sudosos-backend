@@ -32,6 +32,6 @@ export default class TmpSubTransaction extends SubTransaction {
 
   @OneToMany(() => TmpSubTransactionRow,
     (subTransactionRow) => subTransactionRow.subTransaction,
-    { cascade: true })
+    { cascade: true, onDelete: 'CASCADE' })
   public subTransactionRows: TmpSubTransactionRow[];
 }
