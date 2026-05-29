@@ -26,6 +26,7 @@ import StripePaymentIntentStatus, { StripePaymentIntentState } from '../entity/s
 import Config from '../config';
 import StripeService, { StripeFactory } from './stripe-service';
 import PaymentRequestService from './payment-request-service';
+import TerminalPaymentService from './terminal-payment-service';
 
 export default class StripeWebhookService extends WithManager {
   private stripe: Stripe;
@@ -81,7 +82,7 @@ export default class StripeWebhookService extends WithManager {
       .save({ stripePaymentIntent: paymentIntent, state });
 
     // If payment has succeeded, create the transfer
-    if (state === StripePaymentIntentState.SUCCEEDED && paymentIntent.deposit) {
+    if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.deposit) {
       await new StripeService(this.manager).handleStripeDepositPaid(paymentIntent);
 
       // If the intent was initiated by a PaymentRequest, flip the request to
@@ -110,6 +111,9 @@ export default class StripeWebhookService extends WithManager {
           );
         }
       }
+    }
+    if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.terminalPayment) {
+      await new TerminalPaymentService(this.manager).handleTerminalPaymentSuccess(paymentIntent);
     }
 
     return paymentIntentStatus;

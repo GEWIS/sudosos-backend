@@ -34,6 +34,7 @@ import { StripePublicKeyResponse } from './response/stripe-response';
 import { AppDataSource } from '../database/database';
 import Stripe from 'stripe';
 import Config from '../config';
+import StripeWebhookService from '../service/stripe-webhook-service';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -103,7 +104,7 @@ export default class StripeWebhookController extends BaseController {
 
     let webhookEvent: Stripe.Event;
     try {
-      webhookEvent = await new StripeService().constructWebhookEvent(rawBody, signature);
+      webhookEvent = await new StripeWebhookService().constructWebhookEvent(rawBody, signature);
     } catch (error) {
       res.status(400).json('Event could not be verified');
       return;
@@ -132,7 +133,7 @@ export default class StripeWebhookController extends BaseController {
 
     // NO await here, because we should execute the action asynchronously
     AppDataSource.manager.transaction(async (manager) => {
-      const stripeService = new StripeService(manager);
+      const stripeService = new StripeWebhookService(manager);
       await stripeService.handleWebhookEvent(webhookEvent);
     }).catch((error) => {
       this.logger.error(error);
