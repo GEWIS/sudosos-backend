@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the module page of debtor-controller.
- *
  * @module debtors
  */
 
@@ -40,6 +38,12 @@ import { ReturnFileType } from 'pdf-generator-client';
 import { PdfError } from '../errors';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 
+/**
+ * Controller for the `/fines` endpoints in the {@link debtors | debtors} module. Covers
+ * the full handout pipeline (eligibility, warning, batch creation, undo) and the
+ * treasurer-facing fine reports. Waiving lives on the user controller; see
+ * {@link users!UserController.waiveUserFines | waiveUserFines} (`POST /users/<id>/fines/waive`).
+ */
 export default class DebtorController extends BaseController {
   private logger: Logger = log4js.getLogger(' DebtorController');
 
