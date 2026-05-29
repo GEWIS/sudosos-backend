@@ -83,7 +83,6 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     controller: TerminalPaymentController,
     adminUser: User,
     localUser: User,
-    organUser: User,
     posUser: User,
     adminToken: String,
     token: String,
@@ -124,21 +123,23 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    const organUser = {
+    // The POS user owns the catalogue (acts as the seller) and is the account
+    // that creates terminal payments on behalf of buyers.
+    const posUser = {
       id: 3,
       firstName: 'Bar',
-      type: UserType.ORGAN,
+      type: UserType.POINT_OF_SALE,
       active: true,
       acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
     } as User;
 
-    await User.save([adminUser, localUser, organUser]);
+    await User.save([adminUser, localUser, posUser]);
 
     const categories = await new ProductCategorySeeder().init();
     const vatGroups = await new VatGroupSeeder().init();
-    const products = await new ProductSeeder().init(organUser, vatGroups, categories);
-    const containers = await new ContainerSeeder().init(organUser, products);
-    const pointOfSale = await new PointOfSaleSeeder().init(organUser, containers);
+    const products = await new ProductSeeder().init(posUser, vatGroups, categories);
+    const containers = await new ContainerSeeder().init(posUser, products);
+    const pointOfSale = await new PointOfSaleSeeder().init(posUser, containers);
     const transactions = await new TransactionSeeder().init([adminUser], pointOfSale.barRevision);
 
     const { terminalPayments } = await new TerminalPaymentSeeder().seed(
@@ -147,18 +148,24 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       [transactions.transactions[0]],
     );
 
+    // A terminal payment created by the POS user for the local user: the POS
+    // user is the creator (createdBy) while the local user is the buyer (from).
+    // POS users have the get-own permission, so this exercises the "own" relation.
+    const { terminalPayment: posTerminalPayment } = await new TerminalPaymentSeeder()
+      .init(posUser, pointOfSale.barRevision, localUser);
+
     const product = products.grimbergenRevision;
     const productPrice = product.priceInclVat.toObject();
     const validTransactionRequest: TransactionRequest = {
-      from: adminUser.id,
-      createdBy: adminUser.id,
+      from: localUser.id,
+      createdBy: localUser.id,
       pointOfSale: {
         id: pointOfSale.bar.id,
         revision: pointOfSale.barRevision.revision,
       },
       subTransactions: [
         {
-          to: organUser.id,
+          to: adminUser.id,
           container: {
             id: containers.alcoholic.id,
             revision: containers.alcoholicRevision.revision,
@@ -190,17 +197,6 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     const roleManager = await new RoleManager().initialize();
     const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
     const token = await signTokenFor(localUser, tokenHandler);
-
-    // A POS user that owns its own terminal payment. POS users have the
-    // get-own permission, so this is used to exercise the "own" relation.
-    const posUser = await User.save({
-      firstName: 'POS',
-      type: UserType.POINT_OF_SALE,
-      active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    } as User);
-    const { terminalPayment: posTerminalPayment } = await new TerminalPaymentSeeder()
-      .init(posUser, pointOfSale.barRevision);
     const posToken = await signTokenFor(posUser, tokenHandler);
 
     const controller = new TerminalPaymentController({ specification, roleManager });
@@ -223,7 +219,6 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       controller,
       adminUser,
       localUser,
-      organUser,
       posUser,
       adminToken,
       token,
@@ -503,6 +498,22 @@ describe('TerminalPaymentController', async (): Promise<void> => {
 
       expect(res.status).to.equal(404);
       expect(res.text).to.equal('Stripe terminal with ID "non-existing-terminal" not found.');
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 422 if the TerminalPayment is already paid', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PAID,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: FAKE_UNAVAILABLE_READER_ID });
+
+      expect(res.status).to.equal(422);
+      expect(res.text).to.equal('TerminalPayment already paid.');
       expect(readersProcessIntentStub).to.not.be.called;
     });
 

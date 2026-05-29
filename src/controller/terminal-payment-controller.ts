@@ -165,8 +165,10 @@ export default class TerminalPaymentController extends BaseController {
    * @param {integer} id.path.required - The ID of the terminal payment
    * @param {ProcessTerminalPaymentRequest} request.body.required - Payment options
    * @return {} 204 - Success
+   * @return {string} 400 - Validation failure
    * @return {string} 404 - Terminal Payment or terminal not found
    * @return {string} 422 - Terminal unavailable
+   * @return {string} 422 - TerminalPayment already paid
    * @return {string} 500 - Internal server error
    */
   public async startTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
@@ -182,6 +184,11 @@ export default class TerminalPaymentController extends BaseController {
 
       if (!terminalPayment) {
         res.status(404).send(`Terminal Payment with ID "${id}" not found.`);
+        return;
+      }
+
+      if (!!terminalPayment.transfer) {
+        res.status(422).send('TerminalPayment already paid.');
         return;
       }
 

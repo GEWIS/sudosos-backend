@@ -94,6 +94,7 @@ import TermsOfServiceController from './controller/terms-of-service-controller';
 import Config from './config';
 import { applyConfiguredLogLevel } from './helpers/logging';
 import { initRedisConnection } from './helpers/redis-connection';
+import TerminalPaymentController from './controller/terminal-payment-controller';
 
 export class Application {
   app: express.Express;
@@ -261,7 +262,7 @@ export default async function createApp(): Promise<Application> {
   const tokenHandler = await createTokenHandler();
   // Setup token handler and authentication controller.
   await setupAuthentication(tokenHandler, application);
-  
+
   // Initialize WebSocket service
   // Close existing instance's server if it exists (e.g., in tests)
   try {
@@ -275,7 +276,7 @@ export default async function createApp(): Promise<Application> {
   } catch {
     // No existing instance, continue
   }
-  
+
   const webSocketService = new WebSocketService({
     tokenHandler,
     roleManager: application.roleManager,
@@ -312,6 +313,7 @@ export default async function createApp(): Promise<Application> {
   if (config.stripe.enabled) {
     application.app.use('/v1/stripe', new StripeController(options).getRouter());
     application.app.use('/v1/payment-requests', new PaymentRequestController(options).getRouter());
+    application.app.use('/v1/terminal-payments', new TerminalPaymentController(options).getRouter());
   }
   application.app.use('/v1/payoutrequests', new PayoutRequestController(options).getRouter());
   application.app.use('/v1/invoices', new InvoiceController(options).getRouter());

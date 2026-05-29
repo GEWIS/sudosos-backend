@@ -41,7 +41,7 @@ export default class TerminalPaymentSeeder extends WithManager {
    * TmpSubTransactionRow, picked deterministically from the first container in the
    * POS revision that has at least one product. Throws if no such container exists.
    */
-  private buildTmpTransaction(user: User, posRevision: PointOfSaleRevision): TmpTransaction {
+  private buildTmpTransaction(user: User, posRevision: PointOfSaleRevision, from: User = user): TmpTransaction {
     const container = posRevision.containers.find((c) => c.products.length > 0);
     if (!container) {
       throw new Error(`PointOfSaleRevision ${posRevision.pointOfSaleId}-${posRevision.revision} has no container with products`);
@@ -58,7 +58,7 @@ export default class TerminalPaymentSeeder extends WithManager {
       subTransactionRows: [row],
     });
     return Object.assign(new TmpTransaction(), {
-      from: user,
+      from,
       createdBy: user,
       pointOfSale: posRevision,
       subTransactions: [subTransaction],
@@ -82,11 +82,12 @@ export default class TerminalPaymentSeeder extends WithManager {
   /**
    * Create a single TerminalPayment in the CREATED state for dev seeding.
    *
-   * @param user - The user initiating the terminal payment.
+   * @param user - The user initiating the terminal payment (the transaction's creator).
    * @param posRevision - The POS revision from which the temporary transaction is built.
+   * @param from - The user the transaction is for (the buyer). Defaults to the creator.
    */
-  public async init(user: User, posRevision: PointOfSaleRevision): Promise<{ terminalPayment: TerminalPayment }> {
-    const tmpTransaction = await this.manager.save(TmpTransaction, this.buildTmpTransaction(user, posRevision));
+  public async init(user: User, posRevision: PointOfSaleRevision, from: User = user): Promise<{ terminalPayment: TerminalPayment }> {
+    const tmpTransaction = await this.manager.save(TmpTransaction, this.buildTmpTransaction(user, posRevision, from));
     const amount = DineroTransformer.Instance.from(this.tmpTransactionCost(tmpTransaction));
 
     const stripePaymentIntent = await this.manager.save(StripePaymentIntent, {
