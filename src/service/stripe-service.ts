@@ -283,6 +283,16 @@ export default class StripeService extends WithManager {
     }));
   }
 
+  /**
+   * Get the Stripe Payment Terminal with the given ID
+   */
+  public async getSingleTerminal(id: string): Promise<StripePaymentTerminalResponse | null> {
+    const terminals = await this.getTerminals();
+    const match = terminals.find((t) => t.id === id);
+    if (!match) return null;
+    return match;
+  }
+
   public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
     // @TODO: add error handling
     const reader = await this.stripe.terminal.readers.processPaymentIntent(

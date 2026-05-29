@@ -20,26 +20,30 @@
 
 /**
  * This is the module page of the terminal payment response.
- * 
+ *
  * @module terminal-payment
  */
 
 import { TerminalPaymentState } from '../../entity/transactions/terminal/terminal-payment';
 import BaseResponse from './base-response';
+import { DineroObjectResponse } from './dinero-response';
 import { TransactionResponse } from './transaction-response';
 import { TransferResponse } from './transfer-response';
 
 /**
- * @typedef {BaseResponse} CreateTransactionPaymentResponse
+ * @typedef {allOf|BaseResponse} TerminalPaymentResponse
  * @property {TransactionResponse} transaction.required - The to-be created
- * transaction when the payment is done 
+ * transaction when the payment is done
  * @property {TransferResponse} transfer - The transfer belonging to this
  * terminal payment
- * @property {TerminalPaymentState} state.required - The state of the terminal
- * payment 
+ * @property {string} state.required - The state of the terminal
+ * payment. Can be 'created' or 'paid'.
+ * @property {DineroObjectResponse} amount.required - The total amount to be
+ * paid
  */
-export interface TransactionPaymentResponse extends BaseResponse {
+export interface TerminalPaymentResponse extends BaseResponse {
   transaction: TransactionResponse;
   transfer?: TransferResponse;
   state: TerminalPaymentState;
+  amount: DineroObjectResponse
 }

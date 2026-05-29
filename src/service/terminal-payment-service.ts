@@ -34,6 +34,7 @@ import DineroFactory from 'dinero.js';
 import TerminalPayment, { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import TransferService from './transfer-service';
+import { TerminalPaymentResponse } from '../controller/response/terminal-payment-response';
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
@@ -44,6 +45,23 @@ export default class TerminalPaymentService extends WithManager {
     super();
     this.transactionService = new TransactionService(manager);
     this.stripeService = new StripeService(manager);
+  }
+
+  public static async asTerminalPaymentResponse(terminalPayment: TerminalPayment, context?: TransactionContext): Promise<TerminalPaymentResponse> {
+    const transactionService = new TransactionService();
+    const totalCost = terminalPayment.stripePaymentIntent.amount;
+    return {
+      id: terminalPayment.id,
+      createdAt: terminalPayment.createdAt.toISOString(),
+      updatedAt: terminalPayment.updatedAt.toISOString(),
+      version: terminalPayment.version,
+      amount: terminalPayment.stripePaymentIntent.amount.toObject(),
+      transaction: terminalPayment.temporaryTransaction
+        ? await transactionService.asTransactionResponse(terminalPayment.temporaryTransaction, totalCost, context)
+        : await transactionService.asTransactionResponse(terminalPayment.finalTransaction, totalCost, context),
+      transfer: terminalPayment.transfer ? TransferService.asTransferResponse(terminalPayment.transfer) : undefined,
+      state: terminalPayment.getState(),
+    };
   }
 
   /**
@@ -64,23 +82,23 @@ export default class TerminalPaymentService extends WithManager {
       where: { id },
       relations: {
         temporaryTransaction: {
-          pointOfSale: true,
+          pointOfSale: { pointOfSale: true },
           from: true,
           createdBy: true,
           subTransactions: {
-            container: true,
+            container: { container: true },
             to: true,
-            subTransactionRows: { product: true },
+            subTransactionRows: { product: { product: true, vat: true } },
           },
         },
         finalTransaction: {
-          pointOfSale: true,
+          pointOfSale: { pointOfSale: true },
           from: true,
           createdBy: true,
           subTransactions: {
-            container: true,
+            container: { container: true },
             to: true,
-            subTransactionRows: { product: true },
+            subTransactionRows: { product: { product: true, vat: true } },
           },
         },
         transfer: true,
@@ -153,7 +171,7 @@ export default class TerminalPaymentService extends WithManager {
     // Transform the temporary transaction into an actual transaction
     const transactionService = new TransactionService(this.manager);
     const transactionReq = transactionService.asTransactionRequest(temporaryTransaction);
-    const { valid, context } = await transactionService.verifyTransaction(transactionReq);
+    const { context } = await transactionService.verifyTransaction(transactionReq);
     if (!context) throw new Error('No context given');
     terminalPayment.finalTransaction = await transactionService.createTransaction(transactionReq, context);
 

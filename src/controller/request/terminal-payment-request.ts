@@ -20,14 +20,14 @@
 
 /**
  * This is the module page of the terminal payment request.
- * 
+ *
  * @module terminal-payment
  */
 
 import { TransactionRequest } from './transaction-request';
 
 /**
- * @typedef {object} TerminalPaymentRequest
+ * @typedef {object} CreateTerminalPaymentRequest
  * @property {TransactionRequest} transaction.required - The transaction to
  * be created/paid by terminal payment
  */
@@ -35,6 +35,11 @@ export interface CreateTerminalPaymentRequest {
   transaction: TransactionRequest;
 }
 
+/**
+ * @typedef {object} ProcessTerminalPaymentRequest
+ * @property {string} stripeTerminalId.required - The ID of the Stripe
+ * terminal to perform the payment with
+ */
 export interface ProcessTerminalPaymentRequest {
   stripeTerminalId: string;
 }

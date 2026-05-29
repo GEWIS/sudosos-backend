@@ -24,11 +24,17 @@ import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { DataSource } from 'typeorm';
 import sinon from 'sinon';
+import Stripe from 'stripe';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TerminalPaymentController from '../../../src/controller/terminal-payment-controller';
+import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import TerminalPaymentService from '../../../src/service/terminal-payment-service';
 import Database from '../../../src/database/database';
-import TerminalPayment from '../../../src/entity/transactions/terminal/terminal-payment';
+import TerminalPayment, { TerminalPaymentState } from '../../../src/entity/transactions/terminal/terminal-payment';
+import TmpTransaction from '../../../src/entity/transactions/terminal/tmp-transaction';
+import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
 import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import Config from '../../../src/config';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
@@ -36,8 +42,38 @@ import { truncateAllTables } from '../../setup';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import TerminalPaymentSeeder from '../../seed/ledger/terminal-payment-seeder';
+import {
+  ContainerSeeder,
+  PointOfSaleSeeder,
+  ProductCategorySeeder,
+  ProductSeeder,
+  TransactionSeeder,
+  VatGroupSeeder,
+} from '../../seed';
+import { TransactionRequest } from '../../../src/controller/request/transaction-request';
+import { StripePaymentTerminalResponse } from '../../../src/controller/response/stripe-response';
 
 const { expect, request } = chai;
+
+const FAKE_PAYMENT_INTENT = 'fake_payment_intent_for_testing_do_not_use';
+const FAKE_READER_ID = 'fake_reader_id_do_not_use';
+const FAKE_UNAVAILABLE_READER_ID = 'fake_unavailable_reader_id_do_not_use';
+
+// Fake Stripe terminal readers backing the stubbed `terminal.readers.list` call.
+// One reader is idle (available) and one is mid-action (unavailable), so both the
+// success and the "terminal unavailable" (HTTP 422) branches can be exercised.
+const FAKE_READERS: Stripe.Terminal.Reader[] = [
+  {
+    id: FAKE_READER_ID,
+    label: 'Available test terminal',
+    action: null,
+  } as Stripe.Terminal.Reader,
+  {
+    id: FAKE_UNAVAILABLE_READER_ID,
+    label: 'In-use test terminal',
+    action: { status: 'in_progress' } as Stripe.Terminal.Reader.Action,
+  } as Stripe.Terminal.Reader,
+];
 
 describe('TerminalPaymentController', async (): Promise<void> => {
   let ctx: {
@@ -47,14 +83,28 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     controller: TerminalPaymentController,
     adminUser: User,
     localUser: User,
+    organUser: User,
+    posUser: User,
     adminToken: String,
     token: String,
+    posToken: String,
     terminalPayments: TerminalPayment[],
+    posTerminalPayment: TerminalPayment,
+    terminals: StripePaymentTerminalResponse[],
+    validTransactionRequest: TransactionRequest,
   };
 
   const stubs: sinon.SinonStub[] = [];
+  let originalStripeKey: string | undefined;
+  let paymentIntentsCreateStub: sinon.SinonStub;
+  let readersProcessIntentStub: sinon.SinonStub;
+  let readersListStub: sinon.SinonStub;
 
   beforeAll(async () => {
+    originalStripeKey = process.env.STRIPE_PRIVATE_KEY;
+    process.env.STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY || 'sk_test_dummy';
+    Config.reset();
+
     const connection = await Database.initialize();
     await truncateAllTables(connection);
 
@@ -74,10 +124,60 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       acceptedToS: TermsOfServiceStatus.ACCEPTED,
     } as User;
 
-    await User.save(adminUser);
-    await User.save(localUser);
+    const organUser = {
+      id: 3,
+      firstName: 'Bar',
+      type: UserType.ORGAN,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User;
 
-    const { terminalPayments } = await new TerminalPaymentSeeder().seed([adminUser, localUser]);
+    await User.save([adminUser, localUser, organUser]);
+
+    const categories = await new ProductCategorySeeder().init();
+    const vatGroups = await new VatGroupSeeder().init();
+    const products = await new ProductSeeder().init(organUser, vatGroups, categories);
+    const containers = await new ContainerSeeder().init(organUser, products);
+    const pointOfSale = await new PointOfSaleSeeder().init(organUser, containers);
+    const transactions = await new TransactionSeeder().init([adminUser], pointOfSale.barRevision);
+
+    const { terminalPayments } = await new TerminalPaymentSeeder().seed(
+      [adminUser],
+      [pointOfSale.barRevision],
+      [transactions.transactions[0]],
+    );
+
+    const product = products.grimbergenRevision;
+    const productPrice = product.priceInclVat.toObject();
+    const validTransactionRequest: TransactionRequest = {
+      from: adminUser.id,
+      createdBy: adminUser.id,
+      pointOfSale: {
+        id: pointOfSale.bar.id,
+        revision: pointOfSale.barRevision.revision,
+      },
+      subTransactions: [
+        {
+          to: organUser.id,
+          container: {
+            id: containers.alcoholic.id,
+            revision: containers.alcoholicRevision.revision,
+          },
+          subTransactionRows: [
+            {
+              product: {
+                id: product.product.id,
+                revision: product.revision,
+              },
+              amount: 1,
+              totalPriceInclVat: productPrice,
+            },
+          ],
+          totalPriceInclVat: productPrice,
+        },
+      ],
+      totalPriceInclVat: productPrice,
+    };
 
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -91,10 +191,30 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
     const token = await signTokenFor(localUser, tokenHandler);
 
+    // A POS user that owns its own terminal payment. POS users have the
+    // get-own permission, so this is used to exercise the "own" relation.
+    const posUser = await User.save({
+      firstName: 'POS',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    } as User);
+    const { terminalPayment: posTerminalPayment } = await new TerminalPaymentSeeder()
+      .init(posUser, pointOfSale.barRevision);
+    const posToken = await signTokenFor(posUser, tokenHandler);
+
     const controller = new TerminalPaymentController({ specification, roleManager });
     app.use(json());
     app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     app.use('/terminal-payments', controller.getRouter());
+
+    // The terminals as the StripeService exposes them, derived from the fake
+    // readers that back the stubbed `terminal.readers.list` call.
+    const terminals: StripePaymentTerminalResponse[] = FAKE_READERS.map((t) => ({
+      id: t.id,
+      name: t.label,
+      available: t.action?.status !== 'in_progress',
+    }));
 
     ctx = {
       connection,
@@ -103,14 +223,46 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       controller,
       adminUser,
       localUser,
+      organUser,
+      posUser,
       adminToken,
       token,
+      posToken,
       terminalPayments,
+      posTerminalPayment,
+      terminals,
+      validTransactionRequest,
     };
   });
 
   afterAll(async () => {
+    process.env.STRIPE_PRIVATE_KEY = originalStripeKey;
+    Config.reset();
     await finishTestDB(ctx.connection);
+  });
+
+  beforeEach(() => {
+    // Stub the underlying Stripe API methods at the resource prototype level
+    // so that no real HTTP calls are made by the StripeService. A throwaway
+    // Stripe instance is used purely to reach the resource prototypes; the
+    // stubs apply to every Stripe instance (including the one inside the
+    // StripeService that TerminalPaymentService owns).
+    const sampleStripe = new Stripe('sk_test_dummy', {
+      apiVersion: STRIPE_API_VERSION,
+    });
+    paymentIntentsCreateStub = sinon
+      .stub(Object.getPrototypeOf(sampleStripe.paymentIntents), 'create')
+      .resolves({ id: FAKE_PAYMENT_INTENT, client_secret: 'cs_fake' } as any);
+    readersProcessIntentStub = sinon
+      .stub(
+        Object.getPrototypeOf(sampleStripe.terminal.readers),
+        'processPaymentIntent',
+      )
+      .resolves({ id: FAKE_READER_ID } as any);
+    readersListStub = sinon
+      .stub(Object.getPrototypeOf(sampleStripe.terminal.readers), 'list')
+      .resolves({ data: FAKE_READERS } as any);
+    stubs.push(paymentIntentsCreateStub, readersProcessIntentStub, readersListStub);
   });
 
   afterEach(() => {
@@ -119,21 +271,290 @@ describe('TerminalPaymentController', async (): Promise<void> => {
   });
 
   describe('POST /terminal-payments', () => {
-    it.todo('should create a new terminal payment and return HTTP 200 if admin');
-    it.todo('should return HTTP 400 if the request body is invalid');
-    it.todo('should return HTTP 403 if the user is not allowed to create a terminal payment');
+    it('should create a new terminal payment and return HTTP 200 if admin', async () => {
+      const countBefore = await TerminalPayment.count();
+
+      const res = await request(ctx.app)
+        .post('/terminal-payments')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ transaction: ctx.validTransactionRequest });
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('TerminalPaymentResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.state).to.equal(TerminalPaymentState.CREATED);
+
+      // A new terminal payment (with its Stripe payment intent) was created
+      expect(await TerminalPayment.count()).to.equal(countBefore + 1);
+      expect(paymentIntentsCreateStub).to.be.calledOnce;
+
+      // Cleanup: remove the created terminal payment and its dependent records,
+      // so the system is back to its initial state.
+      const created = await ctx.connection.getRepository(TerminalPayment).findOne({
+        where: { id: res.body.id },
+        relations: { temporaryTransaction: true, stripePaymentIntent: true },
+      });
+      await ctx.connection.getRepository(TerminalPayment).remove(created);
+      await ctx.connection.getRepository(TmpTransaction).remove(created.temporaryTransaction);
+      await ctx.connection.getRepository(StripePaymentIntent).remove(created.stripePaymentIntent);
+      expect(await TerminalPayment.count()).to.equal(countBefore);
+    });
+
+    it('should return HTTP 400 if the request body is invalid', async () => {
+      const countBefore = await TerminalPayment.count();
+
+      const res = await request(ctx.app)
+        .post('/terminal-payments')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ foo: 'bar' });
+
+      expect(res.status).to.equal(400);
+      // No terminal payment should have been created
+      expect(await TerminalPayment.count()).to.equal(countBefore);
+    });
+
+    it('should return HTTP 400 if the terminal payment request cannot be validated', async () => {
+      const countBefore = await TerminalPayment.count();
+      // Structurally valid request, but the transaction references a non-existing user
+      const invalidRequest = {
+        transaction: {
+          ...ctx.validTransactionRequest,
+          createdBy: 100000,
+        },
+      };
+
+      const res = await request(ctx.app)
+        .post('/terminal-payments')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send(invalidRequest);
+
+      expect(res.status).to.equal(400);
+      expect(res.text).to.equal('Could not validate terminalPayment.');
+      expect(await TerminalPayment.count()).to.equal(countBefore);
+    });
+
+    it('should return HTTP 403 if the user is not allowed to create a terminal payment', async () => {
+      const countBefore = await TerminalPayment.count();
+
+      const res = await request(ctx.app)
+        .post('/terminal-payments')
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ transaction: ctx.validTransactionRequest });
+
+      expect(res.status).to.equal(403);
+      expect(await TerminalPayment.count()).to.equal(countBefore);
+    });
+
+    it('should return HTTP 500 if the terminal payment could not be created', async () => {
+      const countBefore = await TerminalPayment.count();
+      const createStub = sinon
+        .stub(TerminalPaymentService.prototype, 'createTerminalPayment')
+        .rejects(new Error('Something went wrong'));
+      stubs.push(createStub);
+
+      const res = await request(ctx.app)
+        .post('/terminal-payments')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ transaction: ctx.validTransactionRequest });
+
+      expect(res.status).to.equal(500);
+      expect(res.text).to.equal('Internal server error.');
+      // Transaction should have rolled back, leaving no new terminal payment
+      expect(await TerminalPayment.count()).to.equal(countBefore);
+    });
   });
 
   describe('GET /terminal-payments/:id', () => {
-    it.todo('should return the terminal payment with the given id and HTTP 200');
-    it.todo('should return HTTP 404 if the terminal payment does not exist');
-    it.todo('should return HTTP 403 if the user is not allowed to view the terminal payment');
+    it('should return the terminal payment with the given id and HTTP 200', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment, 'Precondition failed: no CREATED terminal payment seeded').to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('TerminalPaymentResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.id).to.equal(terminalPayment!.id);
+      expect(res.body.state).to.equal(TerminalPaymentState.CREATED);
+    });
+
+    it('should return HTTP 200 if the user views their own terminal payment', async () => {
+      // The POS user owns this terminal payment and has the get-own permission.
+      const res = await request(ctx.app)
+        .get(`/terminal-payments/${ctx.posTerminalPayment.id}`)
+        .set('Authorization', `Bearer ${ctx.posToken}`);
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('TerminalPaymentResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.id).to.equal(ctx.posTerminalPayment.id);
+    });
+
+    it('should return HTTP 404 if the terminal payment does not exist', async () => {
+      const id = ctx.terminalPayments.length + 1000;
+
+      const res = await request(ctx.app)
+        .get(`/terminal-payments/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.text).to.equal(`Terminal Payment with ID "${id}" not found.`);
+    });
+
+    it('should return HTTP 403 if the user is not allowed to view the terminal payment', async () => {
+      // The local user is not the owner of any terminal payment and lacks the
+      // permission to view terminal payments belonging to others.
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .get(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+    });
+
+    it('should return HTTP 500 if the terminal payment could not be retrieved', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const responseStub = sinon
+        .stub(TerminalPaymentService, 'asTerminalPaymentResponse')
+        .rejects(new Error('Something went wrong'));
+      stubs.push(responseStub);
+
+      const res = await request(ctx.app)
+        .get(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.text).to.equal('Internal server error.');
+    });
   });
 
   describe('POST /terminal-payments/:id/process', () => {
-    it.todo('should start the terminal payment and return HTTP 200 if admin');
-    it.todo('should return HTTP 400 if the request body is invalid');
-    it.todo('should return HTTP 404 if the terminal payment does not exist');
-    it.todo('should return HTTP 403 if the user is not allowed to start the terminal payment');
+    it('should start the terminal payment and return HTTP 204 if admin', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: FAKE_READER_ID });
+
+      expect(res.status).to.equal(204);
+      // The payment intent was forwarded to the requested Stripe terminal
+      expect(readersProcessIntentStub).to.be.calledOnceWith(FAKE_READER_ID, {
+        payment_intent: terminalPayment!.stripePaymentIntent.stripeId,
+      });
+      // Starting the payment does not change the terminal payment's state
+      expect((await new TerminalPaymentService().getTerminalPayment(terminalPayment!.id))!.getState())
+        .to.equal(TerminalPaymentState.CREATED);
+    });
+
+    it('should return HTTP 400 if the request body is invalid', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({});
+
+      expect(res.status).to.equal(400);
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 404 if the terminal payment does not exist', async () => {
+      const id = ctx.terminalPayments.length + 1000;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: FAKE_READER_ID });
+
+      expect(res.status).to.equal(404);
+      expect(res.text).to.equal(`Terminal Payment with ID "${id}" not found.`);
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 404 if the Stripe terminal does not exist', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: 'non-existing-terminal' });
+
+      expect(res.status).to.equal(404);
+      expect(res.text).to.equal('Stripe terminal with ID "non-existing-terminal" not found.');
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 422 if the Stripe terminal is unavailable', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: FAKE_UNAVAILABLE_READER_ID });
+
+      expect(res.status).to.equal(422);
+      expect(res.text).to.equal('Terminal unavailable (is it in use?)');
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 403 if the user is not allowed to start the terminal payment', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.token}`)
+        .send({ stripeTerminalId: FAKE_READER_ID });
+
+      expect(res.status).to.equal(403);
+      expect(readersProcessIntentStub).to.not.be.called;
+    });
+
+    it('should return HTTP 500 if the terminal payment could not be started', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const startStub = sinon
+        .stub(TerminalPaymentService.prototype, 'startTerminalPayment')
+        .rejects(new Error('Something went wrong'));
+      stubs.push(startStub);
+
+      const res = await request(ctx.app)
+        .post(`/terminal-payments/${terminalPayment!.id}/process`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .send({ stripeTerminalId: FAKE_READER_ID });
+
+      expect(res.status).to.equal(500);
+      expect(res.text).to.equal('Internal server error.');
+    });
   });
 });

@@ -196,6 +196,9 @@ export default class DefaultRoles {
         Transaction: {
           get: { own: star },
         },
+        TerminalPayment: {
+          get: { own: star },
+        },
       },
     }, {
       name: 'Super admin',
@@ -222,6 +225,7 @@ export default class DefaultRoles {
         PayoutRequest: admin,
         PaymentRequest: admin,
         SellerPayout: admin,
+        TerminalPayment: admin,
         Permission: admin,
         PointOfSale: admin,
         ProductCategory: admin,

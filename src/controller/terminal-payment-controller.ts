@@ -20,16 +20,21 @@
 
 /**
  * This is the module page of the terminal payment controller
- * 
+ *
  * @module terminal-payment
  */
 
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
-import Dinero from 'dinero.js';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
+import { CreateTerminalPaymentRequest, ProcessTerminalPaymentRequest } from './request/terminal-payment-request';
+import { AppDataSource } from '../database/database';
+import TerminalPaymentService from '../service/terminal-payment-service';
+import { TerminalPaymentResponse } from './response/terminal-payment-response';
+import StripeService from '../service/stripe-service';
+import { asNumber } from '../helpers/validators';
 
 export default class TerminalPaymentController extends BaseController {
   private logger: Logger = log4js.getLogger('TerminalPaymentController');
@@ -62,7 +67,7 @@ export default class TerminalPaymentController extends BaseController {
           policy: async (req) => this.roleManager.can(
             req.token.roles, 'get', await TerminalPaymentController.getRelation(req), 'TerminalPayment', ['*'],
           ),
-          handler: this.getTerminalPayment.bind(this),
+          handler: this.getSingleTerminalPayment.bind(this),
         },
       },
       '/:id(\\d+)/process': {
@@ -78,23 +83,145 @@ export default class TerminalPaymentController extends BaseController {
   }
 
   /**
-   * POST /terminal-payment
-   * 
+   * POST /terminal-payments
+   * @summary Create a terminal payment before executing
+   * @operationId createTerminalPayment
+   * @tags terminalPayments - Operations of the Terminal Payment Controller
+   * @security JWT
+   * @param {CreateTerminalPaymentRequest} request.body.required - The terminal
+   * payment that should be created.
+   * @return {TerminalPaymentResponse} 200 - Terminal Payment
+   * @return {string} 400 - Validation failure
+   * @return {string} 500 - Internal server error
    */
   public async createTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Create new terminal payment by user', req.token.user);
+    const request = req.body as CreateTerminalPaymentRequest;
+
+    try {
+      const { valid, context } = await new TerminalPaymentService().verifyTerminalPaymentRequest(request);
+
+      if (!valid) {
+        res.status(400).send('Could not validate terminalPayment.');
+        return;
+      }
+
+      let result: TerminalPaymentResponse;
+
+      await AppDataSource.transaction(async (manager) => {
+        const service = new TerminalPaymentService(manager);
+        const terminalPayment = await service.createTerminalPayment(request, context);
+        result = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment, context);
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      this.logger.error('Could not create Terminal Payment:', error);
+      res.status(500).send('Internal server error.');
+    }
   }
 
-  public async getTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
+  /**
+   * GET /terminal-payments/{id}
+   * @summary Get single terminal payment by ID
+   * @operationId getSingleTerminalPayment
+   * @tags terminalPayments - Operations of the Terminal Payment Controller
+   * @security JWT
+   * @param {integer} id.path.required - The ID of the terminal payment
+   * @return {TerminalPaymentResponse} 200 - Terminal Payment
+   * @return {string} 404 - Not found
+   * @return {string} 500 - Internal server error
+   */
+  public async getSingleTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Get terminal payment with id', req.params.id, 'by user', req.token.user);
+    const rawId = req.params.id;
+
+    try {
+      const id = Number.parseInt(rawId, 10);
+
+      const service = new TerminalPaymentService();
+      const terminalPayment = await service.getTerminalPayment(id);
+
+      if (terminalPayment == null) {
+        res.status(404).send(`Terminal Payment with ID "${id}" not found.`);
+        return;
+      }
+
+      const result = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment);
+      res.status(200).json(result);
+    } catch (error) {
+      this.logger.error('Could not get terminalPayment:', error);
+      res.status(500).send('Internal server error.');
+    }
   }
 
+  /**
+   * POST /terminal-payments/{id}/process
+   * @summary Start the payment process on the terminal for the TerminalPayment
+   * with the given ID
+   * @operationId startTerminalPayment
+   * @tags terminalPayments - Operations of the Terminal Payment Controller
+   * @security JWT
+   * @param {integer} id.path.required - The ID of the terminal payment
+   * @param {ProcessTerminalPaymentRequest} request.body.required - Payment options
+   * @return {} 204 - Success
+   * @return {string} 404 - Terminal Payment or terminal not found
+   * @return {string} 422 - Terminal unavailable
+   * @return {string} 500 - Internal server error
+   */
   public async startTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Start terminal payment by user', req.token.user);
+    const rawId = req.params.id;
+    const request = req.body as ProcessTerminalPaymentRequest;
+
+    try {
+      const id = Number.parseInt(rawId, 10);
+
+      const service = new TerminalPaymentService();
+      const terminalPayment = await service.getTerminalPayment(id);
+
+      if (!terminalPayment) {
+        res.status(404).send(`Terminal Payment with ID "${id}" not found.`);
+        return;
+      }
+
+      const terminal = await new StripeService().getSingleTerminal(request.stripeTerminalId);
+      if (!terminal) {
+        res.status(404).send(`Stripe terminal with ID "${request.stripeTerminalId}" not found.`);
+        return;
+      }
+
+      if (!terminal.available) {
+        res.status(422).send('Terminal unavailable (is it in use?)');
+        return;
+      }
+
+      await AppDataSource.transaction(async (manager) => {
+        await new TerminalPaymentService(manager).startTerminalPayment(id, request);
+      });
+      res.status(204).send();
+    } catch (error) {
+      this.logger.error('Could not get terminalPayment:', error);
+      res.status(500).send('Internal server error.');
+    }
   }
 
+  /**
+   * Function to determine which credentials are needed to get terminalPayments:
+   *   - all if user is not connected
+   *   - own if user is connected
+   * @param req - Request with terminalPayment ID as param
+   * @return whether terminalPayment is connected to user token
+   */
   private static async getRelation(req: RequestWithToken): Promise<string> {
-    // @TODO implement
+    const id = asNumber(req.params.id);
+    const userId = req.token.user.id;
+
+    const t = await new TerminalPaymentService().getTerminalPayment(id);
+    if (!t) return 'all';
+
+    if (t.temporaryTransaction?.from.id === userId || t.temporaryTransaction?.createdBy.id === userId
+      || t.finalTransaction?.from.id === userId || t.finalTransaction?.createdBy.id === userId) return 'own';
     return 'all';
   }
 }
