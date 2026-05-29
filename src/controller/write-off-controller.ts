@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the module page of the write-off-controller.
- *
  * @module write-offs
  */
 
@@ -39,6 +37,12 @@ import { PdfError } from '../errors';
 import { PdfUrlResponse } from './response/simple-file-response';
 import { asBoolean } from '../helpers/validators';
 
+/**
+ * Controller for the `/writeoffs` endpoints in the {@link write-offs | write-offs}
+ * module. `POST /writeoffs` is the only mutating endpoint and is irreversible: it zeroes
+ * the user's negative balance and closes the account in one go. The rest are reads and
+ * the PDF receipt.
+ */
 export default class WriteOffController extends BaseController {
   private logger: Logger = log4js.getLogger(' WriteOffController');
 

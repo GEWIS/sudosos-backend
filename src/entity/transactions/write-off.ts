@@ -19,7 +19,37 @@
  */
 
 /**
- * This is the module page of the write-off.
+ * A `write-off` zeroes an unrecoverable negative {@link balance!Balance | Balance} and
+ * closes the account it belongs to. Treasurers use it for users who have left the
+ * association without settling up: rather than letting a stale debt sit on the books, the
+ * write-off cancels it out in one credit transfer and the account is retired.
+ *
+ * ### Lifecycle
+ * `POST /writeoffs` is the only way to create one. The handler refuses if the user has a
+ * non-negative balance, then
+ * {@link WriteOffService.createWriteOffAndCloseUser | createWriteOffAndCloseUser} runs:
+ *
+ * - A {@link WriteOff} is saved with `amount = -balance` (always positive) and `to`
+ *   pointing at the doomed account.
+ * - A credit {@link transfers!Transfer | Transfer} is created with `from = null` and
+ *   `to = user`, tagged with the server's high {@link catalogue/vat!VatGroup | VatGroup} so
+ *   the consumed goods stay accounted for at the higher rate.
+ * - {@link users!User | UserService.closeUser} marks the account closed and deleted.
+ *
+ * There is no `DELETE /writeoffs/{id}`. A write-off is final; reversing one requires a
+ * manual transfer.
+ *
+ * ### VAT on the credit transfer
+ * The write-off's credit transfer is tagged with the server's high
+ * {@link catalogue/vat!VatGroup | VatGroup}. The products the user consumed had VAT
+ * charged at sale time, and the write-off cancels payment for those products, so the
+ * VAT side of the books has to be accounted for too.
+ *
+ * ### Listing and PDFs
+ * `GET /writeoffs` and `GET /writeoffs/{id}` page through past write-offs for treasurer
+ * reconciliation. `GET /writeoffs/{id}/pdf` renders the receipt; `WriteOff` extends
+ * `PdfAble` and the PDF is regenerated on demand and cached as a {@link WriteOffPdf}
+ * relation.
  *
  * @module write-offs
  * @mergeTarget
