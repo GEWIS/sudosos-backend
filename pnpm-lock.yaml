@@ -75,8 +75,8 @@ importers:
         specifier: 2.1.35
         version: 2.1.35
       mysql2:
-        specifier: 3.22.3
-        version: 3.22.3(@types/node@20.19.41)
+        specifier: 3.22.4
+        version: 3.22.4(@types/node@20.19.41)
       node-cron:
         specifier: 3.0.3
         version: 3.0.3
@@ -106,7 +106,7 @@ importers:
         version: 5.0.1(express@4.22.2)
       typeorm:
         specifier: 0.3.29
-        version: 0.3.29(better-sqlite3@12.10.0)(ioredis@5.10.1)(mysql2@3.22.3(@types/node@20.19.41))(sqlite3@5.1.7)(ts-node@10.9.2(@swc/core@1.15.40(@swc/helpers@0.5.21))(@types/node@20.19.41)(typescript@5.9.3))
+        version: 0.3.29(better-sqlite3@12.10.0)(ioredis@5.10.1)(mysql2@3.22.4(@types/node@20.19.41))(sqlite3@5.1.7)(ts-node@10.9.2(@swc/core@1.15.40(@swc/helpers@0.5.21))(@types/node@20.19.41)(typescript@5.9.3))
       uuid:
         specifier: 10.0.0
         version: 10.0.0
@@ -3931,8 +3931,8 @@ packages:
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
 
-  mysql2@3.22.3:
-    resolution: {integrity: sha512-uWWxvZSRvRhtBdh2CdcuK83YcOfPdmEeEYB069bAmPnV93QApDGVPuvCQOLjlh7tYHEWdgQPrn6kosDxHBVLkA==}
+  mysql2@3.22.4:
+    resolution: {integrity: sha512-CtXYlmL7ZamiYKbmqkamQHWJROUHSfm+f3kByzGfknw7kW51mcB2ouMUqYq1XfYxbXmnWo6RhPydx6OCqdgcmQ==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -4962,8 +4962,8 @@ packages:
     resolution: {integrity: sha512-dAqSqE/RabpBKI8+h26GfLq6Vb3JVXs30XYQjdMjaj/c2tS8IYYMbIzP599KtRj7c57/wYApb3QjgRgXmrCukA==}
     engines: {node: '>=18'}
 
-  tinyexec@1.2.3:
-    resolution: {integrity: sha512-g62dB+w1/OEFnPvmX0yd/HnetYITOL+1nJW7kitOycOeAvmbWC/nu0fwmmQ/kupNojqExzyC/T++pST/jRJ2mQ==}
+  tinyexec@1.2.4:
+    resolution: {integrity: sha512-SHf/r48b7vOrjve9PxJo3MN5v5yuyjHvdUcrQffT3WXMUfnGmHDVbC4k3sHJaJTgZCwpUplIaAo5ANtMyp3YHg==}
     engines: {node: '>=18'}
 
   tinypool@1.1.1:
@@ -5685,7 +5685,7 @@ snapshots:
   '@antfu/install-pkg@1.1.0':
     dependencies:
       package-manager-detector: 1.6.0
-      tinyexec: 1.2.3
+      tinyexec: 1.2.4
 
   '@apidevtools/json-schema-ref-parser@11.7.2':
     dependencies:
@@ -9674,7 +9674,7 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  mysql2@3.22.3(@types/node@20.19.41):
+  mysql2@3.22.4(@types/node@20.19.41):
     dependencies:
       '@types/node': 20.19.41
       aws-ssl-profiles: 1.1.2
@@ -10926,7 +10926,7 @@ snapshots:
 
   tinyexec@1.1.2: {}
 
-  tinyexec@1.2.3: {}
+  tinyexec@1.2.4: {}
 
   tinypool@1.1.1: {}
 
@@ -11120,7 +11120,7 @@ snapshots:
       typescript: 5.9.3
       yaml: 2.8.3
 
-  typeorm@0.3.29(better-sqlite3@12.10.0)(ioredis@5.10.1)(mysql2@3.22.3(@types/node@20.19.41))(sqlite3@5.1.7)(ts-node@10.9.2(@swc/core@1.15.40(@swc/helpers@0.5.21))(@types/node@20.19.41)(typescript@5.9.3)):
+  typeorm@0.3.29(better-sqlite3@12.10.0)(ioredis@5.10.1)(mysql2@3.22.4(@types/node@20.19.41))(sqlite3@5.1.7)(ts-node@10.9.2(@swc/core@1.15.40(@swc/helpers@0.5.21))(@types/node@20.19.41)(typescript@5.9.3)):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 4.2.0
@@ -11140,7 +11140,7 @@ snapshots:
     optionalDependencies:
       better-sqlite3: 12.10.0
       ioredis: 5.10.1
-      mysql2: 3.22.3(@types/node@20.19.41)
+      mysql2: 3.22.4(@types/node@20.19.41)
       sqlite3: 5.1.7
       ts-node: 10.9.2(@swc/core@1.15.40(@swc/helpers@0.5.21))(@types/node@20.19.41)(typescript@5.9.3)
     transitivePeerDependencies:
