@@ -137,10 +137,11 @@ export class IllegalPaymentRequestTransitionError extends Error {
  */
 export function parseGetPaymentRequestsFilters(
   req: RequestWithToken,
+  options: { ignoreForId?: boolean } = {},
 ): PaymentRequestFilterParameters {
   const q = req.query || {};
   const filters: PaymentRequestFilterParameters = {};
-  if (typeof q.forId === 'string') {
+  if (!options.ignoreForId && typeof q.forId === 'string') {
     try {
       filters.forId = asNumber(q.forId);
     } catch {

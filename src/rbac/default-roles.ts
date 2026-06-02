@@ -97,6 +97,11 @@ export default class DefaultRoles {
         TermsOfService: {
           get: { own: star },
         },
+        PaymentRequest: {
+          get: { own: star },
+          create: { own: star },
+          update: { own: star },
+        },
       },
     }, {
       name: 'Local User',
@@ -215,6 +220,7 @@ export default class DefaultRoles {
           notify: { all: star },
         },
         PayoutRequest: admin,
+        PaymentRequest: admin,
         SellerPayout: admin,
         Permission: admin,
         PointOfSale: admin,
