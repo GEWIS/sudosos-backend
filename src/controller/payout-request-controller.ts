@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the module page of payout-request-controller.
- *
  * @module payout-requests
  */
 
@@ -41,6 +39,14 @@ import { PdfUrlResponse } from './response/simple-file-response';
 import { PdfError } from '../errors';
 import { asBoolean } from '../helpers/validators';
 
+/**
+ * Controller for the `/payoutrequests` endpoints in the
+ * {@link payout-requests | payout-requests} module. Creation is open to members for their
+ * own balance; status transitions go through
+ * {@link PayoutRequestService.canUpdateStatus | canUpdateStatus} so that only the
+ * treasurer can move a request to a terminal state and the
+ * {@link transfers!Transfer | Transfer} is created on `APPROVED`.
+ */
 export default class PayoutRequestController extends BaseController {
   private logger: Logger = log4js.getLogger('PayoutRequestController');
 

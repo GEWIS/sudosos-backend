@@ -19,9 +19,67 @@
  */
 
 /**
- * This is the module page of the debtor-service.
+ * The `debtors` module is the orchestrator over the {@link fines | fines} entities. A
+ * "debtor" in SudoSOS is any user with a negative {@link balance!Balance | Balance},
+ * just below zero, not specifically below the -5 EUR fine threshold. Whether a user can
+ * become one in the first place is gated by
+ * {@link users!User.canGoIntoDebt | User.canGoIntoDebt}, off by default, so most accounts
+ * cannot purchase past zero. This module is the place where an admin or financial
+ * responsible decides what to do about the ones that can and have.
+ *
+ * Fines are the main lever and they use a stricter cutoff than "debtor": only users below
+ * -5 EUR persistently are eligible. See the lifecycle below.
+ *
+ * The merge target is {@link DebtorService}, which owns the full debtor-recovery
+ * pipeline: identify candidates, warn them, hand out fines, waive them, undo them, and
+ * report on the whole thing. Each method maps to one or more endpoints on
+ * {@link DebtorController}, with
+ * {@link users!UserController.waiveUserFines | waiveUserFines} as the one outlier living
+ * on the user controller.
+ *
+ * ### Identify
+ * {@link DebtorService.calculateFinesOnDate | calculateFinesOnDate} takes a list of
+ * reference dates and returns only the users who were below -5 EUR on every single one of
+ * them (including "now" if today is in the list). The double-check exists so a user who
+ * just topped up does not get fined for a historical dip. The endpoint is
+ * `GET /fines/eligible`.
+ *
+ * ### Warn
+ * {@link DebtorService.sendFineWarnings | sendFineWarnings} reuses the same eligibility
+ * filter and notifies each candidate that a fine is incoming. Users keep their grace
+ * period; if they top up before the handout they drop off the list. The endpoint is
+ * `POST /fines/notify`.
+ *
+ * ### Hand out
+ * {@link DebtorService.handOutFines | handOutFines} runs the whole batch in a single
+ * database transaction: one {@link fines!FineHandoutEvent | FineHandoutEvent}, one
+ * {@link fines!Fine | Fine} per eligible user, one debit
+ * {@link transfers!Transfer | Transfer} per fine, and one `UserGotFined` notification per
+ * fined user. The amount per fine caps at 5 EUR via the local `calculateFine` helper. The
+ * endpoint is `POST /fines/handout`.
+ *
+ * ### Waive
+ * {@link DebtorService.waiveFines | waiveFines} creates a credit transfer on the user's
+ * {@link fines!UserFineGroup | UserFineGroup} as `waivedTransfer`. Waiving is
+ * replace-not-append: an existing waiver is removed and a fresh one written with the new
+ * total. Waiving the full outstanding amount nulls
+ * {@link users!User | User.currentFines}. The endpoint is
+ * `POST /users/{id}/fines/waive`.
+ *
+ * ### Undo
+ * {@link DebtorService.deleteFine | deleteFine} and
+ * {@link DebtorService.deleteFineHandout | deleteFineHandout} remove a fine (or a whole
+ * batch) and its debit transfer outright. Fines are the rare exception to the rule that
+ * nothing on the ledger gets deleted; everywhere else, a compensating row is preferred.
+ * Endpoints: `DELETE /fines/single/{id}`, `DELETE /fines/handout/{id}`.
+ *
+ * ### Report
+ * {@link DebtorService.getFineReport | getFineReport} aggregates handed-out and waived
+ * totals over a date range for treasurer reconciliation. Endpoints: `GET /fines/report`,
+ * `GET /fines/report/pdf` (the PDF flavour goes through {@link reports | reports}).
  *
  * @module debtors
+ * @mergeTarget
  */
 
 import User, { UserType } from '../entity/user/user';

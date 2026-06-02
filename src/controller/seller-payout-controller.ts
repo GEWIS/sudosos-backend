@@ -19,8 +19,6 @@
  */
 
 /**
- * This is the module page of the seller-payout-controller.
- *
  * @module seller-payouts
  */
 
@@ -37,6 +35,13 @@ import ReportService, { SalesReportService } from '../service/report-service';
 import { PdfError } from '../errors';
 import { PdfUrlResponse } from './response/simple-file-response';
 
+/**
+ * Controller for the `/seller-payouts` endpoints in the
+ * {@link seller-payouts | seller-payouts} module. The amount is snapshotted from
+ * {@link internal/reports!SalesReportService | SalesReportService} at creation time, so
+ * `GET /seller-payouts/<id>/report` re-runs the report live for drift detection and
+ * `PATCH /seller-payouts/<id>` is the lever for reconciling once drift is found.
+ */
 export default class SellerPayoutController extends BaseController {
   private logger: Logger = log4js.getLogger(' SellerPayoutController');
 
