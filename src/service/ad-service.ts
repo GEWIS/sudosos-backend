@@ -112,7 +112,9 @@ export default class ADService extends WithManager {
     if (createIfNew) await this.createAccountIfNew(ldapUsers);
 
     const uuids = ldapUsers.map((u) => (u.objectGUID));
-    const authenticators = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(uuids) }, relations: ['user'] });
+    const authenticators = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(uuids) }, relations: {
+      user: true,
+    } });
 
     return authenticators.map((u) => u.user);
   }
@@ -123,7 +125,9 @@ export default class ADService extends WithManager {
    */
   async filterUnboundGUID(ldapResponses: LDAPResponse[]) {
     const ids = ldapResponses.map((s) => s.objectGUID);
-    const auths = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(ids) }, relations: ['user'] });
+    const auths = await this.manager.find(LDAPAuthenticator, { where: { UUID: In(ids) }, relations: {
+      user: true,
+    } });
     const existing = auths.map((l: LDAPAuthenticator) => l.UUID);
 
     // Use Buffer.compare to filter out existing GUIDs
@@ -139,7 +143,9 @@ export default class ADService extends WithManager {
    * @param sharedAccount - Account to give access
    */
   async updateSharedAccountMembership(client: Client, sharedAccount: LDAPGroup): Promise<void> {
-    const auth = await LDAPAuthenticator.findOne({ where: { UUID: sharedAccount.objectGUID }, relations: ['user'] });
+    const auth = await LDAPAuthenticator.findOne({ where: { UUID: sharedAccount.objectGUID }, relations: {
+      user: true,
+    } });
     if (!auth) throw new Error('No authenticator found for shared account');
 
     // Get all the members of the shared account from AD

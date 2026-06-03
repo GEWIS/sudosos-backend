@@ -441,7 +441,9 @@ export default class InvoiceController extends BaseController {
         return;
       }
 
-      const invoiceUser = await InvoiceUser.findOne({ where: { userId }, relations: ['user'] });
+      const invoiceUser = await InvoiceUser.findOne({ where: { userId }, relations: {
+        user: true,
+      } });
       if (!invoiceUser) {
         res.status(404).json('Invoice User not found.');
         return;
@@ -567,7 +569,9 @@ export default class InvoiceController extends BaseController {
    * @return whether invoice is connected to used token
    */
   static async getRelation(req: RequestWithToken): Promise<string> {
-    const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: ['to'] });
+    const invoice: Invoice = await Invoice.findOne({ where: { id: parseInt(req.params.id, 10) }, relations: {
+      to: true,
+    } });
     if (!invoice) return 'all';
     if (invoice.to.id === req.token.user.id) return 'own';
     return 'all';

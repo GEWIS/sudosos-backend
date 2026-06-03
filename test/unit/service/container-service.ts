@@ -70,7 +70,9 @@ function entityAsUpdate(update: UpdateContainerParams, container: ContainerRevis
 }
 
 async function entityAsCreation(creation: CreateContainerParams, entity: ContainerRevision) {
-  const container = await Container.findOne({ where: { id: entity.container.id }, relations: ['owner'] });
+  const container = await Container.findOne({ where: { id: entity.container.id }, relations: {
+    owner: true,
+  } });
   expect(creation.ownerId).to.be.eq(container.owner.id);
   expect(creation.name).to.be.eq(entity.name);
   expect(creation.public).to.be.eq(entity.container.public);
@@ -263,13 +265,17 @@ describe('ContainerService', async (): Promise<void> => {
         .public).to.be.true;
     });
     it('should return true if the user is the owner of private container', async () => {
-      const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
+      const container = await Container.findOne({ where: { public: false }, relations: {
+        owner: true,
+      } });
       expect((await ContainerService.canViewContainer(
         container.owner.id, container,
       )).own).to.be.true;
     });
     it('should return false if the user is not the owner and container is private', async () => {
-      const container = await Container.findOne({ where: { public: false }, relations: ['owner'] });
+      const container = await Container.findOne({ where: { public: false }, relations: {
+        owner: true,
+      } });
       expect(container.public).to.be.false;
       const visibility = await ContainerService.canViewContainer(
         container.owner.id + 1, container,
@@ -348,7 +354,11 @@ describe('ContainerService', async (): Promise<void> => {
       await ContainerService.updateContainer(update);
 
       const updatedPos = await PointOfSaleRevision
-        .findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: ['containers', 'containers.products'] });
+        .findOne({ where: { revision: 2, pointOfSale: { id: pos.pointOfSaleId } }, relations: {
+          containers: {
+            products: true,
+          },
+        } });
       expect(updatedPos).to.not.be.null;
       expect(updatedPos.containers).length(2);
 

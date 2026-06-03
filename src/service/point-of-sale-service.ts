@@ -159,12 +159,14 @@ export default class PointOfSaleService {
    */
   public static async updatePointOfSale(update: UpdatePointOfSaleParams): Promise<PointOfSaleRevision> {
     const base = await PointOfSale.findOne({ where: { id: update.id } });
-    const containers = await Container.findByIds(update.containers);
+    const containers = await Container.findBy({
+      id: In(update.containers),
+    });
 
     const containerIds: { revision: number, container: { id: number } }[] = (
       containers.map((container) => (
         ({ revision: container.currentRevision, container: { id: container.id } }))));
-    const containerRevisions: ContainerRevision[] = await ContainerRevision.findByIds(containerIds);
+    const containerRevisions: ContainerRevision[] = await ContainerRevision.find({ where: containerIds });
     const pointOfSaleRevision: PointOfSaleRevision = Object.assign(new PointOfSaleRevision(), {
       pointOfSale: base,
       containers: containerRevisions,

@@ -111,7 +111,9 @@ export default class MemberAuthenticationSecureController extends BaseController
       // Look up the member user by memberId
       const memberUser = await MemberUser.findOne({
         where: { memberId: body.memberId },
-        relations: ['user'],
+        relations: {
+          user: true,
+        },
       });
 
       if (!memberUser) {

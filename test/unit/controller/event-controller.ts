@@ -725,7 +725,11 @@ describe('EventController', () => {
 
       originalEvent = await Event.findOne({
         where: { answers: { shift: { deletedAt: null } } },
-        relations: ['answers', 'answers.shift'],
+        relations: {
+          answers: {
+            shift: true,
+          },
+        },
       });
     });
 

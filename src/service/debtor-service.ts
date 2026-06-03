@@ -244,7 +244,11 @@ export default class DebtorService extends WithManager {
   }: HandOutFinesParams, createdBy: User): Promise<FineHandoutEvent> {
     const previousFineGroup = (await this.manager.find(FineHandoutEvent, {
       order: { id: 'desc' },
-      relations: ['fines', 'fines.userFineGroup'],
+      relations: {
+        fines: {
+          userFineGroup: true,
+        },
+      },
       take: 1,
     }))[0];
 
@@ -267,7 +271,12 @@ export default class DebtorService extends WithManager {
       // Create and save the fine information
       let fines: Fine[] = await Promise.all(balanceRecords.map(async (b) => {
         const previousFine = previousFineGroup?.fines.find((fine) => fine.userFineGroup.userId === b.id);
-        const user = await manager.findOne(User, { where: { id: b.id }, relations: ['currentFines', 'currentFines.user', 'currentFines.fines'] });
+        const user = await manager.findOne(User, { where: { id: b.id }, relations: {
+          currentFines: {
+            user: true,
+            fines: true,
+          },
+        } });
         const amount = calculateFine(b.amount);
 
         let userFineGroup = user.currentFines;
@@ -343,7 +352,13 @@ export default class DebtorService extends WithManager {
    * @param id
    */
   public async deleteFine(id: number): Promise<void> {
-    const fine = await this.manager.findOne(Fine, { where: { id }, relations: ['transfer', 'userFineGroup', 'userFineGroup.fines'] });
+    const fine = await this.manager.findOne(Fine, { where: { id }, relations: {
+      transfer: true,
+
+      userFineGroup: {
+        fines: true,
+      },
+    } });
     if (fine == null) return;
 
     const { transfer, userFineGroup } = fine;

@@ -490,7 +490,10 @@ describe('PayoutRequestController', () => {
         && req.payoutRequestStatus.length === 1)[1];
       const before = await PayoutRequest.findOne({
         where: { id },
-        relations: ['payoutRequestStatus', 'requestedBy'],
+        relations: {
+          payoutRequestStatus: true,
+          requestedBy: true,
+        },
       });
       await generateBalance(before.amount.getAmount() * 2, before.requestedBy.id);
       const res = await request(ctx.app)

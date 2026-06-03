@@ -98,7 +98,9 @@ export default class PayoutRequestController extends BaseController {
     }
 
     const { id } = req.params;
-    const payoutRequest = await PayoutRequest.findOne({ where: { id: parseInt(id, 10) }, relations: ['requestedBy'] });
+    const payoutRequest = await PayoutRequest.findOne({ where: { id: parseInt(id, 10) }, relations: {
+      requestedBy: true,
+    } });
     return (payoutRequest != null && payoutRequest.requestedBy.id === req.token.user.id) ? 'own' : 'all';
   }
 
@@ -304,7 +306,11 @@ export default class PayoutRequestController extends BaseController {
 
     try {
       const force = !!asBoolean(req.query.force);
-      const payoutRequest = await PayoutRequest.findOne({ where: { id: payoutRequestId }, relations: ['requestedBy', 'approvedBy', 'payoutRequestStatus'] });
+      const payoutRequest = await PayoutRequest.findOne({ where: { id: payoutRequestId }, relations: {
+        requestedBy: true,
+        approvedBy: true,
+        payoutRequestStatus: true,
+      } });
       if (!payoutRequest) {
         res.status(404).json('Unknown payout request ID.');
         return;

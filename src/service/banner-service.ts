@@ -138,7 +138,7 @@ export default class BannerService {
     const orderDirection = filters.order || 'DESC';
     const options: FindManyOptions = {
       where: whereClause,
-      relations: ['image'],
+      relations: { image: true },
       order: { startDate: orderDirection },
     };
 
@@ -182,7 +182,9 @@ export default class BannerService {
     // patch banner if found
     const banner = this.asBanner(bannerReq);
     await Banner.update(id, banner);
-    return Banner.findOne({ where: { id }, relations: ['image'] });
+    return Banner.findOne({ where: { id }, relations: {
+      image: true,
+    } });
   }
 
   /**
@@ -193,7 +195,9 @@ export default class BannerService {
    */
   public static async deleteBanner(id: number, fileService: FileService): Promise<Banner> {
     // check if banner in database
-    const banner = await Banner.findOne({ where: { id }, relations: ['image'] });
+    const banner = await Banner.findOne({ where: { id }, relations: {
+      image: true,
+    } });
 
     // return undefined if not found
     if (!banner) {

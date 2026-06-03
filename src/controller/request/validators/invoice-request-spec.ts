@@ -86,7 +86,9 @@ async function validTransactionIds<T extends BaseInvoice>(p: T) {
  * @param p
  */
 async function existsAndNotPaidOrDeleted<T extends UpdateInvoiceParams>(p: T) {
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: {
+    invoiceStatus: true,
+  } });
 
   if (!base) return toFail(INVALID_INVOICE_ID());
   const current = base.invoiceStatus.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[base.invoiceStatus.length - 1].state;
@@ -107,7 +109,9 @@ async function existsAndNotPaidOrDeleted<T extends UpdateInvoiceParams>(p: T) {
 async function differentState<T extends UpdateInvoiceParams>(p: T) {
   if (!p.state) return toPass(p);
 
-  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: ['invoiceStatus'] });
+  const base: Invoice = await Invoice.findOne({ where: { id: p.invoiceId }, relations: {
+    invoiceStatus: true,
+  } });
   if (base.invoiceStatus[base.invoiceStatus.length - 1].state === p.state) {
     return toFail(SAME_INVOICE_STATE());
   }

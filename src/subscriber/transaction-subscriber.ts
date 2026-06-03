@@ -51,7 +51,13 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
       || (entity.subTransactions.length > 0 && entity.subTransactions[0].subTransactionRows.length > 0 && entity.subTransactions[0].subTransactionRows[0].product == null)) {
       entity = await event.manager.findOne(Transaction, {
         where: { id: entity.id },
-        relations: ['subTransactions', 'subTransactions.subTransactionRows', 'subTransactions.subTransactionRows.product'],
+        relations: {
+          subTransactions: {
+            subTransactionRows: {
+              product: true,
+            },
+          },
+        },
       });
     }
 

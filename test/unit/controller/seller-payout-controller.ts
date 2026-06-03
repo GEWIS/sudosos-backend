@@ -67,7 +67,7 @@ describe('SellerPayoutController', () => {
   };
 
   beforeAll(async () => {
-    const c = { ...await defaultContext() };
+    const c = { ...(await defaultContext()) };
 
     const users = await new UserSeeder().seed();
 
@@ -322,7 +322,9 @@ describe('SellerPayoutController', () => {
     });
     it('should return HTTP 502 if pdf generation fails', async () => {
       clientStub.generateDisbursement.rejects(new Error('Failed to generate PDF'));
-      const sellerPayout = await SellerPayout.findOne({ where: { id: 1 }, relations: ['requestedBy'] });
+      const sellerPayout = await SellerPayout.findOne({ where: { id: 1 }, relations: {
+        requestedBy: true,
+      } });
       const res = await request(ctx.app)
         .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
         .set('Authorization', `Bearer ${ctx.adminToken}`)

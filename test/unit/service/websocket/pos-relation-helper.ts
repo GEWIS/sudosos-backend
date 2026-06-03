@@ -55,7 +55,10 @@ describe('POS Relation Helper', () => {
     for (let i = 0; i < pointsOfSale.length; i++) {
       const loaded = await PointOfSale.findOne({
         where: { id: pointsOfSale[i].id },
-        relations: ['owner', 'user'],
+        relations: {
+          owner: true,
+          user: true,
+        },
       });
       expect(loaded).to.not.be.null;
       if (loaded) {

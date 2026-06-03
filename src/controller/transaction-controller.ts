@@ -182,7 +182,7 @@ export default class TransactionController extends BaseController {
     try {
       // Verify POS token for lesser tokens
       if (req.token.posId) {
-        if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
+        if (!(await POSTokenVerifier.verify(req, body.pointOfSale.id))) {
           res.status(403).end('Invalid POS token.');
           return;
         }
@@ -202,7 +202,7 @@ export default class TransactionController extends BaseController {
       const fromUser = context.users.get(body.from)!;
 
       // verify balance if user cannot have negative balance, using cached total cost
-      if (!fromUser.canGoIntoDebt && !await transactionService.verifyBalance(body, context.totalCost)) {
+      if (!fromUser.canGoIntoDebt && !(await transactionService.verifyBalance(body, context.totalCost))) {
         res.status(403).json('Insufficient balance.');
         return;
       }
@@ -375,7 +375,7 @@ export default class TransactionController extends BaseController {
     try {
       // Verify POS token for lesser tokens
       if (req.token.posId) {
-        if (!await POSTokenVerifier.verify(req, body.pointOfSale.id)) {
+        if (!(await POSTokenVerifier.verify(req, body.pointOfSale.id))) {
           res.status(403).end('Invalid POS token.');
           return;
         }
@@ -411,7 +411,10 @@ export default class TransactionController extends BaseController {
     this.logger.trace('Get transaction PDF', id, 'by user', req.token.user);
 
     try {
-      const transaction = await Transaction.findOne({ where: { id: transactionId }, relations: ['from', 'createdBy']  });
+      const transaction = await Transaction.findOne({ where: { id: transactionId }, relations: {
+        from: true,
+        createdBy: true,
+      }  });
       if (!transaction) {
         res.status(404).json('Transaction not found.');
         return;
@@ -455,9 +458,9 @@ export default class TransactionController extends BaseController {
 
       // Check organ relation
       if (
-        (fromId && await UserService.areInSameOrgan(userId, fromId)) ||
-          (toId && await UserService.areInSameOrgan(userId, toId)) ||
-          (createdById && await UserService.areInSameOrgan(userId, createdById))
+        (fromId && (await UserService.areInSameOrgan(userId, fromId))) ||
+          (toId && (await UserService.areInSameOrgan(userId, toId))) ||
+          (createdById && (await UserService.areInSameOrgan(userId, createdById)))
       ) {
         return 'organ';
       }
@@ -499,7 +502,16 @@ export default class TransactionController extends BaseController {
   static async getRelation(req: RequestWithToken): Promise<string> {
     const transaction = await Transaction.findOne({
       where: { id: asNumber(req.params.id) },
-      relations: ['from', 'createdBy', 'pointOfSale', 'pointOfSale.pointOfSale', 'pointOfSale.pointOfSale.owner'],
+      relations: {
+        from: true,
+        createdBy: true,
+
+        pointOfSale: {
+          pointOfSale: {
+            owner: true,
+          },
+        },
+      },
     });
     if (!transaction) return 'all';
     if (userTokenInOrgan(req, transaction.from.id)

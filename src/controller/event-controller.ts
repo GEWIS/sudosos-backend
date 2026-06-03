@@ -335,7 +335,10 @@ export default class EventController extends BaseController {
 
     try {
       const parsedId = Number.parseInt(id, 10);
-      const event = await Event.findOne({ where: { id: parsedId }, relations: ['answers', 'shifts'] });
+      const event = await Event.findOne({ where: { id: parsedId }, relations: {
+        answers: true,
+        shifts: true,
+      } });
       if (event == null) {
         res.status(404).send();
         return;
@@ -374,7 +377,9 @@ export default class EventController extends BaseController {
     let shiftId = Number.parseInt(rawShiftId, 10);
     let userId = Number.parseInt(rawUserId, 10);
     try {
-      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: ['event'] });
+      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: {
+        event: true,
+      } });
       if (answer == null) {
         res.status(404).send();
         return;
@@ -427,7 +432,9 @@ export default class EventController extends BaseController {
     let shiftId = Number.parseInt(rawShiftId, 10);
     let eventId = Number.parseInt(rawEventId, 10);
     try {
-      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: ['event'] });
+      const answer = await EventShiftAnswer.findOne({ where: { eventId, shiftId, userId }, relations: {
+        event: true,
+      } });
       if (answer == null) {
         res.status(404).send();
         return;

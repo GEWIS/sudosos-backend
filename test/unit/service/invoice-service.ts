@@ -355,11 +355,13 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: {
+                subTransactionRows: {
+                  invoice: true,
+                },
+              },
+            },
           });
           linkedTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
@@ -528,7 +530,9 @@ describe('InvoiceService', () => {
           expect(updatedInvoice.transfer.amountInclVat.getCurrency()).is.equal(validUpdateInvoiceParams.amount.currency);
           expect(updatedInvoice.transfer.amountInclVat.getPrecision()).is.equal(validUpdateInvoiceParams.amount.precision);
 
-          const fromDB = await Invoice.findOne({ where: { id: invoice.id }, relations: ['transfer'] });
+          const fromDB = await Invoice.findOne({ where: { id: invoice.id }, relations: {
+            transfer: true,
+          } });
           expect(fromDB.transfer.amountInclVat.getAmount()).is.equal(validUpdateInvoiceParams.amount.amount);
           expect(fromDB.transfer.amountInclVat.getCurrency()).is.equal(validUpdateInvoiceParams.amount.currency);
           expect(fromDB.transfer.amountInclVat.getPrecision()).is.equal(validUpdateInvoiceParams.amount.precision);
@@ -682,11 +686,13 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: {
+                subTransactionRows: {
+                  invoice: true,
+                },
+              },
+            },
           });
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
@@ -709,11 +715,13 @@ describe('InvoiceService', () => {
             where: {
               id: In(transactions.map((transaction) => transaction.tId)),
             },
-            relations: [
-              'subTransactions',
-              'subTransactions.subTransactionRows',
-              'subTransactions.subTransactionRows.invoice',
-            ],
+            relations: {
+              subTransactions: {
+                subTransactionRows: {
+                  invoice: true,
+                },
+              },
+            },
           });
           invoiceTransactions.forEach((t) => {
             t.subTransactions.forEach((tSub) => {
@@ -801,7 +809,11 @@ describe('InvoiceService', () => {
         // Get the transaction from the invoice's subtransaction rows
         const subTransactionRow = await SubTransactionRow.findOne({
           where: { id: invoice.subTransactionRows[0].id },
-          relations: ['subTransaction', 'subTransaction.transaction'],
+          relations: {
+            subTransaction: {
+              transaction: true,
+            },
+          },
         });
         const transaction = subTransactionRow.subTransaction.transaction;
 
@@ -838,14 +850,22 @@ describe('InvoiceService', () => {
         // Get one of the transactions
         const subTransactionRow = await SubTransactionRow.findOne({
           where: { id: invoice.subTransactionRows[0].id },
-          relations: ['subTransaction', 'subTransaction.transaction'],
+          relations: {
+            subTransaction: {
+              transaction: true,
+            },
+          },
         });
         const transaction = subTransactionRow.subTransaction.transaction;
 
         // Verify this transaction has multiple subtransaction rows
         const transactionWithRows = await Transaction.findOne({
           where: { id: transaction.id },
-          relations: ['subTransactions', 'subTransactions.subTransactionRows'],
+          relations: {
+            subTransactions: {
+              subTransactionRows: true,
+            },
+          },
         });
         const totalRows = transactionWithRows.subTransactions
           .map((s) => s.subTransactionRows.length)
@@ -876,7 +896,11 @@ describe('InvoiceService', () => {
 
         const subTransactionRow = await SubTransactionRow.findOne({
           where: { id: invoice.subTransactionRows[0].id },
-          relations: ['subTransaction', 'subTransaction.transaction'],
+          relations: {
+            subTransaction: {
+              transaction: true,
+            },
+          },
         });
         const transaction = subTransactionRow.subTransaction.transaction;
 

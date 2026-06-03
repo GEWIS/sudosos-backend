@@ -454,7 +454,11 @@ describe('BalanceService', (): void => {
         const actualBalance = calculateBalance(user, ctx.transactions, ctx.subTransactions, ctx.transfers);
 
         // eslint-disable-next-line no-await-in-loop
-        const cachedBalance = await Balance.findOne({ where: { userId: user.id }, relations: ['user', 'lastTransaction', 'lastTransfer'] });
+        const cachedBalance = await Balance.findOne({ where: { userId: user.id }, relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        } });
         expect(cachedBalance).to.not.be.undefined;
         // eslint-disable-next-line no-await-in-loop
         const balance = await new BalanceService().getBalance(user.id);
@@ -516,7 +520,11 @@ describe('BalanceService', (): void => {
       const oldBalance = await new BalanceService().getBalance(user.id);
       const oldBalanceCache = await Balance.findOne({
         where: { userId: user.id },
-        relations: ['user', 'lastTransaction', 'lastTransfer'],
+        relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        },
       });
       // Sanity check
       expect(oldBalanceCache).to.not.be.undefined;
@@ -529,7 +537,11 @@ describe('BalanceService', (): void => {
       const newBalance = await new BalanceService().getBalance(user.id);
       let newBalanceCache = await Balance.findOne({
         where: { userId: user.id },
-        relations: ['user', 'lastTransaction', 'lastTransfer'],
+        relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        },
       });
 
       expect(newBalance.id).to.equal(user.id);
@@ -542,7 +554,11 @@ describe('BalanceService', (): void => {
       await new BalanceService().updateBalances({});
       newBalanceCache = await Balance.findOne({
         where: { userId: user.id },
-        relations: ['user', 'lastTransaction', 'lastTransfer'],
+        relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        },
       });
       expect(newBalanceCache.lastTransaction.id).to.equal(transaction.id);
       expect(newBalanceCache.amount.getAmount()).to.equal(newBalance.amount.amount);
@@ -719,7 +735,11 @@ describe('BalanceService', (): void => {
       } as any]);
       const oldBalanceCache = await Balance.findOne({
         where: { userId: newUser.id },
-        relations: ['user', 'lastTransaction', 'lastTransfer'],
+        relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        },
       });
       expect(oldBalanceCache).to.not.be.undefined;
       expect(oldBalanceCache.lastTransaction).to.not.be.undefined;
@@ -735,7 +755,11 @@ describe('BalanceService', (): void => {
 
       const removedBalanceCache = await Balance.findOne({
         where: { userId: newUser.id },
-        relations: ['user', 'lastTransaction', 'lastTransfer'],
+        relations: {
+          user: true,
+          lastTransaction: true,
+          lastTransfer: true,
+        },
       });
       expect(removedBalanceCache).to.be.null;
       expect(await Transaction.findOne({ where: { id: transaction.transaction.id } }))

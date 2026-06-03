@@ -133,7 +133,9 @@ export async function parseUpdateEventRequestParameters(
     // Check that every shift has at least 1 person to do the shift
     // First, get an array with tuples. The first item is the ID, the second whether the shift has any users.
     const shiftsWithUsers = await Promise.all(shifts.map(async (s) => {
-      const roles = await AssignedRole.find({ where: { role: { id: In(s.roles.map((r) => r.id)) } }, relations: ['user'] });
+      const roles = await AssignedRole.find({ where: { role: { id: In(s.roles.map((r) => r.id)) } }, relations: {
+        user: true,
+      } });
       return [s.id, roles.length > 0];
     }));
     // Then, apply a filter to only get the shifts without users
@@ -224,7 +226,7 @@ export default class EventService {
 
     const options: FindManyOptions<Event> = {
       where: QueryFilter.createFilterWhereClause(filterMapping, params),
-      relations: ['createdBy'],
+      relations: { createdBy: true },
       order: { startDate: 'desc' },
     };
 
@@ -300,7 +302,10 @@ export default class EventService {
         // Find the answer sheet in the database
         const dbAnswer = await EventShiftAnswer.findOne({
           where: { user: { id: user.id }, event: { id: event.id }, shift: { id: shift.id } },
-          relations: ['shift', 'user'],
+          relations: {
+            shift: true,
+            user: true,
+          },
         });
         // Return it if it exists. Otherwise create a new one
         if (dbAnswer != null) return dbAnswer;
@@ -470,7 +475,9 @@ export default class EventService {
     const [events] = await EventService.getEvents({ beforeDate: inThreeDays, afterDate: inTwoDays });
 
     await Promise.all(events.map(async (event) => {
-      const answers = await EventShiftAnswer.find({ where: { eventId: event.id, availability: IsNull() }, relations: ['user'] });
+      const answers = await EventShiftAnswer.find({ where: { eventId: event.id, availability: IsNull() }, relations: {
+        user: true,
+      } });
       // Get all users and remove duplicates
       const users = answers
         .map((a) => a.user)
