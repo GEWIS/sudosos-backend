@@ -19,17 +19,17 @@
  */
 
 /**
- * This is the module page of the authentication-secure-nfc-request.
+ * This is the module page of the authentication-nfc-request.
  *
  * @module authentication
  */
 
 /**
- * @typedef {object} AuthenticationSecureNfcRequest
+ * @typedef {object} AuthenticationNfcRequest
  * @property {string} nfcCode.required
  * @property {number} posId.required - POS identifier
  */
-export default interface AuthenticationSecureNfcRequest {
+export default interface AuthenticationNfcRequest {
   nfcCode: string;
   posId: number;
 }

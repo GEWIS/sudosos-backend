@@ -19,17 +19,17 @@
  */
 
 /**
- * This is the module page of the authentication-secure-ean-request.
+ * This is the module page of the authentication-ean-request.
  *
  * @module authentication
  */
 
 /**
- * @typedef {object} AuthenticationSecureEanRequest
+ * @typedef {object} AuthenticationEanRequest
  * @property {string} eanCode.required
  * @property {number} posId.required - POS identifier
  */
-export default interface AuthenticationSecureEanRequest {
+export default interface AuthenticationEanRequest {
   eanCode: string;
   posId: number;
 }

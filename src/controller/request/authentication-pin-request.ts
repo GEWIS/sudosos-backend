@@ -19,18 +19,18 @@
  */
 
 /**
- * This is the module page of the authentication-secure-pin-request.
+ * This is the module page of the authentication-pin-request.
  *
  * @module authentication
  */
 
 /**
- * @typedef {object} AuthenticationSecurePinRequest
+ * @typedef {object} AuthenticationPinRequest
  * @property {number} userId.required
  * @property {string} pin.required
- * @property {number} posId.required - POS identifier (required for secure authentication)
+ * @property {number} posId.required - POS identifier
  */
-export default interface AuthenticationSecurePinRequest {
+export default interface AuthenticationPinRequest {
   userId: number,
   pin: string,
   posId: number,

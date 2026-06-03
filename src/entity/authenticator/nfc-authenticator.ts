@@ -38,7 +38,7 @@ import AuthenticationMethod from './authentication-method';
  *
  * ## NFC Authentication Flow
  * 1. **User** taps their NFC card against an NFC reader at a point of sale.
- * 2. **POS client** captures the NFC UID and calls `/authentication/nfc-secure` as an
+ * 2. **POS client** captures the NFC UID and calls `/authentication/nfc` as an
  *    authenticated POS user, including its POS JWT and the target `posId`.
  * 3. **Authentication Controller** validates the POS JWT/`posId` context and looks up the
  *    NfcAuthenticator by the provided UID.

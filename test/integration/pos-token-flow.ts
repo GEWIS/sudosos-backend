@@ -224,10 +224,10 @@ describe('POS Token Flow Integration Tests', (): void => {
     ctx.app.use(json());
     // Register authentication controller first (no token required)
     ctx.app.use('/authentication', authController.getRouter());
-    // Register token middleware for secure endpoints and other routes
+    // Register token middleware for JWT-protected endpoints and other routes
     const tokenMiddleware = new TokenMiddleware({ tokenHandler: ctx.tokenHandler, refreshFactor: 0.5 });
     ctx.app.use(tokenMiddleware.getMiddleware());
-    // Register secure controller (routes like /pin-secure won't conflict with /pin)
+    // Register the JWT-protected authentication controller
     ctx.app.use('/authentication', authSecureController.getRouter());
     ctx.app.use('/transactions', transactionController.getRouter());
   });
@@ -237,7 +237,7 @@ describe('POS Token Flow Integration Tests', (): void => {
   });
 
   describe('Complete POS Token Flow', () => {
-    it('should allow secure PIN authentication with posId and create transaction', async () => {
+    it('should allow PIN authentication with posId and create transaction', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
@@ -247,9 +247,9 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
 
-      // Authenticate with secure PIN endpoint and posId
+      // Authenticate with PIN endpoint and posId
       const authRes = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send({
           userId: ctx.users[1].id,
@@ -269,7 +269,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should allow secure NFC authentication with posId and create transaction', async () => {
+    it('should allow NFC authentication with posId and create transaction', async () => {
       // Set up NFC authenticator
       const nfcAuth = new NfcAuthenticator();
       nfcAuth.user = ctx.users[1];
@@ -279,9 +279,9 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
 
-      // Authenticate with secure NFC endpoint and posId
+      // Authenticate with NFC endpoint and posId
       const authRes = await request(ctx.app)
-        .post('/authentication/nfc-secure')
+        .post('/authentication/nfc')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send({
           nfcCode: 'test-nfc-code',
@@ -300,7 +300,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should reject transaction when secure PIN posId does not match', async () => {
+    it('should reject transaction when PIN posId does not match', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
@@ -310,9 +310,9 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', true);
 
-      // Authenticate with secure PIN and wrong posId - should fail at authentication
+      // Authenticate with PIN and wrong posId - should fail at authentication
       const authRes = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send({
           userId: ctx.users[1].id,
@@ -324,7 +324,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(authRes.body).to.equal('POS user ID does not match the requested posId.');
     });
 
-    it('should allow transaction in non-strict mode with secure PIN matching posId', async () => {
+    it('should allow transaction in non-strict mode with PIN matching posId', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
@@ -334,9 +334,9 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set non-strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
 
-      // Authenticate with secure PIN and matching posId
+      // Authenticate with PIN and matching posId
       const authRes = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send({
           userId: ctx.users[1].id,
@@ -356,7 +356,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       expect(transRes.status).to.equal(200);
     });
 
-    it('should reject secure PIN authentication when posId does not match in non-strict mode', async () => {
+    it('should reject PIN authentication when posId does not match in non-strict mode', async () => {
       // Set up PIN authenticator
       const pinAuth = new PinAuthenticator();
       pinAuth.user = ctx.users[1];
@@ -366,9 +366,9 @@ describe('POS Token Flow Integration Tests', (): void => {
       // Set non-strict mode
       await ServerSettingsStore.getInstance().setSetting('strictPosToken', false);
 
-      // Authenticate with secure PIN and wrong posId - should fail at authentication
+      // Authenticate with PIN and wrong posId - should fail at authentication
       const authRes = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${ctx.posUserToken}`)
         .send({
           userId: ctx.users[1].id,

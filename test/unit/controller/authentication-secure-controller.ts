@@ -47,9 +47,9 @@ import WebSocketService from '../../../src/service/websocket-service';
 import QRService from '../../../src/service/qr-service';
 import AuthenticationService from '../../../src/service/authentication-service';
 import sinon from 'sinon';
-import AuthenticationSecurePinRequest from '../../../src/controller/request/authentication-secure-pin-request';
-import AuthenticationSecureNfcRequest from '../../../src/controller/request/authentication-secure-nfc-request';
-import AuthenticationSecureEanRequest from '../../../src/controller/request/authentication-secure-ean-request';
+import AuthenticationPinRequest from '../../../src/controller/request/authentication-pin-request';
+import AuthenticationNfcRequest from '../../../src/controller/request/authentication-nfc-request';
+import AuthenticationEanRequest from '../../../src/controller/request/authentication-ean-request';
 import PinAuthenticator from '../../../src/entity/authenticator/pin-authenticator';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import EanAuthenticator from '../../../src/entity/authenticator/ean-authenticator';
@@ -620,7 +620,7 @@ describe('AuthenticationSecureController', () => {
     });
   });
 
-  describe('POST /authentication/pin-secure', () => {
+  describe('POST /authentication/pin', () => {
     let posUserToken: string;
     let memberUserWithPin: User;
 
@@ -634,7 +634,7 @@ describe('AuthenticationSecureController', () => {
       posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
-    const validSecurePinRequest: AuthenticationSecurePinRequest = {
+    const validPinRequest: AuthenticationPinRequest = {
       userId: 0, // Will be set in tests
       pin: '1234',
       posId: 0, // Will be set to actual POS ID in tests
@@ -643,13 +643,13 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 200 and token when valid POS user authenticates with correct PIN', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: memberUserWithPin.id,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -673,30 +673,30 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 403 when caller is not a POS user', async () => {
       const pos = ctx.pointsOfSale[0];
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: memberUserWithPin.id,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(requestBody);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.equal('Only POS users can use secure PIN authentication.');
+      expect(res.body).to.equal('Only POS users can use PIN authentication.');
     });
 
     it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: memberUserWithPin.id,
         posId: pos.id + 999, // Wrong POS ID
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -707,13 +707,13 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 403 when user does not exist', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: 99999, // Non-existent user ID
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -724,14 +724,14 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 403 when PIN is incorrect', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: memberUserWithPin.id,
         pin: '9999', // Wrong PIN
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -748,13 +748,13 @@ describe('AuthenticationSecureController', () => {
 
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecurePinRequest,
+        ...validPinRequest,
         userId: userWithoutPin.id,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/pin-secure')
+        .post('/authentication/pin')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -763,7 +763,7 @@ describe('AuthenticationSecureController', () => {
     });
   });
 
-  describe('POST /authentication/nfc-secure', () => {
+  describe('POST /authentication/nfc', () => {
     let posUserToken: string;
     let memberUserWithNfc: User;
 
@@ -780,7 +780,7 @@ describe('AuthenticationSecureController', () => {
       posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
-    const validSecureNfcRequest: AuthenticationSecureNfcRequest = {
+    const validNfcRequest: AuthenticationNfcRequest = {
       nfcCode: 'secure-nfc-code-1234',
       posId: 0, // Will be set to actual POS ID in tests
     };
@@ -788,12 +788,12 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 200 and token when valid POS user authenticates with correct NFC', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecureNfcRequest,
+        ...validNfcRequest,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/nfc-secure')
+        .post('/authentication/nfc')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -817,28 +817,28 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 403 when caller is not a POS user', async () => {
       const pos = ctx.pointsOfSale[0];
       const requestBody = {
-        ...validSecureNfcRequest,
+        ...validNfcRequest,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/nfc-secure')
+        .post('/authentication/nfc')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(requestBody);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.equal('Only POS users can use secure NFC authentication.');
+      expect(res.body).to.equal('Only POS users can use NFC authentication.');
     });
 
     it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecureNfcRequest,
+        ...validNfcRequest,
         posId: pos.id + 999, // Wrong POS ID
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/nfc-secure')
+        .post('/authentication/nfc')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -854,7 +854,7 @@ describe('AuthenticationSecureController', () => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/nfc-secure')
+        .post('/authentication/nfc')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -863,7 +863,7 @@ describe('AuthenticationSecureController', () => {
     });
   });
 
-  describe('POST /authentication/ean-secure', () => {
+  describe('POST /authentication/ean', () => {
     let posUserToken: string;
     let memberUserWithEan: User;
 
@@ -880,7 +880,7 @@ describe('AuthenticationSecureController', () => {
       posUserToken = await signTokenFor(posUser, ctx.tokenHandler);
     });
 
-    const validSecureEanRequest: AuthenticationSecureEanRequest = {
+    const validEanRequest: AuthenticationEanRequest = {
       eanCode: 'secure-ean-code-1234',
       posId: 0, // Will be set to actual POS ID in tests
     };
@@ -888,12 +888,12 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 200 and token when valid POS user authenticates with correct EAN', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecureEanRequest,
+        ...validEanRequest,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/ean-secure')
+        .post('/authentication/ean')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -917,28 +917,28 @@ describe('AuthenticationSecureController', () => {
     it('should return HTTP 403 when caller is not a POS user', async () => {
       const pos = ctx.pointsOfSale[0];
       const requestBody = {
-        ...validSecureEanRequest,
+        ...validEanRequest,
         posId: pos.id,
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/ean-secure')
+        .post('/authentication/ean')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(requestBody);
 
       expect(res.status).to.equal(403);
-      expect(res.body).to.equal('Only POS users can use secure EAN authentication.');
+      expect(res.body).to.equal('Only POS users can use EAN authentication.');
     });
 
     it('should return HTTP 403 when POS user ID does not match requested posId', async () => {
       const pos = ctx.pointsOfSale.find((p) => p.user.id === ctx.pointOfSaleUsers[0].id);
       const requestBody = {
-        ...validSecureEanRequest,
+        ...validEanRequest,
         posId: pos.id + 999, // Wrong POS ID
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/ean-secure')
+        .post('/authentication/ean')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
@@ -954,7 +954,7 @@ describe('AuthenticationSecureController', () => {
       };
 
       const res = await request(ctx.app)
-        .post('/authentication/ean-secure')
+        .post('/authentication/ean')
         .set('Authorization', `Bearer ${posUserToken}`)
         .send(requestBody);
 
