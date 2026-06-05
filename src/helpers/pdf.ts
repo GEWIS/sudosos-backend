@@ -28,7 +28,6 @@ import { Identity, Product, ProductPricing, TotalPricing, VAT } from 'pdf-genera
 import User from '../entity/user/user';
 import { Report, ReportProductEntry, ReportVatEntry } from '../entity/report/report';
 import ProductRevision from '../entity/product/product-revision';
-import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import Config from '../config';
 
 export const PDF_VAT_ZERO = 0;
@@ -94,15 +93,6 @@ export function userToIdentity(user: User): Identity {
   });
 }
 
-export function emptyIdentity(): Identity {
-  return new Identity({
-    lastNamePreposition: UNUSED_PARAM,
-    firstName: UNUSED_PARAM,
-    lastName: UNUSED_PARAM,
-    fullName: UNUSED_PARAM,
-  });
-}
-
 export function productToPdfProduct(product: ProductRevision, quantity: number): Product {
   return new Product({
     name: product.name,
@@ -123,10 +113,6 @@ export function productToPdfProduct(product: ProductRevision, quantity: number):
  */
 export function entryToProduct(entry: ReportProductEntry): Product {
   return productToPdfProduct(entry.product, entry.count);
-}
-
-export function subTransactionRowToProduct(str: SubTransactionRow): Product {
-  return productToPdfProduct(str.product, str.amount);
 }
 
 /**
