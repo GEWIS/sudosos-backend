@@ -62,6 +62,7 @@
     "express-fileupload": "1.5.2",
     "express-jsdoc-swagger": "1.8.0",
     "gewisdb-ts-client": "github:GEWIS/gewisdb-ts-client#6190730be45646d58ff5968689ec22b88d2c918c",
+    "gray-matter": "^4.0.3",
     "ioredis": "5.10.1",
     "jsonwebtoken": "9.0.3",
     "ldap-escape": "2.0.6",

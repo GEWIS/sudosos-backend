@@ -73,7 +73,7 @@ describe('TermsOfServiceController', () => {
 
   describe('GET /terms-of-service', () => {
     it('should return correct model', async () => {
-      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# TOS v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', date: new Date('2026-06-06'), content: '# TOS v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 
@@ -92,7 +92,7 @@ describe('TermsOfServiceController', () => {
     });
 
     it('should return 200 with the correct TOS content when a valid version is requested', async () => {
-      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# Terms of Service v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', date: new Date('2026-06-06'), content: '# Terms of Service v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 
@@ -169,7 +169,7 @@ describe('TermsOfServiceController', () => {
     });
 
     it('should return 200 for a regular user with own TOS permissions', async () => {
-      const tosResponse: TermsOfService = { versionNumber: '1.0', content: '# TOS v1.0' };
+      const tosResponse: TermsOfService = { versionNumber: '1.0', date: new Date('2026-06-06'), content: '# TOS v1.0' };
       const stub = sinon.stub(TermsOfServiceService, 'getTermsOfService').resolves(tosResponse);
       stubs.push(stub);
 

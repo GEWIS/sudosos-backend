@@ -20,6 +20,7 @@
 
 import path from 'path';
 import { promises as fs } from 'fs';
+import matter from 'gray-matter';
 import { TermsOfServiceResponse } from '../controller/response/terms-of-service-response';
 
 /**
@@ -32,6 +33,7 @@ const TOS_DIR = path.join(__dirname, '../../static/terms-of-service');
 
 export interface TermsOfService {
   versionNumber: string;
+  date: Date;
   content: string;
 }
 
@@ -43,8 +45,25 @@ export default class TermsOfServiceService {
   public static asTermsOfServiceResponse(tos: TermsOfService): TermsOfServiceResponse {
     return {
       versionNumber: tos.versionNumber,
+      date: tos.date.toISOString(),
       content: tos.content,
     };
+  }
+
+  /**
+   * Parse the required leading YAML frontmatter block holding the effective date.
+   * Throws if the frontmatter or its date is missing or invalid.
+   */
+  private static parseFrontmatter(raw: string, version: string): { date: Date; content: string } {
+    const { data, content } = matter(raw);
+    if (!(data.date instanceof Date) && typeof data.date !== 'string') {
+      throw new Error(`Terms of service version v${version} has a missing or invalid frontmatter date`);
+    }
+    const date = data.date instanceof Date ? data.date : new Date(data.date);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error(`Terms of service version v${version} has a missing or invalid frontmatter date`);
+    }
+    return { date, content };
   }
 
   /**
@@ -77,16 +96,17 @@ export default class TermsOfServiceService {
   public static async getTermsOfService(version: string): Promise<TermsOfService> {
     // Check whether the version string is safe (no path traversal)
     if (/[/\\]|\.\./.test(version)) {
-      throw new Error(`Terms of service version v'${version}' not found`);
+      throw new Error(`Terms of service version v${version} not found`);
     }
     const filePath = path.join(TOS_DIR, `${version}.md`);
-    let content: string;
+    let raw: string;
     try {
-      content = await fs.readFile(filePath, 'utf-8');
+      raw = await fs.readFile(filePath, 'utf-8');
     } catch {
-      throw new Error(`Terms of service version v'${version}' not found`);
+      throw new Error(`Terms of service version v${version} not found`);
     }
-    return { versionNumber: version, content };
+    const { date, content } = TermsOfServiceService.parseFrontmatter(raw, version);
+    return { versionNumber: version, date, content };
   }
 
   /**

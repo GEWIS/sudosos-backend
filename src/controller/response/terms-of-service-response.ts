@@ -27,9 +27,11 @@
 /**
  * @typedef {object} TermsOfServiceResponse
  * @property {string} versionNumber.required - The terms of service version number.
+ * @property {string} date.required - The date this version took effect.
  * @property {string} content.required - The terms of service content.
  */
 export interface TermsOfServiceResponse {
   versionNumber: string;
+  date: string;
   content: string;
 }
