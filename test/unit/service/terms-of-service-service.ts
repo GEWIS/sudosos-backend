@@ -72,15 +72,18 @@ describe('TermsOfServiceService', () => {
   });
 
   describe('getTermsOfService', () => {
-    it('should return the correct version and content for a valid version', async () => {
-      const content = '# Terms of Service v1.0\nContent here.';
-      const readFileStub = sinon.stub(fs, 'readFile').resolves(content as any);
+    it('should return the version, date and content for a valid version', async () => {
+      const body = '# Terms of Service v1.0\nContent here.';
+      const raw = `---\ndate: 2024-01-15\n---\n${body}`;
+      const readFileStub = sinon.stub(fs, 'readFile').resolves(raw as any);
       stubs.push(readFileStub);
 
       const result = await TermsOfServiceService.getTermsOfService('1.0');
 
       expect(result.versionNumber).to.equal('1.0');
-      expect(result.content).to.equal(content);
+      expect(result.content).to.equal(body);
+      expect(result.date).to.be.instanceOf(Date);
+      expect(result.date.toISOString()).to.equal(new Date('2024-01-15').toISOString());
     });
 
     it('should throw an error when the version file does not exist', async () => {
@@ -88,10 +91,47 @@ describe('TermsOfServiceService', () => {
       stubs.push(readFileStub);
 
       await expect(TermsOfServiceService.getTermsOfService('99.9'))
-        .to.eventually.be.rejectedWith("Terms of service version v'99.9' not found");
+        .to.eventually.be.rejectedWith('Terms of service version v99.9 not found');
     });
 
-    it('should return the actual content of the existing TOS version from disk', async () => {
+    it('should throw an error when the frontmatter is missing entirely', async () => {
+      const readFileStub = sinon.stub(fs, 'readFile').resolves('# No frontmatter here\nJust content.' as any);
+      stubs.push(readFileStub);
+
+      await expect(TermsOfServiceService.getTermsOfService('1.0'))
+        .to.eventually.be.rejectedWith('Terms of service version v1.0 has a missing or invalid frontmatter date');
+    });
+
+    it('should throw an error when the frontmatter has no date field', async () => {
+      const raw = '---\ntitle: Some title\n---\n# Body\nContent.';
+      const readFileStub = sinon.stub(fs, 'readFile').resolves(raw as any);
+      stubs.push(readFileStub);
+
+      await expect(TermsOfServiceService.getTermsOfService('1.0'))
+        .to.eventually.be.rejectedWith('Terms of service version v1.0 has a missing or invalid frontmatter date');
+    });
+
+    it('should throw an error when the frontmatter date is invalid', async () => {
+      const raw = '---\ndate: not-a-real-date\n---\n# Body\nContent.';
+      const readFileStub = sinon.stub(fs, 'readFile').resolves(raw as any);
+      stubs.push(readFileStub);
+
+      await expect(TermsOfServiceService.getTermsOfService('1.0'))
+        .to.eventually.be.rejectedWith('Terms of service version v1.0 has a missing or invalid frontmatter date');
+    });
+
+    it('should parse a date provided as a quoted string', async () => {
+      const raw = '---\ndate: "2023-06-30"\n---\n# Body\nContent.';
+      const readFileStub = sinon.stub(fs, 'readFile').resolves(raw as any);
+      stubs.push(readFileStub);
+
+      const result = await TermsOfServiceService.getTermsOfService('1.0');
+
+      expect(result.date).to.be.instanceOf(Date);
+      expect(result.date.toISOString()).to.equal(new Date('2023-06-30').toISOString());
+    });
+
+    it('should return the actual content and a valid date from disk', async () => {
       const versions = await TermsOfServiceService.listVersions();
       expect(versions.length).to.be.greaterThan(0);
 
@@ -101,6 +141,8 @@ describe('TermsOfServiceService', () => {
       expect(result.versionNumber).to.equal(version);
       expect(result.content).to.be.a('string');
       expect(result.content.length).to.be.greaterThan(0);
+      expect(result.date).to.be.instanceOf(Date);
+      expect(Number.isNaN(result.date.getTime())).to.be.false;
     });
   });
 
@@ -108,14 +150,26 @@ describe('TermsOfServiceService', () => {
     it('should return the TOS with the highest version (last in sorted order)', async () => {
       const readdirStub = sinon.stub(fs, 'readdir').resolves(['1.0.md', '2.0.md', '1.5.md'] as any);
       stubs.push(readdirStub);
-      const content = '# Latest TOS';
-      const readFileStub = sinon.stub(fs, 'readFile').resolves(content as any);
+      const body = '# Latest TOS';
+      const raw = `---\ndate: 2025-02-20\n---\n${body}`;
+      const readFileStub = sinon.stub(fs, 'readFile').resolves(raw as any);
       stubs.push(readFileStub);
 
       const result = await TermsOfServiceService.getLatestTermsOfService();
 
       expect(result.versionNumber).to.equal('2.0');
-      expect(result.content).to.equal(content);
+      expect(result.content).to.equal(body);
+      expect(result.date.toISOString()).to.equal(new Date('2025-02-20').toISOString());
+    });
+
+    it('should propagate a missing or invalid date error from the latest version', async () => {
+      const readdirStub = sinon.stub(fs, 'readdir').resolves(['1.0.md', '2.0.md'] as any);
+      stubs.push(readdirStub);
+      const readFileStub = sinon.stub(fs, 'readFile').resolves('# No frontmatter' as any);
+      stubs.push(readFileStub);
+
+      await expect(TermsOfServiceService.getLatestTermsOfService())
+        .to.eventually.be.rejectedWith('Terms of service version v2.0 has a missing or invalid frontmatter date');
     });
 
     it('should throw an error when no TOS files exist', async () => {
@@ -135,6 +189,21 @@ describe('TermsOfServiceService', () => {
       expect(result.versionNumber).to.equal(expectedLatest);
       expect(result.content).to.be.a('string');
       expect(result.content.length).to.be.greaterThan(0);
+    });
+  });
+
+  describe('asTermsOfServiceResponse', () => {
+    it('should serialize the date to an ISO string', () => {
+      const date = new Date('2024-01-15');
+      const response = TermsOfServiceService.asTermsOfServiceResponse({
+        versionNumber: '1.0',
+        date,
+        content: '# Body',
+      });
+
+      expect(response.versionNumber).to.equal('1.0');
+      expect(response.content).to.equal('# Body');
+      expect(response.date).to.equal(date.toISOString());
     });
   });
 });
