@@ -46,11 +46,15 @@ export default class DiskStorage implements FileStorage {
   }
 
   public validateFileLocation(location: string): void {
-    const directory = path.dirname(location);
-    const expected = path.resolve(this.workdir);
+    const directory = path.basename(path.dirname(location));
+    const expected = path.basename(path.resolve(this.workdir));
     if (expected !== directory) {
       throw new TypeError(`Given file is not located in the expected directory. Expected: ${expected}, actual: ${directory}`);
     }
+  }
+
+  private resolveLocation(location: string): string {
+    return path.resolve(this.workdir, path.basename(location));
   }
 
   private static readFile(location: string) {
@@ -80,21 +84,23 @@ export default class DiskStorage implements FileStorage {
 
   getFile(file: BaseFile): Promise<Buffer> {
     this.validateFileLocation(file.location);
-    if (!DiskStorage.fileExists(file.location)) {
-      return Promise.reject(new Error(`Given file does not exist on disk: ${file.location}`));
+    const location = this.resolveLocation(file.location);
+    if (!DiskStorage.fileExists(location)) {
+      return Promise.reject(new Error(`Given file does not exist on disk: ${location}`));
     }
 
-    const data = DiskStorage.readFile(file.location);
+    const data = DiskStorage.readFile(location);
     return Promise.resolve(data);
   }
 
   public deleteFile(file: BaseFile): Promise<boolean> {
-    this.validateFileLocation(file.location);
-    if (!DiskStorage.fileExists(file.location)) {
+    const location = this.resolveLocation(file.location);
+    this.validateFileLocation(location);
+    if (!DiskStorage.fileExists(location)) {
       return Promise.resolve(false);
     }
 
-    DiskStorage.removeFile(file.location);
+    DiskStorage.removeFile(location);
     return Promise.resolve(true);
   }
 }
