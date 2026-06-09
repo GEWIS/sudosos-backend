@@ -26,12 +26,13 @@
  * @mergeTarget
  */
 
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import BaseEntity from '../../base-entity';
 import StripePaymentIntent from '../../stripe/stripe-payment-intent';
 import Transfer from '../transfer';
 import Transaction from '../transaction';
 import TmpTransaction from './tmp-transaction';
+import User from '../../user/user';
 
 export enum TerminalPaymentState {
   /**
@@ -47,8 +48,12 @@ export enum TerminalPaymentState {
   /**
    * Transaction is paid
    */
-
   PAID = 'paid',
+
+  /**
+    * Transaction is paid
+    */
+  CANCELLED = 'cancelled',
 }
 
 /**
@@ -87,10 +92,21 @@ export default class TerminalPayment extends BaseEntity {
   public temporaryTransaction?: TmpTransaction | null;
 
   /**
+   * The user who created this TerminalPayment
+   */
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn()
+  public createdBy: User;
+
+  /**
    * Determine the terminal payment's state based on the entity's properties
    */
   public getState(): TerminalPaymentState {
     if (this.finalTransaction) return TerminalPaymentState.PAID;
+
+    // No transaction attached to this TerminalPayment.
+    if (!this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
+
     // @todo how to determine when a transaction is being processed?
     return TerminalPaymentState.CREATED;
   }

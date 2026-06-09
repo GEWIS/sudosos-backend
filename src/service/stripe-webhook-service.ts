@@ -64,7 +64,7 @@ export default class StripeWebhookService extends WithManager {
     paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
     const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true } });
+      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true, paymentRequest: true } });
     if (!paymentIntent) {
       throw new Error(`PaymentIntent with id "${paymentIntentId}" not found.`);
     }
@@ -146,8 +146,10 @@ export default class StripeWebhookService extends WithManager {
           await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
           break;
         case 'payment_intent.payment_failed':
-        case 'payment_intent.canceled':
           await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED);
+          break;
+        case 'payment_intent.canceled':
+          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CANCELLED);
           break;
         default:
           this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');

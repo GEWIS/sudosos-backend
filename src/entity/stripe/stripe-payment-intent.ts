@@ -79,4 +79,12 @@ export default class StripePaymentIntent extends BaseEntity {
 
   @OneToOne('TerminalPayment', (t: TerminalPayment) => t.stripePaymentIntent, { nullable: true })
   public terminalPayment?: TerminalPayment | null;
+
+  /**
+   * Whether this PaymentIntent is cancelled via the API. If the
+   * paymentintent.cancelled event is received but this boolean is set to true,
+   * no additional action should be taken.
+   */
+  @Column({ default: false })
+    cancelledWithAPI: boolean;
 }

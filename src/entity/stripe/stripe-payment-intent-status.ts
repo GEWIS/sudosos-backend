@@ -36,6 +36,7 @@ export enum StripePaymentIntentState {
   PROCESSING = 2,
   SUCCEEDED = 3,
   FAILED = 4,
+  CANCELLED = 5,
 }
 
 /**

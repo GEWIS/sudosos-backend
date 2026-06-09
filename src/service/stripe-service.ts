@@ -241,34 +241,15 @@ export default class StripeService extends WithManager {
   }
 
   /**
-   * Create a new deposit status
-   * @param paymentIntentId
-   * @param state
+   * Cancel a payment intent on Stripe. Note that this will trigger a webhook
+   * by Stripe, which should be handled correctly to prevent infinite loops.
+   * @param paymentIntent
    */
-  public async createNewPaymentIntentStatus(
-    paymentIntentId: number, state: StripePaymentIntentState,
-  ): Promise<StripePaymentIntentStatus> {
-    const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({
-        where: { id: paymentIntentId },
-        relations: { deposit: true, paymentRequest: true },
-      });
-    if (!paymentIntent) {
-      throw new Error(`StripePaymentIntent with id ${paymentIntentId} not found.`);
-    }
-
-    const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
-    if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
-    if (state === StripePaymentIntentState.SUCCEEDED && states.includes(StripePaymentIntentState.FAILED)) {
-      throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
-    }
-    if (state === StripePaymentIntentState.FAILED && states.includes(StripePaymentIntentState.SUCCEEDED)) {
-      throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
-    }
-
-    const depositStatus = await this.manager.getRepository(StripePaymentIntentStatus).save({ stripePaymentIntent: paymentIntent, state });
-
-    return depositStatus;
+  public async cancelPaymentIntent(paymentIntent: StripePaymentIntent) {
+    paymentIntent.cancelledWithAPI = true;
+    await this.stripe.paymentIntents.cancel(paymentIntent.stripeId);
+    await this.manager.save(paymentIntent);
+    return paymentIntent;
   }
 
   /**

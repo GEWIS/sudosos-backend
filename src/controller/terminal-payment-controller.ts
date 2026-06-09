@@ -35,6 +35,7 @@ import TerminalPaymentService from '../service/terminal-payment-service';
 import { TerminalPaymentResponse } from './response/terminal-payment-response';
 import StripeService from '../service/stripe-service';
 import { asNumber } from '../helpers/validators';
+import { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
 
 export default class TerminalPaymentController extends BaseController {
   private logger: Logger = log4js.getLogger('TerminalPaymentController');
@@ -68,6 +69,12 @@ export default class TerminalPaymentController extends BaseController {
             req.token.roles, 'get', await TerminalPaymentController.getRelation(req), 'TerminalPayment', ['*'],
           ),
           handler: this.getSingleTerminalPayment.bind(this),
+        },
+        DELETE: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'cancel', await TerminalPaymentController.getRelation(req), 'TerminalPayment', ['*'],
+          ),
+          handler: this.cancelTerminalPayment.bind(this),
         },
       },
       '/:id(\\d+)/process': {
@@ -208,7 +215,51 @@ export default class TerminalPaymentController extends BaseController {
       });
       res.status(204).send();
     } catch (error) {
-      this.logger.error('Could not get terminalPayment:', error);
+      this.logger.error('Could not start terminalPayment:', error);
+      res.status(500).send('Internal server error.');
+    }
+  }
+
+  /**
+  * DELETE /terminal-payments/{id}
+  * @summary Cancel a Terminal Payment that is created/processing
+  * @operationId cancelTerminalPayment
+  * @tags terminalPayments - Operations of the Terminal Payment Controller
+  * @security JWT
+  * @param {integer} id.path.required - The ID of the terminal payment
+  * @return {TerminalPaymentResponse} 200 - Terminal Payment
+  * @return {string} 404 - TerminalPayment not found
+  * @return {string} 422 - TerminalPayment not created/processing
+  * @return {string} 500 - Internal server error
+   */
+  public async cancelTerminalPayment(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Start terminal payment by user', req.token.user);
+    const rawId = req.params.id;
+
+    try {
+      const id = Number.parseInt(rawId, 10);
+
+      const service = new TerminalPaymentService();
+      let terminalPayment = await service.getTerminalPayment(id);
+
+      if (!terminalPayment) {
+        res.status(404).send(`Terminal Payment with ID "${id}" not found.`);
+        return;
+      }
+
+      if (terminalPayment.getState() !== TerminalPaymentState.CREATED) {
+        res.status(422).send(`Terminal Payment cannot be cancelled, because it has state "${terminalPayment.getState()}"`);
+        return;
+      }
+
+      await AppDataSource.transaction(async (manager) => {
+        terminalPayment = await new TerminalPaymentService(manager).cancelTerminalPayment(id);
+      });
+
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment);
+      res.status(200).json(response);
+    } catch (error) {
+      this.logger.error('Could not cancel terminalPayment:', error);
       res.status(500).send('Internal server error.');
     }
   }

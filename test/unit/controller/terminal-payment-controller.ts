@@ -96,6 +96,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
   const stubs: sinon.SinonStub[] = [];
   let originalStripeKey: string | undefined;
   let paymentIntentsCreateStub: sinon.SinonStub;
+  let paymentIntentsCancelStub: sinon.SinonStub;
   let readersProcessIntentStub: sinon.SinonStub;
   let readersListStub: sinon.SinonStub;
 
@@ -248,6 +249,9 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     paymentIntentsCreateStub = sinon
       .stub(Object.getPrototypeOf(sampleStripe.paymentIntents), 'create')
       .resolves({ id: FAKE_PAYMENT_INTENT, client_secret: 'cs_fake' } as any);
+    paymentIntentsCancelStub = sinon
+      .stub(Object.getPrototypeOf(sampleStripe.paymentIntents), 'cancel')
+      .resolves({ id: FAKE_PAYMENT_INTENT, status: 'canceled' } as any);
     readersProcessIntentStub = sinon
       .stub(
         Object.getPrototypeOf(sampleStripe.terminal.readers),
@@ -257,7 +261,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     readersListStub = sinon
       .stub(Object.getPrototypeOf(sampleStripe.terminal.readers), 'list')
       .resolves({ data: FAKE_READERS } as any);
-    stubs.push(paymentIntentsCreateStub, readersProcessIntentStub, readersListStub);
+    stubs.push(paymentIntentsCreateStub, paymentIntentsCancelStub, readersProcessIntentStub, readersListStub);
   });
 
   afterEach(() => {
@@ -566,6 +570,120 @@ describe('TerminalPaymentController', async (): Promise<void> => {
 
       expect(res.status).to.equal(500);
       expect(res.text).to.equal('Internal server error.');
+    });
+  });
+
+  describe('DELETE /terminal-payments/:id', () => {
+    it('should return HTTP 404 if the terminal payment does not exist', async () => {
+      const id = ctx.terminalPayments.length + 1000;
+
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(404);
+      expect(res.text).to.equal(`Terminal Payment with ID "${id}" not found.`);
+      expect(paymentIntentsCancelStub).to.not.be.called;
+    });
+
+    it('should return HTTP 422 if the terminal payment is not created/processing', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PAID,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(422);
+      expect(res.text).to.equal(
+        `Terminal Payment cannot be cancelled, because it has state "${TerminalPaymentState.PAID}"`,
+      );
+      expect(paymentIntentsCancelStub).to.not.be.called;
+    });
+
+    it('should return HTTP 403 if the user is not allowed to cancel the terminal payment', async () => {
+      // The local user neither owns this terminal payment nor has the cancel
+      // permission for terminal payments belonging to others.
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.token}`);
+
+      expect(res.status).to.equal(403);
+      expect(paymentIntentsCancelStub).to.not.be.called;
+    });
+
+    it('should return HTTP 500 if the terminal payment could not be cancelled', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment).to.not.be.undefined;
+
+      const cancelStub = sinon
+        .stub(TerminalPaymentService.prototype, 'cancelTerminalPayment')
+        .rejects(new Error('Something went wrong'));
+      stubs.push(cancelStub);
+
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(500);
+      expect(res.text).to.equal('Internal server error.');
+    });
+
+    // Destructive tests: run last so the cancelled state does not affect the
+    // other cases that rely on a CREATED terminal payment being present.
+    it('should cancel the terminal payment and return HTTP 200 if admin', async () => {
+      const terminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(terminalPayment, 'Precondition failed: no CREATED terminal payment seeded').to.not.be.undefined;
+
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${terminalPayment!.id}`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('TerminalPaymentResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.id).to.equal(terminalPayment!.id);
+      expect(res.body.state).to.equal(TerminalPaymentState.CANCELLED);
+
+      // The Stripe payment intent was cancelled
+      expect(paymentIntentsCancelStub).to.be.calledOnceWith(
+        terminalPayment!.stripePaymentIntent.stripeId,
+      );
+
+      // The change is persisted: the terminal payment is now cancelled
+      const dbTerminalPayment = await new TerminalPaymentService().getTerminalPayment(terminalPayment!.id);
+      expect(dbTerminalPayment!.getState()).to.equal(TerminalPaymentState.CANCELLED);
+    });
+
+    it('should return HTTP 200 if the POS user cancels their own terminal payment', async () => {
+      // The POS user is the creator of this terminal payment and has the
+      // cancel-own permission on TerminalPayment.
+      const res = await request(ctx.app)
+        .delete(`/terminal-payments/${ctx.posTerminalPayment.id}`)
+        .set('Authorization', `Bearer ${ctx.posToken}`);
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('TerminalPaymentResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.id).to.equal(ctx.posTerminalPayment.id);
+      expect(res.body.state).to.equal(TerminalPaymentState.CANCELLED);
+      expect(paymentIntentsCancelStub).to.be.calledOnceWith(
+        ctx.posTerminalPayment.stripePaymentIntent.stripeId,
+      );
+
+      const dbTerminalPayment = await new TerminalPaymentService().getTerminalPayment(ctx.posTerminalPayment.id);
+      expect(dbTerminalPayment!.getState()).to.equal(TerminalPaymentState.CANCELLED);
     });
   });
 });

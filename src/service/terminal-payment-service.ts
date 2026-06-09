@@ -35,6 +35,7 @@ import TerminalPayment, { TerminalPaymentState } from '../entity/transactions/te
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import TransferService from './transfer-service';
 import { TerminalPaymentResponse } from '../controller/response/terminal-payment-response';
+import { asUserResponse } from './user-service';
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
@@ -58,8 +59,11 @@ export default class TerminalPaymentService extends WithManager {
       amount: terminalPayment.stripePaymentIntent.amount.toObject(),
       transaction: terminalPayment.temporaryTransaction
         ? await transactionService.asTransactionResponse(terminalPayment.temporaryTransaction, totalCost, context)
-        : await transactionService.asTransactionResponse(terminalPayment.finalTransaction, totalCost, context),
+        : (terminalPayment.finalTransaction
+          ? await transactionService.asTransactionResponse(terminalPayment.finalTransaction, totalCost, context)
+          : undefined ),
       transfer: terminalPayment.transfer ? TransferService.asTransferResponse(terminalPayment.transfer) : undefined,
+      createdBy: asUserResponse(terminalPayment.createdBy),
       state: terminalPayment.getState(),
     };
   }
@@ -103,6 +107,7 @@ export default class TerminalPaymentService extends WithManager {
         },
         transfer: true,
         stripePaymentIntent: true,
+        createdBy: true,
       },
     });
   }
@@ -133,6 +138,7 @@ export default class TerminalPaymentService extends WithManager {
     const terminalPayment = await this.manager.getRepository(TerminalPayment).save({
       stripePaymentIntent,
       temporaryTransaction: savedTmpTransaction,
+      createdBy: savedTmpTransaction.createdBy,
     } as TerminalPayment);
     const dbTerminalPayment = await this.getTerminalPayment(terminalPayment.id);
 
@@ -148,6 +154,29 @@ export default class TerminalPaymentService extends WithManager {
       throw new Error(`TerminalPayment with ID "${id}" not found`);
     }
     await this.stripeService.startTerminalPayment(params.stripeTerminalId, terminalPayment.stripePaymentIntent.stripeId);
+  }
+
+  /**
+   *
+   * @param id
+   * @returns
+   */
+  public async cancelTerminalPayment(id: number): Promise<TerminalPayment> {
+    const tp = await this.getTerminalPayment(id);
+    if (!tp) return null;
+
+    if (tp.getState() !== TerminalPaymentState.CREATED) {
+      return null;
+    }
+
+    const transaction = tp.temporaryTransaction;
+    tp.temporaryTransaction = null;
+    await this.manager.save(tp);
+    await this.manager.getRepository(TmpTransaction).remove(transaction);
+
+    tp.stripePaymentIntent = await this.stripeService.cancelPaymentIntent(tp.stripePaymentIntent);
+
+    return tp;
   }
 
   /**
