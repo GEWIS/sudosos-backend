@@ -96,7 +96,7 @@ export interface IInvoicePdf {
    *  Total headline. May be empty. */
   subject: string;
   addressee: string;
-  /** "For the attention of" recipient line. Rendered as "Attn. <name>" between
+  /** "For the attention of" recipient line. Rendered as `Attn. <name>` between
    *  the addressee and the street, omitted entirely when empty. */
   attention: string;
   address: IInvoiceAddress;
