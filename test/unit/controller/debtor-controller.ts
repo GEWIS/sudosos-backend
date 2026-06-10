@@ -48,8 +48,8 @@ import Mailer from '../../../src/mailer';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
-import { Client } from 'pdf-generator-client';
-import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import FineReportPdfService from '../../../src/service/pdf/fine-report-pdf-service';
+import { PdfError } from '../../../src/errors';
 import { FineSeeder, TransactionSeeder, TransferSeeder, UserSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import { rootStubs } from '../../root-hooks';
@@ -634,27 +634,16 @@ describe('DebtorController', () => {
   });
 
   describe('GET /fines/report/pdf', () => {
-    let clientStub: sinon.SinonStubbedInstance<Client>;
-
-    function resolveSuccessful() {
-      clientStub.generateFineReport.resolves({
-        data: new Blob(),
-        status: 200,
-      });
-    }
-
-    beforeEach(() => {
-      clientStub = sinon.createStubInstance(Client);
-      sinon.stub(BasePdfService, 'getClient').returns(clientStub);
-    });
+    let compileHtmlStub: sinon.SinonStub;
 
     afterEach(() => {
+      if (compileHtmlStub) compileHtmlStub.restore();
       sinon.restore();
     });
 
 
     it('should return 200 if admin', async () => {
-      resolveSuccessful();
+      compileHtmlStub = sinon.stub(FineReportPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
       const fromDate = new Date();
       const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
       const res = await request(ctx.app)
@@ -664,7 +653,7 @@ describe('DebtorController', () => {
       expect(res.status).to.equal(200);
     });
     it('should return 502 if pdf generation fails', async () => {
-      clientStub.generateFineReport.rejects(new Error('Failed to generate PDF'));
+      compileHtmlStub = sinon.stub(FineReportPdfService.prototype, 'compileHtml' as any).rejects(new PdfError('Failed to generate PDF'));
       const fromDate = new Date();
       const toDate = new Date(fromDate.getTime() + 1000 * 60 * 60 * 24);
       const res = await request(ctx.app)

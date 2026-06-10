@@ -26,7 +26,7 @@
 
 import { Dinero } from 'dinero.js';
 import { UnstoredPdfAble } from '../file/pdf-able';
-import FineReportPdfService from '../../service/pdf/report-pdf-service';
+import FineReportPdfService from '../../service/pdf/fine-report-pdf-service';
 import { FineReportResponse } from '../../controller/response/debtor-response';
 
 class IFineReport {
