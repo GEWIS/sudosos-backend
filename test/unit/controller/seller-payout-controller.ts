@@ -41,8 +41,8 @@ import {
 import { ReportResponse } from '../../../src/controller/response/report-response';
 import dinero from 'dinero.js';
 import sinon from 'sinon';
-import { Client } from 'pdf-generator-client';
-import { BasePdfService } from '../../../src/service/pdf/pdf-service';
+import SellerPayoutPdfService from '../../../src/service/pdf/seller-payout-pdf-service';
+import { PdfError } from '../../../src/errors';
 import {
   SellerPayoutSeeder, TransactionSeeder, TransferSeeder,
   UserSeeder,
@@ -277,27 +277,16 @@ describe('SellerPayoutController', () => {
   });
 
   describe('GET /seller-payouts/{id}/report/pdf', () => {
-    let clientStub: sinon.SinonStubbedInstance<Client>;
-
-    function resolveSuccessful() {
-      clientStub.generateDisbursement.resolves({
-        data: new Blob(),
-        status: 200,
-      });
-    }
-
-    beforeEach(() => {
-      clientStub = sinon.createStubInstance(Client);
-      sinon.stub(BasePdfService, 'getClient').returns(clientStub);
-    });
+    let compileHtmlStub: sinon.SinonStub;
 
     afterEach(() => {
+      if (compileHtmlStub) compileHtmlStub.restore();
       sinon.restore();
     });
 
     it('should return HTTP 200 with the sales report PDF belonging to the seller payout', async () => {
       fs.mkdirSync(SELLER_PAYOUT_PDF_LOCATION, { recursive: true });
-      resolveSuccessful();
+      compileHtmlStub = sinon.stub(SellerPayoutPdfService.prototype, 'compileHtml' as any).resolves(Buffer.from('PDF content'));
       const sellerPayout = ctx.sellerPayouts[0];
       const res = await request(ctx.app)
         .get(`/seller-payouts/${sellerPayout.id}/report/pdf`)
@@ -321,7 +310,7 @@ describe('SellerPayoutController', () => {
       expect(res.status).to.equal(403);
     });
     it('should return HTTP 502 if pdf generation fails', async () => {
-      clientStub.generateDisbursement.rejects(new Error('Failed to generate PDF'));
+      compileHtmlStub = sinon.stub(SellerPayoutPdfService.prototype, 'compileHtml' as any).rejects(new PdfError('Failed to generate PDF'));
       const sellerPayout = await SellerPayout.findOne({ where: { id: 1 }, relations: {
         requestedBy: true,
       } });
