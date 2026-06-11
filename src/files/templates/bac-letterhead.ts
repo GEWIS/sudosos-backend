@@ -30,7 +30,7 @@ export const BAC = {
   postbus: 'Postbus 513, 5600MB Eindhoven',
   /** Visiting address, split to mirror a "Bill to" recipient block. */
   street: 'De Groene Loper 5',
-  postalCity: '5612AZ Eindhoven',
+  postalCity: '5612AE Eindhoven',
   country: 'The Netherlands',
   phone: '+31 40 247 2815',
   email: 'bacpm@gewis.nl',
