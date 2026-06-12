@@ -26,7 +26,7 @@ import chai from 'chai';
 
 const { expect, request } = chai;
 import PaymentRequestPublicController from '../../../src/controller/payment-request-public-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -56,14 +56,14 @@ describe('PaymentRequestPublicController', (): void => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     const localUser = await User.save({
       firstName: 'User',
       lastName: 'Doe',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
 
     // 8 requests → 2 per derived status.

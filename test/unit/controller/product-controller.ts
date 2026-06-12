@@ -30,7 +30,7 @@ import fileUpload from 'express-fileupload';
 import * as fs from 'fs';
 import path from 'path';
 import sinon from 'sinon';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -109,7 +109,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -117,7 +117,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const organ = {
@@ -125,7 +125,7 @@ describe('ProductController', async (): Promise<void> => {
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     await User.save(adminUser);

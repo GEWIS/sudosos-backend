@@ -22,7 +22,7 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import DebtorController from '../../../src/controller/debtor-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transaction from '../../../src/entity/transactions/transaction';
@@ -90,7 +90,7 @@ describe('DebtorController', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -98,7 +98,7 @@ describe('DebtorController', () => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     await User.save(adminUser);

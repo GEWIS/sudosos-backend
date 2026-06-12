@@ -28,7 +28,7 @@ const { request, expect } = chai;
 import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -108,7 +108,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -116,7 +116,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const organ = {
@@ -124,7 +124,7 @@ describe('ContainerController', async (): Promise<void> => {
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     await User.save(adminUser);

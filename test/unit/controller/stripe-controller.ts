@@ -25,7 +25,7 @@ import { json } from 'body-parser';
 import chai from 'chai';
 
 import StripeController from '../../../src/controller/stripe-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -84,14 +84,14 @@ describe.skipIf(shouldSkipStripe)('StripeController', async (): Promise<void> =>
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     const localUser = await User.save({
       id: 2,
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
 
     const { stripeDeposits } = await new DepositSeeder().seed([localUser, adminUser]);

@@ -26,7 +26,7 @@ import chai from 'chai';
 
 import TokenHandler from '../../../src/authentication/token-handler';
 import AuthenticationSecureController from '../../../src/controller/authentication-secure-controller';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -353,6 +353,7 @@ describe('AuthenticationSecureController', () => {
         user: ctx.memberUser,
         roles: [],
         organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       };
 
       // Setup stubs
@@ -373,9 +374,7 @@ describe('AuthenticationSecureController', () => {
       expect(authenticationServiceStub.getSaltedToken.calledOnce).to.be.true;
 
       // Verify WebSocket emission through mocked Socket.IO
-      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(
-        mockToken.user, mockToken.roles, mockToken.organs, mockToken.token,
-      );
+      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(mockToken);
       expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
       expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
         sessionId: pendingQr.sessionId,
@@ -494,6 +493,7 @@ describe('AuthenticationSecureController', () => {
         user: ctx.memberUser,
         roles: [],
         organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -521,6 +521,7 @@ describe('AuthenticationSecureController', () => {
         user: ctx.adminUser,
         roles: [],
         organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -535,9 +536,7 @@ describe('AuthenticationSecureController', () => {
       expect(res.body).to.deep.equal({ message: 'QR code confirmed successfully.' });
 
       // Verify WebSocket emission with admin user
-      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(
-        mockToken.user, mockToken.roles, mockToken.organs, mockToken.token,
-      );
+      const expectedAuthResponse = AuthenticationService.asAuthenticationResponse(mockToken);
       expect(mockToMethod.calledOnceWith(`qr-session-${pendingQr.sessionId}`)).to.be.true;
       expect(mockEmitMethod.calledOnceWith('qr-confirmed', {
         sessionId: pendingQr.sessionId,
@@ -554,6 +553,7 @@ describe('AuthenticationSecureController', () => {
         user: ctx.memberUser,
         roles: [],
         organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -580,6 +580,7 @@ describe('AuthenticationSecureController', () => {
         user: ctx.memberUser,
         roles: [],
         organs: [],
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
       };
 
       qrServiceStub.get.resolves(pendingQr);
@@ -604,9 +605,10 @@ describe('AuthenticationSecureController', () => {
       const pendingQr = ctx.qrAuthenticators.find(qr => qr.status === QRAuthenticatorStatus.PENDING);
       expect(pendingQr).to.not.be.undefined;
 
-      const mockToken: AuthenticationResponse = AuthenticationService.asAuthenticationResponse(
-        ctx.memberUser, [], [], 'mock-jwt-token',
-      );
+      const mockToken: AuthenticationResponse = AuthenticationService.asAuthenticationResponse({
+        user: ctx.memberUser, roles: [], organs: [], token: 'mock-jwt-token',
+        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      });
 
       // Call WebSocketService.emitQRConfirmed directly
       WebSocketService.emitQRConfirmed(pendingQr, mockToken);

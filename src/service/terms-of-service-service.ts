@@ -63,6 +63,13 @@ export default class TermsOfServiceService {
   }
 
   /**
+   * Clear the ToS version cache, used for testing.
+   */
+  public static resetVersionCache() {
+    TermsOfServiceService.currentVersion = undefined;
+  }
+
+  /**
    * Derive the TOS status of a user from their acceptance records
    * against the current TOS version.
    */

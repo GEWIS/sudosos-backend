@@ -20,8 +20,10 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { DataSource } from 'typeorm';
-import UserService, { parseGetUsersFilters, parseGetFinancialMutationsFilters, asUserResponse } from '../../../src/service/user-service';
+import UserService, { AcceptTosResult, parseGetUsersFilters, parseGetFinancialMutationsFilters, asUserResponse } from '../../../src/service/user-service';
 import User, { LocalUserTypes, TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import TermsOfServiceService from '../../../src/service/terms-of-service-service';
+import TermsOfServiceAcceptance from '../../../src/entity/user/terms-of-service-acceptance';
 import WelcomeWithReset from '../../../src/mailer/messages/welcome-with-reset';
 import WelcomeToSudosos from '../../../src/mailer/messages/welcome-to-sudosos';
 import Mailer from '../../../src/mailer';
@@ -213,7 +215,7 @@ describe('UserService', async (): Promise<void> => {
         deleted: false,
         type: UserType.MEMBER,
         email: 'john@example.com',
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         extensiveDataProcessing: true,
         ofAge: true,
         canGoIntoDebt: false,
@@ -555,7 +557,7 @@ describe('UserService', async (): Promise<void> => {
       expect(createResetTokenStub.called).to.be.false;
     });
 
-    it('should set acceptedToS to NOT_ACCEPTED for TOS required types', async () => {
+    it('should set tosRequired for TOS required types', async () => {
       const result = await UserService.createUser({
         type: UserType.MEMBER,
         email: 'test@member.com',
@@ -566,10 +568,11 @@ describe('UserService', async (): Promise<void> => {
       } as any);
 
       const user = await User.findOne({ where: { id: result.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+      expect(user.tosRequired).to.equal(true);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
     });
 
-    it('should set acceptedToS to NOT_REQUIRED for non-TOS required types', async () => {
+    it('should not set tosRequired for non-TOS required types', async () => {
       const result = await UserService.createUser({
         type: UserType.ORGAN,
         email: '',
@@ -580,7 +583,8 @@ describe('UserService', async (): Promise<void> => {
       } as any);
 
       const user = await User.findOne({ where: { id: result.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+      expect(user.tosRequired).to.equal(false);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
     });
 
     it('should set empty lastName to empty string', async () => {
@@ -729,31 +733,66 @@ describe('UserService', async (): Promise<void> => {
   describe('acceptToS', () => {
     it('should accept ToS for user', async () => {
       const user = ctx.users[0];
-      user.acceptedToS = TermsOfServiceStatus.NOT_ACCEPTED;
-      await user.save();
+      const currentVersion = await TermsOfServiceService.getCurrentVersion();
+      await TermsOfServiceAcceptance.delete({ userId: user.id });
 
-      const result = await UserService.acceptToS(user.id, { extensiveDataProcessing: true });
+      const result = await UserService.acceptToS(user.id, {
+        extensiveDataProcessing: true, version: currentVersion,
+      });
 
-      expect(result).to.be.true;
+      expect(result).to.equal(AcceptTosResult.SUCCESS);
 
       const updatedUser = await User.findOne({ where: { id: user.id } });
-      expect(updatedUser.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(await TermsOfServiceService.getUserTosStatus(updatedUser)).to.equal(TermsOfServiceStatus.ACCEPTED);
       expect(updatedUser.extensiveDataProcessing).to.be.true;
     });
 
-    it('should return false if user already accepted ToS', async () => {
+    it('should return ALREADY_ACCEPTED if user already accepted this ToS version', async () => {
       const user = ctx.users[0];
-      user.acceptedToS = TermsOfServiceStatus.ACCEPTED;
-      await user.save();
+      const currentVersion = await TermsOfServiceService.getCurrentVersion();
 
-      const result = await UserService.acceptToS(user.id, { extensiveDataProcessing: false });
+      const result = await UserService.acceptToS(user.id, {
+        extensiveDataProcessing: false, version: currentVersion,
+      });
 
-      expect(result).to.be.false;
+      expect(result).to.equal(AcceptTosResult.ALREADY_ACCEPTED);
     });
 
-    it('should return false for non-existent user', async () => {
-      const result = await UserService.acceptToS(999999, { extensiveDataProcessing: false });
-      expect(result).to.be.false;
+    it('should return NOT_CURRENT_VERSION if version is not the current version', async () => {
+      const user = ctx.users[0];
+
+      const result = await UserService.acceptToS(user.id, {
+        extensiveDataProcessing: false, version: '0.1',
+      });
+
+      expect(result).to.equal(AcceptTosResult.NOT_CURRENT_VERSION);
+    });
+
+    it('should accept again after a new version is published', async () => {
+      const user = ctx.users[1];
+      await TermsOfServiceAcceptance.delete({ userId: user.id });
+      await TermsOfServiceAcceptance.save({
+        userId: user.id, versionNumber: '0.9',
+      } as TermsOfServiceAcceptance);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+
+      const currentVersion = await TermsOfServiceService.getCurrentVersion();
+      const result = await UserService.acceptToS(user.id, {
+        extensiveDataProcessing: true, version: currentVersion,
+      });
+
+      expect(result).to.equal(AcceptTosResult.SUCCESS);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.ACCEPTED);
+      const acceptances = await TermsOfServiceService.getAcceptances(user.id);
+      expect(acceptances.map((a) => a.versionNumber)).to.have.members(['0.9', currentVersion]);
+    });
+
+    it('should return USER_NOT_FOUND for non-existent user', async () => {
+      const result = await UserService.acceptToS(999999, {
+        extensiveDataProcessing: false,
+        version: await TermsOfServiceService.getCurrentVersion(),
+      });
+      expect(result).to.equal(AcceptTosResult.USER_NOT_FOUND);
     });
   });
 

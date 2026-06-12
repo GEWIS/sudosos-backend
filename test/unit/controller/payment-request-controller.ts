@@ -27,7 +27,7 @@ import chai from 'chai';
 const { expect, request } = chai;
 import PaymentRequestController from '../../../src/controller/payment-request-controller';
 import UserController from '../../../src/controller/user-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
 import Swagger from '../../../src/start/swagger';
@@ -65,19 +65,19 @@ describe('PaymentRequestController', (): void => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     const localUser = await User.save({
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     const otherUser = await User.save({
       firstName: 'Other',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
 
     // Seed 8 PaymentRequests — two per status, all with localUser as beneficiary

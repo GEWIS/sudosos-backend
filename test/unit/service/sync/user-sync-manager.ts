@@ -147,7 +147,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -156,7 +156,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.ORGAN,
         active: true,
-        acceptedToS: 'NOT_REQUIRED' as any,
+        tosRequired: false,
         canGoIntoDebt: true,
       });
 
@@ -165,7 +165,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.LOCAL_USER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -185,7 +185,7 @@ describe('UserSyncManager', (): void => {
         type: UserType.MEMBER,
         active: true,
         deleted: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -207,7 +207,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -216,7 +216,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.ORGAN,
         active: true,
-        acceptedToS: 'NOT_REQUIRED' as any,
+        tosRequired: false,
         canGoIntoDebt: true,
       });
 
@@ -237,7 +237,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -259,7 +259,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -282,7 +282,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -304,7 +304,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -325,7 +325,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -351,7 +351,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -370,7 +370,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -439,7 +439,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -461,7 +461,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -480,7 +480,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -501,7 +501,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 
@@ -517,7 +517,7 @@ describe('UserSyncManager', (): void => {
         lastName: 'User',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: 'ACCEPTED' as any,
+        tosRequired: true,
         canGoIntoDebt: true,
       });
 

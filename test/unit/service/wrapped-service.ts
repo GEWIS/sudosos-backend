@@ -27,7 +27,7 @@ import Database from '../../../src/database/database';
 import WrappedService from '../../../src/service/wrapped-service';
 import Wrapped from '../../../src/entity/wrapped';
 import WrappedOrganMember from '../../../src/entity/wrapped/wrapped-organ-member';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Transaction from '../../../src/entity/transactions/transaction';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -78,7 +78,7 @@ describe('WrappedService', (): void => {
       active: true,
       deleted: false,
       extensiveDataProcessing: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     await connection.manager.save(userWithExtData);
     users.push(userWithExtData);
@@ -90,7 +90,7 @@ describe('WrappedService', (): void => {
       active: true,
       deleted: false,
       extensiveDataProcessing: false,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     await connection.manager.save(userWithoutExtData);
     users.push(userWithoutExtData);
@@ -102,7 +102,7 @@ describe('WrappedService', (): void => {
       active: false,
       deleted: false,
       extensiveDataProcessing: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     await connection.manager.save(inactiveUser);
     users.push(inactiveUser);
@@ -115,7 +115,7 @@ describe('WrappedService', (): void => {
       active: true,
       deleted: false,
       extensiveDataProcessing: false,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     });
     await connection.manager.save(activeOrgan);
 
@@ -126,7 +126,7 @@ describe('WrappedService', (): void => {
       active: false,
       deleted: false,
       extensiveDataProcessing: false,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     });
     await connection.manager.save(inactiveOrgan);
 
@@ -157,7 +157,7 @@ describe('WrappedService', (): void => {
       lastName: 'User1',
       type: UserType.POINT_OF_SALE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     });
     await connection.manager.save(activeOrganPosUser);
 
@@ -880,7 +880,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(userWithoutMembership);
 
@@ -946,7 +946,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(eligibleSeller);
 
@@ -957,7 +957,7 @@ describe('WrappedService', (): void => {
         active: false,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(inactiveSeller);
 
@@ -1130,7 +1130,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(seller1);
 
@@ -1141,7 +1141,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(seller2);
 
@@ -1296,7 +1296,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: false,
-        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        tosRequired: false,
       });
       await ctx.connection.manager.save(emptyOrgan);
 
@@ -1344,7 +1344,7 @@ describe('WrappedService', (): void => {
         active: true,
         deleted: false,
         extensiveDataProcessing: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       await ctx.connection.manager.save(nonSeller);
 

@@ -18,7 +18,7 @@
  *  @license
  */
 
-import User, { UserType } from '../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
 import TermsOfServiceAcceptance from '../../src/entity/user/terms-of-service-acceptance';
 import TermsOfServiceService from '../../src/service/terms-of-service-service';
 import generateBalance from './test-helpers';
@@ -71,8 +71,7 @@ export async function tokenFor(
   if (organs && organs.length > 0 && !roles.includes(SELLER_ROLE)) {
     roles.push(SELLER_ROLE);
   }
-  const acceptedToS = await TermsOfServiceService.getUserTosStatus(user);
-  return { user, roles, organs, posId, acceptedToS };
+  return { user, roles, organs, posId, acceptedToS: TermsOfServiceStatus.NOT_REQUIRED };
 }
 
 /**
@@ -131,10 +130,8 @@ export class Builder {
     return this;
   }
 
-  public async get(): Promise<User> {
-    const user = await User.save(this.user as User);
-    await acceptCurrentTos(user);
-    return user;
+  public get(): Promise<User> {
+    return User.save(this.user as User);
   }
 
   public delete(): Promise<DeleteResult> {

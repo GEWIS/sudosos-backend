@@ -25,7 +25,7 @@ import UserSettingsStore from '../../../src/user-settings/user-settings-store';
 import UserSetting, { IUserSettings } from '../../../src/entity/user-setting';
 import { expect } from 'chai';
 import UserSettingsDefaults from '../../../src/user-settings/user-settings-defaults';
-import User, { UserType, TermsOfServiceStatus } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 
 describe('UserSettingsStore', () => {
   let ctx: {
@@ -47,7 +47,7 @@ describe('UserSettingsStore', () => {
       lastName: 'User1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User);
     await User.save(ctx.user1);
 
@@ -56,7 +56,7 @@ describe('UserSettingsStore', () => {
       lastName: 'User2',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User);
     await User.save(ctx.user2);
   });

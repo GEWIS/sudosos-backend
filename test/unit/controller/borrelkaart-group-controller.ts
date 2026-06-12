@@ -31,7 +31,6 @@ import VoucherGroupResponse from '../../../src/controller/response/voucher-group
 import Database from '../../../src/database/database';
 import VoucherGroup from '../../../src/entity/user/voucher-group';
 import User, {
-  TermsOfServiceStatus,
   UserType,
 } from '../../../src/entity/user/user';
 import UserVoucherGroup from '../../../src/entity/user/user-voucher-group';
@@ -112,7 +111,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -120,7 +119,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser2 = {
@@ -128,7 +127,7 @@ describe('VoucherGroupController', async (): Promise<void> => {
       firstName: 'User 2',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     await User.save(adminUser);

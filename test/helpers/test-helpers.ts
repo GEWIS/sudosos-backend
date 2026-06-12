@@ -29,7 +29,7 @@ import RoleManager from '../../src/rbac/role-manager';
 import Database from '../../src/database/database';
 import TokenHandler from '../../src/authentication/token-handler';
 import User, { UserType } from '../../src/entity/user/user';
-import { ADMIN_USER, UserFactory } from './user-factory';
+import { acceptCurrentTos, ADMIN_USER, UserFactory } from './user-factory';
 import { truncateAllTables } from './database-helpers';
 import ServerSettingsStore from '../../src/server-settings/server-settings-store';
 
@@ -82,6 +82,7 @@ export async function defaultAfter(ctx: DefaultContext): Promise<void> {
 
 export async function defaultTokens(tokenHandler: TokenHandler) {
   const admin: User = await (await UserFactory(await ADMIN_USER())).get();
+  await acceptCurrentTos(admin);
   const user: User = await (await UserFactory()).get();
   const adminToken = await tokenHandler.signToken({ user: admin, roles: [UserType[UserType.LOCAL_ADMIN]] }, 'nonce admin');
   const token = await tokenHandler.signToken({ user, roles: [UserType[UserType.MEMBER]] }, 'nonce');

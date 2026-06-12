@@ -24,7 +24,7 @@ import BannerService, { BannerFilterParameters } from '../../../src/service/bann
 import Banner from '../../../src/entity/banner';
 import { defaultBefore, finishTestDB } from '../../helpers/test-helpers';
 import BannerSeeder from '../../seed/banner-seeder';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 
 describe('BannerService', () => {
   let ctx: {
@@ -45,7 +45,7 @@ describe('BannerService', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     await User.save(adminUser);

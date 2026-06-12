@@ -28,7 +28,7 @@ import TransactionController from '../../src/controller/transaction-controller';
 import Database from '../../src/database/database';
 import Swagger from '../../src/start/swagger';
 import TokenHandler from '../../src/authentication/token-handler';
-import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import User, { UserType } from '../../src/entity/user/user';
 import TokenMiddleware from '../../src/middleware/token-middleware';
 import RoleManager from '../../src/rbac/role-manager';
 import { TransactionRequest } from '../../src/controller/request/transaction-request';
@@ -112,13 +112,13 @@ describe('POS Token Flow Integration Tests', (): void => {
       lastName: 'User',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
       canGoIntoDebt: true,
     } as User);
     await adminOwner.save();
 
     ctx.users[0].type = UserType.LOCAL_USER;
-    ctx.users[0].acceptedToS = TermsOfServiceStatus.ACCEPTED;
+    ctx.users[0].tosRequired = true;
     await ctx.users[0].save();
 
     // Create roles

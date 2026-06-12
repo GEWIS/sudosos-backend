@@ -31,7 +31,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { UserFactory } from '../../helpers/user-factory';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -127,14 +127,14 @@ describe('BaseController', (): void => {
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User)).get();
     const userNotAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      tosRequired: true,
     } as User)).get();
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
