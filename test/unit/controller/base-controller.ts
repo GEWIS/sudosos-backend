@@ -31,7 +31,7 @@ import RoleManager from '../../../src/rbac/role-manager';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import TokenHandler from '../../../src/authentication/token-handler';
 import { UserFactory } from '../../helpers/user-factory';
-import User, { UserType } from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
@@ -144,8 +144,12 @@ describe('BaseController', (): void => {
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use(ctx.controller.getRouter());
 
-    ctx.userToken = await tokenHandler.signToken({ user: userAccepted, roles: [] }, '39');
-    ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], posId: 123 }, '39');
+    ctx.userToken = await tokenHandler.signToken({
+      user: userAccepted, roles: [], acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    }, '39');
+    ctx.userTokenRestricted = await tokenHandler.signToken({
+      user: userNotAccepted, roles: [], posId: 123, acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+    }, '39');
   });
 
   afterAll(async () => {

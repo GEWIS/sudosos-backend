@@ -48,7 +48,7 @@ import {
   SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
-import { inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
+import { acceptCurrentTos, inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
@@ -136,6 +136,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser2);
     await User.save(invoiceUser3);
     await User.save(invoiceUser4);
+    await acceptCurrentTos(adminUser, localUser);
 
     const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4]);
     const { invoices } = await new InvoiceSeeder().seed([invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4], transactions);
