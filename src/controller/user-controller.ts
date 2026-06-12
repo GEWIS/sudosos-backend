@@ -83,6 +83,8 @@ import Role from '../entity/rbac/role';
 import WrappedService from '../service/wrapped-service';
 import UserSettingsStore from '../user-settings/user-settings-store';
 import { PatchUserSettingsRequest } from './request/user-request';
+import TermsOfServiceService from '../service/terms-of-service-service';
+import { UserTosResponse } from './response/terms-of-service-response';
 
 export default class UserController extends BaseController {
   private logger: Logger = log4js.getLogger('UserController');
@@ -239,6 +241,15 @@ export default class UserController extends BaseController {
             req.token.roles, 'get', UserController.getRelation(req), 'User', ['id', 'firstName', 'lastName'],
           ),
           handler: this.getOrganMembers.bind(this),
+        },
+      },
+      '/:id(\\d+)/tos': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', UserController.getRelation(req), 'User', ['*'],
+          ),
+          handler: this.getUserTos.bind(this),
+          restrictions: { acceptedTOS: false },
         },
       },
       '/:id(\\d+)/products': {
@@ -1045,6 +1056,49 @@ export default class UserController extends BaseController {
       }
     } catch (error) {
       this.logger.error('Could not accept ToS for user:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /users/{id}/tos
+   * @summary Get a user's terms of service status and acceptance history
+   * @operationId getUserTos
+   * @tags users - Operations of the User controller
+   * @param {integer} id.path.required - The id of the user
+   * @security JWT
+   * @return {UserTosResponse} 200 - The user's TOS status and acceptance history
+   * @return {string} 404 - User not found
+   */
+  public async getUserTos(req: RequestWithToken, res: Response): Promise<void> {
+    const parameters = req.params;
+    this.logger.trace('Get user TOS status', parameters, 'by user', req.token.user);
+
+    try {
+      const id = parseInt(parameters.id, 10);
+      const user = await User.findOne({ where: { id, deleted: false } });
+      if (user == null) {
+        res.status(404).json('User not found.');
+        return;
+      }
+
+      const [status, currentVersion, acceptances] = await Promise.all([
+        TermsOfServiceService.getUserTosStatus(user),
+        TermsOfServiceService.getCurrentVersion(),
+        TermsOfServiceService.getAcceptances(id),
+      ]);
+
+      const response: UserTosResponse = {
+        status,
+        currentVersion,
+        acceptances: acceptances.map((acceptance) => ({
+          versionNumber: acceptance.versionNumber,
+          acceptedAt: acceptance.createdAt.toISOString(),
+        })),
+      };
+      res.json(response);
+    } catch (error) {
+      this.logger.error('Could not get user TOS status:', error);
       res.status(500).json('Internal server error.');
     }
   }

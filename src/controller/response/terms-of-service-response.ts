@@ -24,6 +24,8 @@
  * @module terms-of-service
  */
 
+import { TermsOfServiceStatus } from '../../entity/user/user';
+
 /**
  * @typedef {object} TermsOfServiceResponse
  * @property {string} versionNumber.required - The terms of service version number.
@@ -34,4 +36,32 @@ export interface TermsOfServiceResponse {
   versionNumber: string;
   date: string;
   content: string;
+}
+
+/**
+ * @typedef {object} UserTosAcceptanceResponse
+ * @property {string} versionNumber.required - The accepted terms of service version number.
+ * @property {string} acceptedAt.required - The date at which this version was accepted.
+ */
+export interface UserTosAcceptanceResponse {
+  versionNumber: string;
+  acceptedAt: string;
+}
+
+/**
+ * enum:ACCEPTED,NOT_ACCEPTED,NOT_REQUIRED - The terms of service status of a user
+ * @typedef {string} TermsOfServiceStatus
+ */
+
+/**
+ * @typedef {object} UserTosResponse
+ * @property {TermsOfServiceStatus} status.required - The TOS status of the user,
+ * computed against the current TOS version.
+ * @property {string} currentVersion.required - The current terms of service version number.
+ * @property {Array<UserTosAcceptanceResponse>} acceptances.required - All TOS versions the user has accepted.
+ */
+export interface UserTosResponse {
+  status: TermsOfServiceStatus;
+  currentVersion: string;
+  acceptances: UserTosAcceptanceResponse[];
 }
