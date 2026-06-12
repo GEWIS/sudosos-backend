@@ -32,7 +32,7 @@ import User, { UserType } from '../../src/entity/user/user';
 import TokenMiddleware from '../../src/middleware/token-middleware';
 import RoleManager from '../../src/rbac/role-manager';
 import { TransactionRequest } from '../../src/controller/request/transaction-request';
-import { UserFactory } from '../helpers/user-factory';
+import { acceptCurrentTos, UserFactory } from '../helpers/user-factory';
 import ServerSettingsStore from '../../src/server-settings/server-settings-store';
 import { truncateAllTables } from '../helpers/database-helpers';
 import { finishTestDB } from '../helpers/test-helpers';
@@ -116,6 +116,7 @@ describe('POS Token Flow Integration Tests', (): void => {
       canGoIntoDebt: true,
     } as User);
     await adminOwner.save();
+    await acceptCurrentTos(adminOwner);
 
     ctx.users[0].type = UserType.LOCAL_USER;
     ctx.users[0].tosRequired = true;
