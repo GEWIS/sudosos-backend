@@ -116,8 +116,10 @@ import {
 } from '../migrations/1777010230751-stripe-payment-intent-payment-request';
 import Config from '../config';
 import { AddExpiryToUser1778681972323 } from '../migrations/1778681972323-add-expiry-to-user';
+import TermsOfServiceAcceptance from '../entity/user/terms-of-service-acceptance';
 import log4js, { Logger } from 'log4js';
 import { applyConfiguredLogLevel } from '../helpers/logging';
+import { TermsOfServiceVersioning1781691836923 } from '../migrations/1781691836923-terms-of-service-versioning';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -169,6 +171,7 @@ function getDataSourceOptions(): DataSourceOptions {
       PaymentRequest1777010230727,
       StripePaymentIntentPaymentRequest1777010230751,
       AddExpiryToUser1778681972323,
+      TermsOfServiceVersioning1781691836923,
     ],
     extra: {
       authPlugins: {
@@ -241,6 +244,7 @@ function getDataSourceOptions(): DataSourceOptions {
       UserNotificationPreference,
       UserSetting,
       PaymentRequest,
+      TermsOfServiceAcceptance,
     ],
     subscribers: [
       TransactionSubscriber,
