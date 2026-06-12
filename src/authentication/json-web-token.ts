@@ -41,7 +41,7 @@
  */
 
 
-import User from '../entity/user/user';
+import User, { TermsOfServiceStatus } from '../entity/user/user';
 
 /**
  * The contents of the JWT used for user authentication.
@@ -51,6 +51,12 @@ export default class JsonWebToken {
    * The token holds a reference to the user to which this token belongs.
    */
   public user: User;
+
+  /**
+   * The TOS status of the user, computed against the current TOS version
+   * at the time the token was signed.
+   */
+  public acceptedToS?: TermsOfServiceStatus;
 
   /**
    * The roles that are assigned to the specific user.

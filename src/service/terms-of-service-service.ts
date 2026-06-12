@@ -85,7 +85,7 @@ export default class TermsOfServiceService {
     users: Pick<User, 'id' | 'tosRequired'>[],
     manager?: EntityManager,
   ): Promise<boolean> {
-    const requiredIds = users.filter((u) => u.tosRequired).map((u) => u.id);
+    const requiredIds = [...new Set(users.filter((u) => u.tosRequired).map((u) => u.id))];
     if (requiredIds.length === 0) return true;
     const versionNumber = await TermsOfServiceService.getCurrentVersion();
     const where = { userId: In(requiredIds), versionNumber };

@@ -161,10 +161,9 @@ export default class User extends BaseEntity {
   public type: UserType;
 
   @Column({
-    type: 'varchar',
-    nullable: false, default: TermsOfServiceStatus.NOT_ACCEPTED,
+    default: true,
   })
-  public acceptedToS: TermsOfServiceStatus;
+  public tosRequired: boolean;
 
   @Column({
     default: false,

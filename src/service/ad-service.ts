@@ -28,7 +28,7 @@ import { Client, EqualityFilter, SearchResult } from 'ldapts';
 import { In } from 'typeorm';
 import log4js, { Logger } from 'log4js';
 import LDAPAuthenticator from '../entity/authenticator/ldap-authenticator';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import { bindUser, LDAPGroup, LDAPResponse, LDAPResult, LDAPUser, userFromLDAP } from '../helpers/ad';
 import AuthenticationService from './authentication-service';
 import RoleManager from '../rbac/role-manager';
@@ -58,7 +58,7 @@ export default class ADService extends WithManager {
       lastName: '',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     });
     await bindUser(this.manager, sharedUser, account);
     return account;
@@ -74,7 +74,7 @@ export default class ADService extends WithManager {
       lastName: '',
       type: UserType.INTEGRATION,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
       canGoIntoDebt: false,
     });
 

@@ -28,7 +28,7 @@ import { filter } from 'ldap-escape';
 import log4js, { Logger } from 'log4js';
 import { FindOptionsRelations, FindOptionsWhere, In } from 'typeorm';
 import { randomBytes } from 'crypto';
-import User, { LocalUserTypes, UserType } from '../entity/user/user';
+import User, { LocalUserTypes, TermsOfServiceStatus, UserType } from '../entity/user/user';
 import JsonWebToken from '../authentication/json-web-token';
 import AuthenticationResponse from '../controller/response/authentication-response';
 import TokenHandler from '../authentication/token-handler';
@@ -50,6 +50,7 @@ import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ISettings } from '../entity/server-setting';
 import Config from '../config';
 import { applyConfiguredLogLevel } from '../helpers/logging';
+import TermsOfServiceService from './terms-of-service-service';
 
 export interface AuthenticationContext {
   tokenHandler: TokenHandler,
@@ -66,6 +67,7 @@ export interface AuthenticationResult {
   roles: Role[],
   organs: User[],
   token: string,
+  acceptedToS: TermsOfServiceStatus,
 }
 
 /**
@@ -168,9 +170,11 @@ export default class AuthenticationService extends WithManager {
   public async makeJsonWebToken(
     user: User, roles: Role[], organs: User[], overrideMaintenance: boolean, posId?: number,
   ): Promise<JsonWebToken> {
+    const acceptedToS = await TermsOfServiceService.getUserTosStatus(user);
 
     return {
       user,
+      acceptedToS,
       roles: roles.map((r) => r.name),
       organs,
       overrideMaintenance,
@@ -207,24 +211,19 @@ export default class AuthenticationService extends WithManager {
   /**
    * Converts the internal object representation to an authentication response, which can be
    * returned in the API response.
-   * @param user - The user that authenticated.
-   * @param roles - The roles that the authenticated user has.
-   * @param organs - The organs that the user is part of.
-   * @param token - The JWT token that can be used to authenticate.
+   * @param result - The result of the authentication.
    * @returns The authentication response.
    */
   public static asAuthenticationResponse(
-    user: User,
-    roles: Role[],
-    organs: User[],
-    token: string,
+    result: AuthenticationResult,
   ): AuthenticationResponse {
+    const { user, roles, organs, token, acceptedToS } = result;
     return {
       user: asUserResponse(user, true),
       organs: organs.map((organ) => asUserResponse(organ, false)),
       roles: roles.map((r) => r.name),
       token,
-      acceptedToS: user.acceptedToS,
+      acceptedToS,
       rolesWithPermissions: roles.map((r) => RBACService.asRoleResponse(r)),
     };
   }
@@ -566,7 +565,7 @@ export default class AuthenticationService extends WithManager {
     const finalSalt = salt || (await bcrypt.genSalt(AuthenticationService.BCRYPT_ROUNDS));
     const token = await context.tokenHandler.signToken(contents, finalSalt, expiry);
 
-    return { user: contents.user, roles, organs: contents.organs, token };
+    return { user: contents.user, roles, organs: contents.organs, token, acceptedToS: contents.acceptedToS };
   }
 
   public async compareHash(password: string, hash: string): Promise<boolean> {

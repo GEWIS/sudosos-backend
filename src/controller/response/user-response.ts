@@ -26,7 +26,6 @@
 
 import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
-import { TermsOfServiceStatus } from '../../entity/user/user';
 import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
 import { SupportedLanguage } from '../../entity/user-setting';
 
@@ -53,7 +52,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {boolean} deleted.required - Whether the user is deleted
  * @property {string} type.required - The type of user
  * @property {string} email - If local user, the e-mail of the user
- * @property {string} acceptedToS - Whether this user has accepted the TOS
+ * @property {boolean} tosRequired - Whether this user is required to accept the TOS
  * @property {boolean} extensiveDataProcessing - Whether data about this
  * user can be used (non-anonymously) for more data science!
  * @property {boolean} ofAge - Whether someone is old enough to drink beer
@@ -68,7 +67,7 @@ export interface UserResponse extends BaseUserResponse {
   deleted: boolean;
   type: string;
   email?: string;
-  acceptedToS?: TermsOfServiceStatus,
+  tosRequired?: boolean,
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;

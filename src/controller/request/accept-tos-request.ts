@@ -27,7 +27,9 @@
  * @typedef {object} AcceptTosRequest
  * @property {boolean} extensiveDataProcessing.required - Whether data about this
  * user can be used (non-anonymously) for more data science!
+ * @property {string} version.required - The TOS version being accepted.
  */
 export interface AcceptTosRequest {
   extensiveDataProcessing: boolean;
+  version: string;
 }

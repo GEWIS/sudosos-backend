@@ -49,6 +49,7 @@ import RBACService from '../service/rbac-service';
 import { updatePinRequestSpecFactory } from './request/validators/update-pin-request-spec';
 import UpdatePinRequest from './request/update-pin-request';
 import UserService, {
+  AcceptTosResult,
   asUserResponse,
   parseGetFinancialMutationsFilters,
   parseGetUsersFilters,
@@ -1011,13 +1012,14 @@ export default class UserController extends BaseController {
 
   /**
    * POST /users/acceptTos
-   * @summary Accept the Terms of Service if you have not accepted it yet
+   * @summary Accept the current Terms of Service version
    * @operationId acceptTos
    * @tags users - Operations of the User controller
    * @param {AcceptTosRequest} request.body.required - "Tosrequest body"
    * @security JWT
    * @return 204 - ToS accepted
-   * @return {string} 400 - ToS already accepted
+   * @return {string} 400 - Given version is not the current TOS version, or this version was already accepted
+   * @return {string} 404 - User not found
    */
   public async acceptToS(req: RequestWithToken, res: Response): Promise<void> {
     this.logger.trace('Accept ToS for user', req.token.user);
@@ -1026,20 +1028,21 @@ export default class UserController extends BaseController {
     const body = req.body as AcceptTosRequest;
 
     try {
-      const user = await UserService.getSingleUser(id);
-      if (user == null) {
-        res.status(404).json('User not found.');
-        return;
+      const result = await UserService.acceptToS(id, body);
+      switch (result) {
+        case AcceptTosResult.USER_NOT_FOUND:
+          res.status(404).json('User not found.');
+          return;
+        case AcceptTosResult.NOT_CURRENT_VERSION:
+          res.status(400).json('Given version is not the current Terms of Service version.');
+          return;
+        case AcceptTosResult.ALREADY_ACCEPTED:
+          res.status(400).json('User already accepted this ToS version.');
+          return;
+        case AcceptTosResult.SUCCESS:
+          res.status(204).json();
+          return;
       }
-
-      const success = await UserService.acceptToS(id, body);
-      if (!success) {
-        res.status(400).json('User already accepted ToS.');
-        return;
-      }
-
-      res.status(204).json();
-      return;
     } catch (error) {
       this.logger.error('Could not accept ToS for user:', error);
       res.status(500).json('Internal server error.');

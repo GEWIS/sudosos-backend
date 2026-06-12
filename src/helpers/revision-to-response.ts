@@ -30,7 +30,7 @@ import { BaseContainerResponse } from '../controller/response/container-response
 import ContainerRevision from '../entity/container/container-revision';
 import { BasePointOfSaleResponse } from '../controller/response/point-of-sale-response';
 import PointOfSaleRevision from '../entity/point-of-sale/point-of-sale-revision';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import { BaseUserResponse, InvoiceUserResponse, UserResponse } from '../controller/response/user-response';
 import VatGroup from '../entity/vat-group';
 import { BaseVatGroupResponse } from '../controller/response/vat-group-response';
@@ -120,7 +120,7 @@ export function parseUserToResponse(user: User, timestamps = false): UserRespons
     active: user.active,
     deleted: user.deleted,
     type: UserType[user.type],
-    acceptedToS: user.acceptedToS,
+    tosRequired: user.tosRequired,
     email: user.email,
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
@@ -141,7 +141,7 @@ export interface RawUser {
   email: string,
   deleted: number,
   type: string,
-  acceptedToS: TermsOfServiceStatus,
+  tosRequired: number,
   extensiveDataProcessing: number,
   canGoIntoDebt: number,
   memberId?: number,
@@ -164,7 +164,7 @@ export function parseRawUserToResponse(user: RawUser, timestamps = false): UserR
     deleted: user.deleted === 1,
     type: user.type,
     email: user.email,
-    acceptedToS: user.acceptedToS,
+    tosRequired: user.tosRequired === 1,
     extensiveDataProcessing: user.extensiveDataProcessing === 1,
     ofAge: user.ofAge === 1,
     canGoIntoDebt: user.canGoIntoDebt === 1,

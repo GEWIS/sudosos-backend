@@ -24,7 +24,7 @@
  * @module internal/ldap-sync-service
  */
 
-import User, { TermsOfServiceStatus, UserType } from '../../../entity/user/user';
+import User, { UserType } from '../../../entity/user/user';
 import { Client } from 'ldapts';
 import ADService from '../../ad-service';
 import LDAPAuthenticator from '../../../entity/authenticator/ldap-authenticator';
@@ -94,7 +94,7 @@ export default class LdapSyncService extends UserSyncService {
     user.firstName = ldapUser.displayName;
     user.lastName = '';
     user.canGoIntoDebt = false;
-    user.acceptedToS = TermsOfServiceStatus.NOT_REQUIRED;
+    user.tosRequired = false;
     user.active = true;
     
     if (!isDryRun) {
