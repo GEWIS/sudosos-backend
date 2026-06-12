@@ -161,7 +161,7 @@ export default class TerminalPaymentService extends WithManager {
    * @param id
    * @returns
    */
-  public async cancelTerminalPayment(id: number): Promise<TerminalPayment> {
+  public async cancelTerminalPayment(id: number, sendStripeCancellation = true): Promise<TerminalPayment> {
     const tp = await this.getTerminalPayment(id);
     if (!tp) return null;
 
@@ -174,7 +174,9 @@ export default class TerminalPaymentService extends WithManager {
     await this.manager.save(tp);
     await this.manager.getRepository(TmpTransaction).remove(transaction);
 
-    tp.stripePaymentIntent = await this.stripeService.cancelPaymentIntent(tp.stripePaymentIntent);
+    if (sendStripeCancellation) {
+      tp.stripePaymentIntent = await this.stripeService.cancelPaymentIntent(tp.stripePaymentIntent);
+    }
 
     return tp;
   }

@@ -70,12 +70,18 @@ export default class StripeWebhookService extends WithManager {
     }
 
     const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
+    const mutuallyExclusiveStates = [
+      StripePaymentIntentState.SUCCEEDED,
+      StripePaymentIntentState.FAILED,
+      StripePaymentIntentState.CANCELLED,
+    ];
     if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
-    if (state === StripePaymentIntentState.SUCCEEDED && states.includes(StripePaymentIntentState.FAILED)) {
-      throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
-    }
-    if (state === StripePaymentIntentState.FAILED && states.includes(StripePaymentIntentState.SUCCEEDED)) {
-      throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
+    if (mutuallyExclusiveStates.includes(state)) {
+      const forbiddenStates = [...mutuallyExclusiveStates];
+      forbiddenStates.splice(forbiddenStates.indexOf(state), 1);
+      for (const s of forbiddenStates) {
+        if (states.includes(s)) throw new Error(`Cannot create status ${StripePaymentIntentState[state]}, because ${StripePaymentIntentState[s]} already exists`);
+      }
     }
 
     const paymentIntentStatus = await this.manager.getRepository(StripePaymentIntentStatus)
@@ -114,6 +120,11 @@ export default class StripeWebhookService extends WithManager {
     }
     if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.terminalPayment) {
       await new TerminalPaymentService(this.manager).handleTerminalPaymentSuccess(paymentIntent);
+    }
+
+    // If payment is cancelled, propagate this to appropriate entity if cancellation is done by Stripe (and not SudoSOS)
+    if (state === StripePaymentIntentState.CANCELLED && !!paymentIntent.terminalPayment && !paymentIntent.cancelledWithAPI) {
+      await new TerminalPaymentService(this.manager).cancelTerminalPayment(paymentIntent.terminalPayment.id, false);
     }
 
     return paymentIntentStatus;

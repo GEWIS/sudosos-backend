@@ -20,6 +20,8 @@
 
 import { DataSource } from 'typeorm';
 import { expect } from 'chai';
+import sinon from 'sinon';
+import log4js from 'log4js';
 import Stripe from 'stripe';
 import User from '../../../src/entity/user/user';
 import Database, { AppDataSource } from '../../../src/database/database';
@@ -32,10 +34,7 @@ import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { DepositSeeder, UserSeeder } from '../../seed';
 
-const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
-  || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
-
-describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void> => {
+describe('StripeWebhookService', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     users: User[],
@@ -130,6 +129,14 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
       await expect(AppDataSource.manager.transaction(async (manager) => new StripeWebhookService(manager).createNewPaymentIntentStatus(id, state)))
         .to.eventually.be.rejectedWith('Cannot create status SUCCEEDED, because FAILED already exists');
     });
+    it('should not create "SUCCEEDED" state when "CANCELLED" already exists', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === StripePaymentIntentState.CANCELLED)))[0];
+      const state = StripePaymentIntentState.SUCCEEDED;
+
+      await expect(AppDataSource.manager.transaction(async (manager) => new StripeWebhookService(manager).createNewPaymentIntentStatus(id, state)))
+        .to.eventually.be.rejectedWith('Cannot create status SUCCEEDED, because CANCELLED already exists');
+    });
     it('should not create "FAILED" state when "SUCCEEDED" already exists', async () => {
       const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
         .some((s) => s.state === StripePaymentIntentState.SUCCEEDED)))[0];
@@ -137,6 +144,27 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
 
       await expect(AppDataSource.manager.transaction(async (manager) => new StripeWebhookService(manager).createNewPaymentIntentStatus(id, state)))
         .to.eventually.be.rejectedWith('Cannot create status FAILED, because SUCCEEDED already exists');
+    });
+    it('should not create "CANCELLED" state when "SUCCEEDED" already exists', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === StripePaymentIntentState.SUCCEEDED)))[0];
+      const state = StripePaymentIntentState.CANCELLED;
+
+      await expect(AppDataSource.manager.transaction(async (manager) => new StripeWebhookService(manager).createNewPaymentIntentStatus(id, state)))
+        .to.eventually.be.rejectedWith('Cannot create status CANCELLED, because SUCCEEDED already exists');
+    });
+    it('should not create "CANCELLED" state when "FAILED" already exists', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses
+        .some((s) => s.state === StripePaymentIntentState.FAILED)))[0];
+      const state = StripePaymentIntentState.CANCELLED;
+
+      await expect(AppDataSource.manager.transaction(async (manager) => new StripeWebhookService(manager).createNewPaymentIntentStatus(id, state)))
+        .to.eventually.be.rejectedWith('Cannot create status CANCELLED, because FAILED already exists');
+    });
+    it('should throw when paymentIntent does not exist', async () => {
+      const id = ctx.stripeDeposits.length + 100;
+      const promise = new StripeWebhookService().createNewPaymentIntentStatus(id, StripePaymentIntentState.CREATED);
+      await expect(promise).to.eventually.be.rejectedWith(`PaymentIntent with id "${id}" not found.`);
     });
   });
 
@@ -160,6 +188,9 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
           break;
         case StripePaymentIntentState.FAILED:
           type = 'payment_intent.payment_failed';
+          break;
+        case StripePaymentIntentState.CANCELLED:
+          type = 'payment_intent.canceled';
           break;
         default:
           type = 'UNKNOWN';
@@ -200,6 +231,10 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
       const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 2))[3];
       await testHandleWebhookEvent(id, StripePaymentIntentState.FAILED);
     });
+    it('should correctly handle payment_intent.payment_cancelled', async () => {
+      const { id } = (ctx.stripeDeposits.filter((d) => d.stripePaymentIntent.paymentIntentStatuses.length === 1))[2];
+      await testHandleWebhookEvent(id, StripePaymentIntentState.CANCELLED);
+    });
     it('should correctly do nothing when type is not listed', async () => {
       const { id } = ctx.stripeDeposits[ctx.stripeDeposits.length - 1];
       const beforeStripeDeposit = await StripeService.getStripeDeposit(id);
@@ -221,6 +256,36 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
         .to.equal(beforeStripeDeposit.stripePaymentIntent.paymentIntentStatuses.length);
       expect(afterStripeDeposit.updatedAt.getTime())
         .to.equal(beforeStripeDeposit.updatedAt.getTime());
+    });
+    it('should log an error when paymentIntent does not exist', async () => {
+      const id = 'abc-non-existent-id-fake';
+      const event = {
+        type: 'payment_intent.created',
+        api_version: STRIPE_API_VERSION,
+        data: {
+          object: {
+            id,
+          } as any,
+        },
+      } as Stripe.Event;
+
+      // The service swallows the error and only logs it, so stub the logger to intercept it.
+      // log4js.getLogger() returns a fresh Logger wrapper each call, so we stub the shared
+      // Logger prototype to also affect the instance the service created in beforeAll.
+      const loggerProto = Object.getPrototypeOf(log4js.getLogger('StripeController'));
+      const errorStub = sinon.stub(loggerProto, 'error');
+      try {
+        await expect(ctx.stripeWebhookService.handleWebhookEvent(event)).to.eventually.be.fulfilled;
+
+        expect(errorStub).to.have.been.called;
+        const loggedError = errorStub.getCalls()
+          .flatMap((call) => call.args)
+          .find((arg) => arg instanceof Error
+            && arg.message === `Could not find payment intent with ID "${id}"`);
+        expect(loggedError, 'expected the missing-payment-intent error to be logged').to.exist;
+      } finally {
+        errorStub.restore();
+      }
     });
   });
 });

@@ -94,8 +94,16 @@ export default class DepositSeeder extends WithManager {
       });
 
       const succeeded = Math.floor(((i % 8) + 1) / 4) !== 1;
+      // CANCELLED is mutually exclusive with SUCCEEDED and FAILED. Only cancel a small
+      // subset of the non-succeeded deposits. The terminal state is only persisted for
+      // deposits with a full status array (i % 4 === 3), so the condition must land there:
+      // i % 24 === 11 picks i = 11, 35, 59, 83 (all non-succeeded, all i % 4 === 3).
+      const cancelled = !succeeded && i % 24 === 11;
+      let terminalState = StripePaymentIntentState.FAILED;
+      if (succeeded) terminalState = StripePaymentIntentState.SUCCEEDED;
+      else if (cancelled) terminalState = StripePaymentIntentState.CANCELLED;
       const states = [StripePaymentIntentState.CREATED, StripePaymentIntentState.PROCESSING,
-        succeeded ? StripePaymentIntentState.SUCCEEDED : StripePaymentIntentState.FAILED].slice(0, i % 4);
+        terminalState].slice(0, i % 4);
 
       if (succeeded) {
         const transfer = await this.manager.save(Transfer, {

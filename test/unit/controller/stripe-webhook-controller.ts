@@ -30,7 +30,7 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import StripeWebhookController from '../../../src/controller/stripe-webhook-controller';
-import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
