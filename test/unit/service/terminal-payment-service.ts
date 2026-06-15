@@ -616,6 +616,67 @@ describe('TerminalPaymentService', () => {
         .getRepository(TerminalPayment)
         .save(ctxTerminalPayment!);
     });
+    it('should not cancel terminal payment at Stripe when instructed', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "CREATED"',
+      ).to.not.be.undefined;
+
+      const tmpTransactionId = ctxTerminalPayment!.temporaryTransaction!.id;
+      const nrTmpTransactionsBefore = await ctx.connection
+        .getRepository(TmpTransaction)
+        .count();
+
+      const service = new TerminalPaymentService();
+      const result = await service.cancelTerminalPayment(ctxTerminalPayment!.id, false);
+
+      // The Stripe payment intent should NOT have been cancelled
+      expect(paymentIntentsCancelStub).to.not.be.called;
+
+      // The returned terminal payment should now be CANCELLED
+      expect(result).to.not.be.null;
+      expect(result.temporaryTransaction).to.be.null;
+      expect(result.getState()).to.equal(
+        TerminalPaymentState.CANCELLED,
+      );
+      expect(result.stripePaymentIntent.cancelledWithAPI).to.equal(ctxTerminalPayment.stripePaymentIntent.cancelledWithAPI);
+
+      // The change should be persisted and the temporary transaction removed
+      const dbTerminalPayment = await service.getTerminalPayment(
+        ctxTerminalPayment!.id,
+      );
+      expect(dbTerminalPayment!.temporaryTransaction).to.be.null;
+      expect(dbTerminalPayment!.getState()).to.equal(
+        TerminalPaymentState.CANCELLED,
+      );
+
+      const nrTmpTransactionsAfter = await ctx.connection
+        .getRepository(TmpTransaction)
+        .count();
+      expect(nrTmpTransactionsAfter).to.equal(nrTmpTransactionsBefore - 1);
+      const removedTmp = await ctx.connection
+        .getRepository(TmpTransaction)
+        .findOne({ where: { id: tmpTransactionId } });
+      expect(removedTmp).to.be.null;
+
+      // Cleanup: restore the temporary transaction and re-attach it, and reset
+      // the payment intent's cancelledWithAPI flag, so the seeded CREATED
+      // terminal payment is left intact for other tests.
+      ctxTerminalPayment!.stripePaymentIntent.cancelledWithAPI = false;
+      await ctx.connection
+        .getRepository(StripePaymentIntent)
+        .save(ctxTerminalPayment!.stripePaymentIntent);
+      await ctx.connection
+        .getRepository(TmpTransaction)
+        .save(ctxTerminalPayment!.temporaryTransaction!);
+      await ctx.connection
+        .getRepository(TerminalPayment)
+        .save(ctxTerminalPayment!);
+    });
     it('should return null when terminal payment is already processed', async () => {
       const ctxTerminalPayment = ctx.terminalPayments.find(
         (t) => t.getState() === TerminalPaymentState.PAID,

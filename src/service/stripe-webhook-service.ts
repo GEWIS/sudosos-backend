@@ -27,6 +27,7 @@ import Config from '../config';
 import StripeService, { StripeFactory } from './stripe-service';
 import PaymentRequestService from './payment-request-service';
 import TerminalPaymentService from './terminal-payment-service';
+import { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
 
 export default class StripeWebhookService extends WithManager {
   private stripe: Stripe;
@@ -123,7 +124,7 @@ export default class StripeWebhookService extends WithManager {
     }
 
     // If payment is cancelled, propagate this to appropriate entity if cancellation is done by Stripe (and not SudoSOS)
-    if (state === StripePaymentIntentState.CANCELLED && !!paymentIntent.terminalPayment && !paymentIntent.cancelledWithAPI) {
+    if (state === StripePaymentIntentState.CANCELLED && !!paymentIntent.terminalPayment && paymentIntent.terminalPayment.getState() !== TerminalPaymentState.CANCELLED) {
       await new TerminalPaymentService(this.manager).cancelTerminalPayment(paymentIntent.terminalPayment.id, false);
     }
 
