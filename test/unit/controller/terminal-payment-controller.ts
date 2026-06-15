@@ -332,6 +332,45 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       expect(await TerminalPayment.count()).to.equal(countBefore);
     });
 
+    it('should return HTTP 400 if transaction fromUser is of wrong type', async () => {
+      const allowedTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.POINT_OF_SALE];
+      const allTypes: UserType[] = Object.keys(UserType) as UserType[];
+      const typesToTest = allTypes.filter((t) => !allowedTypes.includes(t));
+      expect(typesToTest.length).to.be.greaterThan(0);
+
+      const countBefore = await TerminalPayment.count();
+
+      // Test for each user type that is not allowed to make a terminal payment
+      for (const type of typesToTest) {
+        let u = {
+          firstName: `userType-${type}`,
+          type,
+          active: true,
+          acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        } as User;
+        u = await User.save(u);
+
+        const req = { transaction: { ...ctx.validTransactionRequest } };
+        req.transaction.from = u.id;
+
+        const res = await request(ctx.app)
+          .post('/terminal-payments')
+          .set('Authorization', `Bearer ${ctx.adminToken}`)
+          .send(req);
+
+        expect(res.status).to.equal(400);
+        // Already blocked by transaction validator.
+        if (type === UserType.ORGAN) {
+          expect(res.text).to.equal('Could not validate terminalPayment.');
+        } else {
+          expect(res.text).to.equal(`Could not create terminalPayment for user "${u.firstName} (SudoSOS ID: ${u.id})", because their account type is "${u.type}"`);
+        }
+        expect(await TerminalPayment.count()).to.equal(countBefore);
+
+        await User.delete(u.id);
+      }
+    });
+
     it('should return HTTP 403 if the user is not allowed to create a terminal payment', async () => {
       const countBefore = await TerminalPayment.count();
 

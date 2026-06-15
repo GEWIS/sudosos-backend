@@ -36,6 +36,7 @@ import { TerminalPaymentResponse } from './response/terminal-payment-response';
 import StripeService from '../service/stripe-service';
 import { asNumber } from '../helpers/validators';
 import { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
+import { UserType } from '../entity/user/user';
 
 export default class TerminalPaymentController extends BaseController {
   private logger: Logger = log4js.getLogger('TerminalPaymentController');
@@ -91,7 +92,9 @@ export default class TerminalPaymentController extends BaseController {
 
   /**
    * POST /terminal-payments
-   * @summary Create a terminal payment before executing
+   * @summary Create a terminal payment before executing. TerminalPayments can
+   * only be done for users of type LOCAL_USER, LOCAL_ADMIN, MEMBER, or
+   * POINT_OF_SALE (for anonymous payments).
    * @operationId createTerminalPayment
    * @tags terminalPayments - Operations of the Terminal Payment Controller
    * @security JWT
@@ -110,6 +113,13 @@ export default class TerminalPaymentController extends BaseController {
 
       if (!valid) {
         res.status(400).send('Could not validate terminalPayment.');
+        return;
+      }
+
+      const allowedUserTypes = [UserType.LOCAL_USER, UserType.LOCAL_ADMIN, UserType.MEMBER, UserType.POINT_OF_SALE];
+      const fromUser = context.users.get(request.transaction.from);
+      if (!allowedUserTypes.includes(fromUser?.type)) {
+        res.status(400).send(`Could not create terminalPayment for user "${fromUser.toString()}", because their account type is "${fromUser.type}"`);
         return;
       }
 
