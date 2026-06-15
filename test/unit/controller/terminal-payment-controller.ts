@@ -38,7 +38,7 @@ import Config from '../../../src/config';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
 import Swagger from '../../../src/start/swagger';
-import { truncateAllTables } from '../../setup';
+import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import TerminalPaymentSeeder from '../../seed/ledger/terminal-payment-seeder';
