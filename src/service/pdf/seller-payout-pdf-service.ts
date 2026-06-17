@@ -24,51 +24,69 @@
  * @module internal/pdf/seller-payout-pdf-service
  */
 
-import {
-  FileResponse,
-  SellerPayoutParameters,
-  SellerPayoutRouteParams,
-} from 'pdf-generator-client';
-import {
-  entryToProduct,
-  getPDFTotalsFromReport,
-  userToIdentity,
-} from '../../helpers/pdf';
 import SellerPayout from '../../entity/transactions/payout/seller-payout';
 import SellerPayoutPdf from '../../entity/file/seller-payout-pdf';
+import { createSellerPayoutPdf, ISellerPayoutPdf } from '../../html/seller-payout.html';
 import { SalesReportService } from '../report-service';
-import { ReportProductEntry } from '../../entity/report/report';
-import { PdfService } from './pdf-service';
+import { HtmlPdfService } from './pdf-service';
 
-export default class SellerPayoutPdfService extends PdfService<SellerPayoutPdf, SellerPayout, SellerPayoutRouteParams> {
-  generator(routeParams: SellerPayoutRouteParams): Promise<FileResponse> {
-    return this.client.generateDisbursement(routeParams);
-  }
+export default class SellerPayoutPdfService extends HtmlPdfService<SellerPayoutPdf, SellerPayout, ISellerPayoutPdf> {
+  pdfConstructor = SellerPayoutPdf;
 
-  async getParameters(entity: SellerPayout): Promise<SellerPayoutParameters> {
-    const { startDate, endDate, reference } = entity;
+  htmlGenerator = createSellerPayoutPdf;
+
+  async getParameters(entity: SellerPayout): Promise<ISellerPayoutPdf> {
+    const { startDate, endDate, reference, requestedBy } = entity;
     const report = await new SalesReportService().getReport({
       fromDate: startDate,
       tillDate: endDate,
-      forId: entity.requestedBy.id,
+      forId: requestedBy.id,
     });
 
-    const entries = report.data.products.map((s: ReportProductEntry) => entryToProduct(s));
-    entries.sort((a, b) => a.name.localeCompare(b.name));
+    const lineItems = (report.data.products ?? [])
+      .map((p) => {
+        const excl = p.totalExclVat.getAmount();
+        const incl = p.totalInclVat.getAmount();
+        return {
+          description: p.product.name,
+          qty: p.count,
+          rate: p.product.vat.percentage,
+          excl: excl / 100,
+          vat: (incl - excl) / 100,
+          incl: incl / 100,
+        };
+      })
+      .sort((a, b) => a.description.localeCompare(b.description));
 
-    return new SellerPayoutParameters({
+    const vatBreakdown = (report.data.vat ?? [])
+      .map((v) => {
+        const excl = v.totalExclVat.getAmount();
+        const incl = v.totalInclVat.getAmount();
+        return {
+          rate: v.vat.percentage,
+          excl: excl / 100,
+          vat: (incl - excl) / 100,
+          incl: incl / 100,
+        };
+      })
+      .sort((a, b) => a.rate - b.rate);
+
+    const exclCents = report.totalExclVat.getAmount();
+    const inclCents = report.totalInclVat.getAmount();
+
+    return {
       reference: `SDS-SP-${String(entity.id).padStart(4, '0')}`,
-      startDate,
-      endDate,
-      entries,
-      total: getPDFTotalsFromReport(report),
+      identifier: String(entity.id),
       description: reference,
-      debtorId: entity.requestedBy.id,
-      account: userToIdentity(entity.requestedBy),
-    });
+      account: [requestedBy.firstName, requestedBy.lastName].filter(Boolean).join(' '),
+      customerNumber: String(requestedBy.id),
+      startDate: startDate.toLocaleDateString('nl-NL'),
+      endDate: endDate.toLocaleDateString('nl-NL'),
+      vatBreakdown,
+      lineItems,
+      totalIncl: inclCents / 100,
+      subtotalExcl: exclCents / 100,
+      totalVat: (inclCents - exclCents) / 100,
+    };
   }
-
-  pdfConstructor = SellerPayoutPdf;
-
-  routeConstructor = SellerPayoutRouteParams;
 }
