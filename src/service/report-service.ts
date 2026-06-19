@@ -157,6 +157,7 @@ export default abstract class ReportService extends WithManager {
      */
   public async getProductEntries(forId: number, fromDate: Date, tillDate: Date): Promise<ReportProductEntry[]> {
     const query = this.manager.createQueryBuilder(ProductRevision, 'productRevision')
+      .withDeleted()
       .innerJoinAndSelect('productRevision.vat', 'vatGroup')
       .innerJoinAndSelect('productRevision.product', 'product')
       .leftJoin('product.image', 'productImage')
