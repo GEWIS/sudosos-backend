@@ -73,21 +73,21 @@ export default class TerminalPayment extends BaseEntity {
   @JoinColumn()
   public stripePaymentIntent: StripePaymentIntent;
 
-  @OneToOne(() => Transfer, { nullable: true, onDelete: 'CASCADE' })
+  @OneToOne(() => Transfer, { nullable: true, onDelete: 'CASCADE', eager: true })
   @JoinColumn()
   public transfer?: Transfer | null;
 
   /**
    * Transaction that was paid with this payment
    */
-  @OneToOne(() => Transaction, { nullable: true, onDelete: 'RESTRICT' })
+  @OneToOne(() => Transaction, { nullable: true, onDelete: 'RESTRICT', eager: true })
   @JoinColumn()
   public finalTransaction?: Transaction | null;
 
   /**
    * Transaction to be created when the payment is successful
    */
-  @OneToOne(() => TmpTransaction, { nullable: true, onDelete: 'RESTRICT' })
+  @OneToOne(() => TmpTransaction, { nullable: true, onDelete: 'RESTRICT', eager: true })
   @JoinColumn()
   public temporaryTransaction?: TmpTransaction | null;
 

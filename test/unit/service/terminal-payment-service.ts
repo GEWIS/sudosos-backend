@@ -34,15 +34,7 @@ import User, {
 import Config from '../../../src/config';
 import { defaultBefore, finishTestDB } from '../../helpers/test-helpers';
 import TerminalPaymentSeeder from '../../seed/ledger/terminal-payment-seeder';
-import {
-  ContainerSeeder,
-  DepositSeeder,
-  PointOfSaleSeeder,
-  ProductCategorySeeder,
-  ProductSeeder,
-  TransactionSeeder,
-  VatGroupSeeder,
-} from '../../seed';
+import { DepositSeeder } from '../../seed';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import TransactionService from '../../../src/service/transaction-service';
 import Product from '../../../src/entity/product/product';
@@ -98,28 +90,12 @@ describe('TerminalPaymentService', () => {
 
     await User.save([adminUser, organUser]);
 
-    const categories = await new ProductCategorySeeder().init();
-    const vatGroups = await new VatGroupSeeder().init();
-    const products = await new ProductSeeder().init(
-      organUser,
-      vatGroups,
-      categories,
-    );
-    const containers = await new ContainerSeeder().init(organUser, products);
-    const pointOfSale = await new PointOfSaleSeeder().init(
-      organUser,
-      containers,
-    );
-    const transactions = await new TransactionSeeder().init(
-      [adminUser],
-      pointOfSale.barRevision,
-    );
-
-    const { terminalPayments } = await new TerminalPaymentSeeder().seed(
-      [adminUser],
-      [pointOfSale.barRevision],
-      [transactions.transactions[0]],
-    );
+    // The TerminalPaymentSeeder seeds the full catalogue (categories, VAT
+    // groups, products, containers, point of sale) and a set of transactions
+    // internally when no points of sale or transactions are supplied, and
+    // returns them so the request below can be built against the same entities.
+    const { terminalPayments, catalogue } = await new TerminalPaymentSeeder().seed([adminUser]);
+    const { products, containers, pointOfSale } = catalogue!;
 
     const product = products.grimbergenRevision;
     const productPrice = product.priceInclVat.toObject();

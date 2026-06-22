@@ -42,14 +42,6 @@ import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import TerminalPaymentSeeder from '../../seed/ledger/terminal-payment-seeder';
-import {
-  ContainerSeeder,
-  PointOfSaleSeeder,
-  ProductCategorySeeder,
-  ProductSeeder,
-  TransactionSeeder,
-  VatGroupSeeder,
-} from '../../seed';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import { StripePaymentTerminalResponse } from '../../../src/controller/response/stripe-response';
 
@@ -136,18 +128,12 @@ describe('TerminalPaymentController', async (): Promise<void> => {
 
     await User.save([adminUser, localUser, posUser]);
 
-    const categories = await new ProductCategorySeeder().init();
-    const vatGroups = await new VatGroupSeeder().init();
-    const products = await new ProductSeeder().init(posUser, vatGroups, categories);
-    const containers = await new ContainerSeeder().init(posUser, products);
-    const pointOfSale = await new PointOfSaleSeeder().init(posUser, containers);
-    const transactions = await new TransactionSeeder().init([adminUser], pointOfSale.barRevision);
-
-    const { terminalPayments } = await new TerminalPaymentSeeder().seed(
-      [adminUser],
-      [pointOfSale.barRevision],
-      [transactions.transactions[0]],
-    );
+    // The TerminalPaymentSeeder seeds the full catalogue (categories, VAT
+    // groups, products, containers, point of sale) and a set of transactions
+    // internally when no points of sale or transactions are supplied, and
+    // returns them so the requests below can be built against the same entities.
+    const { terminalPayments, catalogue } = await new TerminalPaymentSeeder().seed([adminUser]);
+    const { products, containers, pointOfSale } = catalogue!;
 
     // A terminal payment created by the POS user for the local user: the POS
     // user is the creator (createdBy) while the local user is the buyer (from).

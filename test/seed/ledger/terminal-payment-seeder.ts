@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../../../src/database/with-manager';
-import User from '../../../src/entity/user/user';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
 import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
 import StripePaymentIntentStatus, {
   StripePaymentIntentState,
@@ -32,7 +32,35 @@ import Transaction from '../../../src/entity/transactions/transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
-import { PointOfSaleSeeder } from '../catalogue';
+import {
+  ContainerSeeder,
+  DevCategories,
+  DevContainers,
+  DevPointOfSale,
+  DevProducts,
+  DevVatGroups,
+  PointOfSaleSeeder,
+  ProductCategorySeeder,
+  ProductSeeder,
+  VatGroupSeeder,
+} from '../catalogue';
+import TransactionSeeder from './transaction-seeder';
+
+/**
+ * The full set of catalogue and transaction fixtures that
+ * {@link TerminalPaymentSeeder.seed} seeds on its own when neither points of
+ * sale nor transactions are supplied. Returned so test suites can build their
+ * own requests against the same entities without re-seeding them.
+ */
+export interface TerminalPaymentCatalogue {
+  owner: User;
+  categories: DevCategories;
+  vatGroups: DevVatGroups;
+  products: DevProducts;
+  containers: DevContainers;
+  pointOfSale: DevPointOfSale;
+  transactions: Transaction[];
+}
 
 export default class TerminalPaymentSeeder extends WithManager {
   /**
@@ -63,6 +91,34 @@ export default class TerminalPaymentSeeder extends WithManager {
       pointOfSale: posRevision,
       subTransactions: [subTransaction],
     });
+  }
+
+  /**
+   * Seed a complete catalogue (product categories, VAT groups, products,
+   * containers and a point of sale) together with a small set of transactions
+   * the terminal payments can be built against.
+   *
+   * A dedicated organ user is created to own the catalogue; the supplied users
+   * act as the buyers of the seeded transactions.
+   *
+   * @param users - The buyers for the seeded transactions.
+   */
+  private async seedCatalogue(users: User[]): Promise<TerminalPaymentCatalogue> {
+    const owner = await this.manager.save(User, Object.assign(new User(), {
+      firstName: 'Terminal Payment Catalogue Owner',
+      type: UserType.ORGAN,
+      active: true,
+      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    }));
+
+    const categories = await new ProductCategorySeeder(this.manager).init();
+    const vatGroups = await new VatGroupSeeder(this.manager).init();
+    const products = await new ProductSeeder(this.manager).init(owner, vatGroups, categories);
+    const containers = await new ContainerSeeder(this.manager).init(owner, products);
+    const pointOfSale = await new PointOfSaleSeeder(this.manager).init(owner, containers);
+    const { transactions } = await new TransactionSeeder(this.manager).init(users, pointOfSale.barRevision);
+
+    return { owner, categories, vatGroups, products, containers, pointOfSale, transactions };
   }
 
   /**
@@ -118,30 +174,49 @@ export default class TerminalPaymentSeeder extends WithManager {
    * For every user a TerminalPayment in the CREATED state (with a valid
    * TmpTransaction) is created, as well as a CANCELLED TerminalPayment that has no
    * temporary or final transaction and whose Stripe PaymentIntent ends in the
-   * FAILED state. When transactions are supplied, every transaction is
-   * additionally converted into a PAID TerminalPayment: the TmpTransaction is
-   * replaced by a finalTransaction and a Transfer whose amount equals the total
-   * value of the transaction's sub-transaction rows.
+   * FAILED state. When transactions are supplied (or seeded internally), every
+   * transaction is additionally converted into a PAID TerminalPayment: the
+   * TmpTransaction is replaced by a finalTransaction and a Transfer whose amount
+   * equals the total value of the transaction's sub-transaction rows.
    *
-   * @param users - The users that initiate the CREATED terminal payments.
+   * When neither {@link pointsOfSale} nor {@link transactions} are supplied, a
+   * complete catalogue (product categories, VAT groups, products, containers, a
+   * point of sale) and a set of transactions are seeded internally. The seeded
+   * fixtures are returned as {@link TerminalPaymentCatalogue} so callers can
+   * build their own requests against them.
+   *
+   * @param users - The users that initiate the CREATED terminal payments (and
+   * the buyers of the internally seeded transactions).
    * @param pointsOfSale - Points of sale to build temporary transactions against.
-   * Must have containers, products and (owner) eagerly loaded. If omitted, a
-   * default catalogue is seeded with {@link PointOfSaleSeeder}.
+   * Must have containers, products and (owner) eagerly loaded. If omitted (and no
+   * transactions are given), a catalogue is seeded internally.
    * @param transactions - Existing transactions to back PAID terminal payments
    * with. Must have subTransactions, subTransactionRows and products loaded so
-   * the transfer total can be computed.
+   * the transfer total can be computed. If omitted (and no points of sale are
+   * given), transactions are seeded internally.
    */
   public async seed(
     users: User[],
     pointsOfSale?: PointOfSaleRevision[],
-    transactions: Transaction[] = [],
+    transactions?: Transaction[],
   ): Promise<{
       terminalPayments: TerminalPayment[],
       stripePaymentIntents: StripePaymentIntent[],
       tmpTransactions: TmpTransaction[],
       transfers: Transfer[],
+      catalogue?: TerminalPaymentCatalogue,
     }> {
-    const posRevisions = pointsOfSale ?? (await new PointOfSaleSeeder().seed(users)).pointOfSaleRevisions;
+    // When the caller supplies neither points of sale nor transactions, seed a
+    // full catalogue and a set of transactions internally, so test suites no
+    // longer have to wire up all the prerequisite entities themselves.
+    let catalogue: TerminalPaymentCatalogue | undefined;
+    if (pointsOfSale === undefined && transactions === undefined) {
+      catalogue = await this.seedCatalogue(users);
+    }
+
+    const posRevisions = pointsOfSale ?? (catalogue ? [catalogue.pointOfSale.barRevision] : []);
+    const paidTransactions = transactions ?? catalogue?.transactions ?? [];
+
     const usablePosRevisions = posRevisions.filter((p) => p.containers.some((c) => c.products.length > 0));
     if (usablePosRevisions.length === 0) {
       throw new Error('TerminalPaymentSeeder.seed requires at least one PointOfSaleRevision with a container containing products');
@@ -230,8 +305,8 @@ export default class TerminalPaymentSeeder extends WithManager {
       terminalPayments.push(terminalPayment);
     }
 
-    for (let i = 0; i < transactions.length; i += 1) {
-      const transaction = transactions[i];
+    for (let i = 0; i < paidTransactions.length; i += 1) {
+      const transaction = paidTransactions[i];
       let cost = 0;
       for (const subTransaction of transaction.subTransactions) {
         for (const row of subTransaction.subTransactionRows) {
@@ -283,6 +358,6 @@ export default class TerminalPaymentSeeder extends WithManager {
       terminalPayments.push(terminalPayment);
     }
 
-    return { terminalPayments, stripePaymentIntents, tmpTransactions, transfers };
+    return { terminalPayments, stripePaymentIntents, tmpTransactions, transfers, catalogue };
   }
 }

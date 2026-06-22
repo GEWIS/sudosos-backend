@@ -65,7 +65,7 @@ export default class StripeWebhookService extends WithManager {
     paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
     const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true, paymentRequest: true } });
+      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true, paymentRequest: true, terminalPayment: true } });
     if (!paymentIntent) {
       throw new Error(`PaymentIntent with id "${paymentIntentId}" not found.`);
     }
