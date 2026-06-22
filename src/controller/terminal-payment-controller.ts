@@ -87,6 +87,14 @@ export default class TerminalPaymentController extends BaseController {
           body: { modelName: 'ProcessTerminalPaymentRequest' },
         },
       },
+      '/terminals': {
+        GET: {
+          policy: async (req) => this.roleManager.can(
+            req.token.roles, 'get', 'all', 'TerminalPayment', ['*'],
+          ),
+          handler: this.getStripeTerminals.bind(this),
+        },
+      },
     };
   }
 
@@ -270,6 +278,29 @@ export default class TerminalPaymentController extends BaseController {
       res.status(200).json(response);
     } catch (error) {
       this.logger.error('Could not cancel terminalPayment:', error);
+      res.status(500).send('Internal server error.');
+    }
+  }
+
+  /**
+  * GET /terminal-payments/terminals
+  * @summary Get all Stripe terminals
+  * @operationId getStripeTerminals
+  * @tags terminalPayments - Operations of the Terminal Payment Controller
+  * @security JWT
+  * @return {Array.<StripePaymentTerminalResponse[]>} 200 - Stripe Terminals
+  * @return {string} 500 - Internal server error
+  */
+  public async getStripeTerminals(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get all Stripe terminals by user', req.token.user);
+
+    try {
+      const service = new StripeService();
+      const terminals = await service.getTerminals();
+
+      res.status(200).json(terminals);
+    } catch (error) {
+      this.logger.error('Could not get all Stripe terminals:', error);
       res.status(500).send('Internal server error.');
     }
   }

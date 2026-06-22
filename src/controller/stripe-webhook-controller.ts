@@ -88,9 +88,9 @@ export default class StripeWebhookController extends BaseController {
   }
 
   /**
-   * Webhook for Stripe event updates
+   * POST /stripe/webhook
    *
-   * @route POST /stripe/webhook
+   * @summary Webhook for Stripe event updates
    * @operationId webhook
    * @tags stripe - Operations of the stripe controller
    * @return 204 - Success
