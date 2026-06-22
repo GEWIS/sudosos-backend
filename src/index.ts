@@ -214,6 +214,7 @@ export default async function createApp(): Promise<Application> {
   console.log = (message: any, ...additional: any[]) => logger.debug(message, ...additional);
 
   // Set up monetary value configuration.
+  dinero.globalLocale = 'nl-NL';
   dinero.defaultCurrency = config.currency.code as Currency;
   dinero.defaultPrecision = config.currency.precision;
 
