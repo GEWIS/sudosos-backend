@@ -176,7 +176,7 @@ export default class GewisAuthenticationController extends BaseController {
         context: { roleManager: this.roleManager, tokenHandler: this.tokenHandler },
         salt: body.nonce,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');

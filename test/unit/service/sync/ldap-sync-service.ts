@@ -18,7 +18,7 @@
  *  @license
  */
 
-import User, { TermsOfServiceStatus, UserType } from '../../../../src/entity/user/user';
+import User, { UserType } from '../../../../src/entity/user/user';
 import { AppDataSource } from '../../../../src/database/database';
 import {
   defaultAfter,
@@ -161,7 +161,7 @@ describe('LdapSyncService', () => {
       expect(user.firstName).to.be.equal(ldapUser.displayName);
       expect(user.lastName).to.be.equal('');
       expect(user.canGoIntoDebt).to.be.false;
-      expect(user.acceptedToS).to.be.equal(TermsOfServiceStatus.NOT_REQUIRED);
+      expect(user.tosRequired).to.be.equal(false);
       expect(user.active).to.be.true;
     }
 
@@ -208,7 +208,7 @@ describe('LdapSyncService', () => {
               firstName: 'Wrong',
               lastName: 'Wrong',
               canGoIntoDebt: true,
-              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              tosRequired: true,
               active: false,
             });
 
@@ -240,7 +240,7 @@ describe('LdapSyncService', () => {
               firstName: 'Wrong',
               lastName: 'Wrong',
               canGoIntoDebt: true,
-              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              tosRequired: true,
               active: false,
             });
             // Snapshot database state after the mess up
@@ -249,7 +249,7 @@ describe('LdapSyncService', () => {
               firstName: dbUserBefore.firstName,
               lastName: dbUserBefore.lastName,
               canGoIntoDebt: dbUserBefore.canGoIntoDebt,
-              acceptedToS: dbUserBefore.acceptedToS,
+              tosRequired: dbUserBefore.tosRequired,
               active: dbUserBefore.active,
             };
 
@@ -269,7 +269,7 @@ describe('LdapSyncService', () => {
             expect(dbUserAfter.firstName).to.eq(messedUpState.firstName);
             expect(dbUserAfter.lastName).to.eq(messedUpState.lastName);
             expect(dbUserAfter.canGoIntoDebt).to.eq(messedUpState.canGoIntoDebt);
-            expect(dbUserAfter.acceptedToS).to.eq(messedUpState.acceptedToS);
+            expect(dbUserAfter.tosRequired).to.eq(messedUpState.tosRequired);
             expect(dbUserAfter.active).to.eq(messedUpState.active);
           },
         );
@@ -286,7 +286,7 @@ describe('LdapSyncService', () => {
               firstName: 'Wrong',
               lastName: 'Wrong',
               canGoIntoDebt: true,
-              acceptedToS: TermsOfServiceStatus.ACCEPTED,
+              tosRequired: true,
               active: false,
             });
 

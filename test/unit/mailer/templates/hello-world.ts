@@ -21,7 +21,7 @@
 import { expect } from 'chai';
 import HelloWorld from '../../../../src/mailer/messages/hello-world';
 import { Language } from '../../../../src/mailer/mail-message';
-import User, { TermsOfServiceStatus, UserType } from '../../../../src/entity/user/user';
+import User, { UserType } from '../../../../src/entity/user/user';
 import { UserFactory } from '../../../helpers/user-factory';
 import { DataSource } from 'typeorm';
 import database from '../../../../src/database/database';
@@ -39,7 +39,7 @@ describe('HelloWorldTemplate', () => {
       firstName: 'Samuel',
       active: true,
       type: UserType.LOCAL_ADMIN,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
       email: 'test@example.com',
     } as User)).get();
     ctx = {

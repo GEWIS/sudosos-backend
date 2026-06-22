@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../../../src/database/with-manager';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import PointOfSale from '../../../src/entity/point-of-sale/point-of-sale';
 import ContainerRevision from '../../../src/entity/container/container-revision';
 import PointOfSaleRevision from '../../../src/entity/point-of-sale/point-of-sale-revision';
@@ -52,7 +52,7 @@ export default class PointOfSaleSeeder extends WithManager {
         firstName: `Point of Sale ${id}`,
         type: UserType.POINT_OF_SALE,
         active: true,
-        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        tosRequired: false,
       });
       const pointOfSale = Object.assign(new PointOfSale(), {
         id,
@@ -114,7 +114,7 @@ export default class PointOfSaleSeeder extends WithManager {
       firstName: 'Bar POS',
       type: UserType.POINT_OF_SALE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     }));
 
     const bar = await this.manager.save(PointOfSale, Object.assign(new PointOfSale(), {

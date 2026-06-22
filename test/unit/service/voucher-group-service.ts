@@ -24,7 +24,7 @@ import { DataSource } from 'typeorm';
 import { VoucherGroupParams, VoucherGroupRequest } from '../../../src/controller/request/voucher-group-request';
 import Database from '../../../src/database/database';
 import Transfer from '../../../src/entity/transactions/transfer';
-import User, { TermsOfServiceStatus } from '../../../src/entity/user/user';
+import User from '../../../src/entity/user/user';
 import VoucherGroup from '../../../src/entity/user/voucher-group';
 import VoucherGroupService from '../../../src/service/voucher-group-service';
 import { truncateAllTables } from '../../helpers/database-helpers';
@@ -229,7 +229,7 @@ describe('VoucherGroupService', async (): Promise<void> => {
       bkgEq(params, voucherGroup, users);
       await Promise.all(users.map(async (user) => {
         expect(user.active, 'user inactive').to.equal(false);
-        expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+        expect(user.tosRequired).to.equal(false);
         const transfers = await Transfer.find({ where: { toId: user.id } });
         const balanceAmounts = transfers.map((transfer) => transfer.amountInclVat.getAmount());
         const balance = balanceAmounts.reduce((a, b) => a + b);

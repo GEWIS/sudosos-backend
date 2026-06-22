@@ -51,7 +51,8 @@ import {
   SubTransactionRowRequest,
   TransactionRequest,
 } from '../controller/request/transaction-request';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
+import TermsOfServiceService from './terms-of-service-service';
 import ContainerRevision from '../entity/container/container-revision';
 import SubTransactionRow from '../entity/transactions/sub-transaction-row';
 import ProductRevision from '../entity/product/product-revision';
@@ -369,7 +370,8 @@ export default class TransactionService extends WithManager {
     // Batch load all users
     const users = await this.manager.find(User, { where: { id: In(Array.from(userIds)) } });
     if (users.length !== userIds.size
-      || (!isUpdate && !users.every((user) => user.active && user.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED))) {
+      || (!isUpdate && (!users.every((user) => user.active)
+        || !await TermsOfServiceService.haveUsersAcceptedCurrent(users, this.manager)))) {
       return { valid: false };
     }
 

@@ -127,14 +127,14 @@ describe('BaseController', (): void => {
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User)).get();
     const userNotAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      tosRequired: true,
     } as User)).get();
     const tokenHandler = new TokenHandler({
       algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
@@ -144,8 +144,12 @@ describe('BaseController', (): void => {
     ctx.app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
     ctx.app.use(ctx.controller.getRouter());
 
-    ctx.userToken = await tokenHandler.signToken({ user: userAccepted, roles: [] }, '39');
-    ctx.userTokenRestricted = await tokenHandler.signToken({ user: userNotAccepted, roles: [], posId: 123 }, '39');
+    ctx.userToken = await tokenHandler.signToken({
+      user: userAccepted, roles: [], acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    }, '39');
+    ctx.userTokenRestricted = await tokenHandler.signToken({
+      user: userNotAccepted, roles: [], posId: 123, acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+    }, '39');
   });
 
   afterAll(async () => {

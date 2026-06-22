@@ -21,7 +21,7 @@
 import { DataSource } from 'typeorm';
 import express, { Application, json } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import UserNotificationPreference, {
   NotificationChannels,
 } from '../../../src/entity/notifications/user-notification-preference';
@@ -75,14 +75,14 @@ describe('user-notification-preference-controller',  async (): Promise<void> => 
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     users.push(adminUser);

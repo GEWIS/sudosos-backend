@@ -32,7 +32,7 @@ import { UserResponse } from '../controller/response/user-response';
 import Transfer from '../entity/transactions/transfer';
 import DineroTransformer from '../entity/transformer/dinero-transformer';
 import VoucherGroup from '../entity/user/voucher-group';
-import User, { TermsOfServiceStatus, UserType } from '../entity/user/user';
+import User, { UserType } from '../entity/user/user';
 import UserVoucherGroup from '../entity/user/user-voucher-group';
 import { PaginationParameters } from '../helpers/pagination';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
@@ -195,7 +195,7 @@ export default class VoucherGroupService {
           active: active,
           type: UserType.VOUCHER,
           ofAge: true,
-          acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+          tosRequired: false,
         } as User),
       );
     }

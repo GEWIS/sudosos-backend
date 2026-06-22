@@ -161,7 +161,7 @@ export default class AuthenticationSecureController extends BaseController {
         expiry,
         posId: req.token.posId,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
@@ -200,7 +200,7 @@ export default class AuthenticationSecureController extends BaseController {
         },
         expiry,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');
@@ -255,7 +255,7 @@ export default class AuthenticationSecureController extends BaseController {
         },
         posId: req.token.posId,
       });
-      const authResponse = AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token);
+      const authResponse = AuthenticationService.asAuthenticationResponse(result);
 
       // Let the service handle all business logic validation
       await (new QRService()).confirm(qrAuthenticator, user);
@@ -362,7 +362,7 @@ export default class AuthenticationSecureController extends BaseController {
         context,
         posId: body.posId,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not authenticate using NFC:', error);
       res.status(500).json('Internal server error.');
@@ -423,7 +423,7 @@ export default class AuthenticationSecureController extends BaseController {
         context,
         posId: body.posId,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not authenticate using EAN:', error);
       res.status(500).json('Internal server error.');

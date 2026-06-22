@@ -37,7 +37,7 @@ import {
 } from '../../../src/controller/request/transaction-request';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import SubTransactionRow from '../../../src/entity/transactions/sub-transaction-row';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import { createTransactions, createValidTransactionRequest, createValidTransactionRequestPOS, requestToTransaction } from '../../helpers/transaction-factory';
 import PointOfSaleService from '../../../src/service/point-of-sale-service';
 import { PointOfSaleWithContainersResponse } from '../../../src/controller/response/point-of-sale-response';
@@ -262,7 +262,7 @@ describe('TransactionService', (): void => {
         type: UserType.LOCAL_USER,
         active: true,
         ofAge: true,
-        acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+        tosRequired: true,
       }) as User;
       await User.save(user);
 

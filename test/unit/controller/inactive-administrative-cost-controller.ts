@@ -22,7 +22,7 @@ import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import InactiveAdministrativeCostController from '../../../src/controller/inactive-administrative-cost-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import {
   CreateInactiveAdministrativeCostRequest,
 } from '../../../src/controller/request/inactive-administrative-cost-request';
@@ -91,7 +91,7 @@ describe('InactiveAdministrativeCostController', async () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -99,7 +99,7 @@ describe('InactiveAdministrativeCostController', async () => {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     await User.save(adminUser);

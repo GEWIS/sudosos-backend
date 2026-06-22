@@ -24,7 +24,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import { json } from 'body-parser';
 import chai from 'chai';
 
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import InvoiceController from '../../../src/controller/invoice-controller';
 import Database, { AppDataSource } from '../../../src/database/database';
 import TokenHandler from '../../../src/authentication/token-handler';
@@ -48,7 +48,7 @@ import {
   SUBTRANSACTION_ALREADY_INVOICED,
   ZERO_LENGTH_STRING,
 } from '../../../src/controller/request/validators/validation-errors';
-import { inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
+import { acceptCurrentTos, inUserContext, INVOICE_USER, ORGAN_USER, UserFactory } from '../../helpers/user-factory';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
 import BalanceService from '../../../src/service/balance-service';
 import { InvoiceState } from '../../../src/entity/invoices/invoice-status';
@@ -92,42 +92,42 @@ describe('InvoiceController', async () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
       firstName: 'User',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     let invoiceUser = {
       firstName: 'User',
       type: UserType.INVOICE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     let invoiceUser2 = {
       firstName: 'User2',
       type: UserType.INVOICE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     let invoiceUser3 = {
       firstName: 'User3',
       type: UserType.INVOICE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     let invoiceUser4 = {
       firstName: 'User4',
       type: UserType.INVOICE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     await User.save(adminUser);
@@ -136,6 +136,7 @@ describe('InvoiceController', async () => {
     await User.save(invoiceUser2);
     await User.save(invoiceUser3);
     await User.save(invoiceUser4);
+    await acceptCurrentTos(adminUser, localUser);
 
     const { transactions } = await new TransactionSeeder().seed([adminUser, localUser, invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4]);
     const { invoices } = await new InvoiceSeeder().seed([invoiceUser, invoiceUser2, invoiceUser3, invoiceUser4], transactions);

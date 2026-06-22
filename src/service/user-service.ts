@@ -29,7 +29,9 @@ import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
+import User, { LocalUserTypes, TOSRequired, UserType } from '../entity/user/user';
+import TermsOfServiceAcceptance from '../entity/user/terms-of-service-acceptance';
+import TermsOfServiceService from './terms-of-service-service';
 import OrganMembership from '../entity/organ/organ-membership';
 import { CreateUserRequest, UpdateUserRequest } from '../controller/request/user-request';
 import TransactionService, { TransactionFilterParameters } from './transaction-service';
@@ -45,7 +47,7 @@ import AssignedRole from '../entity/rbac/assigned-role';
 import Role from '../entity/rbac/role';
 import { NotificationTypes } from '../notifications/notification-types';
 import Notifier, { WelcomeToSudososOptions, WelcomeWithResetOptions } from '../notifications';
-import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not } from 'typeorm';
+import { Brackets, FindManyOptions, FindOptionsRelations, FindOptionsWhere, In, Not, QueryFailedError } from 'typeorm';
 import PointOfSaleService from './point-of-sale-service';
 import { UserTypeUpdatedOptions, UserTypeUpdatedWithResetOptions } from '../notifications/notification-options';
 import LocalAuthenticator from '../entity/authenticator/local-authenticator';
@@ -68,6 +70,13 @@ export interface UserFilterParameters {
 }
 
 export type FinancialMutationsFilterParams = TransactionFilterParameters & TransferFilterParameters;
+
+export enum AcceptTosResult {
+  SUCCESS = 'SUCCESS',
+  USER_NOT_FOUND = 'USER_NOT_FOUND',
+  NOT_CURRENT_VERSION = 'NOT_CURRENT_VERSION',
+  ALREADY_ACCEPTED = 'ALREADY_ACCEPTED',
+}
 
 /**
  * Extracts UserFilterParameters from the RequestWithToken
@@ -119,7 +128,7 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     deleted: user.deleted,
     type: UserType[user.type],
     email: user.email,
-    acceptedToS: user.acceptedToS,
+    tosRequired: user.tosRequired,
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
     canGoIntoDebt: user.canGoIntoDebt,
@@ -344,7 +353,7 @@ export default class UserService {
    */
   public static async createUser(createUserRequest: CreateUserRequest): Promise<User | undefined> {
     // Check if user needs to accept TOS.
-    const acceptedToS = TOSRequired.includes(createUserRequest.type) ? TermsOfServiceStatus.NOT_ACCEPTED : TermsOfServiceStatus.NOT_REQUIRED;
+    const tosRequired = TOSRequired.includes(createUserRequest.type);
 
     let expiryDate: Date | undefined;
     if (LocalUserTypes.includes(createUserRequest.type)) {
@@ -355,7 +364,7 @@ export default class UserService {
     const user = await User.save({
       ...createUserRequest,
       lastName: createUserRequest.lastName || '',
-      acceptedToS,
+      tosRequired,
       expiryDate,
     } as User);
 
@@ -427,17 +436,32 @@ export default class UserService {
    * Accept the ToS for the user with the given ID.
    * @param userId - ID of the user to accept the ToS for.
    * @param params
-   * @returns boolean - Whether the request has successfully been processed
+   * @returns The result of processing the request
    */
-  public static async acceptToS(userId: number, params: AcceptTosRequest): Promise<boolean> {
-    const user = await User.findOne({ where: { id: userId } });
-    if (!user) return false;
+  public static async acceptToS(userId: number, params: AcceptTosRequest): Promise<AcceptTosResult> {
+    const user = await User.findOne(this.getOptions({ id: userId }));
+    if (!user) return AcceptTosResult.USER_NOT_FOUND;
 
-    if (user.acceptedToS === TermsOfServiceStatus.ACCEPTED) return false;
-    user.acceptedToS = TermsOfServiceStatus.ACCEPTED;
+    const currentVersion = await TermsOfServiceService.getCurrentVersion();
+    if (params.version !== currentVersion) return AcceptTosResult.NOT_CURRENT_VERSION;
+
+    const existing = await TermsOfServiceAcceptance.findOne({
+      where: { userId, versionNumber: params.version },
+    });
+    if (existing) return AcceptTosResult.ALREADY_ACCEPTED;
+
+    try {
+      await TermsOfServiceAcceptance.save({
+        userId,
+        versionNumber: params.version,
+      } as TermsOfServiceAcceptance);
+    } catch (error) {
+      if (error instanceof QueryFailedError) return AcceptTosResult.ALREADY_ACCEPTED;
+      throw error;
+    }
     user.extensiveDataProcessing = params.extensiveDataProcessing;
     await user.save();
-    return true;
+    return AcceptTosResult.SUCCESS;
   }
 
   /**

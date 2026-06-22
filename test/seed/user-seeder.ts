@@ -19,7 +19,9 @@
  */
 
 import WithManager from '../../src/database/with-manager';
-import User, { LocalUserTypes, TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import User, { LocalUserTypes, UserType } from '../../src/entity/user/user';
+import TermsOfServiceAcceptance from '../../src/entity/user/terms-of-service-acceptance';
+import TermsOfServiceService from '../../src/service/terms-of-service-service';
 import MemberUser from '../../src/entity/user/member-user';
 import InvoiceUser from '../../src/entity/user/invoice-user';
 import bcrypt from 'bcrypt';
@@ -93,7 +95,7 @@ export default class UserSeeder extends WithManager {
         nickname: nr % 4 === 0 ? `Nickname${start + nr}` : null,
         type,
         active,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         inactiveNotificationSend: nr % 3 === 0,
         extensiveDataProcessing: true,
         email: type === UserType.LOCAL_USER || type === UserType.LOCAL_ADMIN ? `user${start + nr}@example.com` : '',
@@ -130,8 +132,20 @@ export default class UserSeeder extends WithManager {
 
     await Promise.all(promises);
     await this.manager.save(InvoiceUser, invoiceUsers);
+    await this.acceptCurrentTos(users);
 
     return users;
+  }
+
+  /**
+   * Stores acceptance records of the current TOS version for the given users,
+   * so that seeded users can transact.
+   */
+  public async acceptCurrentTos(users: User[]): Promise<void> {
+    const versionNumber = await TermsOfServiceService.getCurrentVersion();
+    await this.manager.save(TermsOfServiceAcceptance, users.map((user) => Object.assign(
+      new TermsOfServiceAcceptance(), { userId: user.id, versionNumber },
+    )));
   }
 
   private BCRYPT_ROUNDS = 4;
@@ -179,7 +193,7 @@ export default class UserSeeder extends WithManager {
         type: UserType.LOCAL_ADMIN,
         active: true,
         ofAge: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         extensiveDataProcessing: true,
         expiryDate: defaultExpiry(),
       }),
@@ -190,7 +204,7 @@ export default class UserSeeder extends WithManager {
         type: UserType.LOCAL_USER,
         active: true,
         ofAge: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         extensiveDataProcessing: true,
         expiryDate: defaultExpiry(),
       }),
@@ -201,7 +215,7 @@ export default class UserSeeder extends WithManager {
         type: UserType.MEMBER,
         active: true,
         ofAge: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         extensiveDataProcessing: true,
       }),
       Object.assign(new User(), {
@@ -211,7 +225,7 @@ export default class UserSeeder extends WithManager {
         type: UserType.MEMBER,
         active: true,
         ofAge: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         extensiveDataProcessing: true,
       }),
       Object.assign(new User(), {
@@ -220,7 +234,7 @@ export default class UserSeeder extends WithManager {
         email: '',
         type: UserType.ORGAN,
         active: true,
-        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        tosRequired: false,
       }),
       Object.assign(new User(), {
         firstName: 'Invoice',
@@ -228,9 +242,11 @@ export default class UserSeeder extends WithManager {
         email: 'invoices@company.nl',
         type: UserType.INVOICE,
         active: true,
-        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        tosRequired: false,
       }),
     ]);
+
+    await this.acceptCurrentTos([admin, user, alice, bob]);
 
     // Hash-based auth for local users (4 bcrypt rounds for fast dev seeding)
     await Promise.all([

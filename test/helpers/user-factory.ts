@@ -19,6 +19,8 @@
  */
 
 import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import TermsOfServiceAcceptance from '../../src/entity/user/terms-of-service-acceptance';
+import TermsOfServiceService from '../../src/service/terms-of-service-service';
 import generateBalance from './test-helpers';
 import { DeleteResult } from 'typeorm';
 import TokenHandler from '../../src/authentication/token-handler';
@@ -69,7 +71,7 @@ export async function tokenFor(
   if (organs && organs.length > 0 && !roles.includes(SELLER_ROLE)) {
     roles.push(SELLER_ROLE);
   }
-  return { user, roles, organs, posId };
+  return { user, roles, organs, posId, acceptedToS: TermsOfServiceStatus.NOT_REQUIRED };
 }
 
 /**
@@ -83,6 +85,24 @@ export async function signTokenFor(
   return tokenHandler.signToken(jwt, nonce);
 }
 
+/**
+ * Stores acceptance records of the current TOS version for given users.
+ */
+export async function acceptCurrentTos(...users: User[]): Promise<void> {
+  const versionNumber = await TermsOfServiceService.getCurrentVersion();
+  await Promise.all(users.map(async (user) => {
+    if (!user.tosRequired) return;
+    const existing = await TermsOfServiceAcceptance.findOne({
+      where: { userId: user.id, versionNumber },
+    });
+    if (!existing) {
+      await TermsOfServiceAcceptance.save({
+        userId: user.id, versionNumber,
+      } as TermsOfServiceAcceptance);
+    }
+  }));
+}
+
 export class Builder {
   user: User;
 
@@ -93,9 +113,10 @@ export class Builder {
       lastName: `Doe #${count + 1}`,
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
       canGoIntoDebt: true,
     });
+    await acceptCurrentTos(this.user);
     return this;
   }
 
@@ -135,6 +156,7 @@ export class Builder {
       })).then((u) => { users.push(u); }));
     }
     await Promise.all(promises);
+    await acceptCurrentTos(...users);
     return users;
   }
 }
@@ -146,7 +168,7 @@ export const ORGAN_USER = async () => {
     lastName: `Doe #${count + 1}`,
     type: UserType.ORGAN,
     active: true,
-    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    tosRequired: false,
   } as User);
 };
 
@@ -157,7 +179,7 @@ export const ADMIN_USER = async () => {
     lastName: `Doe #${count + 1}`,
     type: UserType.LOCAL_ADMIN,
     active: true,
-    acceptedToS: TermsOfServiceStatus.ACCEPTED,
+    tosRequired: true,
   } as User);
 };
 
@@ -168,7 +190,7 @@ export const INVOICE_USER = async () => {
     lastName: `Doe #${count + 1}`,
     type: UserType.INVOICE,
     active: true,
-    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    tosRequired: false,
   } as User);
 };
 
@@ -179,7 +201,7 @@ export const INTEGRATION_USER = async () => {
     lastName: `Doe #${count + 1}`,
     type: UserType.INTEGRATION,
     active: true,
-    acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+    tosRequired: false,
   });
 };
 

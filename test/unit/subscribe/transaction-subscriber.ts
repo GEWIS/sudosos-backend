@@ -24,6 +24,7 @@ import User, {
   TermsOfServiceStatus,
   UserType,
 } from '../../../src/entity/user/user';
+import TermsOfServiceService from '../../../src/service/terms-of-service-service';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
 import Transfer from '../../../src/entity/transactions/transfer';
@@ -94,7 +95,7 @@ describe('TransactionSubscriber', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const users = await new UserSeeder().seed();
@@ -460,7 +461,8 @@ describe('TransactionSubscriber', () => {
         const pref = ctx.notificationPreferences.find((p) =>
           p.userId === candidateUser.id && p.type === NotificationTypes.TransactionNotificationSelf,
         );
-        if (pref && candidateUser.active && candidateUser.acceptedToS !== TermsOfServiceStatus.NOT_ACCEPTED) {
+        if (pref && candidateUser.active
+          && await TermsOfServiceService.getUserTosStatus(candidateUser) !== TermsOfServiceStatus.NOT_ACCEPTED) {
           user = candidateUser;
           notificationPreference = pref;
           break;
@@ -503,7 +505,7 @@ describe('TransactionSubscriber', () => {
       const transactionService = new TransactionService();
       const verification = await transactionService.verifyTransaction(transactionRequest);
       if (!verification.valid || !verification.context) {
-        throw new Error(`Invalid transaction in test. User: ${user.id}, active: ${user.active}, acceptedToS: ${user.acceptedToS}`);
+        throw new Error(`Invalid transaction in test. User: ${user.id}, active: ${user.active}`);
       }
 
       await (new TransactionService()).createTransaction(transactionRequest, verification.context);

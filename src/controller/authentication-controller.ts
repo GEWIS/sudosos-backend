@@ -212,7 +212,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     };
   }
 
@@ -269,7 +269,7 @@ export default class AuthenticationController extends BaseController {
 
       // AD login gives full access.
       const result = await service.getSaltedToken({ user, context });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     };
   }
 
@@ -325,7 +325,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not authenticate using Local:', error);
       res.status(500).json('Internal server error.');
@@ -461,7 +461,7 @@ export default class AuthenticationController extends BaseController {
         return;
       }
 
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not authenticate using key:', error);
       res.status(500).json('Internal server error.');
@@ -493,7 +493,7 @@ export default class AuthenticationController extends BaseController {
         context: { tokenHandler: this.tokenHandler, roleManager: this.roleManager },
         salt: body.nonce,
       });
-      res.json(AuthenticationService.asAuthenticationResponse(result.user, result.roles, result.organs, result.token));
+      res.json(AuthenticationService.asAuthenticationResponse(result));
     } catch (error) {
       this.logger.error('Could not create token:', error);
       res.status(500).json('Internal server error.');

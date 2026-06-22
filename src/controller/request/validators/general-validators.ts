@@ -31,10 +31,11 @@ import {
   INVALID_ACTIVE_USER_ID, INVALID_CUSTOM_ROLE_ID,
   INVALID_ORGAN_ID,
   INVALID_ROLE_ID,
-  INVALID_USER_ID,
+  INVALID_USER_ID, TOS_NOT_ACCEPTED,
 } from './validation-errors';
 import { In } from 'typeorm';
 import Role from '../../../entity/rbac/role';
+import TermsOfServiceService from '../../../service/terms-of-service-service';
 
 export const positiveNumber = async (p: number) => {
   if (p <= 0) return toFail(new ValidationError('Number must be positive'));
@@ -42,10 +43,13 @@ export const positiveNumber = async (p: number) => {
 };
 
 export const userMustExist = async (p: number) => {
-  if (await User.findOne({ where: {
-    id: p, acceptedToS: In([TermsOfServiceStatus.ACCEPTED, TermsOfServiceStatus.NOT_REQUIRED]),
-  } }) == null) {
+  const user = await User.findOne({ where: { id: p } });
+  if (user == null) {
     return toFail(INVALID_USER_ID());
+  }
+  const status = await TermsOfServiceService.getUserTosStatus(user);
+  if (status === TermsOfServiceStatus.NOT_ACCEPTED) {
+    return toFail(TOS_NOT_ACCEPTED());
   }
   return toPass(p);
 };

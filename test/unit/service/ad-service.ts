@@ -24,7 +24,7 @@ import { SwaggerSpecification } from 'swagger-model-validator';
 import sinon from 'sinon';
 import chai, { expect } from 'chai';
 import deepEqualInAnyOrder from 'deep-equal-in-any-order';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import ADService from '../../../src/service/ad-service';
@@ -75,7 +75,7 @@ describe('AD Service', (): void => {
     expect(user.firstName).to.equal(organ.displayName);
     expect(user.lastName).to.equal('');
     expect(user.active).to.equal(true);
-    expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+    expect(user.tosRequired).to.equal(false);
   };
 
   const serviceAccountIsAsExpected = (user: User, organ: LDAPUser) => {
@@ -83,7 +83,7 @@ describe('AD Service', (): void => {
     expect(user.firstName).to.equal(organ.displayName);
     expect(user.lastName).to.equal('');
     expect(user.active).to.equal(true);
-    expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+    expect(user.tosRequired).to.equal(false);
     expect(user.canGoIntoDebt).to.equal(false);
   };
 

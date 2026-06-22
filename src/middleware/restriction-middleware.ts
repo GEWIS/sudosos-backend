@@ -92,7 +92,7 @@ export default class RestrictionMiddleware {
     }
 
     if ((acceptedTOS === undefined || acceptedTOS)
-      && req.token.user.acceptedToS === TermsOfServiceStatus.NOT_ACCEPTED
+      && req.token.acceptedToS === TermsOfServiceStatus.NOT_ACCEPTED
     ) {
       res.status(403).end('You have not yet accepted the Terms of Service. Please do this first.');
       return;

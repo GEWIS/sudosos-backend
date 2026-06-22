@@ -63,6 +63,9 @@ import {
 } from '../../../src/controller/response/financial-mutation-response';
 import UpdateLocalRequest from '../../../src/controller/request/update-local-request';
 import { AcceptTosRequest } from '../../../src/controller/request/accept-tos-request';
+import TermsOfServiceService from '../../../src/service/terms-of-service-service';
+import TermsOfServiceAcceptance from '../../../src/entity/user/terms-of-service-acceptance';
+import { UserTosResponse } from '../../../src/controller/response/terms-of-service-response';
 import { CreateUserRequest, UpdateUserRequest } from '../../../src/controller/request/user-request';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { StripeDepositResponse } from '../../../src/controller/response/stripe-response';
@@ -168,7 +171,7 @@ describe('UserController', (): void => {
       type: UserType.MEMBER,
       deleted: true,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User);
     await User.save(deletedUser);
 
@@ -177,7 +180,7 @@ describe('UserController', (): void => {
       type: UserType.ORGAN,
       deleted: false,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User);
     await User.save(ctx.organ);
 
@@ -203,7 +206,7 @@ describe('UserController', (): void => {
       type: UserType.POINT_OF_SALE,
       active: true,
       deleted: false,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     }));
     ctx.posToken = await signTokenFor(posUser, tokenHandler);
 
@@ -1508,25 +1511,29 @@ describe('UserController', (): void => {
     let userNotAcceptedToken: string;
     let userNotRequired: User;
     let userNotRequiredToken: string;
-
-    const body: AcceptTosRequest = {
-      extensiveDataProcessing: true,
-    };
+    let currentVersion: string;
+    let body: AcceptTosRequest;
 
     beforeAll(async () => {
+      currentVersion = await TermsOfServiceService.getCurrentVersion();
+      body = {
+        extensiveDataProcessing: true,
+        version: currentVersion,
+      };
+
       userNotAccepted = await (await UserFactory({
         firstName: 'TestUser1',
         lastName: 'TestUser1',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+        tosRequired: true,
       } as User)).get();
       userNotRequired = await (await UserFactory({
         firstName: 'TestUser2',
         lastName: 'TestUser2',
         type: UserType.MEMBER,
         active: true,
-        acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+        tosRequired: false,
       } as User)).get();
       ctx.users.push(userNotAccepted, userNotRequired);
 
@@ -1537,7 +1544,7 @@ describe('UserController', (): void => {
     it('should correctly accept ToS if not accepted', async () => {
       // Sanity check
       let user = await User.findOne({ where: { id: userNotAccepted.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
@@ -1546,13 +1553,18 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotAccepted.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.ACCEPTED);
       expect(user.extensiveDataProcessing).to.equal(true);
+
+      const acceptance = await TermsOfServiceAcceptance.findOne({
+        where: { userId: user.id, versionNumber: currentVersion },
+      });
+      expect(acceptance).to.not.be.null;
     });
     it('should correctly accept ToS if not required', async () => {
       // Sanity check
       let user = await User.findOne({ where: { id: userNotRequired.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.NOT_REQUIRED);
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
@@ -1564,22 +1576,81 @@ describe('UserController', (): void => {
       expect(res.status).to.equal(204);
 
       user = await User.findOne({ where: { id: userNotRequired.id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
       expect(user.extensiveDataProcessing).to.equal(false);
+
+      const acceptance = await TermsOfServiceAcceptance.findOne({
+        where: { userId: user.id, versionNumber: currentVersion },
+      });
+      expect(acceptance).to.not.be.null;
     });
-    it('should return 400 if ToS already accepted', async () => {
+    it('should return 400 if ToS version already accepted', async () => {
       const { id } = ctx.users[0];
 
       // Sanity check
       const user = await User.findOne({ where: { id } });
-      expect(user.acceptedToS).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(await TermsOfServiceService.getUserTosStatus(user)).to.equal(TermsOfServiceStatus.ACCEPTED);
 
       const res = await request(ctx.app)
         .post('/users/acceptToS')
         .set('Authorization', `Bearer ${ctx.userToken}`)
         .send(body);
       expect(res.status).to.equal(400);
-      expect(res.body).to.equal('User already accepted ToS.');
+      expect(res.body).to.equal('User already accepted this ToS version.');
+    });
+    it('should return 400 if version is not the current version', async () => {
+      const res = await request(ctx.app)
+        .post('/users/acceptToS')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({
+          ...body,
+          version: '0.1',
+        } as AcceptTosRequest);
+      expect(res.status).to.equal(400);
+      expect(res.body).to.equal('Given version is not the current Terms of Service version.');
+    });
+    it('should return 400 if version is missing', async () => {
+      const res = await request(ctx.app)
+        .post('/users/acceptToS')
+        .set('Authorization', `Bearer ${ctx.userToken}`)
+        .send({ extensiveDataProcessing: true });
+      expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('GET /users/{id}/tos', () => {
+    it('should return own TOS status and acceptance history', async () => {
+      const currentVersion = await TermsOfServiceService.getCurrentVersion();
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[0].id}/tos`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(200);
+
+      const body = res.body as UserTosResponse;
+      expect(body.status).to.equal(TermsOfServiceStatus.ACCEPTED);
+      expect(body.currentVersion).to.equal(currentVersion);
+      expect(body.acceptances.map((a) => a.versionNumber)).to.include(currentVersion);
+      body.acceptances.forEach((a) => {
+        expect(new Date(a.acceptedAt).getTime()).to.not.be.NaN;
+      });
+    });
+    it('should return TOS status of another user if admin', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[1].id}/tos`)
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(200);
+      expect((res.body as UserTosResponse).status).to.equal(TermsOfServiceStatus.ACCEPTED);
+    });
+    it('should return 403 when getting TOS status of another user if not admin', async () => {
+      const res = await request(ctx.app)
+        .get(`/users/${ctx.users[1].id}/tos`)
+        .set('Authorization', `Bearer ${ctx.userToken}`);
+      expect(res.status).to.equal(403);
+    });
+    it('should return 404 for a non-existent user', async () => {
+      const res = await request(ctx.app)
+        .get('/users/9999999/tos')
+        .set('Authorization', `Bearer ${ctx.adminToken}`);
+      expect(res.status).to.equal(404);
     });
   });
 

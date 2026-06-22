@@ -21,7 +21,7 @@
 import { DataSource } from 'typeorm';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import UserNotificationPreference, {
   NotificationChannels,
 } from '../../../src/entity/notifications/user-notification-preference';
@@ -237,7 +237,7 @@ describe('UserNotificationPreferenceService', async (): Promise<void> => {
         firstName: 'TestUser',
         active: true,
         type: UserType.LOCAL_ADMIN,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
         email: 'test@example.com',
       } as User)).get();
 

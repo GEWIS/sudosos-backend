@@ -21,7 +21,13 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { promises as fs } from 'fs';
+import { DataSource } from 'typeorm';
 import TermsOfServiceService from '../../../src/service/terms-of-service-service';
+import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import TermsOfServiceAcceptance from '../../../src/entity/user/terms-of-service-acceptance';
+import Database from '../../../src/database/database';
+import { truncateAllTables } from '../../helpers/database-helpers';
+import { finishTestDB } from '../../helpers/test-helpers';
 
 describe('TermsOfServiceService', () => {
   const stubs: sinon.SinonStub[] = [];
@@ -204,6 +210,142 @@ describe('TermsOfServiceService', () => {
       expect(response.versionNumber).to.equal('1.0');
       expect(response.content).to.equal('# Body');
       expect(response.date).to.equal(date.toISOString());
+    });
+  });
+
+  describe('getCurrentVersion', () => {
+    beforeEach(() => {
+      TermsOfServiceService.resetVersionCache();
+    });
+
+    afterEach(() => {
+      TermsOfServiceService.resetVersionCache();
+    });
+
+    it('should return the highest version and cache it', async () => {
+      const readdirStub = sinon.stub(fs, 'readdir').resolves(['1.0.md', '2.0.md', '1.5.md'] as any);
+      stubs.push(readdirStub);
+
+      expect(await TermsOfServiceService.getCurrentVersion()).to.equal('2.0');
+      expect(await TermsOfServiceService.getCurrentVersion()).to.equal('2.0');
+      expect(readdirStub.calledOnce).to.be.true;
+    });
+
+    it('should throw an error when no TOS files exist', async () => {
+      const readdirStub = sinon.stub(fs, 'readdir').resolves([] as any);
+      stubs.push(readdirStub);
+
+      await expect(TermsOfServiceService.getCurrentVersion())
+        .to.eventually.be.rejectedWith('No terms of service versions found');
+    });
+  });
+
+  describe('user TOS status', () => {
+    let connection: DataSource;
+    let userRequired: User;
+    let userNotRequired: User;
+    let currentVersion: string;
+
+    const saveUser = (firstName: string, tosRequired: boolean) => User.save({
+      firstName,
+      lastName: 'TOS',
+      type: UserType.MEMBER,
+      active: true,
+      tosRequired,
+    } as User);
+
+    beforeAll(async () => {
+      connection = await Database.initialize();
+      await truncateAllTables(connection);
+      TermsOfServiceService.resetVersionCache();
+      currentVersion = await TermsOfServiceService.getCurrentVersion();
+      userRequired = await saveUser('Required', true);
+      userNotRequired = await saveUser('NotRequired', false);
+    });
+
+    afterAll(async () => {
+      await finishTestDB(connection);
+    });
+
+    describe('getUserTosStatus', () => {
+      it('should return NOT_REQUIRED when the user does not require the TOS', async () => {
+        expect(await TermsOfServiceService.getUserTosStatus(userNotRequired))
+          .to.equal(TermsOfServiceStatus.NOT_REQUIRED);
+      });
+
+      it('should return NOT_ACCEPTED when there is no acceptance record', async () => {
+        expect(await TermsOfServiceService.getUserTosStatus(userRequired))
+          .to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+      });
+
+      it('should return NOT_ACCEPTED when only an older version was accepted', async () => {
+        const user = await saveUser('OldVersion', true);
+        await TermsOfServiceAcceptance.save({
+          userId: user.id, versionNumber: '0.9',
+        } as TermsOfServiceAcceptance);
+
+        expect(await TermsOfServiceService.getUserTosStatus(user))
+          .to.equal(TermsOfServiceStatus.NOT_ACCEPTED);
+      });
+
+      it('should return ACCEPTED when the current version was accepted', async () => {
+        const user = await saveUser('Accepted', true);
+        await TermsOfServiceAcceptance.save({
+          userId: user.id, versionNumber: currentVersion,
+        } as TermsOfServiceAcceptance);
+
+        expect(await TermsOfServiceService.getUserTosStatus(user))
+          .to.equal(TermsOfServiceStatus.ACCEPTED);
+      });
+    });
+
+    describe('haveUsersAcceptedCurrent', () => {
+      it('should return true when all required users accepted the current version', async () => {
+        const user = await saveUser('BulkAccepted', true);
+        await TermsOfServiceAcceptance.save({
+          userId: user.id, versionNumber: currentVersion,
+        } as TermsOfServiceAcceptance);
+
+        expect(await TermsOfServiceService.haveUsersAcceptedCurrent([user, userNotRequired]))
+          .to.be.true;
+      });
+
+      it('should return false when a required user has not accepted the current version', async () => {
+        expect(await TermsOfServiceService.haveUsersAcceptedCurrent([userRequired, userNotRequired]))
+          .to.be.false;
+      });
+
+      it('should return true when no users require the TOS', async () => {
+        expect(await TermsOfServiceService.haveUsersAcceptedCurrent([userNotRequired]))
+          .to.be.true;
+      });
+
+      it('should return true for an empty list', async () => {
+        expect(await TermsOfServiceService.haveUsersAcceptedCurrent([])).to.be.true;
+      });
+    });
+
+    describe('getAcceptances', () => {
+      it('should return all acceptance records of a user', async () => {
+        const user = await saveUser('History', true);
+        await TermsOfServiceAcceptance.save({
+          userId: user.id, versionNumber: '0.9',
+        } as TermsOfServiceAcceptance);
+        await TermsOfServiceAcceptance.save({
+          userId: user.id, versionNumber: currentVersion,
+        } as TermsOfServiceAcceptance);
+
+        const acceptances = await TermsOfServiceService.getAcceptances(user.id);
+        expect(acceptances.map((a) => a.versionNumber))
+          .to.have.members(['0.9', currentVersion]);
+        acceptances.forEach((a) => {
+          expect(a.createdAt).to.be.instanceOf(Date);
+        });
+      });
+
+      it('should return an empty array for a user without acceptances', async () => {
+        expect(await TermsOfServiceService.getAcceptances(userRequired.id)).to.be.empty;
+      });
     });
   });
 });

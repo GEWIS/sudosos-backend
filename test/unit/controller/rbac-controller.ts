@@ -32,7 +32,7 @@ import database from '../../../src/database/database';
 import { finishTestDB } from '../../helpers/test-helpers';
 import DefaultRoles from '../../../src/rbac/default-roles';
 import Role from '../../../src/entity/rbac/role';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import PermissionRule from '../../../src/rbac/permission-rule';
@@ -69,12 +69,12 @@ describe('RbacController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     }, {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     }]);
 
     const roles = await DefaultRoles.synchronize();

@@ -19,7 +19,7 @@
  */
 
 import { DataSource } from 'typeorm';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
 import Transaction from '../../../src/entity/transactions/transaction';
 import SubTransaction from '../../../src/entity/transactions/sub-transaction';
@@ -188,7 +188,7 @@ describe('DebtorService', (): void => {
         type: UserType.LOCAL_USER,
         ofAge: true,
         active: true,
-        acceptedToS: TermsOfServiceStatus.ACCEPTED,
+        tosRequired: true,
       });
       newUser = await newUser.save();
       const { transfer } = await addTransfer(newUser, ctx.users, false, undefined, 500);

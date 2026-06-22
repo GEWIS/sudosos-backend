@@ -57,21 +57,21 @@ describe('RestrictionMiddleware', (): void => {
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      tosRequired: true,
     } as User)).get();
     const userNotRequired = await (await UserFactory({
       firstName: 'TestUser2',
       lastName: 'TestUser2',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User)).get();
     const userAccepted = await (await UserFactory({
       firstName: 'TestUser1',
       lastName: 'TestUser1',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User)).get();
 
     const tokenHandler = new TokenHandler({
@@ -237,7 +237,9 @@ describe('RestrictionMiddleware', (): void => {
   describe('Accepted TOS endpoints', async () => {
     it('should allow accepted TOS tokens', async () => {
       ctx.acceptTOS = true;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userAccepted, roles: [], acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -245,7 +247,9 @@ describe('RestrictionMiddleware', (): void => {
     });
     it('should allow not required TOS tokens', async () => {
       ctx.acceptTOS = true;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userNotRequired, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userNotRequired, roles: [], acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -253,7 +257,9 @@ describe('RestrictionMiddleware', (): void => {
     });
     it('should reject not accepted TOS tokens', async () => {
       ctx.acceptTOS = true;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userNotAccepted, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userNotAccepted, roles: [], acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -263,13 +269,17 @@ describe('RestrictionMiddleware', (): void => {
     it('should reject not accepted users by default', async () => {
       // sanity check
       ctx.acceptTOS = undefined;
-      let token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [] }, '39');
+      let token = await ctx.tokenHandler.signToken({
+        user: ctx.userAccepted, roles: [], acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      }, '39');
       let res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).to.equal(200);
 
-      token = await ctx.tokenHandler.signToken({ user: ctx.userNotAccepted, roles: [] }, '39');
+      token = await ctx.tokenHandler.signToken({
+        user: ctx.userNotAccepted, roles: [], acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      }, '39');
       res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -280,7 +290,9 @@ describe('RestrictionMiddleware', (): void => {
   describe('Not accepted TOS endpoints', async () => {
     it('should allow accepted TOS tokens', async () => {
       ctx.acceptTOS = false;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userAccepted, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userAccepted, roles: [], acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -288,7 +300,9 @@ describe('RestrictionMiddleware', (): void => {
     });
     it('should allow not required TOS tokens', async () => {
       ctx.acceptTOS = false;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userNotRequired, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userNotRequired, roles: [], acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);
@@ -296,7 +310,9 @@ describe('RestrictionMiddleware', (): void => {
     });
     it('should allow not accepted TOS tokens', async () => {
       ctx.acceptTOS = false;
-      const token = await ctx.tokenHandler.signToken({ user: ctx.userNotAccepted, roles: [] }, '39');
+      const token = await ctx.tokenHandler.signToken({
+        user: ctx.userNotAccepted, roles: [], acceptedToS: TermsOfServiceStatus.NOT_ACCEPTED,
+      }, '39');
       const res = await request(ctx.app)
         .get('/')
         .set('Authorization', `Bearer ${token}`);

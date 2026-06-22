@@ -23,7 +23,7 @@ import express, { Application } from 'express';
 import ProductController from '../../src/controller/product-controller';
 import ContainerController from '../../src/controller/container-controller';
 import PointOfSaleController from '../../src/controller/point-of-sale-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../src/entity/user/user';
+import User, { UserType } from '../../src/entity/user/user';
 import VatGroup from '../../src/entity/vat-group';
 import { ProductResponse } from '../../src/controller/response/product-response';
 import { ContainerResponse } from '../../src/controller/response/container-response';
@@ -78,13 +78,13 @@ describe('Propagation between products, containers, POSs', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     });
     const organ = await User.save({
       firstName: 'Organ',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     });
 
     const categories = await new ProductCategorySeeder().seed();

@@ -19,17 +19,36 @@
  */
 
 /**
- * This is the module page of the accept-tos-request.
- * @module users
+ * This is the module page of the terms-of-service-acceptance.
+ *
+ * @module terms-of-service
  */
 
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import BaseEntity from '../base-entity';
+import User from './user';
+
 /**
- * @typedef {object} AcceptTosRequest
- * @property {boolean} extensiveDataProcessing.required - Whether data about this
- * user can be used (non-anonymously) for more data science!
- * @property {string} version.required - The TOS version being accepted.
+ * Records that a user accepted a specific terms of service version.
+ * The `createdAt` timestamp doubles as the acceptance timestamp.
  */
-export interface AcceptTosRequest {
-  extensiveDataProcessing: boolean;
-  version: string;
+@Entity()
+@Unique(['userId', 'versionNumber'])
+export default class TermsOfServiceAcceptance extends BaseEntity {
+  @Column({
+    type: 'integer',
+    nullable: false,
+  })
+  public userId: number;
+
+  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  public user: User;
+
+  @Column({
+    type: 'varchar',
+    length: 16,
+    nullable: false,
+  })
+  public versionNumber: string;
 }

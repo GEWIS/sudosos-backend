@@ -21,7 +21,10 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import matter from 'gray-matter';
+import { EntityManager, In } from 'typeorm';
 import { TermsOfServiceResponse } from '../controller/response/terms-of-service-response';
+import User, { TermsOfServiceStatus } from '../entity/user/user';
+import TermsOfServiceAcceptance from '../entity/user/terms-of-service-acceptance';
 
 /**
  * This is the module page of the terms-of-service-service.
@@ -38,6 +41,76 @@ export interface TermsOfService {
 }
 
 export default class TermsOfServiceService {
+
+  /**
+   * Cached current TOS version.
+   */
+  private static currentVersion: string | undefined;
+
+  /**
+   * Get the current TOS version (highest version number).
+   * Throws an error if no TOS files exist.
+   */
+  public static async getCurrentVersion(): Promise<string> {
+    if (TermsOfServiceService.currentVersion === undefined) {
+      const versions = await TermsOfServiceService.listVersions();
+      if (versions.length === 0) {
+        throw new Error('No terms of service versions found');
+      }
+      TermsOfServiceService.currentVersion = versions[versions.length - 1];
+    }
+    return TermsOfServiceService.currentVersion;
+  }
+
+  /**
+   * Clear the ToS version cache, used for testing.
+   */
+  public static resetVersionCache() {
+    TermsOfServiceService.currentVersion = undefined;
+  }
+
+  /**
+   * Derive the TOS status of a user from their acceptance records
+   * against the current TOS version.
+   */
+  public static async getUserTosStatus(user: Pick<User, 'id' | 'tosRequired'>): Promise<TermsOfServiceStatus> {
+    if (!user.tosRequired) return TermsOfServiceStatus.NOT_REQUIRED;
+    const versionNumber = await TermsOfServiceService.getCurrentVersion();
+    const acceptance = await TermsOfServiceAcceptance.findOne({
+      where: { userId: user.id, versionNumber },
+    });
+    return acceptance ? TermsOfServiceStatus.ACCEPTED : TermsOfServiceStatus.NOT_ACCEPTED;
+  }
+
+  /**
+   * Whether all given users that are required to accept the TOS
+   * have accepted the current version.
+   * @param users - The users to check.
+   * @param manager - Optional entity manager to read within a specific transaction. Defaults to the global manager when omitted.
+   */
+  public static async haveUsersAcceptedCurrent(
+    users: Pick<User, 'id' | 'tosRequired'>[],
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    const requiredIds = [...new Set(users.filter((u) => u.tosRequired).map((u) => u.id))];
+    if (requiredIds.length === 0) return true;
+    const versionNumber = await TermsOfServiceService.getCurrentVersion();
+    const where = { userId: In(requiredIds), versionNumber };
+    const count = manager
+      ? await manager.count(TermsOfServiceAcceptance, { where })
+      : await TermsOfServiceAcceptance.count({ where });
+    return count === requiredIds.length;
+  }
+
+  /**
+   * Get all TOS acceptance records of a user, ordered by acceptance date.
+   */
+  public static async getAcceptances(userId: number): Promise<TermsOfServiceAcceptance[]> {
+    return TermsOfServiceAcceptance.find({
+      where: { userId },
+      order: { createdAt: 'ASC' },
+    });
+  }
 
   /**
    * Convert a TermsOfService data object to a TermsOfServiceResponse.

@@ -22,7 +22,7 @@ import express, { Application } from 'express';
 import { DataSource } from 'typeorm';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import EventController from '../../../src/controller/event-controller';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Event, { EventType } from '../../../src/entity/event/event';
 import EventShift from '../../../src/entity/event/event-shift';
 import EventShiftAnswer, { Availability } from '../../../src/entity/event/event-shift-answer';
@@ -77,7 +77,7 @@ describe('EventController', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     const localUser = {
@@ -85,7 +85,7 @@ describe('EventController', () => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User;
 
     await User.save(adminUser);

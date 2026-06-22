@@ -42,7 +42,6 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { PointOfSaleSeeder } from '../../seed';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
-import { TermsOfServiceStatus } from '../../../src/entity/user/user';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 
 const { expect, request } = chai;
@@ -76,7 +75,7 @@ describe('MemberAuthenticationSecureController', async (): Promise<void> => {
       lastName: 'User',
       type: UserType.MEMBER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: true,
     } as User);
 
     // Create Member user linked to member user
