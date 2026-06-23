@@ -33,7 +33,7 @@ import Database from '../../../src/database/database';
 import TerminalPayment, { TerminalPaymentState } from '../../../src/entity/transactions/terminal/terminal-payment';
 import TmpTransaction from '../../../src/entity/transactions/terminal/tmp-transaction';
 import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Config from '../../../src/config';
 import TokenMiddleware from '../../../src/middleware/token-middleware';
 import RoleManager from '../../../src/rbac/role-manager';
@@ -113,7 +113,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: false,
     } as User;
 
     const localUser = {
@@ -121,7 +121,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       firstName: 'User',
       type: UserType.LOCAL_USER,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: false,
     } as User;
 
     // The POS user owns the catalogue (acts as the seller) and is the account
@@ -131,7 +131,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       firstName: 'Bar',
       type: UserType.POINT_OF_SALE,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     await User.save([adminUser, localUser, posUser]);
@@ -348,7 +348,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
           firstName: `userType-${type}`,
           type,
           active: true,
-          acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+          tosRequired: false,
         } as User;
         u = await User.save(u);
 

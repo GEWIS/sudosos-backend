@@ -19,7 +19,7 @@
  */
 
 import WithManager from '../../../src/database/with-manager';
-import User, { TermsOfServiceStatus, UserType } from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
 import StripePaymentIntentStatus, {
   StripePaymentIntentState,
@@ -104,12 +104,13 @@ export default class TerminalPaymentSeeder extends WithManager {
    * @param users - The buyers for the seeded transactions.
    */
   private async seedCatalogue(users: User[]): Promise<TerminalPaymentCatalogue> {
-    const owner = await this.manager.save(User, Object.assign(new User(), {
+    let owner = {
       firstName: 'Terminal Payment Catalogue Owner',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
-    }));
+      tosRequired: false,
+    } as User;
+    owner = await this.manager.save(User, owner);
 
     const categories = await new ProductCategorySeeder(this.manager).init();
     const vatGroups = await new VatGroupSeeder(this.manager).init();

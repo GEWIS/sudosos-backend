@@ -28,7 +28,6 @@ import TerminalPayment, {
   TerminalPaymentState,
 } from '../../../src/entity/transactions/terminal/terminal-payment';
 import User, {
-  TermsOfServiceStatus,
   UserType,
 } from '../../../src/entity/user/user';
 import Config from '../../../src/config';
@@ -81,14 +80,14 @@ describe('TerminalPaymentService', () => {
       firstName: 'Admin',
       type: UserType.LOCAL_ADMIN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.ACCEPTED,
+      tosRequired: false,
     } as User;
     const organUser = {
       id: 2,
       firstName: 'Bar',
       type: UserType.ORGAN,
       active: true,
-      acceptedToS: TermsOfServiceStatus.NOT_REQUIRED,
+      tosRequired: false,
     } as User;
 
     await User.save([adminUser, organUser]);

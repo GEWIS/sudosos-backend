@@ -216,7 +216,8 @@ export default class TerminalPaymentService extends WithManager {
     // Transform the temporary transaction into an actual transaction
     const transactionService = new TransactionService(this.manager);
     const transactionReq = transactionService.asTransactionRequest(temporaryTransaction);
-    const { context } = await transactionService.verifyTransaction(transactionReq);
+    const { valid, context } = await transactionService.verifyTransaction(transactionReq);
+    if (!valid) throw new Error('Stored transaction is invalid');
     if (!context) throw new Error('No context given');
     terminalPayment.finalTransaction = await transactionService.createTransaction(transactionReq, context);
 
