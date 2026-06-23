@@ -308,7 +308,7 @@ describe('WebSocketService', () => {
       const originalInstance = wss.instance;
 
       // Stub setupAdapter on the prototype BEFORE creating the instance
-      // so the real cluster adapter never runs (it needs process.send)
+      // so the real Redis adapter never runs (it needs a Redis connection)
       // @ts-ignore to allow access to the private method
       const setupAdapterStub = sinon.stub(WebSocketService.prototype, 'setupAdapter').returns(undefined);
 

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-cron
+  labels:
+    app: backend-cron
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-cron
+  template:
+    metadata:
+      labels:
+        app: backend-cron
+    spec:
+      containers:
+        - name: backend-cron
+          image: abc.docker-registry.gewis.nl/pos/sudosos/backend:latest
+          command: ["/app/init_scripts/start-cron.sh"]
+          envFrom:
+            - configMapRef:
+                name: backend-env-config
+            - secretRef:
+                name: backend-env
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sudosos-backend-config

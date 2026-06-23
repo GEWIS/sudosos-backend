@@ -21,8 +21,8 @@
 import log4js from 'log4js';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
-import { createAdapter } from '@socket.io/cluster-adapter';
-import { setupWorker } from '@socket.io/sticky';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import QRAuthenticator from '../entity/authenticator/qr-authenticator';
 import AuthenticationResponse from '../controller/response/authentication-response';
@@ -140,16 +140,17 @@ export default class WebSocketService {
    * Delegates to the singleton instance.
    * @throws Error if WebSocketService has not been initialized.
    */
-  public static initiateWebSocket(): void {
-    this.getInstance().initiateWebSocket();
+  public static initiateWebSocket(redisConnection?: Redis): void {
+    this.getInstance().initiateWebSocket(redisConnection);
   }
 
   /**
-   * Sets up the cluster adapter for production environments.
+   * Sets up the Redis adapter for production environments.
    */
-  private setupAdapter(): void {
-    this.io.adapter(createAdapter());
-    setupWorker(this.io);
+  private setupAdapter(redisConnection: Redis): void {
+    const subClient = redisConnection.duplicate();
+    this.io.adapter(createAdapter(redisConnection, subClient));
+    this.logger.info('Socket.IO Redis adapter initialized.');
   }
 
   /**
@@ -268,7 +269,7 @@ export default class WebSocketService {
   /**
    * Initializes the WebSocket server and sets up connection handlers.
    */
-  public initiateWebSocket(): void {
+  public initiateWebSocket(redisConnection?: Redis): void {
     const config = Config.get();
     // Prevent multiple initializations
     if (this.connectionHandlerRegistered) {
@@ -279,7 +280,10 @@ export default class WebSocketService {
     const port = config.websocket.port;
 
     if (config.app.isProduction) {
-      this.setupAdapter();
+      if (!redisConnection) {
+        throw new Error('Redis connection is required for WebSocket adapter in production');
+      }
+      this.setupAdapter(redisConnection);
     }
 
     // Only start listening if not already listening

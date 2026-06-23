@@ -329,7 +329,7 @@ export default async function createApp(): Promise<Application> {
     application.app.use('/v1/test', new TestController(options).getRouter());
   }
 
-  webSocketService.initiateWebSocket();
+  webSocketService.initiateWebSocket(application.redisConnection);
 
   application.workers = application.redisConnection
     ? [startMailWorker(application.redisConnection)]
