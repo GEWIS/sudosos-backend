@@ -27,6 +27,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import User from '../../../src/entity/user/user';
+import type { Redis } from 'ioredis';
 
 // Bridges socket.io's callback-style flow (e.g. `clientSocket.on('event', () => done())`)
 // into Promises. Vitest hooks/tests must return a Promise — it doesn't support
@@ -323,8 +324,10 @@ describe('WebSocketService', () => {
           roleManager: mockRoleManager,
         });
 
-        testService.initiateWebSocket();
+        const mockRedisConnection = {} as Redis;
+        testService.initiateWebSocket(mockRedisConnection);
         expect(setupAdapterStub.calledOnce).to.be.true;
+        expect(setupAdapterStub.calledWith(mockRedisConnection)).to.be.true;
       } finally {
         // Restore everything so later tests are not affected
         setupAdapterStub.restore();
