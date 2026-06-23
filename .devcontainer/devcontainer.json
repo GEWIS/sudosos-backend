@@ -51,7 +51,7 @@
     }
   },
 
-  "postCreateCommand": "npm install && npm run init:dev",
+  "postCreateCommand": "npm install && ([ -f config/jwt.key ] || openssl genrsa -out config/jwt.key 2048) && npm run init:dev",
   "postStartCommand": "",
 
   "remoteEnv": {

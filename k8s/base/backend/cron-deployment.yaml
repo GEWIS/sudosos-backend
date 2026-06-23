@@ -23,9 +23,6 @@ spec:
                 name: backend-env-config
             - secretRef:
                 name: backend-env
-          volumeMounts:
-            - name: config
-              mountPath: /app/config
           resources:
             requests:
               cpu: 50m
@@ -37,7 +34,3 @@ spec:
         options:
           - name: ndots
             value: '1'
-      volumes:
-        - name: config
-          persistentVolumeClaim:
-            claimName: sudosos-backend-config

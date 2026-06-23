@@ -14,9 +14,9 @@ RUN HUSKY=0 pnpm install --prod --frozen-lockfile
 
 # The target image that will be run
 FROM node:22-alpine AS target
-RUN apk add openssl
 
 WORKDIR /app
+RUN mkdir -p /app/config && chown node /app/config
 COPY --from=build --chown=node /app/node_modules /app/node_modules
 RUN npm install -g typeorm
 

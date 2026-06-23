@@ -72,6 +72,18 @@ The shared volumes use `ReadWriteMany` access mode:
 
 Your cluster needs a storage class that supports RWX (e.g. NFS, Longhorn with NFS, or a shared filesystem).
 
+## JWT signing key
+
+The backend JWT private key is stored in a dedicated `backend-jwt` sealed secret and
+mounted at `/app/config/jwt.key`. See `secrets/README.md` for generation and rotation.
+
+When migrating from the old config PVC, copy the existing key from the PVC before
+applying this change so issued tokens remain valid:
+
+```bash
+kubectl exec -n sudosos-prod deploy/backend -- cat /app/config/jwt.key
+```
+
 ## Image Tags
 
 Most application image tags are set per-overlay in `kustomization.yaml`:

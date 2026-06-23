@@ -28,8 +28,10 @@ spec:
             - secretRef:
                 name: backend-env
           volumeMounts:
-            - name: config
-              mountPath: /app/config
+            - name: jwt-key
+              mountPath: /app/config/jwt.key
+              subPath: jwt.key
+              readOnly: true
             - name: data-products
               mountPath: /app/out/data/products
             - name: data-banners
@@ -54,9 +56,12 @@ spec:
           - name: ndots
             value: '1'
       volumes:
-        - name: config
-          persistentVolumeClaim:
-            claimName: sudosos-backend-config
+        - name: jwt-key
+          secret:
+            secretName: backend-jwt
+            items:
+              - key: JWT_PRIVATE_KEY
+                path: jwt.key
         - name: data-products
           persistentVolumeClaim:
             claimName: sudosos-products
