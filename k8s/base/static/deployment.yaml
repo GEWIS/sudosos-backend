@@ -19,6 +19,12 @@ spec:
           image: caddy:alpine
           ports:
             - containerPort: 80
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           volumeMounts:
             - name: static-config
               mountPath: /etc/caddy/Caddyfile

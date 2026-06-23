@@ -19,6 +19,13 @@ spec:
           image: abc.docker-registry.gewis.nl/pos/sudosos/dashboard:latest
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               cpu: 25m

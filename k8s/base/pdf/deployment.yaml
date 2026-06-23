@@ -20,6 +20,12 @@ spec:
           command: ["node", "/usr/src/app/build/index.js"]
           ports:
             - containerPort: 3001
+          livenessProbe:
+            tcpSocket:
+              port: 3001
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           envFrom:
             - configMapRef:
                 name: pdf-env

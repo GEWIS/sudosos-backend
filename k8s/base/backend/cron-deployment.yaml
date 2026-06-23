@@ -18,6 +18,13 @@ spec:
         - name: backend-cron
           image: abc.docker-registry.gewis.nl/pos/sudosos/backend:latest
           command: ["/app/init_scripts/start-cron.sh"]
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "kill -0 1"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
           envFrom:
             - configMapRef:
                 name: backend-env-config
