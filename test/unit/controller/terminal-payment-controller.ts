@@ -27,7 +27,7 @@ import sinon from 'sinon';
 import Stripe from 'stripe';
 import TokenHandler from '../../../src/authentication/token-handler';
 import TerminalPaymentController from '../../../src/controller/terminal-payment-controller';
-import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import { STRIPE_API_VERSION, StripePaymentTerminal } from '../../../src/service/stripe-service';
 import TerminalPaymentService from '../../../src/service/terminal-payment-service';
 import Database from '../../../src/database/database';
 import TerminalPayment, { TerminalPaymentState } from '../../../src/entity/transactions/terminal/terminal-payment';
@@ -43,7 +43,6 @@ import { finishTestDB } from '../../helpers/test-helpers';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
 import TerminalPaymentSeeder from '../../seed/ledger/terminal-payment-seeder';
 import { TransactionRequest } from '../../../src/controller/request/transaction-request';
-import { StripePaymentTerminalResponse } from '../../../src/controller/response/stripe-response';
 
 const { expect, request } = chai;
 
@@ -58,13 +57,21 @@ const FAKE_READERS: Stripe.Terminal.Reader[] = [
   {
     id: FAKE_READER_ID,
     label: 'Available test terminal',
+    last_seen_at: new Date().getTime() - 1000 * 60 * 15,
     action: null,
-  } as Stripe.Terminal.Reader,
+  } as any,
+  {
+    id: FAKE_READER_ID,
+    label: 'Available test terminal',
+    last_seen_at: new Date().getTime(),
+    action: null,
+  } as any,
   {
     id: FAKE_UNAVAILABLE_READER_ID,
     label: 'In-use test terminal',
+    last_seen_at: new Date().getTime(),
     action: { status: 'in_progress' } as Stripe.Terminal.Reader.Action,
-  } as Stripe.Terminal.Reader,
+  } as any,
 ];
 
 describe('TerminalPaymentController', async (): Promise<void> => {
@@ -81,7 +88,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     posToken: String,
     terminalPayments: TerminalPayment[],
     posTerminalPayment: TerminalPayment,
-    terminals: StripePaymentTerminalResponse[],
+    terminals: StripePaymentTerminal[],
     validTransactionRequest: TransactionRequest,
   };
 
@@ -90,6 +97,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
   let paymentIntentsCreateStub: sinon.SinonStub;
   let paymentIntentsCancelStub: sinon.SinonStub;
   let readersProcessIntentStub: sinon.SinonStub;
+  let readersCancelActionStub: sinon.SinonStub;
   let readersListStub: sinon.SinonStub;
 
   beforeAll(async () => {
@@ -193,9 +201,11 @@ describe('TerminalPaymentController', async (): Promise<void> => {
 
     // The terminals as the StripeService exposes them, derived from the fake
     // readers that back the stubbed `terminal.readers.list` call.
-    const terminals: StripePaymentTerminalResponse[] = FAKE_READERS.map((t) => ({
+    const terminals: StripePaymentTerminal[] = FAKE_READERS.map((t) => ({
       id: t.id,
       name: t.label,
+      // TODO: Update Stripe because this attribute is in the response, but not in the types
+      lastSeenAt: new Date((t as any).last_seen_at),
       available: t.action?.status !== 'in_progress',
     }));
 
@@ -244,10 +254,16 @@ describe('TerminalPaymentController', async (): Promise<void> => {
         'processPaymentIntent',
       )
       .resolves({ id: FAKE_READER_ID } as any);
+    readersCancelActionStub = sinon
+      .stub(
+        Object.getPrototypeOf(sampleStripe.terminal.readers),
+        'cancelAction',
+      )
+      .resolves({ id: FAKE_READER_ID } as any);
     readersListStub = sinon
       .stub(Object.getPrototypeOf(sampleStripe.terminal.readers), 'list')
       .resolves({ data: FAKE_READERS } as any);
-    stubs.push(paymentIntentsCreateStub, paymentIntentsCancelStub, readersProcessIntentStub, readersListStub);
+    stubs.push(paymentIntentsCreateStub, paymentIntentsCancelStub, readersProcessIntentStub, readersCancelActionStub, readersListStub);
   });
 
   afterEach(() => {
@@ -481,9 +497,15 @@ describe('TerminalPaymentController', async (): Promise<void> => {
       expect(readersProcessIntentStub).to.be.calledOnceWith(FAKE_READER_ID, {
         payment_intent: terminalPayment!.stripePaymentIntent.stripeId,
       });
-      // Starting the payment does not change the terminal payment's state
+      // Starting the payment changes the state to PROCESSING
       expect((await new TerminalPaymentService().getTerminalPayment(terminalPayment!.id))!.getState())
-        .to.equal(TerminalPaymentState.CREATED);
+        .to.equal(TerminalPaymentState.PROCESSING);
+
+      // Cleanup: revert to CREATED so the other tests that rely on this shared
+      // seeded payment being CREATED (in particular the cancel test, whose stub
+      // set does not include `terminal.readers.cancelAction`) are not affected.
+      await ctx.connection.getRepository(TerminalPayment)
+        .update(terminalPayment!.id, { processedByTerminal: null });
     });
 
     it('should return HTTP 400 if the request body is invalid', async () => {

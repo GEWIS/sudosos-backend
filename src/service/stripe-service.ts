@@ -47,6 +47,13 @@ import Config from '../config';
 
 export const STRIPE_API_VERSION = '2024-06-20';
 
+export interface StripePaymentTerminal {
+  id: string;
+  name: string;
+  lastSeenAt: Date;
+  available: boolean;
+}
+
 export class StripeFactory {
   public static create(): Stripe {
     const config = Config.get();
@@ -124,6 +131,15 @@ export default class StripeService extends WithManager {
     };
   }
 
+  public static asStripePaymentTerminalResponse(terminal: StripePaymentTerminal): StripePaymentTerminalResponse {
+    return {
+      id: terminal.id,
+      name: terminal.name,
+      lastSeenAt: terminal.lastSeenAt.toISOString(),
+      available: terminal.available,
+    };
+  }
+
   public static async getProcessingStripeDepositsFromUser(userId: number): Promise<StripeDeposit[]> {
     const deposits = await StripeDeposit.find({
       where: {
@@ -175,22 +191,43 @@ export default class StripeService extends WithManager {
    * @param metadata Optional extra metadata to attach to the payment intent
    * @returns
    */
-  public async createStripePaymentIntent(user: User, amount: Dinero, metadata?: Record<string, any>): Promise<{
+  public async createStripePaymentIntent(user: User, amount: Dinero, paymentMethod: 'digital' | 'terminal', metadata?: Record<string, any>): Promise<{
     stripePaymentIntent: StripePaymentIntent,
     clientSecret: string | null,
   }> {
     const config = Config.get();
-    const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: DineroTransformer.Instance.to(amount),
-      currency: amount.getCurrency(),
-      automatic_payment_methods: { enabled: true },
-      description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
-      metadata: {
-        ...metadata,
-        'service': config.app.name,
-        'userId': user.id,
-      },
-    });
+
+    let paymentIntent: Stripe.Response<Stripe.PaymentIntent>;
+    if (paymentMethod === 'digital') {
+      paymentIntent = await this.stripe.paymentIntents.create({
+        amount: DineroTransformer.Instance.to(amount),
+        currency: amount.getCurrency(),
+        automatic_payment_methods: { enabled: true },
+        description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+        metadata: {
+          ...metadata,
+          'service': config.app.name,
+          'userId': user.id,
+        },
+      });
+    } else if (paymentMethod === 'terminal') {
+      paymentIntent = await this.stripe.paymentIntents.create({
+        amount: DineroTransformer.Instance.to(amount),
+        currency: amount.getCurrency(),
+        payment_method_types: [
+          'card_present',
+        ],
+        // TODO: can this be automatic? Otherwise SudoSOS needs to manually
+        // capture the payment
+        capture_method: 'manual',
+        description: `SudoSOS terminal payment of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+        metadata: {
+          ...metadata,
+          'service': config.app.name,
+          'userId': user.id,
+        },
+      });
+    }
 
     const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({
       stripeId: paymentIntent.id,
@@ -210,7 +247,7 @@ export default class StripeService extends WithManager {
   public async createStripeDeposit(
     user: User, amount: Dinero, metadata?: Record<string, any>,
   ): Promise<{ deposit: StripeDeposit, clientSecret: string | null }> {
-    const { stripePaymentIntent, clientSecret } = await this.createStripePaymentIntent(user, amount, metadata);
+    const { stripePaymentIntent, clientSecret } = await this.createStripePaymentIntent(user, amount, 'digital', metadata);
     const deposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
@@ -240,6 +277,11 @@ export default class StripeService extends WithManager {
     await this.manager.save(paymentIntent.deposit);
   }
 
+  public async cancelTerminalAction(readerId: string) {
+    const terminal = await this.stripe.terminal.readers.cancelAction(readerId);
+    return terminal;
+  }
+
   /**
    * Cancel a payment intent on Stripe. Note that this will trigger a webhook
    * by Stripe, which should be handled correctly to prevent infinite loops.
@@ -255,19 +297,24 @@ export default class StripeService extends WithManager {
   /**
    * Get all Stripe Payment Terminals available in Stripe
    */
-  public async getTerminals(): Promise<StripePaymentTerminalResponse[]> {
+  public async getTerminals(): Promise<StripePaymentTerminal[]> {
     const terminals = await this.stripe.terminal.readers.list();
-    return terminals.data.map((t) => ({
-      id: t.id,
-      name: t.label,
-      available: t.action?.status !== 'in_progress',
-    }));
+
+    return terminals.data.map((t) => {
+      const lastSeenAt = new Date((terminals.data[0] as any).last_seen_at);
+      return {
+        id: t.id,
+        name: t.label,
+        lastSeenAt,
+        available: t.action?.status !== 'in_progress',
+      };
+    });
   }
 
   /**
    * Get the Stripe Payment Terminal with the given ID
    */
-  public async getSingleTerminal(id: string): Promise<StripePaymentTerminalResponse | null> {
+  public async getSingleTerminal(id: string): Promise<StripePaymentTerminal | null> {
     const terminals = await this.getTerminals();
     const match = terminals.find((t) => t.id === id);
     if (!match) return null;

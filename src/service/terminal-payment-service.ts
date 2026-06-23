@@ -133,7 +133,7 @@ export default class TerminalPaymentService extends WithManager {
       return prevTotalSt.add(strTotal);
     }, DineroFactory());
 
-    const { stripePaymentIntent } = await this.stripeService.createStripePaymentIntent(savedTmpTransaction.from, totalCost);
+    const { stripePaymentIntent } = await this.stripeService.createStripePaymentIntent(savedTmpTransaction.from, totalCost, 'terminal');
 
     const terminalPayment = await this.manager.getRepository(TerminalPayment).save({
       stripePaymentIntent,
@@ -148,12 +148,22 @@ export default class TerminalPaymentService extends WithManager {
   /**
    * Send the Payment to the terminal
    */
-  public async startTerminalPayment(id: number, params: ProcessTerminalPaymentRequest): Promise<void> {
+  public async startTerminalPayment(id: number, params: ProcessTerminalPaymentRequest): Promise<TerminalPayment> {
     const terminalPayment = await this.getTerminalPayment(id);
     if (!terminalPayment) {
       throw new Error(`TerminalPayment with ID "${id}" not found`);
     }
-    await this.stripeService.startTerminalPayment(params.stripeTerminalId, terminalPayment.stripePaymentIntent.stripeId);
+
+    const terminal = await this.stripeService.getSingleTerminal(params.stripeTerminalId);
+    if (!terminal) {
+      throw new Error(`Stripe Terminal with ID "${params.stripeTerminalId}" not found`);
+    }
+
+    terminalPayment.processedByTerminal = terminal.id;
+    await this.manager.save(terminalPayment);
+
+    await this.stripeService.startTerminalPayment(terminal.id, terminalPayment.stripePaymentIntent.stripeId);
+    return terminalPayment;
   }
 
   /**
@@ -163,16 +173,20 @@ export default class TerminalPaymentService extends WithManager {
    */
   public async cancelTerminalPayment(id: number, sendStripeCancellation = true): Promise<TerminalPayment> {
     const tp = await this.getTerminalPayment(id);
-    if (!tp) return null;
+    if (!tp) throw new Error(`TerminalPayment with ID "${id}" not found`);
 
-    if (tp.getState() !== TerminalPaymentState.CREATED) {
-      return null;
+    if (tp.getState() !== TerminalPaymentState.CREATED && tp.getState() !== TerminalPaymentState.PROCESSING) {
+      throw new Error(`TerminalPayment has state "${tp.getState()}", but expected state "${TerminalPaymentState.CREATED}" or "${TerminalPaymentState.PROCESSING}"`);
     }
 
     const transaction = tp.temporaryTransaction;
     tp.temporaryTransaction = null;
     await this.manager.save(tp);
     await this.manager.getRepository(TmpTransaction).remove(transaction);
+
+    if (sendStripeCancellation && tp.processedByTerminal) {
+      await this.stripeService.cancelTerminalAction(tp.processedByTerminal);
+    }
 
     if (sendStripeCancellation) {
       tp.stripePaymentIntent = await this.stripeService.cancelPaymentIntent(tp.stripePaymentIntent);
@@ -191,8 +205,8 @@ export default class TerminalPaymentService extends WithManager {
     const terminalPayment = await this.getTerminalPayment(paymentIntent.terminalPayment!.id);
     if (!terminalPayment) throw new Error(`TerminalPayment with ID "${paymentIntent.terminalPayment.id}" not found!`);
 
-    if (terminalPayment.getState() !== TerminalPaymentState.CREATED) {
-      throw new Error(`TerminalPayment has state "${terminalPayment.getState()}", but expected state "${TerminalPaymentState.CREATED}"`);
+    if (terminalPayment.getState() !== TerminalPaymentState.PROCESSING) {
+      throw new Error(`TerminalPayment has state "${terminalPayment.getState()}", but expected state "${TerminalPaymentState.PROCESSING}"`);
     }
     const { temporaryTransaction } = terminalPayment;
     if (!temporaryTransaction) {

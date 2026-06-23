@@ -26,7 +26,7 @@
  * @mergeTarget
  */
 
-import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import BaseEntity from '../../base-entity';
 import StripePaymentIntent from '../../stripe/stripe-payment-intent';
 import Transfer from '../transfer';
@@ -43,7 +43,7 @@ export enum TerminalPaymentState {
   /**
    * Transaction is being paid
    */
-  // PROCESSING = 'processing',
+  PROCESSING = 'processing',
 
   /**
    * Transaction is paid
@@ -99,6 +99,12 @@ export default class TerminalPayment extends BaseEntity {
   public createdBy: User;
 
   /**
+   * The terminal ID that is processing this payment
+   */
+  @Column({ nullable: true })
+  public processedByTerminal?: string;
+
+  /**
    * Determine the terminal payment's state based on the entity's properties
    */
   public getState(): TerminalPaymentState {
@@ -106,6 +112,9 @@ export default class TerminalPayment extends BaseEntity {
 
     // No transaction attached to this TerminalPayment.
     if (!this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
+
+    // Terminal assigned, so processing
+    if (!!this.processedByTerminal) return TerminalPaymentState.PROCESSING;
 
     // @todo how to determine when a transaction is being processed?
     return TerminalPaymentState.CREATED;

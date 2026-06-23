@@ -131,10 +131,10 @@ describe('StripeWebhookService', async (): Promise<void> => {
       expect(deposit.transfer.to.id).to.equal(deposit.to.id);
     });
     it('should correctly create only one success status for terminal payment', async () => {
-      const { id } = (ctx.terminalPayments.filter((t) => t.getState() === TerminalPaymentState.CREATED))[0];
+      const { id } = (ctx.terminalPayments.filter((t) => t.getState() === TerminalPaymentState.PROCESSING))[0];
       let terminalPayment = await new TerminalPaymentService().getTerminalPayment(id);
       expect(terminalPayment).to.not.be.null;
-      expect(terminalPayment.getState()).to.equal(TerminalPaymentState.CREATED);
+      expect(terminalPayment.getState()).to.equal(TerminalPaymentState.PROCESSING);
 
       await testStatusCreation(terminalPayment.stripePaymentIntent.id, StripePaymentIntentState.SUCCEEDED);
 

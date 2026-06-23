@@ -227,8 +227,8 @@ export default class TerminalPaymentSeeder extends WithManager {
     const tmpTransactions: TmpTransaction[] = [];
     const transfers: Transfer[] = [];
 
-    for (let i = 0; i < users.length; i += 1) {
-      const user = users[i];
+    for (let i = 0; i < users.length * 2; i += 1) {
+      const user = users[Math.floor(i / 2)];
       const posRevision = usablePosRevisions[i % usablePosRevisions.length];
 
       // eslint-disable-next-line no-await-in-loop
@@ -254,6 +254,7 @@ export default class TerminalPaymentSeeder extends WithManager {
         stripePaymentIntent,
         temporaryTransaction: tmpTransaction,
         createdBy: user,
+        processedByTerminal: i % 2 === 1 ? 'test_terminal_id' : null,
       }));
 
       stripePaymentIntents.push(stripePaymentIntent);

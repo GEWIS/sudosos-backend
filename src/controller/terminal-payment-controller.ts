@@ -265,7 +265,7 @@ export default class TerminalPaymentController extends BaseController {
         return;
       }
 
-      if (terminalPayment.getState() !== TerminalPaymentState.CREATED) {
+      if (terminalPayment.getState() !== TerminalPaymentState.CREATED && terminalPayment.getState() !== TerminalPaymentState.PROCESSING) {
         res.status(422).send(`Terminal Payment cannot be cancelled, because it has state "${terminalPayment.getState()}"`);
         return;
       }
@@ -297,8 +297,9 @@ export default class TerminalPaymentController extends BaseController {
     try {
       const service = new StripeService();
       const terminals = await service.getTerminals();
+      const response = terminals.map((t) => StripeService.asStripePaymentTerminalResponse(t));
 
-      res.status(200).json(terminals);
+      res.status(200).json(response);
     } catch (error) {
       this.logger.error('Could not get all Stripe terminals:', error);
       res.status(500).send('Internal server error.');

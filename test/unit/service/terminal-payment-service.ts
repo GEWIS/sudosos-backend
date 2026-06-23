@@ -46,6 +46,7 @@ import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-inten
 
 const FAKE_PAYMENT_INTENT = 'fake_payment_intent_for_testing_do_not_use';
 const FAKE_READER_ID = 'fake_reader_id_do_not_use';
+const FAKE_READER_NAME = 'fake_reader_name_do_not_use';
 
 describe('TerminalPaymentService', () => {
   let ctx: {
@@ -61,7 +62,9 @@ describe('TerminalPaymentService', () => {
   let originalStripeKey: string | undefined;
   let paymentIntentsCreateStub: sinon.SinonStub;
   let paymentIntentsCancelStub: sinon.SinonStub;
+  let readersListStub: sinon.SinonStub;
   let readersProcessIntentStub: sinon.SinonStub;
+  let readersCancelActionStub: sinon.SinonStub;
 
   beforeAll(async () => {
     originalStripeKey = process.env.STRIPE_PRIVATE_KEY;
@@ -156,13 +159,31 @@ describe('TerminalPaymentService', () => {
     paymentIntentsCancelStub = sinon
       .stub(Object.getPrototypeOf(sampleStripe.paymentIntents), 'cancel')
       .resolves({ id: FAKE_PAYMENT_INTENT, status: 'canceled' } as any);
+    readersListStub = sinon
+      .stub(
+        Object.getPrototypeOf(sampleStripe.terminal.readers),
+        'list',
+      )
+      .resolves({ data: [{ id: FAKE_READER_ID, name: FAKE_READER_NAME, lastSeenAt: new Date(), available: true }] });
     readersProcessIntentStub = sinon
       .stub(
         Object.getPrototypeOf(sampleStripe.terminal.readers),
         'processPaymentIntent',
       )
       .resolves({ id: FAKE_READER_ID } as any);
-    stubs.push(paymentIntentsCreateStub, paymentIntentsCancelStub, readersProcessIntentStub);
+    readersCancelActionStub = sinon
+      .stub(
+        Object.getPrototypeOf(sampleStripe.terminal.readers),
+        'cancelAction',
+      )
+      .resolves({ id: FAKE_READER_ID } as any);
+    stubs.push(
+      paymentIntentsCreateStub,
+      paymentIntentsCancelStub,
+      readersListStub,
+      readersProcessIntentStub,
+      readersCancelActionStub,
+    );
   });
 
   afterEach(() => {
@@ -371,14 +392,19 @@ describe('TerminalPaymentService', () => {
       ).to.not.be.undefined;
 
       const service = new TerminalPaymentService();
-      const promise = service.startTerminalPayment(ctxTerminalPayment!.id, {
+      const response = await service.startTerminalPayment(ctxTerminalPayment!.id, {
         stripeTerminalId: FAKE_READER_ID,
       });
-      await expect(promise).to.eventually.be.fulfilled;
+
+      expect(response).to.not.be.null;
+      expect(response.getState()).to.equal(TerminalPaymentState.PROCESSING);
 
       expect(readersProcessIntentStub).to.be.calledOnceWith(FAKE_READER_ID, {
         payment_intent: ctxTerminalPayment?.stripePaymentIntent.stripeId,
       });
+
+      // Cleanup
+      await TerminalPayment.save(ctxTerminalPayment);
     });
 
     it('should throw if the terminal payment does not exist', async () => {
@@ -396,7 +422,7 @@ describe('TerminalPaymentService', () => {
 
   describe('#handleTerminalPaymentSuccess', () => {
     it('should correctly create transaction and transfer', async () => {
-      const tp = ctx.terminalPayments.find((t) => !!t.temporaryTransaction);
+      const tp = ctx.terminalPayments.find((t) => t.getState() === TerminalPaymentState.PROCESSING);
       expect(tp).to.not.be.undefined;
       const tmpT = tp?.temporaryTransaction!;
 
@@ -512,6 +538,20 @@ describe('TerminalPaymentService', () => {
       await expect(promise).to.eventually.be
         .rejectedWith('Given paymentIntent does not have a TerminalPayment');
     });
+    it('should raise error if terminalPayment is not yet procesing', async () => {
+      const tp = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      expect(tp).to.not.be.undefined;
+      tp.stripePaymentIntent.terminalPayment = tp;
+
+      const promise = new TerminalPaymentService().handleTerminalPaymentSuccess(
+        tp.stripePaymentIntent,
+      );
+
+      await expect(promise).to.eventually.be
+        .rejectedWith('TerminalPayment has state "created", but expected state "processing"');
+    });
     it('should raise error if terminalPayment is already successful', async () => {
       const tp = ctx.terminalPayments.find(
         (t) => t.finalTransaction && t.transfer,
@@ -524,14 +564,14 @@ describe('TerminalPaymentService', () => {
       );
 
       await expect(promise).to.eventually.be
-        .rejectedWith('TerminalPayment has state "paid", but expected state "created"');
+        .rejectedWith('TerminalPayment has state "paid", but expected state "processing"');
     });
   });
 
   describe('#cancelTerminalPayment', () => {
     it('should correctly cancel a terminal payment', async () => {
       const ctxTerminalPayment = ctx.terminalPayments.find(
-        (t) => t.getState() === TerminalPaymentState.CREATED,
+        (t) => t.getState() === TerminalPaymentState.PROCESSING,
       );
       // Sanity check
       expect(
@@ -547,6 +587,10 @@ describe('TerminalPaymentService', () => {
       const service = new TerminalPaymentService();
       const result = await service.cancelTerminalPayment(ctxTerminalPayment!.id);
 
+      // The terminal reader should stop the payment
+      expect(readersCancelActionStub).to.be.calledOnceWith(
+        ctxTerminalPayment.processedByTerminal,
+      );
       // The Stripe payment intent should have been cancelled
       expect(paymentIntentsCancelStub).to.be.calledOnceWith(
         ctxTerminalPayment!.stripePaymentIntent.stripeId,
@@ -612,6 +656,7 @@ describe('TerminalPaymentService', () => {
 
       // The Stripe payment intent should NOT have been cancelled
       expect(paymentIntentsCancelStub).to.not.be.called;
+      expect(readersCancelActionStub).to.not.be.called;
 
       // The returned terminal payment should now be CANCELLED
       expect(result).to.not.be.null;
@@ -653,7 +698,72 @@ describe('TerminalPaymentService', () => {
         .getRepository(TerminalPayment)
         .save(ctxTerminalPayment!);
     });
-    it('should return null when terminal payment is already processed', async () => {
+    it('should not cancel reader action if intent is not processing', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "CREATED"',
+      ).to.not.be.undefined;
+
+      const tmpTransactionId = ctxTerminalPayment!.temporaryTransaction!.id;
+      const nrTmpTransactionsBefore = await ctx.connection
+        .getRepository(TmpTransaction)
+        .count();
+
+      const service = new TerminalPaymentService();
+      const result = await service.cancelTerminalPayment(ctxTerminalPayment!.id);
+
+      // The reader should NOT have been cancelled
+      expect(readersCancelActionStub).to.not.be.called;
+      // The Stripe payment intent should have been cancelled
+      expect(paymentIntentsCancelStub).to.be.calledOnceWith(
+        ctxTerminalPayment!.stripePaymentIntent.stripeId,
+      );
+
+      // The returned terminal payment should now be CANCELLED
+      expect(result).to.not.be.null;
+      expect(result.temporaryTransaction).to.be.null;
+      expect(result.getState()).to.equal(
+        TerminalPaymentState.CANCELLED,
+      );
+      expect(result.stripePaymentIntent.cancelledWithAPI).to.equal(true);
+
+      // The change should be persisted and the temporary transaction removed
+      const dbTerminalPayment = await service.getTerminalPayment(
+        ctxTerminalPayment!.id,
+      );
+      expect(dbTerminalPayment!.temporaryTransaction).to.be.null;
+      expect(dbTerminalPayment!.getState()).to.equal(
+        TerminalPaymentState.CANCELLED,
+      );
+
+      const nrTmpTransactionsAfter = await ctx.connection
+        .getRepository(TmpTransaction)
+        .count();
+      expect(nrTmpTransactionsAfter).to.equal(nrTmpTransactionsBefore - 1);
+      const removedTmp = await ctx.connection
+        .getRepository(TmpTransaction)
+        .findOne({ where: { id: tmpTransactionId } });
+      expect(removedTmp).to.be.null;
+
+      // Cleanup: restore the temporary transaction and re-attach it, and reset
+      // the payment intent's cancelledWithAPI flag, so the seeded CREATED
+      // terminal payment is left intact for other tests.
+      ctxTerminalPayment!.stripePaymentIntent.cancelledWithAPI = false;
+      await ctx.connection
+        .getRepository(StripePaymentIntent)
+        .save(ctxTerminalPayment!.stripePaymentIntent);
+      await ctx.connection
+        .getRepository(TmpTransaction)
+        .save(ctxTerminalPayment!.temporaryTransaction!);
+      await ctx.connection
+        .getRepository(TerminalPayment)
+        .save(ctxTerminalPayment!);
+    });
+    it('should throw when terminal payment is already processed', async () => {
       const ctxTerminalPayment = ctx.terminalPayments.find(
         (t) => t.getState() === TerminalPaymentState.PAID,
       );
@@ -664,18 +774,20 @@ describe('TerminalPaymentService', () => {
       ).to.not.be.undefined;
 
       const service = new TerminalPaymentService();
-      const result = await service.cancelTerminalPayment(ctxTerminalPayment!.id);
+      const promise = service.cancelTerminalPayment(ctxTerminalPayment!.id, false);
 
-      expect(result).to.be.null;
+      await expect(promise).to.eventually.be.rejectedWith('TerminalPayment has state "paid", but expected state "created" or "processing"');
+      expect(readersCancelActionStub).to.not.have.been.called;
       expect(paymentIntentsCancelStub).to.not.have.been.called;
     });
-    it('should return null when terminal payment does not exist', async () => {
+    it('should throw when terminal payment does not exist', async () => {
       const id = ctx.terminalPayments.length + 100;
 
       const service = new TerminalPaymentService();
-      const result = await service.cancelTerminalPayment(id);
+      const promise = service.cancelTerminalPayment(id);
 
-      expect(result).to.be.null;
+      await expect(promise).to.eventually.be.rejectedWith(`TerminalPayment with ID "${id}" not found`);
+      expect(readersCancelActionStub).to.not.have.been.called;
       expect(paymentIntentsCancelStub).to.not.have.been.called;
     });
   });
