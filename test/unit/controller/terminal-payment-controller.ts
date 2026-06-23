@@ -70,7 +70,7 @@ const FAKE_READERS: Stripe.Terminal.Reader[] = [
     id: FAKE_UNAVAILABLE_READER_ID,
     label: 'In-use test terminal',
     last_seen_at: new Date().getTime(),
-    action: { status: 'in_progress' } as Stripe.Terminal.Reader.Action,
+    action: { status: 'in_progress' },
   } as any,
 ];
 
@@ -204,8 +204,7 @@ describe('TerminalPaymentController', async (): Promise<void> => {
     const terminals: StripePaymentTerminal[] = FAKE_READERS.map((t) => ({
       id: t.id,
       name: t.label,
-      // TODO: Update Stripe because this attribute is in the response, but not in the types
-      lastSeenAt: new Date((t as any).last_seen_at),
+      lastSeenAt: new Date(t.last_seen_at),
       available: t.action?.status !== 'in_progress',
     }));
 

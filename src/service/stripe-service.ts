@@ -45,7 +45,7 @@ import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import WithManager from '../database/with-manager';
 import Config from '../config';
 
-export const STRIPE_API_VERSION = '2024-06-20';
+export const STRIPE_API_VERSION = '2026-05-27.dahlia';
 
 export interface StripePaymentTerminal {
   id: string;
@@ -301,11 +301,10 @@ export default class StripeService extends WithManager {
     const terminals = await this.stripe.terminal.readers.list();
 
     return terminals.data.map((t) => {
-      const lastSeenAt = new Date((terminals.data[0] as any).last_seen_at);
       return {
         id: t.id,
         name: t.label,
-        lastSeenAt,
+        lastSeenAt: new Date(t.last_seen_at),
         available: t.action?.status !== 'in_progress',
       };
     });
