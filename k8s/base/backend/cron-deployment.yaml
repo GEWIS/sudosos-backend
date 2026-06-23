@@ -33,6 +33,10 @@ spec:
             limits:
               cpu: 250m
               memory: 256Mi
+      dnsConfig:
+        options:
+          - name: ndots
+            value: '1'
       volumes:
         - name: config
           persistentVolumeClaim:
