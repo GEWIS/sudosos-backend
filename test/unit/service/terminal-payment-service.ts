@@ -190,6 +190,85 @@ describe('TerminalPaymentService', () => {
     stubs.splice(0, stubs.length);
   });
 
+  describe('#asTerminalPaymentResponse', () => {
+    it('should map a CREATED terminal payment using its temporary transaction', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "CREATED"',
+      ).to.not.be.undefined;
+
+      const service = new TerminalPaymentService();
+      const tp = await service.getTerminalPayment(ctxTerminalPayment!.id);
+      expect(tp).to.not.be.null;
+
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(tp!);
+
+      expect(response.id).to.equal(tp!.id);
+      expect(response.version).to.equal(tp!.version);
+      expect(response.state).to.equal(TerminalPaymentState.CREATED);
+      expect(response.amount).to.deep.equal(
+        tp!.stripePaymentIntent.amount.toObject(),
+      );
+      expect(response.createdBy.id).to.equal(tp!.createdBy.id);
+      // The temporary transaction should be mapped, no transfer should exist yet
+      expect(response.transaction).to.not.be.undefined;
+      expect(response.transaction!.id).to.equal(tp!.temporaryTransaction!.id);
+      expect(response.transfer).to.be.undefined;
+    });
+
+    it('should map a PAID terminal payment using its final transaction and transfer', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PAID,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "PAID"',
+      ).to.not.be.undefined;
+
+      const service = new TerminalPaymentService();
+      const tp = await service.getTerminalPayment(ctxTerminalPayment!.id);
+      expect(tp).to.not.be.null;
+
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(tp!);
+
+      expect(response.id).to.equal(tp!.id);
+      expect(response.state).to.equal(TerminalPaymentState.PAID);
+      // The final transaction should be mapped since there is no temporary one
+      expect(response.transaction).to.not.be.undefined;
+      expect(response.transaction!.id).to.equal(tp!.finalTransaction!.id);
+      // The transfer should be mapped
+      expect(response.transfer).to.not.be.undefined;
+      expect(response.transfer!.id).to.equal(tp!.transfer!.id);
+    });
+
+    it('should map a CANCELLED terminal payment without a transaction or transfer', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CANCELLED,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "CANCELLED"',
+      ).to.not.be.undefined;
+
+      const service = new TerminalPaymentService();
+      const tp = await service.getTerminalPayment(ctxTerminalPayment!.id);
+      expect(tp).to.not.be.null;
+
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(tp!);
+
+      expect(response.id).to.equal(tp!.id);
+      expect(response.state).to.equal(TerminalPaymentState.CANCELLED);
+      expect(response.transaction).to.be.undefined;
+      expect(response.transfer).to.be.undefined;
+    });
+  });
+
   describe('#verifyTerminalPaymentRequest', () => {
     it('should use transaction validator', async () => {
       const transactionValidateStub = sinon
@@ -377,6 +456,25 @@ describe('TerminalPaymentService', () => {
         'SqliteError: NOT NULL constraint failed: tmp_transaction.createdById',
       );
     });
+
+    it('should throw if the transaction service yields no transaction entity', async () => {
+      const req: CreateTerminalPaymentRequest = {
+        transaction: ctx.validTransactionRequest,
+      };
+      const service = new TerminalPaymentService();
+      const { context } = await service.verifyTerminalPaymentRequest(req);
+
+      // Force the transaction service to produce no transaction entity.
+      const asTransactionStub = sinon
+        .stub(TransactionService.prototype, 'asTransaction')
+        .resolves(undefined);
+      stubs.push(asTransactionStub);
+
+      const promise = service.createTerminalPayment(req, context!);
+      await expect(promise).to.eventually.be.rejectedWith(
+        'Could not transform transaction request into a transaction entity',
+      );
+    });
   });
 
   describe('#startTerminalPayment', () => {
@@ -416,6 +514,30 @@ describe('TerminalPaymentService', () => {
       await expect(promise).to.eventually.be.rejectedWith(
         `TerminalPayment with ID "${id}" not found`,
       );
+    });
+
+    it('should throw if the Stripe terminal does not exist', async () => {
+      const ctxTerminalPayment = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.CREATED,
+      );
+      // Sanity check
+      expect(
+        ctxTerminalPayment,
+        'Precondition failed: could not find terminal payment with state "CREATED"',
+      ).to.not.be.undefined;
+
+      // readersListStub only knows about FAKE_READER_ID, so getSingleTerminal
+      // returns null for any other id.
+      const unknownTerminalId = 'non_existent_reader_id';
+      const service = new TerminalPaymentService();
+      const promise = service.startTerminalPayment(ctxTerminalPayment!.id, {
+        stripeTerminalId: unknownTerminalId,
+      });
+      await expect(promise).to.eventually.be.rejectedWith(
+        `Stripe Terminal with ID "${unknownTerminalId}" not found`,
+      );
+      // The intent should never have been sent to a reader
+      expect(readersProcessIntentStub).to.not.have.been.called;
     });
   });
 
@@ -564,6 +686,86 @@ describe('TerminalPaymentService', () => {
 
       await expect(promise).to.eventually.be
         .rejectedWith('TerminalPayment has state "paid", but expected state "processing"');
+    });
+    it('should raise error if the terminal payment cannot be found in the database', async () => {
+      const tp = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PROCESSING,
+      );
+      expect(tp).to.not.be.undefined;
+      tp.stripePaymentIntent.terminalPayment = tp;
+
+      const service = new TerminalPaymentService();
+      const getStub = sinon
+        .stub(service, 'getTerminalPayment')
+        .resolves(null);
+      stubs.push(getStub);
+
+      const promise = service.handleTerminalPaymentSuccess(tp.stripePaymentIntent);
+
+      await expect(promise).to.eventually.be
+        .rejectedWith(`TerminalPayment with ID "${tp.id}" not found!`);
+    });
+    it('should raise error if the processing terminal payment has no temporary transaction', async () => {
+      const tp = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PROCESSING,
+      );
+      expect(tp).to.not.be.undefined;
+      tp.stripePaymentIntent.terminalPayment = tp;
+
+      // A PROCESSING payment that lost its temporary transaction.
+      const fakeTerminalPayment = {
+        getState: () => TerminalPaymentState.PROCESSING,
+        temporaryTransaction: null,
+      } as unknown as TerminalPayment;
+
+      const service = new TerminalPaymentService();
+      const getStub = sinon
+        .stub(service, 'getTerminalPayment')
+        .resolves(fakeTerminalPayment);
+      stubs.push(getStub);
+
+      const promise = service.handleTerminalPaymentSuccess(tp.stripePaymentIntent);
+
+      await expect(promise).to.eventually.be
+        .rejectedWith('No temporary transaction found to convert to an actual transaction.');
+    });
+    it('should raise error if the stored transaction is no longer valid', async () => {
+      const tp = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PROCESSING,
+      );
+      expect(tp).to.not.be.undefined;
+      tp.stripePaymentIntent.terminalPayment = tp;
+
+      const verifyStub = sinon
+        .stub(TransactionService.prototype, 'verifyTransaction')
+        .resolves({ valid: false });
+      stubs.push(verifyStub);
+
+      const promise = new TerminalPaymentService().handleTerminalPaymentSuccess(
+        tp.stripePaymentIntent,
+      );
+
+      await expect(promise).to.eventually.be
+        .rejectedWith('Stored transaction is invalid');
+    });
+    it('should raise error if no transaction context is returned', async () => {
+      const tp = ctx.terminalPayments.find(
+        (t) => t.getState() === TerminalPaymentState.PROCESSING,
+      );
+      expect(tp).to.not.be.undefined;
+      tp.stripePaymentIntent.terminalPayment = tp;
+
+      const verifyStub = sinon
+        .stub(TransactionService.prototype, 'verifyTransaction')
+        .resolves({ valid: true, context: undefined });
+      stubs.push(verifyStub);
+
+      const promise = new TerminalPaymentService().handleTerminalPaymentSuccess(
+        tp.stripePaymentIntent,
+      );
+
+      await expect(promise).to.eventually.be
+        .rejectedWith('No context given');
     });
   });
 
