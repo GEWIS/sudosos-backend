@@ -21,7 +21,7 @@
 /**
  * This is the module page of the terminal payment response.
  *
- * @module terminal-payment
+ * @module stripe/terminal-payment
  */
 
 import { TerminalPaymentState } from '../../entity/transactions/terminal/terminal-payment';
@@ -40,7 +40,7 @@ import { UserResponse } from './user-response';
  * @property {UserResponse} createdBy.required - The user who created this
  * terminal payment.
  * @property {string} state.required - The state of the terminal
- * payment. Can be 'created' or 'paid'.
+ * payment. One of 'created', 'processing', 'paid' or 'cancelled'.
  * @property {DineroObjectResponse} amount.required - The total amount to be
  * paid
  */

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the terminal payment service
  *
- * @module terminal-payment
+ * @module stripe/terminal-payment
  */
 
 import { EntityManager } from 'typeorm';
@@ -48,6 +48,14 @@ export default class TerminalPaymentService extends WithManager {
     this.stripeService = new StripeService(manager);
   }
 
+  /**
+   * Convert a {@link TerminalPayment} entity into its API response shape. The
+   * embedded transaction is taken from the final transaction when the payment
+   * has succeeded, otherwise from the temporary transaction (if any).
+   * @param terminalPayment The entity to convert.
+   * @param context Optional transaction context to reuse when building the
+   * embedded transaction response.
+   */
   public static async asTerminalPaymentResponse(terminalPayment: TerminalPayment, context?: TransactionContext): Promise<TerminalPaymentResponse> {
     const transactionService = new TransactionService();
     const totalCost = terminalPayment.stripePaymentIntent.amount;
@@ -146,7 +154,11 @@ export default class TerminalPaymentService extends WithManager {
   }
 
   /**
-   * Send the Payment to the terminal
+   * Send the payment to the terminal: record which reader is handling it and
+   * instruct Stripe to start collecting the payment.
+   * @param id ID of the TerminalPayment to process.
+   * @param params Request holding the Stripe terminal ID to process with.
+   * @returns The updated TerminalPayment.
    */
   public async startTerminalPayment(id: number, params: ProcessTerminalPaymentRequest): Promise<TerminalPayment> {
     const terminalPayment = await this.getTerminalPayment(id);
@@ -167,9 +179,12 @@ export default class TerminalPaymentService extends WithManager {
   }
 
   /**
-   *
-   * @param id
-   * @returns
+   * Cancel a CREATED or PROCESSING terminal payment. Removes the temporary transaction.
+   * @param id ID of the TerminalPayment
+   * @param sendStripeCancellation Whether the corresponding PaymentIntent must
+   * also be cancelled at Stripe. Defaults to true, but should be false when
+   * Stripe is cancelling the terminalPayment.
+   * @returns The cancelled TerminalPayment.
    */
   public async cancelTerminalPayment(id: number, sendStripeCancellation = true): Promise<TerminalPayment> {
     const tp = await this.getTerminalPayment(id);

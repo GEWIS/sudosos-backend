@@ -17,6 +17,13 @@
  *
  *  @license
  */
+
+/**
+ * This is the module page of the stripe-webhook-service.
+ *
+ * @module stripe
+ */
+
 import log4js, { Logger } from 'log4js';
 import WithManager from '../database/with-manager';
 import { EntityManager } from 'typeorm';
@@ -57,9 +64,18 @@ export default class StripeWebhookService extends WithManager {
   }
 
   /**
-   * Create a new deposit status
-   * @param paymentIntentId
-   * @param state
+   * Append a new status to a {@link StripePaymentIntent} and, when the new
+   * state is terminal, run the side effects for whatever the intent is linked
+   * to. On `SUCCEEDED` this settles the deposit (and marks any linked
+   * PaymentRequest as paid) or finalises the terminal payment; on `CANCELLED`
+   * it propagates a Stripe-initiated cancellation to a linked terminal payment.
+   *
+   * Rejects when the intent does not exist, when the status already exists, or
+   * when it would conflict with a mutually exclusive terminal state already
+   * present (SUCCEEDED/FAILED/CANCELLED).
+   * @param paymentIntentId The local (database) ID of the payment intent.
+   * @param state The new state to record.
+   * @returns The persisted {@link StripePaymentIntentStatus}.
    */
   public async createNewPaymentIntentStatus(
     paymentIntentId: number, state: StripePaymentIntentState,

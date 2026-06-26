@@ -31,7 +31,7 @@
  * `PaymentRequestService` as a pure CRUD + state-machine module and lets
  * `StripeService` import `PaymentRequestService` normally for the webhook
  * settlement hook in
- * {@link stripe!StripeService.createNewPaymentIntentStatus | createNewPaymentIntentStatus}.
+ * {@link stripe!StripeWebhookService.createNewPaymentIntentStatus | createNewPaymentIntentStatus}.
  *
  * @module stripe/payment-request-checkout-service
  */

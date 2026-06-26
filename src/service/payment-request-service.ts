@@ -543,7 +543,7 @@ export default class PaymentRequestService extends WithManager {
    *
    * The caller is expected to have loaded the `paymentRequest` relation on
    * `paymentIntent` already (the webhook flow in
-   * {@link stripe!StripeService.createNewPaymentIntentStatus} does so). Status
+   * {@link stripe!StripeWebhookService.createNewPaymentIntentStatus} does so). Status
    * is derived from columns the relation join already populates, so no extra
    * reload is needed — the webhook hot-path has no need for
    * `for`/`createdBy`/`cancelledBy`/`fulfilledBy` joins either.

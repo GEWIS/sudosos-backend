@@ -21,7 +21,7 @@
 /**
  * This is the module page of the terminal payment request.
  *
- * @module terminal-payment
+ * @module stripe/terminal-payment
  */
 
 import { TransactionRequest } from './transaction-request';

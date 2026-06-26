@@ -18,10 +18,24 @@
  *  @license
  */
 
+/**
+ * This is the module page of the sub-transaction-row.
+ *
+ * @module transactions
+ * @mergeTarget
+ */
 import { Entity, ManyToOne } from 'typeorm';
 import SubTransactionRow from '../sub-transaction-row';
 import TmpSubTransaction from './tmp-sub-transaction';
 
+/**
+ * @typedef {SubTransactionRow} {TmpSubTransactionRow} The temporary counterpart
+ * of a {@link SubTransactionRow}, belonging to a {@link TmpSubTransaction}. Used
+ * while a terminal payment is pending, so the order is immutable but not yet
+ * part of the ledger.
+ * @property {TmpSubTransaction.model} subTransaction.required - The temporary
+ * sub-transaction this row belongs to.
+ */
 @Entity()
 export default class TmpSubTransactionRow extends SubTransactionRow {
   @ManyToOne(() => TmpSubTransaction,

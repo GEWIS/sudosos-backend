@@ -50,9 +50,15 @@ export default class StripePaymentIntent extends BaseEntity {
   @JoinColumn()
   public paymentIntentStatuses: StripePaymentIntentStatus[];
 
+  /**
+   * ID of the PaymentIntent as given by Stripe.
+   */
   @Column({ unique: true })
   public stripeId: string;
 
+  /**
+   * Amount to be paid with Stripe.
+   */
   @Column({
     type: 'integer',
     transformer: DineroTransformer.Instance,

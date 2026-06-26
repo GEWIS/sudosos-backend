@@ -23,7 +23,7 @@
  *
  * Authenticated endpoints for managing {@link stripe/payment-request!PaymentRequest | PaymentRequest}
  * rows. The unauthenticated share-link surface lives in
- * {@link PaymentRequestPublicController}.
+ * {@link stripe/payment-request!PaymentRequestPublicController | PaymentRequestPublicController}.
  *
  * @module stripe/payment-request
  */

@@ -21,7 +21,7 @@
 /**
  * This is the module page of the terminal payment controller
  *
- * @module terminal-payment
+ * @module stripe/terminal-payment
  */
 
 import log4js, { Logger } from 'log4js';
@@ -100,9 +100,12 @@ export default class TerminalPaymentController extends BaseController {
 
   /**
    * POST /terminal-payments
-   * @summary Create a terminal payment before executing. TerminalPayments can
+   *
+   * Create a terminal payment before executing. TerminalPayments can
    * only be done for users of type LOCAL_USER, LOCAL_ADMIN, MEMBER, or
    * POINT_OF_SALE (for anonymous payments).
+   *
+   * @summary Create a terminal payment before executing.
    * @operationId createTerminalPayment
    * @tags terminalPayments - Operations of the Terminal Payment Controller
    * @security JWT

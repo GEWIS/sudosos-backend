@@ -47,14 +47,28 @@ import Config from '../config';
 
 export const STRIPE_API_VERSION = '2026-05-27.dahlia';
 
+/**
+ * A normalised view of a Stripe Terminal reader, as used internally by
+ * SudoSOS. Derived from the Stripe SDK's reader object in
+ * {@link StripeService.getTerminals}.
+ */
 export interface StripePaymentTerminal {
+  /** The Stripe reader ID. */
   id: string;
+  /** The human-readable label configured for the reader in Stripe. */
   name: string;
+  /** When the reader last contacted Stripe. */
   lastSeenAt: Date;
+  /** Whether the reader is free to start a new payment (not mid-action). */
   available: boolean;
 }
 
 export class StripeFactory {
+  /**
+   * Create a configured Stripe SDK client using the private key from the
+   * application config.
+   * @throws Error when the `STRIPE_PRIVATE_KEY` environment variable is not set.
+   */
   public static create(): Stripe {
     const config = Config.get();
     if (!config.stripe.privateKey) {
@@ -131,6 +145,10 @@ export default class StripeService extends WithManager {
     };
   }
 
+  /**
+   * Convert an internal {@link StripePaymentTerminal} into its API response shape.
+   * @param terminal
+   */
   public static asStripePaymentTerminalResponse(terminal: StripePaymentTerminal): StripePaymentTerminalResponse {
     return {
       id: terminal.id,
@@ -188,8 +206,12 @@ export default class StripeService extends WithManager {
    * Create a Stripe Payment Intent and save it to the database
    * @param user For whom the payment intent is for
    * @param amount The amount to be deposited/paid using Stripe
+   * @param paymentMethod The payment method to use: 'digital' for an online
+   * deposit (automatic payment methods) or 'terminal' for a card-present
+   * payment captured manually by a Stripe Terminal.
    * @param metadata Optional extra metadata to attach to the payment intent
-   * @returns
+   * @returns The saved {@link StripePaymentIntent} and the Stripe client secret
+   * (null when Stripe does not return one).
    */
   public async createStripePaymentIntent(user: User, amount: Dinero, paymentMethod: 'digital' | 'terminal', metadata?: Record<string, any>): Promise<{
     stripePaymentIntent: StripePaymentIntent,
@@ -277,6 +299,12 @@ export default class StripeService extends WithManager {
     await this.manager.save(paymentIntent.deposit);
   }
 
+  /**
+   * Cancel the in-progress action (e.g. a payment being collected) on a Stripe
+   * Terminal reader, freeing it up for a new payment.
+   * @param readerId The Stripe reader ID whose current action should be cancelled.
+   * @returns The updated Stripe reader.
+   */
   public async cancelTerminalAction(readerId: string) {
     const terminal = await this.stripe.terminal.readers.cancelAction(readerId);
     return terminal;
@@ -320,8 +348,15 @@ export default class StripeService extends WithManager {
     return match;
   }
 
+  /**
+   * Instruct a Stripe Terminal reader to start collecting payment for the
+   * given payment intent.
+   * @param terminalId The Stripe reader ID that should process the payment.
+   * @param paymentIntent The Stripe ID of the payment intent to collect.
+   */
   public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
-    // @TODO: add error handling
+    // @TODO: determine with physical terminal what happens if a reader is
+    // in use and how to correctly handle this state.
     const reader = await this.stripe.terminal.readers.processPaymentIntent(
       terminalId,
       {

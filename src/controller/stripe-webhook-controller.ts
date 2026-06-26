@@ -37,7 +37,7 @@ import Config from '../config';
 import StripeWebhookService from '../service/stripe-webhook-service';
 
 export default class StripeWebhookController extends BaseController {
-  private logger: Logger = log4js.getLogger('StripeController');
+  private logger: Logger = log4js.getLogger('StripeWebhookController');
 
   /**
    * Create a new stripe webhook controller instance
