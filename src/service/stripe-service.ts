@@ -357,7 +357,8 @@ export default class StripeService extends WithManager {
   public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
     // @TODO: determine with physical terminal what happens if a reader is
     // in use and how to correctly handle this state.
-    const reader = await this.stripe.terminal.readers.processPaymentIntent(
+    // const reader = await this.stripe.terminal.readers.processPaymentIntent(
+    await this.stripe.terminal.readers.processPaymentIntent(
       terminalId,
       {
         payment_intent: paymentIntent,
