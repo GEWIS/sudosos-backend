@@ -192,7 +192,7 @@ export default class TerminalPaymentController extends BaseController {
    * @security JWT
    * @param {integer} id.path.required - The ID of the terminal payment
    * @param {ProcessTerminalPaymentRequest} request.body.required - Payment options
-   * @return {} 204 - Success
+   * @return 204 - Success
    * @return {string} 400 - Validation failure
    * @return {string} 404 - Terminal Payment or terminal not found
    * @return {string} 422 - Terminal unavailable
