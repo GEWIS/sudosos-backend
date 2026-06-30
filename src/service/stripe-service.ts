@@ -351,13 +351,13 @@ export default class StripeService extends WithManager {
   /**
    * Instruct a Stripe Terminal reader to start collecting payment for the
    * given payment intent.
+   * WATCH OUT: when a terminal is already processing a payment, this "new"
+   * payment will silently override the existing payment! Only call this
+   * method when you are sure that the reader is available.
    * @param terminalId The Stripe reader ID that should process the payment.
    * @param paymentIntent The Stripe ID of the payment intent to collect.
    */
   public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
-    // @TODO: determine with physical terminal what happens if a reader is
-    // in use and how to correctly handle this state.
-    // const reader = await this.stripe.terminal.readers.processPaymentIntent(
     await this.stripe.terminal.readers.processPaymentIntent(
       terminalId,
       {
