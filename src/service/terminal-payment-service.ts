@@ -43,7 +43,7 @@ export default class TerminalPaymentService extends WithManager {
   private stripeService: StripeService;
 
   constructor(manager?: EntityManager) {
-    super();
+    super(manager);
     this.transactionService = new TransactionService(manager);
     this.stripeService = new StripeService(manager);
   }

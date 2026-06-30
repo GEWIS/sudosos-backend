@@ -450,11 +450,8 @@ describe('TerminalPaymentService', () => {
         context!,
       );
 
-      // Weird error message, but precondition should be checked before calling this function.
-      // That is the design of the transaction service anyways.
-      await expect(promise).to.eventually.be.rejectedWith(
-        'SqliteError: NOT NULL constraint failed: tmp_transaction.createdById',
-      );
+      // Error message differs per database (SQLite vs MariaDB), so only check that it rejects.
+      await expect(promise).to.eventually.be.rejected;
     });
 
     it('should throw if the transaction service yields no transaction entity', async () => {
