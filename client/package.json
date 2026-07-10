@@ -19,7 +19,7 @@
     "axios": "1.18.1"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "2.39.0",
+    "@openapitools/openapi-generator-cli": "2.39.1",
     "typescript": "5.9.3"
   },
   "repository": {
