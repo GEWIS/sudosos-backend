@@ -101,10 +101,6 @@ export default class TerminalPaymentController extends BaseController {
   /**
    * POST /terminal-payments
    *
-   * Create a terminal payment before executing. TerminalPayments can
-   * only be done for users of type LOCAL_USER, LOCAL_ADMIN, MEMBER, or
-   * POINT_OF_SALE (for anonymous payments).
-   *
    * @summary Create a terminal payment before executing.
    * @operationId createTerminalPayment
    * @tags terminalPayments - Operations of the Terminal Payment Controller

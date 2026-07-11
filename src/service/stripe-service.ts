@@ -44,8 +44,9 @@ import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import WithManager from '../database/with-manager';
 import Config from '../config';
+import { STRIPE_API_VERSION } from './stripe-api-version';
 
-export const STRIPE_API_VERSION = '2026-05-27.dahlia';
+export { STRIPE_API_VERSION };
 
 /**
  * A normalised view of a Stripe Terminal reader, as used internally by
@@ -239,10 +240,13 @@ export default class StripeService extends WithManager {
         payment_method_types: [
           'card_present',
         ],
-        // TODO: can this be automatic? Otherwise SudoSOS needs to manually
-        // capture the payment
-        capture_method: 'manual',
+        capture_method: 'automatic',
         description: `SudoSOS terminal payment of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+        payment_method_options: {
+          card_present: {
+            capture_method: 'manual_preferred',
+          },
+        },
         metadata: {
           ...metadata,
           'service': config.app.name,
