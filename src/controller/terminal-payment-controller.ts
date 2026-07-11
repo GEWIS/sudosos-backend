@@ -319,7 +319,8 @@ export default class TerminalPaymentController extends BaseController {
     const t = await new TerminalPaymentService().getTerminalPayment(id);
     if (!t) return 'all';
 
-    if (t.temporaryTransaction?.from.id === userId || t.temporaryTransaction?.createdBy.id === userId
+    if (t.createdBy.id === userId
+      || t.temporaryTransaction?.from.id === userId || t.temporaryTransaction?.createdBy.id === userId
       || t.finalTransaction?.from.id === userId || t.finalTransaction?.createdBy.id === userId) return 'own';
     return 'all';
   }

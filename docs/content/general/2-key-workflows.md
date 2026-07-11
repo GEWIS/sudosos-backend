@@ -92,9 +92,9 @@ flowchart TD
 - Customer wants to perform an (anonymous) transaction and pay for it directly.
 
 **API surface**
-- `POST /terminal-payment` (create transaction to be paid, either anonymous (fromUser is POS) or by existing user)
-- `POST /terminal-payment/{id}/process` (assign terminal payment to Stripe Terminal Reader and start physical transaction)
-- `GET /terminal-payment/terminals` (get all Stripe Terminal Readers)
+- `POST /terminal-payments` (create transaction to be paid, either anonymous (fromUser is POS) or by existing user)
+- `POST /terminal-payments/{id}/process` (assign terminal payment to Stripe Terminal Reader and start physical transaction)
+- `GET /terminal-payments/terminals` (get all Stripe Terminal Readers)
 
 **Entities touched**
 - `TerminalPayment`

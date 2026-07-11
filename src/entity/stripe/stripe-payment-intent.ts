@@ -92,5 +92,5 @@ export default class StripePaymentIntent extends BaseEntity {
    * no additional action should be taken.
    */
   @Column({ default: false })
-    cancelledWithAPI: boolean;
+  public cancelledWithAPI: boolean;
 }
