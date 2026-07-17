@@ -367,7 +367,7 @@ export class TerminalPayment1782294145719 implements MigrationInterface {
       columnNames: ['finalTransactionId'],
       referencedColumnNames: ['id'],
       referencedTableName: 'transaction',
-      onDelete: 'RESTRICT',
+      onDelete: 'NO ACTION',
       onUpdate: 'NO ACTION',
     }));
 
@@ -375,7 +375,7 @@ export class TerminalPayment1782294145719 implements MigrationInterface {
       columnNames: ['temporaryTransactionId'],
       referencedColumnNames: ['id'],
       referencedTableName: 'tmp_transaction',
-      onDelete: 'RESTRICT',
+      onDelete: 'NO ACTION',
       onUpdate: 'NO ACTION',
     }));
 
