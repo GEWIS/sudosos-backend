@@ -158,7 +158,7 @@ export default class TerminalPayment extends BaseEntity {
     if (this.finalTransaction) return TerminalPaymentState.PAID;
 
     // No transaction attached to this TerminalPayment.
-    if (this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
+    if (!this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
 
     // Terminal assigned, so processing
     if (this.processedByTerminal) return TerminalPaymentState.PROCESSING;
