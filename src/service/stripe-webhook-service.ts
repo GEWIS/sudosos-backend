@@ -44,7 +44,7 @@ export default class StripeWebhookService extends WithManager {
   constructor(manager?: EntityManager) {
     super(manager);
     this.stripe = StripeFactory.create();
-    this.logger = log4js.getLogger('StripeController');
+    this.logger = log4js.getLogger('StripeWebhookService');
   }
 
   /**

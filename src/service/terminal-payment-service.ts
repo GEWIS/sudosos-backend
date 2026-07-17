@@ -35,7 +35,7 @@ import TerminalPayment, { TerminalPaymentState } from '../entity/transactions/te
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import TransferService from './transfer-service';
 import { TerminalPaymentResponse } from '../controller/response/terminal-payment-response';
-import { asUserResponse } from './user-service';
+import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
@@ -52,27 +52,27 @@ export default class TerminalPaymentService extends WithManager {
    * Convert a {@link TerminalPayment} entity into its API response shape. The
    * embedded transaction is taken from the final transaction when the payment
    * has succeeded, otherwise from the temporary transaction (if any).
-   * @param terminalPayment The entity to convert.
+   * @param tp The entity to convert.
    * @param context Optional transaction context to reuse when building the
    * embedded transaction response.
    */
-  public static async asTerminalPaymentResponse(terminalPayment: TerminalPayment, context?: TransactionContext): Promise<TerminalPaymentResponse> {
+  public static async asTerminalPaymentResponse(tp: TerminalPayment, context?: TransactionContext): Promise<TerminalPaymentResponse> {
     const transactionService = new TransactionService();
-    const totalCost = terminalPayment.stripePaymentIntent.amount;
+    const totalCost = tp.stripePaymentIntent.amount;
     return {
-      id: terminalPayment.id,
-      createdAt: terminalPayment.createdAt.toISOString(),
-      updatedAt: terminalPayment.updatedAt.toISOString(),
-      version: terminalPayment.version,
-      amount: terminalPayment.stripePaymentIntent.amount.toObject(),
-      transaction: terminalPayment.temporaryTransaction
-        ? await transactionService.asTransactionResponse(terminalPayment.temporaryTransaction, totalCost, context)
-        : (terminalPayment.finalTransaction
-          ? await transactionService.asTransactionResponse(terminalPayment.finalTransaction, totalCost, context)
+      id: tp.id,
+      createdAt: tp.createdAt.toISOString(),
+      updatedAt: tp.updatedAt.toISOString(),
+      version: tp.version,
+      amount: tp.stripePaymentIntent.amount.toObject(),
+      transaction: tp.temporaryTransaction
+        ? await transactionService.asTransactionResponse(tp.temporaryTransaction, totalCost, context)
+        : (tp.finalTransaction
+          ? await transactionService.asTransactionResponse(tp.finalTransaction, totalCost, context)
           : undefined ),
-      transfer: terminalPayment.transfer ? TransferService.asTransferResponse(terminalPayment.transfer) : undefined,
-      createdBy: asUserResponse(terminalPayment.createdBy),
-      state: terminalPayment.getState(),
+      transfer: tp.transfer ? TransferService.asTransferResponse(tp.transfer) : undefined,
+      createdBy: parseUserToBaseResponse(tp.createdBy, false),
+      state: tp.getState(),
     };
   }
 
@@ -143,12 +143,12 @@ export default class TerminalPaymentService extends WithManager {
 
     const { stripePaymentIntent } = await this.stripeService.createStripePaymentIntent(savedTmpTransaction.from, totalCost, 'terminal');
 
-    const terminalPayment = await this.manager.getRepository(TerminalPayment).save({
+    const tp = await this.manager.getRepository(TerminalPayment).save({
       stripePaymentIntent,
       temporaryTransaction: savedTmpTransaction,
       createdBy: savedTmpTransaction.createdBy,
     } as TerminalPayment);
-    const dbTerminalPayment = await this.getTerminalPayment(terminalPayment.id);
+    const dbTerminalPayment = await this.getTerminalPayment(tp.id);
 
     return dbTerminalPayment!;
   }
@@ -161,8 +161,8 @@ export default class TerminalPaymentService extends WithManager {
    * @returns The updated TerminalPayment.
    */
   public async startTerminalPayment(id: number, params: ProcessTerminalPaymentRequest): Promise<TerminalPayment> {
-    const terminalPayment = await this.getTerminalPayment(id);
-    if (!terminalPayment) {
+    const tp = await this.getTerminalPayment(id);
+    if (!tp) {
       throw new Error(`TerminalPayment with ID "${id}" not found`);
     }
 
@@ -171,11 +171,11 @@ export default class TerminalPaymentService extends WithManager {
       throw new Error(`Stripe Terminal with ID "${params.stripeTerminalId}" not found`);
     }
 
-    terminalPayment.processedByTerminal = terminal.id;
-    await this.manager.save(terminalPayment);
+    tp.processedByTerminal = terminal.id;
+    await this.manager.save(tp);
 
-    await this.stripeService.startTerminalPayment(terminal.id, terminalPayment.stripePaymentIntent.stripeId);
-    return terminalPayment;
+    await this.stripeService.startTerminalPayment(terminal.id, tp.stripePaymentIntent.stripeId);
+    return tp;
   }
 
   /**
@@ -217,13 +217,13 @@ export default class TerminalPaymentService extends WithManager {
   public async handleTerminalPaymentSuccess(paymentIntent: StripePaymentIntent) {
     if (!paymentIntent.terminalPayment) throw new Error('Given paymentIntent does not have a TerminalPayment');
 
-    const terminalPayment = await this.getTerminalPayment(paymentIntent.terminalPayment!.id);
-    if (!terminalPayment) throw new Error(`TerminalPayment with ID "${paymentIntent.terminalPayment.id}" not found!`);
+    const tp = await this.getTerminalPayment(paymentIntent.terminalPayment!.id);
+    if (!tp) throw new Error(`TerminalPayment with ID "${paymentIntent.terminalPayment.id}" not found!`);
 
-    if (terminalPayment.getState() !== TerminalPaymentState.PROCESSING) {
-      throw new Error(`TerminalPayment has state "${terminalPayment.getState()}", but expected state "${TerminalPaymentState.PROCESSING}"`);
+    if (tp.getState() !== TerminalPaymentState.PROCESSING) {
+      throw new Error(`TerminalPayment has state "${tp.getState()}", but expected state "${TerminalPaymentState.PROCESSING}"`);
     }
-    const { temporaryTransaction } = terminalPayment;
+    const { temporaryTransaction } = tp;
     if (!temporaryTransaction) {
       throw new Error('No temporary transaction found to convert to an actual transaction.');
     }
@@ -234,25 +234,25 @@ export default class TerminalPaymentService extends WithManager {
     const { valid, context } = await transactionService.verifyTransaction(transactionReq);
     if (!valid) throw new Error('Stored transaction is invalid');
     if (!context) throw new Error('No context given');
-    terminalPayment.finalTransaction = await transactionService.createTransaction(transactionReq, context);
+    tp.finalTransaction = await transactionService.createTransaction(transactionReq, context);
 
     // Create the transfer that pays for the transaction
-    terminalPayment.transfer = await new TransferService(this.manager).createTransfer({
+    tp.transfer = await new TransferService(this.manager).createTransfer({
       amount: paymentIntent.amount.toObject(),
-      description: `Terminal Payment for transaction "${terminalPayment.finalTransaction.id}"`,
+      description: `Terminal Payment for transaction "${tp.finalTransaction.id}"`,
       toId: temporaryTransaction.from.id,
       fromId: undefined,
     });
 
     // Remove the temporary transaction reference
-    terminalPayment.temporaryTransaction = null;
+    tp.temporaryTransaction = null;
 
     // Save all changes to the database
-    await this.manager.save(terminalPayment);
+    await this.manager.save(tp);
 
     // Cleanup temporary transaction
     await this.manager.getRepository(TmpTransaction).remove(temporaryTransaction);
 
-    return terminalPayment;
+    return tp;
   }
 }

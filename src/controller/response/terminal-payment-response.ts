@@ -29,7 +29,7 @@ import BaseResponse from './base-response';
 import { DineroObjectResponse } from './dinero-response';
 import { TransactionResponse } from './transaction-response';
 import { TransferResponse } from './transfer-response';
-import { UserResponse } from './user-response';
+import { BaseUserResponse } from './user-response';
 
 /**
  * @typedef {allOf|BaseResponse} TerminalPaymentResponse
@@ -37,7 +37,7 @@ import { UserResponse } from './user-response';
  * transaction when the payment is done. Undefined if cancelled.
  * @property {TransferResponse} transfer - The transfer belonging to this
  * terminal payment. Undefined if not paid yet.
- * @property {UserResponse} createdBy.required - The user who created this
+ * @property {BaseUserResponse} createdBy.required - The user who created this
  * terminal payment.
  * @property {string} state.required - The state of the terminal
  * payment. One of 'created', 'processing', 'paid' or 'cancelled'.
@@ -47,7 +47,7 @@ import { UserResponse } from './user-response';
 export interface TerminalPaymentResponse extends BaseResponse {
   transaction?: TransactionResponse;
   transfer?: TransferResponse;
-  createdBy: UserResponse;
+  createdBy: BaseUserResponse;
   state: TerminalPaymentState;
   amount: DineroObjectResponse
 }

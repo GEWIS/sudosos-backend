@@ -211,7 +211,7 @@ export default class TerminalPaymentController extends BaseController {
         return;
       }
 
-      if (!!terminalPayment.transfer) {
+      if (terminalPayment.transfer) {
         res.status(422).send('TerminalPayment already paid.');
         return;
       }

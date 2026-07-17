@@ -127,14 +127,14 @@ export default class TerminalPayment extends BaseEntity {
   /**
    * Transaction that was paid with this payment
    */
-  @OneToOne(() => Transaction, { nullable: true, onDelete: 'RESTRICT', eager: true })
+  @OneToOne(() => Transaction, { nullable: true, eager: true })
   @JoinColumn()
   public finalTransaction?: Transaction | null;
 
   /**
    * Transaction to be created when the payment is successful
    */
-  @OneToOne(() => TmpTransaction, { nullable: true, onDelete: 'RESTRICT', eager: true })
+  @OneToOne(() => TmpTransaction, { nullable: true, eager: true })
   @JoinColumn()
   public temporaryTransaction?: TmpTransaction | null;
 
@@ -158,12 +158,11 @@ export default class TerminalPayment extends BaseEntity {
     if (this.finalTransaction) return TerminalPaymentState.PAID;
 
     // No transaction attached to this TerminalPayment.
-    if (!this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
+    if (this.temporaryTransaction) return TerminalPaymentState.CANCELLED;
 
     // Terminal assigned, so processing
-    if (!!this.processedByTerminal) return TerminalPaymentState.PROCESSING;
+    if (this.processedByTerminal) return TerminalPaymentState.PROCESSING;
 
-    // @todo how to determine when a transaction is being processed?
     return TerminalPaymentState.CREATED;
   }
 }
