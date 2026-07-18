@@ -51,6 +51,7 @@ import UpdatePinRequest from './request/update-pin-request';
 import UserService, {
   AcceptTosResult,
   asUserResponse,
+  asUserResponses,
   parseGetFinancialMutationsFilters,
   parseGetUsersFilters,
   UserFilterParameters,
@@ -483,7 +484,7 @@ export default class UserController extends BaseController {
 
     try {
       const [users, count] = await UserService.getUsers(filters, { take, skip });
-      const records = users.map((u) => asUserResponse(u, true));
+      const records = await asUserResponses(users, true);
       if (!await this.canSeeEmail(req, 'all')) {
         records.forEach((u) => { u.email = undefined; });
       }
@@ -790,7 +791,7 @@ export default class UserController extends BaseController {
       }
 
       const [members, count] = await UserService.getUsers({ organId }, { take, skip });
-      const records = members.map((u) => asUserResponse(u, true));
+      const records = await asUserResponses(members, true);
       if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
         records.forEach((u) => { u.email = undefined; });
       }
@@ -827,7 +828,7 @@ export default class UserController extends BaseController {
         return;
       }
 
-      const response = asUserResponse(user, true);
+      const response = asUserResponse(user, true, await TermsOfServiceService.getUserTosStatus(user));
       if (!await this.canSeeEmail(req, UserController.getRelation(req))) {
         response.email = undefined;
       }
