@@ -55,7 +55,7 @@
     "bcrypt": "5.1.1",
     "better-sqlite3": "12.11.1",
     "body-parser": "1.20.6",
-    "bullmq": "5.80.1",
+    "bullmq": "5.80.7",
     "commander": "12.1.0",
     "dinero.js": "1.9.1",
     "dotenv": "16.6.1",
