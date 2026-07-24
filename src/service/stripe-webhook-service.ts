@@ -128,7 +128,7 @@ export default class StripeWebhookService extends WithManager {
             {
               paymentIntentId: paymentIntent.id,
               stripeId: paymentIntent.stripeId,
-              paymentRequestId: paymentIntent.paymentRequest.paymentRequest.id,
+              paymentRequestId: paymentIntent.paymentRequest.id,
               error,
             },
           );
@@ -156,12 +156,7 @@ export default class StripeWebhookService extends WithManager {
       const eventPaymentIntent = event.data.object as Stripe.PaymentIntent;
       const paymentIntent = await StripePaymentIntent.findOne({
         where: { stripeId: eventPaymentIntent.id },
-        relations: {
-          deposit: { transfer: true },
-          paymentIntentStatuses: true,
-          paymentRequest: { paymentRequest: true },
-          terminalPayment: true,
-        },
+        relations: { deposit: { transfer: true }, paymentIntentStatuses: true },
       });
 
       if (!paymentIntent) {

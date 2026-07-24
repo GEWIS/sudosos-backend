@@ -346,10 +346,10 @@ export default class PaymentRequestController extends BaseController {
         return;
       }
       const checkout = new PaymentRequestCheckoutService();
-      const { intentId, clientSecret } = await checkout.startPayment(request);
+      const { deposit, clientSecret } = await checkout.startPayment(request);
       const response: PaymentRequestStartResponse = {
         paymentRequestId: request.id,
-        stripeId: intentId,
+        stripeId: deposit.stripePaymentIntent.stripeId,
         clientSecret,
       };
       res.status(200).json(response);

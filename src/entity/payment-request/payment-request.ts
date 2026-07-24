@@ -86,7 +86,7 @@
  */
 
 import {
-  Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn,
+  Column, Entity, JoinColumn, ManyToOne, PrimaryColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Dinero } from 'dinero.js';
@@ -94,7 +94,6 @@ import BaseEntityWithoutId from '../base-entity-without-id';
 import User from '../user/user';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { PaymentRequestStatus } from './payment-request-status';
-import PaymentRequestAttempt from './payment-request-attempt';
 
 /**
  * A shareable, fixed-amount request to top up a specific user's SudoSOS
@@ -189,10 +188,6 @@ export default class PaymentRequest extends BaseEntityWithoutId {
     nullable: true,
   })
   public description: string | null;
-
-  /** Payment attempts (intents) */
-  @OneToMany(() => PaymentRequestAttempt, (a) => a.paymentRequest)
-  public attempts: PaymentRequestAttempt[];
 
   /**
    * Derived status — not persisted. Order of precedence:
