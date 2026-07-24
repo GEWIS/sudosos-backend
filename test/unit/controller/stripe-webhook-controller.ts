@@ -30,12 +30,13 @@ import Database from '../../../src/database/database';
 import Swagger from '../../../src/start/swagger';
 import RoleManager from '../../../src/rbac/role-manager';
 import StripeWebhookController from '../../../src/controller/stripe-webhook-controller';
-import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { extractRawBody } from '../../../src/helpers/raw-body';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
 import { DepositSeeder, UserSeeder } from '../../seed';
+import StripeWebhookService from '../../../src/service/stripe-webhook-service';
 
 const { expect, request } = chai;
 
@@ -165,7 +166,7 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookController', async (): Promise<v
       expect(res.status).to.equal(400);
     });
     it('should return 204 when sending correct request', async () => {
-      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      const handleWebhookEventStub = sinon.stub(StripeWebhookService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
       const res = await request(ctx.app)
@@ -197,7 +198,7 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookController', async (): Promise<v
       expect(res.body).to.equal('PaymentIntent with ID "Yeeeee" not found.');
     });
     it('should return 204 if not for SudoSOS service', async () => {
-      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      const handleWebhookEventStub = sinon.stub(StripeWebhookService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
       const payload = {
@@ -223,7 +224,7 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookController', async (): Promise<v
       expect(handleWebhookEventStub).to.not.have.been.called;
     });
     it('should return 204 if no service given', async () => {
-      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      const handleWebhookEventStub = sinon.stub(StripeWebhookService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
       const payload = {
@@ -247,7 +248,7 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookController', async (): Promise<v
       expect(handleWebhookEventStub).to.not.have.been.called;
     });
     it('should return 204 if not listening for event', async () => {
-      const handleWebhookEventStub = sinon.stub(StripeService.prototype, 'handleWebhookEvent').resolves();
+      const handleWebhookEventStub = sinon.stub(StripeWebhookService.prototype, 'handleWebhookEvent').resolves();
       stubs.push(handleWebhookEventStub);
 
       const payload = {

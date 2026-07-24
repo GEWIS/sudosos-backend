@@ -73,3 +73,20 @@ export interface StripeDepositResponse extends BaseResponse {
   amount: DineroObjectResponse;
   to: BaseUserResponse;
 }
+
+/**
+ * @typedef {object} StripePaymentTerminalResponse
+ * @property {string} id.required - The ID of the payment terminal
+ * @property {string} name.required - The name of the payment terminal
+ * @property {string} lastSeenAt.required - When the terminal was last seen. If
+ * more than 1 minute ago, the terminal might be offline. If more than 5
+ * minutes ago, it is definitely offline.
+ * @property {boolean} available.required - Whether the terminal is available
+ * to start processing a payment
+ */
+export interface StripePaymentTerminalResponse {
+  id: string;
+  name: string;
+  lastSeenAt: string;
+  available: boolean;
+}

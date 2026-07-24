@@ -96,7 +96,7 @@ export default class StripeController extends BaseController {
         return;
       }
 
-      const { deposit, clientSecret } = await this.stripeService.createStripePaymentIntent(req.token.user, amount);
+      const { deposit, clientSecret } = await this.stripeService.createStripeDeposit(req.token.user, amount);
       res.status(200).json({
         id: deposit.id,
         createdAt: deposit.createdAt.toISOString(),

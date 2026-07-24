@@ -18,14 +18,25 @@
  *  @license
  */
 
-export { default as DepositSeeder } from './deposit-seeder';
-export { default as FineSeeder } from './fine-seeder';
-export { default as InvoiceSeeder } from './invoice-seeder';
-export { default as PaymentRequestSeeder } from './payment-request-seeder';
-export { default as PayoutRequestSeeder } from './payout-request-seeder';
-export { default as SellerPayoutSeeder } from './seller-payout-seeder';
-export { default as TerminalPaymentSeeder } from './terminal-payment-seeder';
-export { default as TransactionSeeder } from './transaction-seeder';
-export { default as TransferSeeder } from './transfer-seeder';
-export { default as WriteOffSeeder } from './write-off-seeder';
-export { default as UserNotificationSeeder } from './user-notification-seeder';
+/**
+ * This is the module page of the transaction.
+ *
+ * @module transactions
+ * @mergeTarget
+ */
+import { Entity, OneToMany } from 'typeorm';
+import Transaction from '../transaction';
+import TmpSubTransaction from './tmp-sub-transaction';
+
+/**
+ * @typedef {Transaction} A transaction that should be
+ * stored in the database, for example when paying for it using a terminal.
+ * @property {Array.<TmpSubTransaction>} subtransactions.required
+ */
+@Entity()
+export default class TmpTransaction extends Transaction {
+  @OneToMany(() => TmpSubTransaction,
+    (subTransaction) => subTransaction.transaction,
+    { cascade: true })
+  public subTransactions: TmpSubTransaction[];
+}

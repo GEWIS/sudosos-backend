@@ -31,7 +31,17 @@ import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import StripeDeposit from './stripe-deposit';
 import PaymentRequest from '../payment-request/payment-request';
+import type TerminalPayment from '../transactions/terminal/terminal-payment';
 
+/**
+ * @typedef {BaseEntity} StripePaymentIntent
+ * @property {Array.<StripePaymentIntentStatus>} paymentIntentStatuses.required - The
+ * status updates belonging to this intent. The newest status is the current
+ * status.
+ * @property {string} stripeId.required - The ID of the transaction on Stripe's side
+ * @property {Dinero.model} amount.required - The amount to be paid
+ * @property {StripeDeposit.model} deposit - The deposit belonging to this intent
+ */
 @Entity()
 export default class StripePaymentIntent extends BaseEntity {
   @OneToMany(() => StripePaymentIntentStatus,
@@ -40,9 +50,15 @@ export default class StripePaymentIntent extends BaseEntity {
   @JoinColumn()
   public paymentIntentStatuses: StripePaymentIntentStatus[];
 
+  /**
+   * ID of the PaymentIntent as given by Stripe.
+   */
   @Column({ unique: true })
   public stripeId: string;
 
+  /**
+   * Amount to be paid with Stripe.
+   */
   @Column({
     type: 'integer',
     transformer: DineroTransformer.Instance,
@@ -66,4 +82,15 @@ export default class StripePaymentIntent extends BaseEntity {
   @ManyToOne(() => PaymentRequest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'paymentRequestId' })
   public paymentRequest?: PaymentRequest | null;
+
+  @OneToOne('TerminalPayment', (t: TerminalPayment) => t.stripePaymentIntent, { nullable: true })
+  public terminalPayment?: TerminalPayment | null;
+
+  /**
+   * Whether this PaymentIntent is cancelled via the API. If the
+   * paymentintent.cancelled event is received but this boolean is set to true,
+   * no additional action should be taken.
+   */
+  @Column({ default: false })
+  public cancelledWithAPI: boolean;
 }

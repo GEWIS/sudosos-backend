@@ -85,6 +85,7 @@ import WithManager from '../database/with-manager';
 import ProductService from './product-service';
 import { convertToPositional } from '../helpers/params';
 import UserService from './user-service';
+import DineroFactory from 'dinero.js';
 
 export interface TransactionFilterParameters {
   transactionId?: number | number[],
@@ -108,7 +109,7 @@ export interface TransactionFilterParameters {
 /**
  * Context object to cache loaded entities and calculated values during transaction processing
  */
-interface TransactionContext {
+export interface TransactionContext {
   users: Map<number, User>;
   pointOfSale?: PointOfSaleRevision;
   containers: Map<string, ContainerRevision>;
@@ -160,7 +161,7 @@ export default class TransactionService extends WithManager {
   ): Promise<Dinero.Dinero> {
     // If product map is provided, use it; otherwise batch load all products
     let products: Map<string, ProductRevision>;
-    
+
     if (productMap) {
       products = productMap;
     } else {
@@ -185,7 +186,7 @@ export default class TransactionService extends WithManager {
           return this.manager.findOne(ProductRevision, options);
         }),
       );
-      
+
       // Filter out null results
       const validProducts = allProducts.filter((p): p is ProductRevision => p !== null);
 
@@ -214,7 +215,7 @@ export default class TransactionService extends WithManager {
    */
   public async verifyBalance(req: TransactionRequest, totalCost?: Dinero.Dinero): Promise<boolean> {
     let cost: Dinero.Dinero;
-    
+
     if (totalCost) {
       cost = totalCost;
     } else {
@@ -255,7 +256,7 @@ export default class TransactionService extends WithManager {
   ): Promise<boolean> {
     // check if fields provided in subtransactionrow
     if (!req.product || !req.totalPriceInclVat
-        || !req.amount || req.amount <= 0 || !Number.isInteger(req.amount)) {
+      || !req.amount || req.amount <= 0 || !Number.isInteger(req.amount)) {
       return false;
     }
 
@@ -296,13 +297,13 @@ export default class TransactionService extends WithManager {
   ): Promise<boolean> {
     // check if fields provided in the transaction
     if (!req.to || !req.container || !req.totalPriceInclVat
-        || !req.subTransactionRows || req.subTransactionRows.length === 0) {
+      || !req.subTransactionRows || req.subTransactionRows.length === 0) {
       return false;
     }
 
     // check if container is in the point of sale
     if (!pointOfSale.containers.some((container) => container.container && container.container.id === req.container.id
-        && container.revision === req.container.revision)) {
+      && container.revision === req.container.revision)) {
       return false;
     }
 
@@ -354,8 +355,8 @@ export default class TransactionService extends WithManager {
 
     // check fields provided in the transaction
     if (!req.from || !req.createdBy
-        || !req.subTransactions || req.subTransactions.length === 0
-        || !req.pointOfSale || !req.totalPriceInclVat) {
+      || !req.subTransactions || req.subTransactions.length === 0
+      || !req.pointOfSale || !req.totalPriceInclVat) {
       return { valid: false };
     }
 
@@ -403,7 +404,7 @@ export default class TransactionService extends WithManager {
           return this.manager.findOne(ProductRevision, options);
         }),
       );
-      
+
       // Filter out null results and add to context
       allProducts
         .filter((p): p is ProductRevision => p !== null)
@@ -475,7 +476,7 @@ export default class TransactionService extends WithManager {
         });
       }),
     );
-    
+
     // Filter out null results and add to context
     allContainers
       .filter((c): c is ContainerRevision => c !== null)
@@ -487,14 +488,13 @@ export default class TransactionService extends WithManager {
     const verification = await Promise.all(req.subTransactions.map(
       async (sub) => this.verifySubTransaction(sub, pointOfSale, context, isUpdate),
     ));
-    
+
     if (verification.includes(false)) {
       return { valid: false };
     }
 
     return { valid: true, context };
   }
-
 
   /**
    * Creates a transaction from a transaction request
@@ -532,6 +532,62 @@ export default class TransactionService extends WithManager {
     transaction.pointOfSale = context.pointOfSale;
 
     return transaction;
+  }
+
+  /**
+   * Transform an existing subtransactionrow into a request
+   */
+  public asSubTransactionRowRequest(t: SubTransactionRow): SubTransactionRowRequest {
+    const totalPriceInclVat = t.product.priceInclVat.multiply(t.amount);
+    return {
+      amount: t.amount,
+      totalPriceInclVat: totalPriceInclVat.toObject(),
+      product: {
+        id: t.product.productId,
+        revision: t.product.revision,
+      },
+    };
+  }
+
+  /**
+   * Transform an existing subtransaction into a request
+   */
+  public asSubTransactionRequest(t: SubTransaction): SubTransactionRequest {
+    const subTransactionRows = t.subTransactionRows.map((r) => this.asSubTransactionRowRequest(r));
+    const totalPriceInclVat = subTransactionRows.reduce(
+      (total, curr) => total.add(DineroFactory(curr.totalPriceInclVat)),
+      DineroFactory(),
+    );
+    return {
+      totalPriceInclVat: totalPriceInclVat.toObject(),
+      to: t.to.id,
+      container: {
+        id: t.container.containerId,
+        revision: t.container.revision,
+      },
+      subTransactionRows,
+    };
+  }
+
+  /**
+   * Transform an existing transaction into a request
+   */
+  public asTransactionRequest(t: Transaction): TransactionRequest {
+    const subTransactions = t.subTransactions.map((s) => this.asSubTransactionRequest(s));
+    const totalPriceInclVat = subTransactions.reduce(
+      (total, curr) => total.add(DineroFactory(curr.totalPriceInclVat)),
+      DineroFactory(),
+    );
+    return {
+      from: t.from.id,
+      createdBy: t.createdBy.id,
+      totalPriceInclVat: totalPriceInclVat.toObject(),
+      pointOfSale: {
+        id: t.pointOfSale.pointOfSaleId,
+        revision: t.pointOfSale.revision,
+      },
+      subTransactions,
+    };
   }
 
 
@@ -1050,7 +1106,7 @@ export default class TransactionService extends WithManager {
     transactionReport.data.categories.forEach((entry) => {
       const category: TransactionReportCategoryEntryResponse = {
         category: ProductCategoryService.asProductCategoryResponse(entry.category),
-        totalExclVat: dinero({ amount : Math.round(entry.totalExclVat) }).toObject(),
+        totalExclVat: dinero({ amount: Math.round(entry.totalExclVat) }).toObject(),
         totalInclVat: entry.totalInclVat.toObject() as DineroObjectResponse,
       };
       categories.push(category);

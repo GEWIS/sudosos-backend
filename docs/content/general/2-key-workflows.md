@@ -87,6 +87,29 @@ flowchart TD
 - event routing: only accept events intended for this service
 - idempotency: the same Stripe event may be delivered multiple times
 
+## Terminal Payment (Stripe physical payment)
+**Trigger +actor**
+- Customer wants to perform an (anonymous) transaction and pay for it directly.
+
+**API surface**
+- `POST /terminal-payments` (create transaction to be paid, either anonymous (fromUser is POS) or by existing user)
+- `POST /terminal-payments/{id}/process` (assign terminal payment to Stripe Terminal Reader and start physical transaction)
+- `GET /terminal-payments/terminals` (get all Stripe Terminal Readers)
+
+**Entities touched**
+- `TerminalPayment`
+- Everything from `Purchase (create a transaction)`
+- Everything from `Deposit (Stripe top-up)`
+
+**Critical checks**
+- Amount is fixed at creation. When transaction needs to be edited, a new TerminalPayment must be created.
+- Terminal can only process one TerminalPayment at a time.
+
+**Simplified flow**
+1. Temporary transaction is created (as if you are creating an actual transaction).
+2. Balance is topped up with the amount to be paid for that transaction.
+3. Temporary transaction is transformed into an actual transaction. Temporary transaction is removed.
+
 ## Payment request (shareable payment link)
 
 **Trigger + actor**

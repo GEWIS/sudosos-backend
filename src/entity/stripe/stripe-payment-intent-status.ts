@@ -25,7 +25,7 @@
  */
 
 import {
-  Column, Entity, ManyToOne,
+  Column, Entity, Index, JoinColumn, ManyToOne,
 } from 'typeorm';
 // eslint-disable-next-line import/no-cycle
 import BaseEntity from '../base-entity';
@@ -36,13 +36,24 @@ export enum StripePaymentIntentState {
   PROCESSING = 2,
   SUCCEEDED = 3,
   FAILED = 4,
+  CANCELLED = 5,
 }
 
+/**
+ * @typedef {BaseEntity} StripePaymentIntentStatus
+ * @property {StripePaymentIntent.model} stripePaymentIntent.required
+ * @property {number} state.required
+ */
 @Entity()
+@Index(['stripePaymentIntentId', 'state'], { unique: true })
 export default class StripePaymentIntentStatus extends BaseEntity {
+  @Column({ nullable: false })
+  public stripePaymentIntentId: number;
+
   @ManyToOne(() => StripePaymentIntent, (intent) => intent.paymentIntentStatuses, { nullable: false })
+  @JoinColumn({ name: 'stripePaymentIntentId' })
   public stripePaymentIntent: StripePaymentIntent;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', nullable: false })
   public state: StripePaymentIntentState;
 }

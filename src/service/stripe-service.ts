@@ -34,6 +34,7 @@ import StripePaymentIntentStatus, { StripePaymentIntentState } from '../entity/s
 import {
   StripeDepositResponse,
   StripePaymentIntentStatusResponse,
+  StripePaymentTerminalResponse,
 } from '../controller/response/stripe-response';
 import TransferService from './transfer-service';
 import { EntityManager, FindOptionsRelations, IsNull } from 'typeorm';
@@ -41,12 +42,45 @@ import { parseUserToBaseResponse } from '../helpers/revision-to-response';
 import BalanceResponse from '../controller/response/balance-response';
 import { StripeRequest } from '../controller/request/stripe-request';
 import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
-import PaymentRequest from '../entity/payment-request/payment-request';
-import PaymentRequestService from './payment-request-service';
 import WithManager from '../database/with-manager';
 import Config from '../config';
+import { STRIPE_API_VERSION } from './stripe-api-version';
 
-export const STRIPE_API_VERSION = '2024-06-20';
+export { STRIPE_API_VERSION };
+
+/**
+ * A normalised view of a Stripe Terminal reader, as used internally by
+ * SudoSOS. Derived from the Stripe SDK's reader object in
+ * {@link StripeService.getTerminals}.
+ */
+export interface StripePaymentTerminal {
+  /** The Stripe reader ID. */
+  id: string;
+  /** The human-readable label configured for the reader in Stripe. */
+  name: string;
+  /** When the reader last contacted Stripe. */
+  lastSeenAt: Date;
+  /** Whether the reader is free to start a new payment (not mid-action). */
+  available: boolean;
+}
+
+export class StripeFactory {
+  /**
+   * Create a configured Stripe SDK client using the private key from the
+   * application config.
+   * @throws Error when the `STRIPE_PRIVATE_KEY` environment variable is not set.
+   */
+  public static create(): Stripe {
+    const config = Config.get();
+    if (!config.stripe.privateKey) {
+      throw new Error('STRIPE_PRIVATE_KEY environment variable is not set.');
+    }
+
+    return new Stripe(config.stripe.privateKey, {
+      apiVersion: STRIPE_API_VERSION,
+    });
+  }
+}
 
 export default class StripeService extends WithManager {
   private stripe: Stripe;
@@ -55,15 +89,8 @@ export default class StripeService extends WithManager {
 
   constructor(manager?: EntityManager) {
     super(manager);
-    const config = Config.get();
-    if (!config.stripe.privateKey) {
-      throw new Error('STRIPE_PRIVATE_KEY environment variable is not set.');
-    }
-
-    this.stripe = new Stripe(config.stripe.privateKey, {
-      apiVersion: STRIPE_API_VERSION,
-    });
-    this.logger = log4js.getLogger('StripeController');
+    this.stripe = StripeFactory.create();
+    this.logger = log4js.getLogger('StripeService');
   }
 
   /**
@@ -74,11 +101,11 @@ export default class StripeService extends WithManager {
   public static validateStripeRequestMinimumAmount(balance: BalanceResponse, request: StripeRequest): boolean {
     const minimumTopup = Config.get().stripe.minTopupAmount;
 
-    //check for negative and zero 
+    //check for negative and zero
     if (request.amount.amount <= 0) {
       return false;
     }
-    
+
     // Check if top-up is enough
     if (request.amount.amount >= minimumTopup) return true;
     return request.amount.amount === -1 * balance.amount.amount;
@@ -116,6 +143,19 @@ export default class StripeService extends WithManager {
       depositStatus: deposit.stripePaymentIntent.paymentIntentStatuses.map((s) => this.asStripePaymentIntentStatusResponse(s)),
       amount: deposit.stripePaymentIntent.amount.toObject(),
       to: parseUserToBaseResponse(deposit.to, true),
+    };
+  }
+
+  /**
+   * Convert an internal {@link StripePaymentTerminal} into its API response shape.
+   * @param terminal
+   */
+  public static asStripePaymentTerminalResponse(terminal: StripePaymentTerminal): StripePaymentTerminalResponse {
+    return {
+      id: terminal.id,
+      name: terminal.name,
+      lastSeenAt: terminal.lastSeenAt.toISOString(),
+      available: terminal.available,
     };
   }
 
@@ -164,41 +204,76 @@ export default class StripeService extends WithManager {
   }
 
   /**
-   * Create a payment intent and save it to the database.
-   *
-   * When `paymentRequest` is supplied, the resulting {@link StripePaymentIntent}
-   * carries a back-reference to the request so that the webhook flow in
-   * {@link StripeService.createNewPaymentIntentStatus} can flip the request to
-   * `PAID` on SUCCEEDED. The Stripe-side `metadata.paymentRequestId` mirror is
-   * purely informational (helps debugging in the Stripe dashboard).
-   *
-   * @param user User that wants to deposit money into their account
-   * @param amount The amount to be deposited
-   * @param paymentRequest Optional linked PaymentRequest that initiated this intent
-   * @returns The created deposit entity and the Stripe client secret
+   * Create a Stripe Payment Intent and save it to the database
+   * @param user For whom the payment intent is for
+   * @param amount The amount to be deposited/paid using Stripe
+   * @param paymentMethod The payment method to use: 'digital' for an online
+   * deposit (automatic payment methods) or 'terminal' for a card-present
+   * payment captured manually by a Stripe Terminal.
+   * @param metadata Optional extra metadata to attach to the payment intent
+   * @returns The saved {@link StripePaymentIntent} and the Stripe client secret
+   * (null when Stripe does not return one).
    */
-  public async createStripePaymentIntent(
-    user: User, amount: Dinero, paymentRequest?: PaymentRequest,
-  ): Promise<{ deposit: StripeDeposit, clientSecret: string }> {
+  public async createStripePaymentIntent(user: User, amount: Dinero, paymentMethod: 'digital' | 'terminal', metadata?: Record<string, any>): Promise<{
+    stripePaymentIntent: StripePaymentIntent,
+    clientSecret: string | null,
+  }> {
     const config = Config.get();
-    const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: DineroTransformer.Instance.to(amount),
-      currency: amount.getCurrency(),
-      automatic_payment_methods: { enabled: true },
-      description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
-      metadata: {
-        'service': config.app.name,
-        'userId': user.id,
-        ...(paymentRequest ? { 'paymentRequestId': paymentRequest.id } : {}),
-      },
-    });
+
+    let paymentIntent: Stripe.Response<Stripe.PaymentIntent>;
+    if (paymentMethod === 'digital') {
+      paymentIntent = await this.stripe.paymentIntents.create({
+        amount: DineroTransformer.Instance.to(amount),
+        currency: amount.getCurrency(),
+        automatic_payment_methods: { enabled: true },
+        description: `SudoSOS deposit of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+        metadata: {
+          ...metadata,
+          'service': config.app.name,
+          'userId': user.id,
+        },
+      });
+    } else if (paymentMethod === 'terminal') {
+      paymentIntent = await this.stripe.paymentIntents.create({
+        amount: DineroTransformer.Instance.to(amount),
+        currency: amount.getCurrency(),
+        payment_method_types: [
+          'card_present',
+        ],
+        capture_method: 'automatic',
+        description: `SudoSOS terminal payment of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
+        payment_method_options: {
+          card_present: {
+            capture_method: 'manual_preferred',
+          },
+        },
+        metadata: {
+          ...metadata,
+          'service': config.app.name,
+          'userId': user.id,
+        },
+      });
+    }
 
     const stripePaymentIntent = await this.manager.getRepository(StripePaymentIntent).save({
       stripeId: paymentIntent.id,
       amount,
       paymentIntentStatuses: [],
-      paymentRequest: paymentRequest ?? null,
     });
+    return { stripePaymentIntent, clientSecret: paymentIntent.client_secret };
+  }
+
+  /**
+   * Create deposit with a payment intent and save it to the database
+   * @param user User that wants to deposit some money into their account
+   * @param amount The amount to be deposited
+   * @param metadata Optional metadata to attach to the payment intent
+   * @returns The created deposit entity and the Stripe client secret
+   */
+  public async createStripeDeposit(
+    user: User, amount: Dinero, metadata?: Record<string, any>,
+  ): Promise<{ deposit: StripeDeposit, clientSecret: string | null }> {
+    const { stripePaymentIntent, clientSecret } = await this.createStripePaymentIntent(user, amount, 'digital', metadata);
     const deposit = await this.manager.getRepository(StripeDeposit).save({
       stripePaymentIntent,
       to: user,
@@ -206,129 +281,92 @@ export default class StripeService extends WithManager {
 
     return {
       deposit,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret,
     };
   }
 
   /**
-   * Validate a Stripe webhook event
-   * @param body
-   * @param signature
+   * Create the transfer that belongs to the now paid paymentIntent
+   * @param paymentIntent Stripe PaymentIntent that has been successfully paid
    */
-  public async constructWebhookEvent(
-    body: any, signature: string | string[],
-  ): Promise<Stripe.Event> {
-    const webhookSecret = Config.get().stripe.webhookSecret;
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET environment variable is not set.');
-    }
+  public async handleStripeDepositPaid(paymentIntent: StripePaymentIntent) {
+    if (!paymentIntent.deposit) throw new Error('Given paymentIntent does not have a deposit');
+    if (paymentIntent.deposit.transfer) throw new Error('Given paymentIntent\'s deposit already has a transfer attached');
 
-    return this.stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    paymentIntent.deposit.transfer = await new TransferService(this.manager).createTransfer({
+      amount: paymentIntent.amount.toObject(),
+      toId: paymentIntent.deposit.to.id,
+      description: paymentIntent.stripeId,
+      fromId: undefined,
+    });
+
+    await this.manager.save(paymentIntent.deposit);
   }
 
   /**
-   * Create a new deposit status
-   * @param paymentIntentId
-   * @param state
+   * Cancel the in-progress action (e.g. a payment being collected) on a Stripe
+   * Terminal reader, freeing it up for a new payment.
+   * @param readerId The Stripe reader ID whose current action should be cancelled.
+   * @returns The updated Stripe reader.
    */
-  public async createNewPaymentIntentStatus(
-    paymentIntentId: number, state: StripePaymentIntentState,
-  ): Promise<StripePaymentIntentStatus> {
-    const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({
-        where: { id: paymentIntentId },
-        relations: { deposit: true, paymentRequest: true },
-      });
-    if (!paymentIntent) {
-      throw new Error(`StripePaymentIntent with id ${paymentIntentId} not found.`);
-    }
-
-    const states = paymentIntent.paymentIntentStatuses?.map((status) => status.state) ?? [];
-    if (states.includes(state)) throw new Error(`Status ${state} already exists.`);
-    if (state === StripePaymentIntentState.SUCCEEDED && states.includes(StripePaymentIntentState.FAILED)) {
-      throw new Error('Cannot create status SUCCEEDED, because FAILED already exists');
-    }
-    if (state === StripePaymentIntentState.FAILED && states.includes(StripePaymentIntentState.SUCCEEDED)) {
-      throw new Error('Cannot create status FAILED, because SUCCEEDED already exists');
-    }
-
-    const depositStatus = await this.manager.getRepository(StripePaymentIntentStatus).save({ stripePaymentIntent: paymentIntent, state });
-
-    // If payment has succeeded, create the transfer
-    if (state === StripePaymentIntentState.SUCCEEDED && paymentIntent.deposit) {
-      paymentIntent.deposit.transfer = await new TransferService(this.manager).createTransfer({
-        amount: paymentIntent.amount.toObject(),
-        toId: paymentIntent.deposit.to.id,
-        description: paymentIntent.stripeId,
-        fromId: undefined,
-      });
-
-      await this.manager.save(paymentIntent.deposit);
-
-      // If the intent was initiated by a PaymentRequest, flip the request to
-      // PAID. This runs *after* the credit Transfer is saved so that a
-      // successful settlement is the single observable event.
-      //
-      // Best-effort: Stripe settlement has already succeeded and the credit
-      // Transfer is persisted. A PaymentRequest state-machine conflict
-      // (e.g. admin cancelled the request after the intent was created)
-      // must not roll back the deposit — log and continue. The user is
-      // credited either way; reconciling the PaymentRequest state is a
-      // secondary concern.
-      if (paymentIntent.paymentRequest) {
-        try {
-          await new PaymentRequestService(this.manager).markPaidFromStripeIntent(paymentIntent);
-        } catch (error) {
-          this.logger.error(
-            'Failed to mark PaymentRequest as PAID for succeeded Stripe payment intent; '
-            + 'the credit Transfer was still created and the user has been credited.',
-            {
-              paymentIntentId: paymentIntent.id,
-              stripeId: paymentIntent.stripeId,
-              paymentRequestId: paymentIntent.paymentRequest.id,
-              error,
-            },
-          );
-        }
-      }
-    }
-
-    return depositStatus;
+  public async cancelTerminalAction(readerId: string) {
+    const terminal = await this.stripe.terminal.readers.cancelAction(readerId);
+    return terminal;
   }
 
   /**
-   * Handle the event by making the appropriate database additions
-   * @param event {Stripe.Event} Event received from Stripe webhook
+   * Cancel a payment intent on Stripe. Note that this will trigger a webhook
+   * by Stripe, which should be handled correctly to prevent infinite loops.
+   * @param paymentIntent
    */
-  public async handleWebhookEvent(event: Stripe.Event) {
-    try {
-      const eventPaymentIntent = event.data.object as Stripe.PaymentIntent;
-      const paymentIntent = await StripePaymentIntent.findOne({
-        where: { stripeId: eventPaymentIntent.id },
-        relations: { deposit: { transfer: true }, paymentIntentStatuses: true },
-      });
+  public async cancelPaymentIntent(paymentIntent: StripePaymentIntent) {
+    paymentIntent.cancelledWithAPI = true;
+    await this.stripe.paymentIntents.cancel(paymentIntent.stripeId);
+    await this.manager.save(paymentIntent);
+    return paymentIntent;
+  }
 
-      switch (event.type) {
-        case 'payment_intent.created':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.CREATED);
-          break;
-        case 'payment_intent.processing':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.PROCESSING);
-          break;
-        case 'payment_intent.succeeded':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
-          break;
-        case 'payment_intent.payment_failed':
-        case 'payment_intent.canceled':
-          await this.createNewPaymentIntentStatus(paymentIntent.id, StripePaymentIntentState.FAILED);
-          break;
-        default:
-          this.logger.warn('Tried to process event', event.type, 'but processing method is not defined');
-      }
+  /**
+   * Get all Stripe Payment Terminals available in Stripe
+   */
+  public async getTerminals(): Promise<StripePaymentTerminal[]> {
+    const terminals = await this.stripe.terminal.readers.list();
 
-      this.logger.trace(`Successfully processed event "${event.type}" for payment intent "${eventPaymentIntent.id}" (ID: ${paymentIntent.id})`);
-    } catch (error) {
-      this.logger.error('Could not process Stripe webhook event with ID', event.id, error);
-    }
+    return terminals.data.map((t) => {
+      return {
+        id: t.id,
+        name: t.label,
+        lastSeenAt: new Date(t.last_seen_at),
+        available: t.action?.status !== 'in_progress',
+      };
+    });
+  }
+
+  /**
+   * Get the Stripe Payment Terminal with the given ID
+   */
+  public async getSingleTerminal(id: string): Promise<StripePaymentTerminal | null> {
+    const terminals = await this.getTerminals();
+    const match = terminals.find((t) => t.id === id);
+    if (!match) return null;
+    return match;
+  }
+
+  /**
+   * Instruct a Stripe Terminal reader to start collecting payment for the
+   * given payment intent.
+   * WATCH OUT: when a terminal is already processing a payment, this "new"
+   * payment will silently override the existing payment! Only call this
+   * method when you are sure that the reader is available.
+   * @param terminalId The Stripe reader ID that should process the payment.
+   * @param paymentIntent The Stripe ID of the payment intent to collect.
+   */
+  public async startTerminalPayment(terminalId: string, paymentIntent: string): Promise<void> {
+    await this.stripe.terminal.readers.processPaymentIntent(
+      terminalId,
+      {
+        payment_intent: paymentIntent,
+      },
+    );
   }
 }

@@ -27,7 +27,7 @@
  * `async () => true` policy on every endpoint. Do **not** reuse endpoint
  * paths from the authenticated controller — the mount order is significant.
  *
- * The response shape here is {@link PublicPaymentRequestResponse}
+ * The response shape here is {@link stripe/payment-request!PublicPaymentRequestResponse | PublicPaymentRequestResponse}
  * — it deliberately omits `createdBy`, `cancelledBy`, and other internal
  * audit fields, because anyone holding the link can hit these endpoints.
  *
@@ -55,7 +55,7 @@ export default class PaymentRequestPublicController extends BaseController {
   }
 
   /**
-   * @inheritDoc
+   * Returns the routing policy for this controller.
    *
    * All endpoints here bypass authentication (policy is `async () => true`).
    * The controller is mounted before `setupAuthentication` in `src/index.ts`.

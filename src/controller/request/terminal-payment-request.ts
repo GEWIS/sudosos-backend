@@ -18,14 +18,28 @@
  *  @license
  */
 
-export { default as DepositSeeder } from './deposit-seeder';
-export { default as FineSeeder } from './fine-seeder';
-export { default as InvoiceSeeder } from './invoice-seeder';
-export { default as PaymentRequestSeeder } from './payment-request-seeder';
-export { default as PayoutRequestSeeder } from './payout-request-seeder';
-export { default as SellerPayoutSeeder } from './seller-payout-seeder';
-export { default as TerminalPaymentSeeder } from './terminal-payment-seeder';
-export { default as TransactionSeeder } from './transaction-seeder';
-export { default as TransferSeeder } from './transfer-seeder';
-export { default as WriteOffSeeder } from './write-off-seeder';
-export { default as UserNotificationSeeder } from './user-notification-seeder';
+/**
+ * This is the module page of the terminal payment request.
+ *
+ * @module stripe/terminal-payment
+ */
+
+import { TransactionRequest } from './transaction-request';
+
+/**
+ * @typedef {object} CreateTerminalPaymentRequest
+ * @property {TransactionRequest} transaction.required - The transaction to
+ * be created/paid by terminal payment
+ */
+export interface CreateTerminalPaymentRequest {
+  transaction: TransactionRequest;
+}
+
+/**
+ * @typedef {object} ProcessTerminalPaymentRequest
+ * @property {string} stripeTerminalId.required - The ID of the Stripe
+ * terminal to perform the payment with
+ */
+export interface ProcessTerminalPaymentRequest {
+  stripeTerminalId: string;
+}

@@ -18,14 +18,12 @@
  *  @license
  */
 
-export { default as DepositSeeder } from './deposit-seeder';
-export { default as FineSeeder } from './fine-seeder';
-export { default as InvoiceSeeder } from './invoice-seeder';
-export { default as PaymentRequestSeeder } from './payment-request-seeder';
-export { default as PayoutRequestSeeder } from './payout-request-seeder';
-export { default as SellerPayoutSeeder } from './seller-payout-seeder';
-export { default as TerminalPaymentSeeder } from './terminal-payment-seeder';
-export { default as TransactionSeeder } from './transaction-seeder';
-export { default as TransferSeeder } from './transfer-seeder';
-export { default as WriteOffSeeder } from './write-off-seeder';
-export { default as UserNotificationSeeder } from './user-notification-seeder';
+/**
+ * The Stripe API version used throughout SudoSOS. Kept in its own module (with
+ * no other imports) so it can be referenced by lightweight scripts/tools
+ * without pulling in the entire service dependency graph.
+ *
+ * @module stripe
+ */
+
+export const STRIPE_API_VERSION = '2026-05-27.dahlia';
