@@ -552,6 +552,6 @@ export default class PaymentRequestService extends WithManager {
     paymentIntent: StripePaymentIntent,
   ): Promise<PaymentRequest | null> {
     if (!paymentIntent.paymentRequest) return null;
-    return this.markPaid(paymentIntent.paymentRequest);
+    return this.markPaid(paymentIntent.paymentRequest.paymentRequest);
   }
 }

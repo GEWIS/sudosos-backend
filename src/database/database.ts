@@ -110,6 +110,7 @@ import {
 } from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 import { AddLastSeenToUser1769000095806 } from '../migrations/1769000095806-add-last-seen-to-user';
 import PaymentRequest from '../entity/payment-request/payment-request';
+import PaymentRequestAttempt from '../entity/payment-request/payment-request-attempt';
 import { PaymentRequest1777010230727 } from '../migrations/1777010230727-payment-request';
 import {
   StripePaymentIntentPaymentRequest1777010230751,
@@ -254,6 +255,7 @@ function getDataSourceOptions(): DataSourceOptions {
       UserNotificationPreference,
       UserSetting,
       PaymentRequest,
+      PaymentRequestAttempt,
       TermsOfServiceAcceptance,
     ],
     subscribers: [
