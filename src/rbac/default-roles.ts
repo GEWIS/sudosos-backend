@@ -197,7 +197,7 @@ export default class DefaultRoles {
           get: { own: star },
         },
         TerminalPayment: {
-          create: { all: star },
+          create: { own: star },
           get: { own: star },
           cancel: { own: star },
         },

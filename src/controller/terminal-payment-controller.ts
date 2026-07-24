@@ -58,7 +58,7 @@ export default class TerminalPaymentController extends BaseController {
       '/': {
         POST: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'create', 'all', 'TerminalPayment', ['*'],
+            req.token.roles, 'create', 'own', 'TerminalPayment', ['*'],
           ),
           handler: this.createTerminalPayment.bind(this),
           body: { modelName: 'CreateTerminalPaymentRequest' },
@@ -81,7 +81,7 @@ export default class TerminalPaymentController extends BaseController {
       '/:id(\\d+)/process': {
         POST: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'create', 'all', 'TerminalPayment', ['*'],
+            req.token.roles, 'create', await TerminalPaymentController.getRelation(req), 'TerminalPayment', ['*'],
           ),
           handler: this.startTerminalPayment.bind(this),
           body: { modelName: 'ProcessTerminalPaymentRequest' },
@@ -90,7 +90,7 @@ export default class TerminalPaymentController extends BaseController {
       '/terminals': {
         GET: {
           policy: async (req) => this.roleManager.can(
-            req.token.roles, 'get', 'all', 'TerminalPayment', ['*'],
+            req.token.roles, 'get', 'own', 'TerminalPayment', ['*'],
           ),
           handler: this.getStripeTerminals.bind(this),
         },
@@ -211,10 +211,20 @@ export default class TerminalPaymentController extends BaseController {
         return;
       }
 
-      if (terminalPayment.transfer) {
+      if (terminalPayment.getState() === TerminalPaymentState.PAID) {
         res.status(422).send('TerminalPayment already paid.');
         return;
       }
+
+      if (terminalPayment.getState() === TerminalPaymentState.CANCELLED) {
+        res.status(422).send('TerminalPayment is cancelled.');
+        return;
+      }
+
+      // Restarting a processing terminal payment is OK, as it can be used to
+      // force-restart a terminal payment, for example when you reboot the
+      // terminal reader and payment is not yet done. SudoSOS does not get
+      // events like these.
 
       const terminal = await new StripeService().getSingleTerminal(request.stripeTerminalId);
       if (!terminal) {
