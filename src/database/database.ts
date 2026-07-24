@@ -110,6 +110,7 @@ import {
 } from '../migrations/1769005123365-remove-credit-transfer-from-inactive-administrative-cost';
 import { AddLastSeenToUser1769000095806 } from '../migrations/1769000095806-add-last-seen-to-user';
 import PaymentRequest from '../entity/payment-request/payment-request';
+import PaymentRequestAttempt from '../entity/payment-request/payment-request-attempt';
 import { PaymentRequest1777010230727 } from '../migrations/1777010230727-payment-request';
 import {
   StripePaymentIntentPaymentRequest1777010230751,
@@ -125,6 +126,7 @@ import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
 import TmpSubTransaction from '../entity/transactions/terminal/tmp-sub-transaction';
 import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
 import TmpSubTransactionRow from '../entity/transactions/terminal/tmp-sub-transaction-row';
+import { PaymentRequestAttempt1784877357000 } from '../migrations/1784877357000-payment-request-attempt';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -178,6 +180,7 @@ function getDataSourceOptions(): DataSourceOptions {
       AddExpiryToUser1778681972323,
       TermsOfServiceVersioning1781691836923,
       TerminalPayment1782294145719,
+      PaymentRequestAttempt1784877357000,
     ],
     extra: {
       authPlugins: {
@@ -254,6 +257,7 @@ function getDataSourceOptions(): DataSourceOptions {
       UserNotificationPreference,
       UserSetting,
       PaymentRequest,
+      PaymentRequestAttempt,
       TermsOfServiceAcceptance,
     ],
     subscribers: [
