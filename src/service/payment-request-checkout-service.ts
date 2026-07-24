@@ -64,7 +64,7 @@ export default class PaymentRequestCheckoutService extends WithManager {
    * @throws {InvalidPaymentRequestBeneficiaryError} if the beneficiary is no
    *   longer payable (soft-deleted, type became invalid, etc.).
    *
-   * @returns the created {@link stripe!StripeDeposit | StripeDeposit} and the
+   * @returns the created Stripe PaymentIntent's ID and the
    *   Stripe `client_secret` the caller forwards to the browser.
    */
   public async startPayment(
