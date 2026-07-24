@@ -29,7 +29,7 @@ import Transaction from '../transaction';
 import TmpSubTransaction from './tmp-sub-transaction';
 
 /**
- * @typedef {Transaction} {TmpTransaction} A transaction that should be
+ * @typedef {Transaction} A transaction that should be
  * stored in the database, for example when paying for it using a terminal.
  * @property {Array.<TmpSubTransaction>} subtransactions.required
  */
