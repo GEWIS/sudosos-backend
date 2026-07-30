@@ -97,6 +97,8 @@ export const EligibleInactiveUsers: UserType[] = [
  * @property {string} email - The email of the user.
  * @property {boolean} deleted - Whether the user was soft-deleted. Defaults to false.
  * @property {string} type.required - The type of user.
+ * @property {boolean} productSelfService - Whether organ members can manage this organ's
+ *    products and containers without BAC/GEWIS PM. Only meaningful for organ users. Defaults to false.
  */
 @Entity()
 export default class User extends BaseEntity {
@@ -202,6 +204,16 @@ export default class User extends BaseEntity {
     default: false,
   })
   public expiryNotificationSent: boolean;
+
+  /**
+   * Whether members of this organ can manage its own products and containers
+   * (create/update/delete) without going through BAC/GEWIS PM. Only meaningful
+   * for {@link UserType.ORGAN}; ignored for all other user types.
+   */
+  @Column({
+    default: false,
+  })
+  public productSelfService: boolean;
 
   @OneToOne(() => UserFineGroup, {
     nullable: true,
