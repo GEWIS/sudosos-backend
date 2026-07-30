@@ -69,7 +69,7 @@ export default class StripePaymentIntent extends BaseEntity {
   public deposit: StripeDeposit | null;
 
   @OneToOne(() => PaymentRequestAttempt, (a) => a.paymentIntent, { nullable: true })
-  public paymentRequest?: PaymentRequestAttempt | null;
+  public paymentRequestAttempt?: PaymentRequestAttempt | null;
 
   @OneToOne('TerminalPayment', (t: TerminalPayment) => t.stripePaymentIntent, { nullable: true })
   public terminalPayment?: TerminalPayment | null;
