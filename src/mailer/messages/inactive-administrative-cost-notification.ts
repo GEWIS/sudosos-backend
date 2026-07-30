@@ -32,26 +32,26 @@ import { InactiveAdministrativeCostNotificationOptions } from '../../notificatio
 const inactiveAdministrativeCostNotificationDutch = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
   getHTML: (context) => `
   <p> Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.<br>
-  Er zal dan ${context.administrativeCostValue} euro van je account worden afgehaald ter betaling voor administratie kosten. </p>
+  Er zal dan ${context.administrativeCostValue.toFormat()} van je account worden afgehaald ter betaling voor administratie kosten. </p>
   `,
   getSubject: () => 'Notificatie administratie kosten SudoSOS',
   getTitle: 'Administratie notificatie',
   getText: (context) => `
   Je hebt al 2 jaar geen transacties binnen SudoSOS gedaan. Dit betekent dat je volgend jaar administratie kosten zal betalen.
-  Er zal dan ${context.administrativeCostValue} euro van je account worden afgehaald ter betaling voor administratie kosten. 
+  Er zal dan ${context.administrativeCostValue.toFormat()} van je account worden afgehaald ter betaling voor administratie kosten.
   `,
 });
 
 const inactiveAdministrativeCostNotificationEnglish = new MailContentBuilder<InactiveAdministrativeCostNotificationOptions>({
   getHTML: (context) => `
   <p> You haven't made any transfers on SudoSOS for the last 2 years. This means that next year you will pay an administration fee.<br>
-  This means that ${context.administrativeCostValue} euros will be deducted from your account. </p>
+  This means that ${context.administrativeCostValue.toFormat()} will be deducted from your account. </p>
   `,
   getSubject: () => 'Notification administration costs SudoSOS',
   getTitle: 'Administration notification',
   getText: (context) => `
   You haven't made any transfers on SudoSOS for the last 2 years. This means that next year you will pay an administration fee.
-  This means that ${context.administrativeCostValue} euros will be deducted from your account. 
+  This means that ${context.administrativeCostValue.toFormat()} will be deducted from your account.
   `,
 });
 
