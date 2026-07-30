@@ -23,10 +23,10 @@ import { expect } from 'chai';
 import sinon from 'sinon';
 import log4js from 'log4js';
 import Stripe from 'stripe';
-import User from '../../../src/entity/user/user';
+import User, { UserType } from '../../../src/entity/user/user';
 import Database, { AppDataSource } from '../../../src/database/database';
 import StripeDeposit from '../../../src/entity/stripe/stripe-deposit';
-import StripeService, { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
+import StripeService, { STRIPE_API_VERSION, StripeFactory } from '../../../src/service/stripe-service';
 import StripeWebhookService from '../../../src/service/stripe-webhook-service';
 import DineroTransformer from '../../../src/entity/transformer/dinero-transformer';
 import StripePaymentIntentStatus, { StripePaymentIntentState } from '../../../src/entity/stripe/stripe-payment-intent-status';
@@ -37,6 +37,12 @@ import TerminalPayment, { TerminalPaymentState } from '../../../src/entity/trans
 import TerminalPaymentService from '../../../src/service/terminal-payment-service';
 import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
 import Sinon from 'sinon';
+import PaymentRequest from '../../../src/entity/payment-request/payment-request';
+import { PaymentRequestStatus } from '../../../src/entity/payment-request/payment-request-status';
+import PaymentRequestAttempt from '../../../src/entity/payment-request/payment-request-attempt';
+import PaymentRequestService from '../../../src/service/payment-request-service';
+import PaymentRequestCheckoutService from '../../../src/service/payment-request-checkout-service';
+import Transfer from '../../../src/entity/transactions/transfer';
 
 const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
   || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
@@ -238,6 +244,48 @@ describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void
       const id = ctx.stripeDeposits.length + ctx.terminalPayments.length + 100;
       const promise = new StripeWebhookService().createNewPaymentIntentStatus(id, StripePaymentIntentState.CREATED);
       await expect(promise).to.eventually.be.rejectedWith(`PaymentIntent with id "${id}" not found.`);
+    });
+    it('should create a Transfer and mark the PaymentRequest PAID when its payment intent succeeds, even though no StripeDeposit was ever created for it', async () => {
+      const admin = await User.save({ firstName: 'PR-Admin', type: UserType.LOCAL_ADMIN, active: true });
+      const member = await User.save({ firstName: 'PR-Member', type: UserType.MEMBER, active: true });
+
+      const paymentIntentsCreateStub = sinon.stub().resolves({
+        id: `pi_${Math.random().toString(36).slice(2)}`,
+        client_secret: 'secret_test',
+      });
+      const stripeFactoryStub = sinon.stub(StripeFactory, 'create').returns({
+        paymentIntents: { create: paymentIntentsCreateStub },
+      } as any);
+      stubs.push(stripeFactoryStub);
+
+      const request = await new PaymentRequestService().createPaymentRequest({
+        for: member,
+        createdBy: admin,
+        amount: DineroTransformer.Instance.from(1500),
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+      const { intentId } = await new PaymentRequestCheckoutService().startPayment(request);
+      const attempt = await PaymentRequestAttempt.findOne({
+        where: { paymentRequestUuid: request.id },
+        relations: { paymentIntent: true },
+      });
+
+      // Precondition: this intent settles a PaymentRequest, not a StripeDeposit.
+      const intentBefore = await StripePaymentIntent.findOne({
+        where: { id: attempt.paymentIntent.id },
+        relations: { deposit: true },
+      });
+      expect(intentBefore.deposit).to.be.null;
+
+      await new StripeWebhookService().createNewPaymentIntentStatus(attempt.paymentIntent.id, StripePaymentIntentState.SUCCEEDED);
+
+      const reloadedRequest = await PaymentRequest.findOne({ where: { id: request.id } });
+      expect(reloadedRequest.status).to.equal(PaymentRequestStatus.PAID);
+
+      const transfer = await Transfer.findOne({ where: { description: intentId }, relations: { to: true } });
+      expect(transfer, 'expected a credit Transfer to have been created for the paid PaymentRequest').to.not.be.null;
+      expect(transfer!.to.id).to.equal(member.id);
+      expect(ctx.dineroTransformer.to(transfer!.amountInclVat)).to.equal(1500);
     });
   });
 

@@ -513,12 +513,13 @@ export default class PaymentRequestService extends WithManager {
   }
 
   /**
-   * Called by {@link stripe!StripeService | StripeService} from the webhook
-   * flow when a linked payment intent reaches SUCCEEDED. Idempotent:
-   * already-PAID requests are left unchanged.
+   * Idempotent: already-PAID requests are left unchanged.
    *
-   * Does **not** create a credit Transfer — the Stripe deposit flow is the
-   * single settlement event and owns Transfer creation. This method only
+   * Does **not** create a credit Transfer itself — callers own that. For a
+   * StripeDeposit-backed intent, {@link stripe!StripeService.handleStripeDepositPaid
+   * | StripeService.handleStripeDepositPaid} creates it; for a PaymentRequest-
+   * originated intent (which never gets a StripeDeposit row), {@link
+   * settlePaidStripeIntent} creates it before calling this. This method only
    * records the `paidAt` timestamp.
    */
   public async markPaid(request: PaymentRequest): Promise<PaymentRequest> {
@@ -537,21 +538,34 @@ export default class PaymentRequestService extends WithManager {
   }
 
   /**
-   * Helper used by the Stripe webhook ingestion path: given a payment-intent
-   * row, resolve the linked PaymentRequest (if any) and call `markPaid`.
-   * Returns `null` when no request is linked.
+   * Called by the Stripe webhook ingestion path
+   * ({@link stripe!StripeWebhookService.createNewPaymentIntentStatus}) when a
+   * linked payment intent reaches SUCCEEDED. Returns `null` when no request
+   * is linked.
    *
-   * The caller is expected to have loaded the `paymentRequest` relation on
-   * `paymentIntent` already (the webhook flow in
-   * {@link stripe!StripeWebhookService.createNewPaymentIntentStatus} does so). Status
-   * is derived from columns the relation join already populates, so no extra
-   * reload is needed — the webhook hot-path has no need for
-   * `for`/`createdBy`/`cancelledBy`/`fulfilledBy` joins either.
+   * A PaymentRequest-originated payment intent never gets a StripeDeposit
+   * row (see {@link stripe/payment-request-checkout-service!PaymentRequestCheckoutService.startPayment
+   * | PaymentRequestCheckoutService.startPayment}), so unlike a deposit it
+   * has no other settlement path creating its credit Transfer. This method
+   * is that path: it creates the Transfer and then marks the request PAID.
+   *
+   * The caller is expected to have loaded the `paymentRequestAttempt`
+   * relation (nested down to the `PaymentRequest` itself, for its eager
+   * `for`) on `paymentIntent` already.
    */
-  public async markPaidFromStripeIntent(
+  public async settlePaidStripeIntent(
     paymentIntent: StripePaymentIntent,
   ): Promise<PaymentRequest | null> {
-    if (!paymentIntent.paymentRequest) return null;
-    return this.markPaid(paymentIntent.paymentRequest);
+    if (!paymentIntent.paymentRequestAttempt) return null;
+    const request = paymentIntent.paymentRequestAttempt.paymentRequest;
+
+    await new TransferService(this.manager).createTransfer({
+      amount: paymentIntent.amount.toObject(),
+      toId: request.for.id,
+      description: paymentIntent.stripeId,
+      fromId: undefined,
+    });
+
+    return this.markPaid(request);
   }
 }

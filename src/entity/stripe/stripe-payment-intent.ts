@@ -25,13 +25,13 @@
  */
 
 import BaseEntity from '../base-entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import StripePaymentIntentStatus from './stripe-payment-intent-status';
 import DineroTransformer from '../transformer/dinero-transformer';
 import { Dinero } from 'dinero.js';
 import StripeDeposit from './stripe-deposit';
-import PaymentRequest from '../payment-request/payment-request';
 import type TerminalPayment from '../transactions/terminal/terminal-payment';
+import PaymentRequestAttempt from '../payment-request/payment-request-attempt';
 
 /**
  * @typedef {BaseEntity} StripePaymentIntent
@@ -68,20 +68,8 @@ export default class StripePaymentIntent extends BaseEntity {
   @OneToOne(() => StripeDeposit, (s) => s.stripePaymentIntent, { nullable: true })
   public deposit: StripeDeposit | null;
 
-  /**
-   * Optional back-reference to a {@link stripe/payment-request!PaymentRequest | PaymentRequest}
-   * that initiated this intent. Populated when the intent is created via
-   * the PaymentRequest start flow (authenticated or public share-link).
-   *
-   * The data-model contract is: a single PaymentRequest may have many
-   * StripePaymentIntents (retries), but only one of them ever reaches
-   * `SUCCEEDED`. The webhook ingestion path in the service layer reads
-   * this back-reference to mark the linked request as paid; the wiring
-   * itself lives outside this entity (see the service-layer changes).
-   */
-  @ManyToOne(() => PaymentRequest, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'paymentRequestId' })
-  public paymentRequest?: PaymentRequest | null;
+  @OneToOne(() => PaymentRequestAttempt, (a) => a.paymentIntent, { nullable: true })
+  public paymentRequestAttempt?: PaymentRequestAttempt | null;
 
   @OneToOne('TerminalPayment', (t: TerminalPayment) => t.stripePaymentIntent, { nullable: true })
   public terminalPayment?: TerminalPayment | null;

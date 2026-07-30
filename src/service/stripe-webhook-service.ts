@@ -81,7 +81,7 @@ export default class StripeWebhookService extends WithManager {
     paymentIntentId: number, state: StripePaymentIntentState,
   ): Promise<StripePaymentIntentStatus> {
     const paymentIntent = await this.manager.getRepository(StripePaymentIntent)
-      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true, paymentRequest: true, terminalPayment: true } });
+      .findOne({ where: { id: paymentIntentId }, relations: { deposit: true, paymentRequestAttempt: { paymentRequest: true }, terminalPayment: true } });
     if (!paymentIntent) {
       throw new Error(`PaymentIntent with id "${paymentIntentId}" not found.`);
     }
@@ -104,35 +104,35 @@ export default class StripeWebhookService extends WithManager {
     const paymentIntentStatus = await this.manager.getRepository(StripePaymentIntentStatus)
       .save({ stripePaymentIntent: paymentIntent, state });
 
-    // If payment has succeeded, create the transfer
+    // If payment has succeeded, settle whichever consumer this intent
+    // belongs to. A deposit and a PaymentRequest are mutually exclusive on a
+    // given intent, each with its own settlement path: a deposit already
+    // has a StripeDeposit row, so StripeService.handleStripeDepositPaid
+    // creates its Transfer; a PaymentRequest-originated intent never gets a
+    // StripeDeposit row, so PaymentRequestService.settlePaidStripeIntent
+    // creates its Transfer and marks the request PAID in one step.
     if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.deposit) {
       await new StripeService(this.manager).handleStripeDepositPaid(paymentIntent);
-
-      // If the intent was initiated by a PaymentRequest, flip the request to
-      // PAID. This runs *after* the credit Transfer is saved so that a
-      // successful settlement is the single observable event.
-      //
-      // Best-effort: Stripe settlement has already succeeded and the credit
-      // Transfer is persisted. A PaymentRequest state-machine conflict
-      // (e.g. admin cancelled the request after the intent was created)
-      // must not roll back the deposit — log and continue. The user is
+    }
+    if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.paymentRequestAttempt) {
+      // Best-effort on the PaymentRequest side only: if the credit Transfer
+      // is created but the subsequent state-machine flip to PAID conflicts
+      // (e.g. an admin cancelled the request after the intent was created),
+      // that must not undo the Transfer — log and continue. The user is
       // credited either way; reconciling the PaymentRequest state is a
       // secondary concern.
-      if (paymentIntent.paymentRequest) {
-        try {
-          await new PaymentRequestService(this.manager).markPaidFromStripeIntent(paymentIntent);
-        } catch (error) {
-          this.logger.error(
-            'Failed to mark PaymentRequest as PAID for succeeded Stripe payment intent; '
-            + 'the credit Transfer was still created and the user has been credited.',
-            {
-              paymentIntentId: paymentIntent.id,
-              stripeId: paymentIntent.stripeId,
-              paymentRequestId: paymentIntent.paymentRequest.id,
-              error,
-            },
-          );
-        }
+      try {
+        await new PaymentRequestService(this.manager).settlePaidStripeIntent(paymentIntent);
+      } catch (error) {
+        this.logger.error(
+          'Failed to fully settle a succeeded Stripe payment intent for a PaymentRequest.',
+          {
+            paymentIntentId: paymentIntent.id,
+            stripeId: paymentIntent.stripeId,
+            paymentRequestId: paymentIntent.paymentRequestAttempt.paymentRequest.id,
+            error,
+          },
+        );
       }
     }
     if (state === StripePaymentIntentState.SUCCEEDED && !!paymentIntent.terminalPayment) {
@@ -156,7 +156,12 @@ export default class StripeWebhookService extends WithManager {
       const eventPaymentIntent = event.data.object as Stripe.PaymentIntent;
       const paymentIntent = await StripePaymentIntent.findOne({
         where: { stripeId: eventPaymentIntent.id },
-        relations: { deposit: { transfer: true }, paymentIntentStatuses: true },
+        relations: {
+          deposit: { transfer: true },
+          paymentIntentStatuses: true,
+          paymentRequestAttempt: { paymentRequest: true },
+          terminalPayment: true,
+        },
       });
 
       if (!paymentIntent) {

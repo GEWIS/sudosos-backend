@@ -38,11 +38,11 @@
 
 import { EntityManager } from 'typeorm';
 import PaymentRequest from '../entity/payment-request/payment-request';
-import StripeDeposit from '../entity/stripe/stripe-deposit';
 import { PaymentRequestStatus } from '../entity/payment-request/payment-request-status';
 import PaymentRequestService, { IllegalPaymentRequestTransitionError } from './payment-request-service';
 import StripeService from './stripe-service';
 import WithManager from '../database/with-manager';
+import PaymentRequestAttempt from '../entity/payment-request/payment-request-attempt';
 
 /**
  * Bootstrap a Stripe payment session for a PaymentRequest.
@@ -64,12 +64,12 @@ export default class PaymentRequestCheckoutService extends WithManager {
    * @throws {InvalidPaymentRequestBeneficiaryError} if the beneficiary is no
    *   longer payable (soft-deleted, type became invalid, etc.).
    *
-   * @returns the created {@link stripe!StripeDeposit | StripeDeposit} and the
+   * @returns the created Stripe PaymentIntent's ID and the
    *   Stripe `client_secret` the caller forwards to the browser.
    */
   public async startPayment(
     request: PaymentRequest,
-  ): Promise<{ deposit: StripeDeposit; clientSecret: string }> {
+  ): Promise<{ intentId: string; clientSecret: string }> {
     if (request.status !== PaymentRequestStatus.PENDING) {
       throw new IllegalPaymentRequestTransitionError(
         `cannot start payment on request in state ${request.status}`,
@@ -77,10 +77,18 @@ export default class PaymentRequestCheckoutService extends WithManager {
     }
     PaymentRequestService.validatePayable(request.for);
 
-    return new StripeService(this.manager).createStripeDeposit(
+    const { stripePaymentIntent, clientSecret } = await new StripeService(this.manager).createStripePaymentIntent(
       request.for,
       request.amount,
+      'digital',
       { paymentRequestId: request.id },
     );
+
+    const attempt = new PaymentRequestAttempt();
+    attempt.paymentRequest = request;
+    attempt.paymentIntent = stripePaymentIntent;
+    await this.manager.getRepository(PaymentRequestAttempt).save(attempt);
+
+    return { intentId: stripePaymentIntent.stripeId, clientSecret };
   }
 }

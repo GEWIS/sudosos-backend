@@ -128,7 +128,7 @@ flowchart TD
 
 **Entities touched**
 - `PaymentRequest` (UUID pk, immutable amount, derived status)
-- `StripePaymentIntent.paymentRequest?` — one request can have many intents (retries)
+- `PaymentRequestAttempt` (join table) links a `PaymentRequest` to each `StripePaymentIntent` it spawned — one request can have many intents (retries)
 - on success: the standard Stripe deposit `Transfer` (void → user) already created by the deposit flow also settles the payment request
 
 **Lifecycle (derived status)**
