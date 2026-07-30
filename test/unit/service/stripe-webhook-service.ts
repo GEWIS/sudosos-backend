@@ -38,7 +38,10 @@ import TerminalPaymentService from '../../../src/service/terminal-payment-servic
 import StripePaymentIntent from '../../../src/entity/stripe/stripe-payment-intent';
 import Sinon from 'sinon';
 
-describe('StripeWebhookService', async (): Promise<void> => {
+const shouldSkipStripe = (process.env.STRIPE_PUBLIC_KEY === '' || process.env.STRIPE_PUBLIC_KEY === undefined
+  || process.env.STRIPE_PRIVATE_KEY === '' || process.env.STRIPE_PRIVATE_KEY === undefined);
+
+describe.skipIf(shouldSkipStripe)('StripeWebhookService', async (): Promise<void> => {
   let ctx: {
     connection: DataSource,
     users: User[],
