@@ -70,8 +70,5 @@ jobs:
     with:
       projects: '["."]'
       docker-paths: '["${{ vars.DOCKER_TAG }}"]'
-      docker-registry: ${{ vars.DOCKER_REGISTRY }}
+      github-registry: 'true'
       version: ${{ needs.versioning.outputs['next-version'] }}
-    secrets:
-      REGISTRY_USERNAME: ${{ secrets.SVC_GH_SUDOSOS_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.SVC_GH_SUDOSOS_PWD }}
