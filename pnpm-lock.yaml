@@ -78,8 +78,8 @@ importers:
         specifier: 2.1.35
         version: 2.1.35
       mysql2:
-        specifier: 3.22.6
-        version: 3.22.6(@types/node@20.19.43)
+        specifier: 3.23.0
+        version: 3.23.0(@types/node@20.19.43)
       node-cron:
         specifier: 3.0.3
         version: 3.0.3
@@ -109,7 +109,7 @@ importers:
         version: 5.0.1(express@4.22.2)
       typeorm:
         specifier: 1.0.0
-        version: 1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.22.6(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
+        version: 1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
       uuid:
         specifier: 10.0.0
         version: 10.0.0
@@ -3913,8 +3913,8 @@ packages:
   mute-stream@0.0.8:
     resolution: {integrity: sha512-nnbWWOkoWyUsTjKrhgD0dcz22mdkSnpYqbEjIm2nhwhuxlSkpywJmBo8h0ZqJdkp73mb90SssHkN4rsRaBAfAA==}
 
-  mysql2@3.22.6:
-    resolution: {integrity: sha512-fPKmeDGUzvFP7bMD5SASlJ5zIgvCC4hbanTmhbUlEmhyrY1hR4Hi3xLOWgTd3luYjLVifx6uGvMNJ2m/LlqEpg==}
+  mysql2@3.23.0:
+    resolution: {integrity: sha512-ZwyGLoG9BRlL7hKNDcIy7q18hA6WTWGEpLAerGHXj5Xahemia4msZdwjIOUIzesjK3B5z5gWLktf+2tYSLAyTA==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -9542,7 +9542,7 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  mysql2@3.22.6(@types/node@20.19.43):
+  mysql2@3.23.0(@types/node@20.19.43):
     dependencies:
       '@types/node': 20.19.43
       aws-ssl-profiles: 1.1.2
@@ -10939,7 +10939,7 @@ snapshots:
       typescript: 5.9.3
       yaml: 2.9.0
 
-  typeorm@1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.22.6(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
+  typeorm@1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 4.2.0
@@ -10954,7 +10954,7 @@ snapshots:
     optionalDependencies:
       better-sqlite3: 12.11.1
       ioredis: 5.10.1
-      mysql2: 3.22.6(@types/node@20.19.43)
+      mysql2: 3.23.0(@types/node@20.19.43)
       ts-node: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)
     transitivePeerDependencies:
       - babel-plugin-macros
