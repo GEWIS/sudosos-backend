@@ -63,6 +63,8 @@ export interface CreateUserRequest extends BaseUserRequest {
  * @property {boolean} extensiveDataProcessing
  * @property {boolean} inactiveNotificationSend
  * @property {string|null} expiryDate - ISO date at which the account expires; pass null to clear
+ * @property {boolean} productSelfService - Whether organ members can manage this organ's
+ *    products and containers without BAC/GEWIS PM. Only meaningful for organ users.
  */
 export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   active?: boolean;
@@ -70,6 +72,7 @@ export interface UpdateUserRequest extends Partial<BaseUserRequest> {
   extensiveDataProcessing?: boolean
   inactiveNotificationSend?: boolean
   expiryDate?: string | null;
+  productSelfService?: boolean;
 }
 
 
