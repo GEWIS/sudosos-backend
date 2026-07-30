@@ -99,7 +99,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
       .createQueryBuilder('transfer')
       .leftJoin(InactiveAdministrativeCost, 'inactiveAdministrativeCost', 'inactiveAdministrativeCost.transferId = transfer.id')
       .where('inactiveAdministrativeCost.id IS NULL')
-      .andWhere('transfer.fromId = :userId', { userId })
+      .andWhere('(transfer.fromId = :userId OR transfer.toId = :userId)', { userId })
       .orderBy('transfer.createdAt', 'DESC')
       .limit(1)
       .getOne();

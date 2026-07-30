@@ -443,6 +443,32 @@ describe('InactiveAdministrativeCostService', () => {
         expect(userIds).to.not.include(user.id);
       });
     });
+    it('should not return users whose only recent activity is an incoming top-up', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        // A Stripe top-up is a transfer with no fromId (money enters from outside SudoSOS)
+        // and toId equal to the user being credited.
+        const topUpReq: TransferRequest = {
+          amount: {
+            amount: 1000,
+            precision: dinero.defaultPrecision,
+            currency: dinero.defaultCurrency,
+          },
+          description: 'recent top-up',
+          fromId: undefined,
+          toId: user.id,
+        };
+        await new TransferService().createTransfer(topUpReq);
+        await new BalanceService().updateBalances({});
+
+        const finalBalance = await new BalanceService().getBalance(user.id);
+        expect(finalBalance.amount.amount).to.be.greaterThan(0);
+
+        const users = await new InactiveAdministrativeCostService().checkInactiveUsers({ notification: true });
+
+        const userIds = users.map(u => u.id);
+        expect(userIds).to.not.include(user.id);
+      });
+    });
   });
 
   describe('handOutInactiveAdministrativeCost', async (): Promise<void> => {
