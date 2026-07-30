@@ -77,10 +77,10 @@ export class HelloWorldOptions extends TemplateOptions {
  */
 export class InactiveAdministrativeCostNotificationOptions extends TemplateOptions {
   /**
-     * @param administrativeCostValue - The administrative cost value as a formatted string.
+     * @param administrativeCostValue - The configured administrative cost value.
      */
   constructor(
-    public administrativeCostValue: string,
+    public administrativeCostValue: Dinero,
   ) {
     super();
   }

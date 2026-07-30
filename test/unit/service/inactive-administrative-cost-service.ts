@@ -498,6 +498,34 @@ describe('InactiveAdministrativeCostService', () => {
       expect(rootStubs.queueAdd.callCount).to.equal(users.length);
       expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
+    it('should notify with the amount that will actually be deducted, capped to the user\'s balance', async () => {
+      await inUserContext((await UserFactory()).clone(1), async (user: User) => {
+        const administrativeCostValue = ServerSettingsStore.getInstance().getSetting('administrativeCostValue') as number;
+        const lowBalance = Math.floor(administrativeCostValue / 2);
+
+        const depositReq: TransferRequest = {
+          amount: {
+            amount: lowBalance,
+            precision: dinero.defaultPrecision,
+            currency: dinero.defaultCurrency,
+          },
+          description: 'deposit lower than administrative cost value',
+          fromId: 0,
+          toId: user.id,
+        };
+        await new TransferService().createTransfer(depositReq);
+
+        const balance = await new BalanceService().getBalance(user.id);
+        expect(balance.amount.amount).to.be.eq(lowBalance);
+        expect(balance.amount.amount).to.be.lessThan(administrativeCostValue);
+
+        await new InactiveAdministrativeCostService().sendInactiveNotification({ userIds: [user.id] });
+
+        const mailOptions = rootStubs.queueAdd.lastCall.args[1];
+        expect(mailOptions.html).to.include(dinero({ amount: lowBalance }).toFormat());
+        expect(mailOptions.html).to.not.include(dinero({ amount: administrativeCostValue }).toFormat());
+      });
+    });
   });
   describe('getPaginatedInactiveAdministrativeCosts', async (): Promise<void> => {
     it('should paginate inactive administrative costs correctly', async () => {

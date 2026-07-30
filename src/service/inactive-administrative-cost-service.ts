@@ -94,6 +94,21 @@ export default class InactiveAdministrativeCostService extends WithManager {
     return ServerSettingsStore.getInstance().getSetting('administrativeCostValue') as ISettings['administrativeCostValue'];
   }
 
+  /**
+   * Determines the amount that would actually be deducted from the given user for an
+   * inactive administrative cost: the configured administrative cost value, capped to the
+   * user's balance, and never negative.
+   * @param userId
+   */
+  private async getDeductionAmount(userId: number): Promise<number> {
+    const userBalance = await new BalanceService(this.manager).getBalance(userId);
+    const administrativeCostValue = InactiveAdministrativeCostService.getAdministrativeCostValue();
+
+    return userBalance.amount.amount > 0
+      ? Math.min(userBalance.amount.amount, administrativeCostValue)
+      : 0;
+  }
+
   private async lastTransferQuery(userId: number): Promise<Transfer | null> {
     return Transfer.getRepository()
       .createQueryBuilder('transfer')
@@ -203,14 +218,7 @@ export default class InactiveAdministrativeCostService extends WithManager {
 
     // Calculate reduction amount
     const user = await this.manager.findOne(User, { where: { id: forId } });
-    const userBalance = await new BalanceService(this.manager).getBalance(forId);
-
-    const administrativeCostValue = InactiveAdministrativeCostService.getAdministrativeCostValue();
-
-    // Ensure the deduction does not exceed the user's balance and is never negative
-    const monetaryAmount = userBalance.amount.amount > 0
-      ? Math.min(userBalance.amount.amount, administrativeCostValue)
-      : 0;
+    const monetaryAmount = await this.getDeductionAmount(forId);
 
     const amount: DineroObjectRequest = {
       amount: monetaryAmount,
@@ -281,20 +289,16 @@ export default class InactiveAdministrativeCostService extends WithManager {
     await Promise.all(users.userIds.map(async (u) => {
       const user = await this.manager.findOne(User, { where: { id: u } });
 
-      const value = ServerSettingsStore.getInstance().getSetting('administrativeCostValue');
-      if (typeof value !== 'number') {
-        throw new Error('administrativeCostValue must be a number');
-      }
-      const formattedValue = dinero({ amount: value }).toFormat();
+      const monetaryAmount = await this.getDeductionAmount(u);
 
       user.inactiveNotificationSend = true;
       await user.save();
-      
+
       return Notifier.getInstance().notify({
         type: NotificationTypes.InactiveAdministrativeCostNotification,
         userId: user.id,
         params: new InactiveAdministrativeCostNotificationOptions(
-          formattedValue,
+          dinero({ amount: monetaryAmount }),
         ),
       });
     }),
