@@ -26,3 +26,6 @@ data/
 client/src/
 client/dist/
 client/node_modules/
+
+# Git worktrees
+.worktrees/
