@@ -83,6 +83,35 @@ export default class TermsOfServiceService {
   }
 
   /**
+   * Compute the TOS status of each given user against the current version.
+   * Uses a single acceptance lookup for all users, so it is safe to call on
+   * paginated lists without incurring a query per user.
+   * @param users - The users to compute the status for.
+   * @returns A map from user id to their computed {@link TermsOfServiceStatus}.
+   */
+  public static async getUsersTosStatus(
+    users: Pick<User, 'id' | 'tosRequired'>[],
+  ): Promise<Map<number, TermsOfServiceStatus>> {
+    const statuses = new Map<number, TermsOfServiceStatus>();
+    const requiredIds = [...new Set(users.filter((u) => u.tosRequired).map((u) => u.id))];
+
+    // Users that do not need the TOS are immediately NOT_REQUIRED.
+    users.filter((u) => !u.tosRequired).forEach((u) => statuses.set(u.id, TermsOfServiceStatus.NOT_REQUIRED));
+    if (requiredIds.length === 0) return statuses;
+
+    const versionNumber = await TermsOfServiceService.getCurrentVersion();
+    const acceptances = await TermsOfServiceAcceptance.find({
+      where: { userId: In(requiredIds), versionNumber },
+    });
+    const acceptedIds = new Set(acceptances.map((a) => a.userId));
+    requiredIds.forEach((id) => statuses.set(
+      id,
+      acceptedIds.has(id) ? TermsOfServiceStatus.ACCEPTED : TermsOfServiceStatus.NOT_ACCEPTED,
+    ));
+    return statuses;
+  }
+
+  /**
    * Whether all given users that are required to accept the TOS
    * have accepted the current version.
    * @param users - The users to check.

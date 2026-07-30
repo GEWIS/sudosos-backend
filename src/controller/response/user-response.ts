@@ -28,6 +28,7 @@ import BaseResponse from './base-response';
 import { PaginationResult } from '../../helpers/pagination';
 import { BasePointOfSaleInfoResponse } from './point-of-sale-response';
 import { SupportedLanguage } from '../../entity/user-setting';
+import { TermsOfServiceStatus } from '../../entity/user/user';
 
 /**
  * enum:MEMBER,ORGAN,VOUCHER,LOCAL_USER,LOCAL_ADMIN,INVOICE,POINT_OF_SALE,INTEGRATION - The type of a user
@@ -53,6 +54,7 @@ export interface BaseUserResponse extends BaseResponse {
  * @property {string} type.required - The type of user
  * @property {string} email - If local user, the e-mail of the user
  * @property {boolean} tosRequired - Whether this user is required to accept the TOS
+ * @property {TermsOfServiceStatus} acceptedToS - The user's TOS status, computed against the current version
  * @property {boolean} extensiveDataProcessing - Whether data about this
  * user can be used (non-anonymously) for more data science!
  * @property {boolean} ofAge - Whether someone is old enough to drink beer
@@ -68,6 +70,7 @@ export interface UserResponse extends BaseUserResponse {
   type: string;
   email?: string;
   tosRequired?: boolean,
+  acceptedToS?: TermsOfServiceStatus;
   extensiveDataProcessing?: boolean;
   ofAge?: boolean;
   canGoIntoDebt: boolean;

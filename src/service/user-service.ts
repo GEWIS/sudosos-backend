@@ -29,7 +29,7 @@ import { asBoolean, asDate, asNumber, asUserType } from '../helpers/validators';
 import { PaginationParameters } from '../helpers/pagination';
 import { UserResponse } from '../controller/response/user-response';
 import QueryFilter, { FilterMapping } from '../helpers/query-filter';
-import User, { LocalUserTypes, TOSRequired, UserType } from '../entity/user/user';
+import User, { LocalUserTypes, TermsOfServiceStatus, TOSRequired, UserType } from '../entity/user/user';
 import TermsOfServiceAcceptance from '../entity/user/terms-of-service-acceptance';
 import TermsOfServiceService from './terms-of-service-service';
 import OrganMembership from '../entity/organ/organ-membership';
@@ -113,8 +113,12 @@ export function parseGetFinancialMutationsFilters(req: RequestWithToken): Financ
  * Parses a User entity to a UserResponse
  * @param user - User entity with loaded relations (especially memberUser)
  * @param timestamps - Whether to include createdAt and updatedAt
+ * @param acceptedToS - The user's computed TOS status. When omitted, acceptedToS
+ * is left undefined; use {@link asUserResponses} to populate it for a list of users.
  */
-export function asUserResponse(user: User, timestamps = false): UserResponse {
+export function asUserResponse(
+  user: User, timestamps = false, acceptedToS?: TermsOfServiceStatus,
+): UserResponse {
   if (!user) return undefined;
 
   return {
@@ -129,6 +133,7 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     type: UserType[user.type],
     email: user.email,
     tosRequired: user.tosRequired,
+    acceptedToS,
     extensiveDataProcessing: user.extensiveDataProcessing,
     ofAge: user.ofAge,
     canGoIntoDebt: user.canGoIntoDebt,
@@ -137,6 +142,17 @@ export function asUserResponse(user: User, timestamps = false): UserResponse {
     pos: user.pointOfSale ? PointOfSaleService.toBaseInfoResponse(user.pointOfSale) : undefined,
     expiryDate: user.expiryDate ? user.expiryDate.toISOString() : null,
   };
+}
+
+/**
+ * Parses a list of User entities to UserResponses, computing each user's TOS
+ * status against the current version with a single batched lookup.
+ * @param users - User entities with loaded relations (especially memberUser)
+ * @param timestamps - Whether to include createdAt and updatedAt
+ */
+export async function asUserResponses(users: User[], timestamps = false): Promise<UserResponse[]> {
+  const statuses = await TermsOfServiceService.getUsersTosStatus(users);
+  return users.map((user) => asUserResponse(user, timestamps, statuses.get(user.id)));
 }
 
 export default class UserService {
