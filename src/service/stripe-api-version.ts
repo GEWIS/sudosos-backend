@@ -26,4 +26,4 @@
  * @module stripe
  */
 
-export const STRIPE_API_VERSION = '2026-05-27.dahlia';
+export const STRIPE_API_VERSION = '2026-06-24.dahlia';
