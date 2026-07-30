@@ -108,8 +108,8 @@ importers:
         specifier: 5.0.1
         version: 5.0.1(express@4.22.2)
       typeorm:
-        specifier: 1.0.0
-        version: 1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
+        specifier: 1.1.0
+        version: 1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
       uuid:
         specifier: 10.0.0
         version: 10.0.0
@@ -1781,8 +1781,8 @@ packages:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
 
-  ansis@4.2.0:
-    resolution: {integrity: sha512-HqZ5rWlFjGiV0tDm3UxxgNRqsOTniqoKZu0pIAfh7TZQMGuZK+hH0drySty0si0QXj1ieop4+SkSfPZBPPkHig==}
+  ansis@4.3.1:
+    resolution: {integrity: sha512-BJ8/l4R5LRE7hW9WdSuGYrLSHi2ynxeFpDFbH0K/CgNeY/tyhk+vO6TYxXC5r5CpUhNVX310xzPsN/H9lCdfOA==}
     engines: {node: '>=14'}
 
   anymatch@3.1.3:
@@ -5085,8 +5085,8 @@ packages:
     peerDependencies:
       typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x || 5.9.x || 6.0.x
 
-  typeorm@1.0.0:
-    resolution: {integrity: sha512-2mSKNqucP8vo+xQLP59xlHUcqLvG6qajxA7q7tnhJgeZjTrA6lK/Ar7LRyiAxdXhyXmGbIPsArPmcUB9Xg+M7w==}
+  typeorm@1.1.0:
+    resolution: {integrity: sha512-iX/kvsV42/htCNAQUyElGW87E4Z12neZc6YUFBTEu0BnLiREYDNT5Wfw3wRqZw9vyOEC36zUBAY6Qvywoig06Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.11.0}
     hasBin: true
     peerDependencies:
@@ -5097,11 +5097,11 @@ packages:
       mongodb: ^7.0.0
       mssql: ^12.0.0
       mysql2: ^3.15.3
-      oracledb: ^6.3.0
+      oracledb: ^6.3.0 || ^7.0.0
       pg: ^8.5.1
       pg-native: ^3.0.0
       pg-query-stream: ^4.0.0
-      redis: ^5.0.0
+      redis: ^5.0.0 || ^6.0.0
       sql.js: ^1.4.0
       ts-node: ^10.9.2
       typeorm-aurora-data-api-driver: ^3.0.0
@@ -7163,7 +7163,7 @@ snapshots:
 
   ansi-styles@6.2.3: {}
 
-  ansis@4.2.0: {}
+  ansis@4.3.1: {}
 
   anymatch@3.1.3:
     dependencies:
@@ -10939,10 +10939,10 @@ snapshots:
       typescript: 5.9.3
       yaml: 2.9.0
 
-  typeorm@1.0.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
+  typeorm@1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
     dependencies:
       '@sqltools/formatter': 1.2.5
-      ansis: 4.2.0
+      ansis: 4.3.1
       dayjs: 1.11.21
       debug: 4.4.3(supports-color@5.5.0)
       dedent: 1.7.2
