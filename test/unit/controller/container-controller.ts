@@ -85,8 +85,10 @@ describe('ContainerController', async (): Promise<void> => {
     adminUser: User,
     localUser: User,
     organ: User,
+    selfServiceOrgan: User,
     adminToken: String,
     organMemberToken: String,
+    selfServiceOrganMemberToken: String,
     token: String,
     products: Product[],
     deletedProducts: Product[],
@@ -127,9 +129,19 @@ describe('ContainerController', async (): Promise<void> => {
       tosRequired: false,
     } as User;
 
+    const selfServiceOrgan = {
+      id: 4,
+      firstName: 'SelfServiceOrgan',
+      type: UserType.ORGAN,
+      active: true,
+      tosRequired: false,
+      productSelfService: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(organ);
+    await User.save(selfServiceOrgan);
 
     const { products, productRevisions } = (
       await new ProductSeeder().seed([adminUser, localUser]));
@@ -161,6 +173,7 @@ describe('ContainerController', async (): Promise<void> => {
     const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
     const token = await signTokenFor(localUser, tokenHandler);
     const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce organ', [organ]);
+    const selfServiceOrganMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce self-service organ', [selfServiceOrgan]);
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());
@@ -170,6 +183,7 @@ describe('ContainerController', async (): Promise<void> => {
     // initialize context
     ctx = {
       organ,
+      selfServiceOrgan,
       connection,
       app,
       specification,
@@ -178,6 +192,7 @@ describe('ContainerController', async (): Promise<void> => {
       localUser,
       adminToken,
       organMemberToken,
+      selfServiceOrganMemberToken,
       token,
       products: products.filter((p) => p.deletedAt == null),
       deletedProducts: products.filter((p) => p.deletedAt != null),
@@ -642,6 +657,49 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(404);
       expect(res.body).to.equal('Container not found');
+    });
+  });
+
+  describe('self-service organ', () => {
+    it('should allow an organ member to create, update and delete a container when productSelfService is enabled', async () => {
+      const containerCount = await Container.count();
+      const createRes = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send({
+          ...ctx.validContainerReq,
+          ownerId: ctx.selfServiceOrgan.id,
+        } as CreateContainerRequest);
+
+      expect(createRes.status).to.equal(200);
+      expect(await Container.count()).to.equal(containerCount + 1);
+      const container = createRes.body as ContainerResponse;
+
+      const patchRes = await request(ctx.app)
+        .patch(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send(ctx.validContainerUpdate);
+      expect(patchRes.status).to.equal(200);
+
+      const deleteRes = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send();
+      expect(deleteRes.status).to.equal(204);
+
+      // Cleanup
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container.id });
+    });
+    it('should return an HTTP 403 if the organ does not have productSelfService enabled', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send(ctx.validContainerReq);
+
+      expect(res.status).to.equal(403);
+      expect(await Container.count()).to.equal(containerCount);
     });
   });
 });

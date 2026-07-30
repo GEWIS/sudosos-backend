@@ -932,6 +932,10 @@ export default class UserController extends BaseController {
         res.status(400).json('expiryDate can only be set for local user accounts');
         return;
       }
+      if (body.productSelfService !== undefined && user.type !== UserType.ORGAN) {
+        res.status(400).json('productSelfService can only be set for organ accounts');
+        return;
+      }
 
       user = { ...body } as unknown as User;
       if (parsedExpiryDate !== undefined) {

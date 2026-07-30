@@ -37,6 +37,7 @@ import CreateProductParams, {
   UpdateProductRequest,
 } from './request/product-request';
 import Product from '../entity/product/product';
+import User from '../entity/user/user';
 import FileService from '../service/file-service';
 import { PRODUCT_IMAGE_LOCATION } from '../files/storage';
 import { parseRequestPagination, toResponse } from '../helpers/pagination';
@@ -91,7 +92,7 @@ export default class ProductController extends BaseController {
         },
         POST: {
           body: { modelName: 'CreateProductRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', ProductController.postRelation(req), 'Product', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await ProductController.postRelation(req), 'Product', ['*']),
           handler: this.createProduct.bind(this),
         },
       },
@@ -360,21 +361,25 @@ export default class ProductController extends BaseController {
   /**
    * Function to determine which credentials are needed to post product
    *    'all' if user is not connected to product
-   *    'organ' if user is not connected to product via organ
+   *    'organ' if user is connected to product via an organ that allows product self-service
    *    'own' if user is connected to product
    * @param req - Request with CreateProductRequest as body
    * @return whether product is connected to user token
    */
-  static postRelation(req: RequestWithToken): string {
+  static async postRelation(req: RequestWithToken): Promise<string> {
     const request = req.body as CreateProductRequest;
-    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) return 'organ';
-    if (request.ownerId && request.ownerId === req.token.user.id) return 'all';
-    return 'own';
+    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) {
+      const owner = await User.findOne({ where: { id: request.ownerId } });
+      if (owner?.productSelfService) return 'organ';
+    }
+    if (request.ownerId && request.ownerId === req.token.user.id) return 'own';
+    return 'all';
   }
 
   /**
    * Function to determine which credentials are needed to get product
    *    'all' if user is not connected to product
+   *    'organ' if user is connected to product via an organ that allows product self-service
    *    'own' if user is connected to product
    * @param req - Request with product id as param
    * @return whether product is connected to user token
@@ -385,7 +390,7 @@ export default class ProductController extends BaseController {
       owner: true,
     } });
     if (product && product.owner.id === req.token.user.id) return 'own';
-    if (product && userTokenInOrgan(req, product.owner.id)) return 'organ';
+    if (product && userTokenInOrgan(req, product.owner.id) && product.owner.productSelfService) return 'organ';
     return 'all';
   }
 }

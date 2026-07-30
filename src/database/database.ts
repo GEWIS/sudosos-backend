@@ -127,6 +127,9 @@ import TmpSubTransaction from '../entity/transactions/terminal/tmp-sub-transacti
 import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
 import TmpSubTransactionRow from '../entity/transactions/terminal/tmp-sub-transaction-row';
 import { PaymentRequestAttempt1784877357000 } from '../migrations/1784877357000-payment-request-attempt';
+import {
+  AddProductSelfServiceToUser1785401380818,
+} from '../migrations/1785401380818-add-product-self-service-to-user';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -181,6 +184,7 @@ function getDataSourceOptions(): DataSourceOptions {
       TermsOfServiceVersioning1781691836923,
       TerminalPayment1782294145719,
       PaymentRequestAttempt1784877357000,
+      AddProductSelfServiceToUser1785401380818,
     ],
     extra: {
       authPlugins: {
