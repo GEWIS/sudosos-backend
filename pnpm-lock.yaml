@@ -55,7 +55,7 @@ importers:
         version: 1.8.0
       gewisdb-ts-client:
         specifier: github:GEWIS/gewisdb-ts-client#6190730be45646d58ff5968689ec22b88d2c918c
-        version: https://codeload.github.com/GEWIS/gewisdb-ts-client/tar.gz/6190730be45646d58ff5968689ec22b88d2c918c(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(debug@4.4.3)
+        version: https://codeload.github.com/GEWIS/gewisdb-ts-client/tar.gz/6190730be45646d58ff5968689ec22b88d2c918c(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(debug@4.4.3)
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -109,7 +109,7 @@ importers:
         version: 5.0.1(express@4.22.2)
       typeorm:
         specifier: 1.1.0
-        version: 1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
+        version: 1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3))
       uuid:
         specifier: 10.0.0
         version: 10.0.0
@@ -133,8 +133,8 @@ importers:
         specifier: 20.5.3
         version: 20.5.3
       '@swc/core':
-        specifier: 1.15.43
-        version: 1.15.43(@swc/helpers@0.5.21)
+        specifier: 1.15.46
+        version: 1.15.46(@swc/helpers@0.5.21)
       '@types/bcrypt':
         specifier: 5.0.2
         version: 5.0.2
@@ -278,7 +278,7 @@ importers:
         version: 3.7.0(chai@4.5.0)(sinon@18.0.1)
       ts-node:
         specifier: 10.9.2
-        version: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)
+        version: 10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)
       typedoc:
         specifier: 0.28.20
         version: 0.28.20(typescript@5.9.3)
@@ -296,7 +296,7 @@ importers:
         version: 5.9.3
       unplugin-swc:
         specifier: 1.5.9
-        version: 1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.21))(rollup@4.60.1)
+        version: 1.5.9(@swc/core@1.15.46(@swc/helpers@0.5.21))(rollup@4.60.1)
       vitepress:
         specifier: 1.6.4
         version: 1.6.4(@algolia/client-search@5.50.1)(@types/node@20.19.43)(axios@1.15.0(debug@4.4.3))(postcss@8.5.9)(search-insights@2.17.3)(typescript@5.9.3)
@@ -1121,86 +1121,86 @@ packages:
   '@sqltools/formatter@1.2.5':
     resolution: {integrity: sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==}
 
-  '@swc/core-darwin-arm64@1.15.43':
-    resolution: {integrity: sha512-v1aVuvXdo/BHxJzco9V2xpHrvwWmhfS8t6gziY5wJxd+Z2h8AeJRnAwPD8itCDaGXVBwJ/CaKfxEzTkG0Va0OA==}
+  '@swc/core-darwin-arm64@1.15.46':
+    resolution: {integrity: sha512-IsISIT22EfktVJrlvIpnAxG2u/A9aob9l99HMlx80x72WlFmFPk1V3UhkEzx86eJP8hw049KTFv/RISho2cq2Q==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@swc/core-darwin-x64@1.15.43':
-    resolution: {integrity: sha512-lp3d4Lamc8dt5huYdGLSR+9hLxmfr1jb0l+4XXG2zPqZwYWRN9R0U2qYoTrggiU2RWW0oV9VbWM3kBnqIc2kdQ==}
+  '@swc/core-darwin-x64@1.15.46':
+    resolution: {integrity: sha512-4Tj4ppVIPCmUMpmGFiGtyEriwLyJ+yi/US4WfBrP/ok8COGddDZXLEzQETnKyK46mjvr1v0jevrS23zjoff7vA==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [darwin]
 
-  '@swc/core-linux-arm-gnueabihf@1.15.43':
-    resolution: {integrity: sha512-JWTQQELtsG5GgphDrr/XqqmM2pDN3cZqbMS0Mrg+iTiXL3F74sn/S2IyYE/5u4h2KLkTf9qQ7dXyxsbx7YzkeA==}
+  '@swc/core-linux-arm-gnueabihf@1.15.46':
+    resolution: {integrity: sha512-i8tUGnNjyOgMmfmgFSg4aeJLQoFyfpIHK5FjpQAwpRyQIqEUB2w1e8zIDQzY1WhOxx8NoS1S5iUL813Un4Sf5A==}
     engines: {node: '>=10'}
     cpu: [arm]
     os: [linux]
 
-  '@swc/core-linux-arm64-gnu@1.15.43':
-    resolution: {integrity: sha512-B4otJRdPWIsmiSBf0uG7Z/+vMWmkufjz5MmYxubwKuZazDW14Zd3symga1N62QR4RT+kEFeHEgsXfZGyn/w0hw==}
+  '@swc/core-linux-arm64-gnu@1.15.46':
+    resolution: {integrity: sha512-c0OnhqzdhfOvv6qhNCcByepB+sNYOGZyhtr2Qa6ZCHvAWTYhSRw4j/u92Stue9PbZ/6q74b9nHzi76+kVzqQHQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@swc/core-linux-arm64-musl@1.15.43':
-    resolution: {integrity: sha512-6zB6OnpViBxYy4tgY3v2i6AZY9fwkcHZ032UOwtwUuW1d19sdT07qF0kZe6/3UR1tUaK6jjg2rmVcUIBCEYVjQ==}
+  '@swc/core-linux-arm64-musl@1.15.46':
+    resolution: {integrity: sha512-imyRpNEcUzFQFV2LE4jL68ErvmKEuZCbvZru77iQREunJ+bR4i658cupTgtG1mLYM3F1Tzy3Sb9xYb02KghWTg==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@swc/core-linux-ppc64-gnu@1.15.43':
-    resolution: {integrity: sha512-coxE1ZWdB3uSDVNoEtYNrRi/1epvckZx9cTJ8ICUxTMTxGk+yvQ/Twacp3ruZSaMPGCriUjP86C37VhaT6nyRg==}
+  '@swc/core-linux-ppc64-gnu@1.15.46':
+    resolution: {integrity: sha512-ctEfcl/HcUeomK33cbySiHZm98GEDIxTm1EkpBsYCiHxElYBzvTXVeuQT2YwbUXn9XCrjiw4ipyUNk33k26qRg==}
     engines: {node: '>=10'}
     cpu: [ppc64]
     os: [linux]
     libc: [glibc]
 
-  '@swc/core-linux-s390x-gnu@1.15.43':
-    resolution: {integrity: sha512-lXfLhs+LpBsD5inuYx+YDH5WsPPBQ95KPUiy8P5wq9ob9xKDZFqwNfU2QW6bGO8NqRO/H9JQomTSt5Yyh+FGfA==}
+  '@swc/core-linux-s390x-gnu@1.15.46':
+    resolution: {integrity: sha512-DxlMdnt84TtRVTv7WL/thWyz9+QU8QZNNoAP9rrk0P68LziuhfePp8MjQ44zIprpTHTsEwyziIuGUUN5iSC1bQ==}
     engines: {node: '>=10'}
     cpu: [s390x]
     os: [linux]
     libc: [glibc]
 
-  '@swc/core-linux-x64-gnu@1.15.43':
-    resolution: {integrity: sha512-07XnKwTmKy8TGOZG3D9fRnLWGynxPjwQnZLVmBFbo6F+7vHYzBIOuwXEhemrChBWb6yDNZsVCcMWCPX6FDD2xg==}
+  '@swc/core-linux-x64-gnu@1.15.46':
+    resolution: {integrity: sha512-SKxI7J6t90XPl8hRUqtJi9NfGdunN/E/vZMc7Bc0figeRdOPDBT+Tm8g7cx9xM0T0mewh2l+8dewa3Am27/P+A==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@swc/core-linux-x64-musl@1.15.43':
-    resolution: {integrity: sha512-TJc+bsSIaBh+hZvZ5GRtW/K1bw66TJ9vsUwvVIsZdiWxU5ObLwZvfcnZ3UpgVfMnFibRes9uriJrQNBHEEogRQ==}
+  '@swc/core-linux-x64-musl@1.15.46':
+    resolution: {integrity: sha512-qj9T6B7bosI0VEsrWOVXZN1OXxS8Tp63ywyrLxNdOycnUtLdkgYcoBsN5y8ImnDDsnwrEWZOy1e+J4xSe7mA3Q==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@swc/core-win32-arm64-msvc@1.15.43':
-    resolution: {integrity: sha512-jfd7s2/bUQYkOHLs+LWQNKZdmDa8+sufKLllhpWAhVQ2GDCwsHe3vR/j+OSiItZNtkzFuaawa3+SAKz9y5gYfw==}
+  '@swc/core-win32-arm64-msvc@1.15.46':
+    resolution: {integrity: sha512-8p7l4c3LU+eA5g9Et1JPhNeMC1oQwXTGU+uah8DPIBX7YXzqswvaBtyKVmXefVGi/DJU1x3YJsc3mbAp9aWzSQ==}
     engines: {node: '>=10'}
     cpu: [arm64]
     os: [win32]
 
-  '@swc/core-win32-ia32-msvc@1.15.43':
-    resolution: {integrity: sha512-rLAE8JvucqEW1ZGohxPQrQWPBQeJG4+ypKbWfdlU/qmKScvCkxf9/Jxnzki1dkUQCQ7P5Enp13RlvqOlvx/32g==}
+  '@swc/core-win32-ia32-msvc@1.15.46':
+    resolution: {integrity: sha512-tUEnfr3Bn9u6FOjUb3PN9p+09qZC2j+wNDLKHzXXZn22rqGcUqR/ohCRSS+nG9B9+X+U+3FewNEHJkTmdIvMjQ==}
     engines: {node: '>=10'}
     cpu: [ia32]
     os: [win32]
 
-  '@swc/core-win32-x64-msvc@1.15.43':
-    resolution: {integrity: sha512-h8MLDHZcfIukwQWj03rIJZx1I0E81AYj2X7J/nGErG4nz+QAv6G1Z+peotvinL3lqpbo32tLYSMFo32/ySzxKg==}
+  '@swc/core-win32-x64-msvc@1.15.46':
+    resolution: {integrity: sha512-Vux7UDzBJYQggSuPfcl2w9iu+IJpgpRCxHzgCaVkELnAXAE4XZMOTX9HNcaNiwfeIDqdu2rkr69RuDm6wY8neA==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [win32]
 
-  '@swc/core@1.15.43':
-    resolution: {integrity: sha512-1CuKjFkPxIgGdeHVuNbkxmBxkcbdc08u0aiI43pFq6yY1tTVKmXT9hFEooyyKs/sJ3xf1GPHyEwTtk9Xl8dvQw==}
+  '@swc/core@1.15.46':
+    resolution: {integrity: sha512-Ri3em2mBpq3h2zSPliCYl63otDGqek8PPEfv2nWgRQEbZ/VBCNyypVTVQ6cEbTCXBhy+WE2T3fQb08moIyuYaw==}
     engines: {node: '>=10'}
     peerDependencies:
       '@swc/helpers': '>=0.5.17'
@@ -1214,8 +1214,8 @@ packages:
   '@swc/helpers@0.5.21':
     resolution: {integrity: sha512-jI/VAmtdjB/RnI8GTnokyX7Ug8c+g+ffD6QRLa6XQewtnGyukKkKSk3wLTM3b5cjt1jNh9x0jfVlagdN2gDKQg==}
 
-  '@swc/types@0.1.27':
-    resolution: {integrity: sha512-K6h3iUlqeM946U4sXFYeahefR1YBbXJvko+hv8WS8/0BNJ4OHiHRywMnQUJCqkR7Y9+hqQ1TvEpiKqUhz7NEFg==}
+  '@swc/types@0.1.28':
+    resolution: {integrity: sha512-V6Mnml8v09QALx6K0elJ7o9K/MkVDtW3t6L+7Ou/JcWtb3xwId2AH4FeOceySd2JaO87IMw4+6vSZxLm34LPbw==}
 
   '@tanstack/virtual-core@3.13.23':
     resolution: {integrity: sha512-zSz2Z2HNyLjCplANTDyl3BcdQJc2k1+yyFoKhNRmCr7V7dY8o8q5m8uFTI1/Pg1kL+Hgrz6u3Xo6eFUB7l66cg==}
@@ -6433,59 +6433,59 @@ snapshots:
 
   '@sqltools/formatter@1.2.5': {}
 
-  '@swc/core-darwin-arm64@1.15.43':
+  '@swc/core-darwin-arm64@1.15.46':
     optional: true
 
-  '@swc/core-darwin-x64@1.15.43':
+  '@swc/core-darwin-x64@1.15.46':
     optional: true
 
-  '@swc/core-linux-arm-gnueabihf@1.15.43':
+  '@swc/core-linux-arm-gnueabihf@1.15.46':
     optional: true
 
-  '@swc/core-linux-arm64-gnu@1.15.43':
+  '@swc/core-linux-arm64-gnu@1.15.46':
     optional: true
 
-  '@swc/core-linux-arm64-musl@1.15.43':
+  '@swc/core-linux-arm64-musl@1.15.46':
     optional: true
 
-  '@swc/core-linux-ppc64-gnu@1.15.43':
+  '@swc/core-linux-ppc64-gnu@1.15.46':
     optional: true
 
-  '@swc/core-linux-s390x-gnu@1.15.43':
+  '@swc/core-linux-s390x-gnu@1.15.46':
     optional: true
 
-  '@swc/core-linux-x64-gnu@1.15.43':
+  '@swc/core-linux-x64-gnu@1.15.46':
     optional: true
 
-  '@swc/core-linux-x64-musl@1.15.43':
+  '@swc/core-linux-x64-musl@1.15.46':
     optional: true
 
-  '@swc/core-win32-arm64-msvc@1.15.43':
+  '@swc/core-win32-arm64-msvc@1.15.46':
     optional: true
 
-  '@swc/core-win32-ia32-msvc@1.15.43':
+  '@swc/core-win32-ia32-msvc@1.15.46':
     optional: true
 
-  '@swc/core-win32-x64-msvc@1.15.43':
+  '@swc/core-win32-x64-msvc@1.15.46':
     optional: true
 
-  '@swc/core@1.15.43(@swc/helpers@0.5.21)':
+  '@swc/core@1.15.46(@swc/helpers@0.5.21)':
     dependencies:
       '@swc/counter': 0.1.3
-      '@swc/types': 0.1.27
+      '@swc/types': 0.1.28
     optionalDependencies:
-      '@swc/core-darwin-arm64': 1.15.43
-      '@swc/core-darwin-x64': 1.15.43
-      '@swc/core-linux-arm-gnueabihf': 1.15.43
-      '@swc/core-linux-arm64-gnu': 1.15.43
-      '@swc/core-linux-arm64-musl': 1.15.43
-      '@swc/core-linux-ppc64-gnu': 1.15.43
-      '@swc/core-linux-s390x-gnu': 1.15.43
-      '@swc/core-linux-x64-gnu': 1.15.43
-      '@swc/core-linux-x64-musl': 1.15.43
-      '@swc/core-win32-arm64-msvc': 1.15.43
-      '@swc/core-win32-ia32-msvc': 1.15.43
-      '@swc/core-win32-x64-msvc': 1.15.43
+      '@swc/core-darwin-arm64': 1.15.46
+      '@swc/core-darwin-x64': 1.15.46
+      '@swc/core-linux-arm-gnueabihf': 1.15.46
+      '@swc/core-linux-arm64-gnu': 1.15.46
+      '@swc/core-linux-arm64-musl': 1.15.46
+      '@swc/core-linux-ppc64-gnu': 1.15.46
+      '@swc/core-linux-s390x-gnu': 1.15.46
+      '@swc/core-linux-x64-gnu': 1.15.46
+      '@swc/core-linux-x64-musl': 1.15.46
+      '@swc/core-win32-arm64-msvc': 1.15.46
+      '@swc/core-win32-ia32-msvc': 1.15.46
+      '@swc/core-win32-x64-msvc': 1.15.46
       '@swc/helpers': 0.5.21
 
   '@swc/counter@0.1.3': {}
@@ -6494,7 +6494,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@swc/types@0.1.27':
+  '@swc/types@0.1.28':
     dependencies:
       '@swc/counter': 0.1.3
 
@@ -8678,11 +8678,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  gewisdb-ts-client@https://codeload.github.com/GEWIS/gewisdb-ts-client/tar.gz/6190730be45646d58ff5968689ec22b88d2c918c(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(debug@4.4.3):
+  gewisdb-ts-client@https://codeload.github.com/GEWIS/gewisdb-ts-client/tar.gz/6190730be45646d58ff5968689ec22b88d2c918c(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(debug@4.4.3):
     dependencies:
       axios: 1.15.0(debug@4.4.3)
       swagger-axios-codegen: 0.16.14(debug@4.4.3)
-      ts-node-dev: 2.0.0(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5)
+      ts-node-dev: 2.0.0(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
       - '@swc/core'
@@ -10783,7 +10783,7 @@ snapshots:
 
   ts-dedent@2.3.0: {}
 
-  ts-node-dev@2.0.0(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5):
+  ts-node-dev@2.0.0(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5):
     dependencies:
       chokidar: 3.6.0
       dynamic-dedupe: 0.3.0
@@ -10793,7 +10793,7 @@ snapshots:
       rimraf: 2.7.1
       source-map-support: 0.5.21
       tree-kill: 1.2.2
-      ts-node: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5)
+      ts-node: 10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5)
       tsconfig: 7.0.0
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -10801,7 +10801,7 @@ snapshots:
       - '@swc/wasm'
       - '@types/node'
 
-  ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5):
+  ts-node@10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@4.9.5):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.12
@@ -10819,9 +10819,9 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     optionalDependencies:
-      '@swc/core': 1.15.43(@swc/helpers@0.5.21)
+      '@swc/core': 1.15.46(@swc/helpers@0.5.21)
 
-  ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3):
+  ts-node@10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.12
@@ -10839,7 +10839,7 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     optionalDependencies:
-      '@swc/core': 1.15.43(@swc/helpers@0.5.21)
+      '@swc/core': 1.15.46(@swc/helpers@0.5.21)
 
   tsconfig-paths@3.15.0:
     dependencies:
@@ -10939,7 +10939,7 @@ snapshots:
       typescript: 5.9.3
       yaml: 2.9.0
 
-  typeorm@1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
+  typeorm@1.1.0(better-sqlite3@12.11.1)(ioredis@5.10.1)(mysql2@3.23.0(@types/node@20.19.43))(ts-node@10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 4.3.1
@@ -10955,7 +10955,7 @@ snapshots:
       better-sqlite3: 12.11.1
       ioredis: 5.10.1
       mysql2: 3.23.0(@types/node@20.19.43)
-      ts-node: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)
+      ts-node: 10.9.2(@swc/core@1.15.46(@swc/helpers@0.5.21))(@types/node@20.19.43)(typescript@5.9.3)
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
@@ -11012,10 +11012,10 @@ snapshots:
 
   unpipe@1.0.0: {}
 
-  unplugin-swc@1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.21))(rollup@4.60.1):
+  unplugin-swc@1.5.9(@swc/core@1.15.46(@swc/helpers@0.5.21))(rollup@4.60.1):
     dependencies:
       '@rollup/pluginutils': 5.3.0(rollup@4.60.1)
-      '@swc/core': 1.15.43(@swc/helpers@0.5.21)
+      '@swc/core': 1.15.46(@swc/helpers@0.5.21)
       load-tsconfig: 0.2.5
       unplugin: 2.3.11
     transitivePeerDependencies:
