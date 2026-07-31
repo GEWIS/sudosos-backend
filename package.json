@@ -90,7 +90,7 @@
     "@braintree/sanitize-url": "7.1.2",
     "@commitlint/cli": "20.5.3",
     "@commitlint/config-conventional": "20.5.3",
-    "@swc/core": "1.15.43",
+    "@swc/core": "1.15.46",
     "@types/bcrypt": "5.0.2",
     "@types/body-parser": "1.19.6",
     "@types/chai": "4.3.4",
