@@ -72,6 +72,9 @@ export default class TransactionSubscriber implements EntitySubscriberInterface 
     }
 
     const balance = await new BalanceService().getBalance(user.id);
+    // POINT_OF_SALE users are excluded from balance reporting, so anonymous
+    // terminal payments have no balance here. Nothing to notify about.
+    if (!balance?.amount) return;
 
     let currentBalance = balance.amount.amount;
     if (balance.lastTransactionId < event.entity.id) {
