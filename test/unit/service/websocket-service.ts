@@ -27,6 +27,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import TokenHandler from '../../../src/authentication/token-handler';
 import RoleManager from '../../../src/rbac/role-manager';
 import User from '../../../src/entity/user/user';
+import type { Redis } from 'ioredis';
 
 // Bridges socket.io's callback-style flow (e.g. `clientSocket.on('event', () => done())`)
 // into Promises. Vitest hooks/tests must return a Promise — it doesn't support
@@ -308,7 +309,7 @@ describe('WebSocketService', () => {
       const originalInstance = wss.instance;
 
       // Stub setupAdapter on the prototype BEFORE creating the instance
-      // so the real cluster adapter never runs (it needs process.send)
+      // so the real Redis adapter never runs (it needs a Redis connection)
       // @ts-ignore to allow access to the private method
       const setupAdapterStub = sinon.stub(WebSocketService.prototype, 'setupAdapter').returns(undefined);
 
@@ -323,8 +324,10 @@ describe('WebSocketService', () => {
           roleManager: mockRoleManager,
         });
 
-        testService.initiateWebSocket();
+        const mockRedisConnection = {} as Redis;
+        testService.initiateWebSocket(mockRedisConnection);
         expect(setupAdapterStub.calledOnce).to.be.true;
+        expect(setupAdapterStub.calledWith(mockRedisConnection)).to.be.true;
       } finally {
         // Restore everything so later tests are not affected
         setupAdapterStub.restore();

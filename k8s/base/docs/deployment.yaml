@@ -17,8 +17,16 @@ spec:
       containers:
         - name: docs
           image: abc.docker-registry.gewis.nl/pos/sudosos/docs:develop
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               cpu: 25m

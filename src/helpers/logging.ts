@@ -31,7 +31,6 @@ export function applyConfiguredLogLevel(logger: log4js.Logger): void {
 
 export default function getAppLogger(category: string = 'Application'): log4js.Logger {
   log4js.configure({
-    pm2: true,
     appenders: {
       out: { type: 'stdout' },
     },

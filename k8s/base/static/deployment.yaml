@@ -17,24 +17,38 @@ spec:
       containers:
         - name: static
           image: caddy:alpine
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           volumeMounts:
             - name: static-config
               mountPath: /etc/caddy/Caddyfile
               subPath: Caddyfile
-            - name: data-products
+            # The disk folders are not the same as the URLs
+            - name: data
               mountPath: /srv/static/products
-            - name: data-banners
+              subPath: products
+            - name: data
               mountPath: /srv/static/banners
-            - name: data-invoices
+              subPath: banners
+            - name: data
               mountPath: /srv/static/invoices
-            - name: data-payout-requests
+              subPath: invoices
+            - name: data
               mountPath: /srv/static/payouts
-            - name: data-seller-payouts
+              subPath: payout_requests
+            - name: data
               mountPath: /srv/static/sellerPayouts
-            - name: data-write-offs
+              subPath: seller_payouts
+            - name: data
               mountPath: /srv/static/writeOffs
+              subPath: write_offs
           resources:
             requests:
               cpu: 10m
@@ -46,21 +60,6 @@ spec:
         - name: static-config
           configMap:
             name: static-config
-        - name: data-products
+        - name: data
           persistentVolumeClaim:
-            claimName: sudosos-products
-        - name: data-banners
-          persistentVolumeClaim:
-            claimName: sudosos-banners
-        - name: data-invoices
-          persistentVolumeClaim:
-            claimName: sudosos-invoices
-        - name: data-payout-requests
-          persistentVolumeClaim:
-            claimName: sudosos-payout-requests
-        - name: data-seller-payouts
-          persistentVolumeClaim:
-            claimName: sudosos-seller-payouts
-        - name: data-write-offs
-          persistentVolumeClaim:
-            claimName: sudosos-write-offs
+            claimName: sudosos-data

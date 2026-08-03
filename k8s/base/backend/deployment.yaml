@@ -5,7 +5,7 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     matchLabels:
       app: backend
@@ -17,31 +17,44 @@ spec:
       containers:
         - name: backend
           image: abc.docker-registry.gewis.nl/pos/sudosos/backend:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 80
             - name: ws
               containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /v1/ping
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /v1/ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /v1/ping
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           envFrom:
             - configMapRef:
                 name: backend-env-config
             - secretRef:
                 name: backend-env
           volumeMounts:
-            - name: config
-              mountPath: /app/config
-            - name: data-products
-              mountPath: /app/out/data/products
-            - name: data-banners
-              mountPath: /app/out/data/banners
-            - name: data-invoices
-              mountPath: /app/out/data/invoices
-            - name: data-payout-requests
-              mountPath: /app/out/data/payout_requests
-            - name: data-seller-payouts
-              mountPath: /app/out/data/seller_payouts
-            - name: data-write-offs
-              mountPath: /app/out/data/write_offs
+            - name: jwt-key
+              mountPath: /app/config/jwt.key
+              subPath: jwt.key
+              readOnly: true
+            - name: data
+              mountPath: /app/data
           resources:
             requests:
               cpu: 100m
@@ -49,25 +62,17 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+      dnsConfig:
+        options:
+          - name: ndots
+            value: '1'
       volumes:
-        - name: config
+        - name: jwt-key
+          secret:
+            secretName: backend-jwt
+            items:
+              - key: JWT_PRIVATE_KEY
+                path: jwt.key
+        - name: data
           persistentVolumeClaim:
-            claimName: sudosos-backend-config
-        - name: data-products
-          persistentVolumeClaim:
-            claimName: sudosos-products
-        - name: data-banners
-          persistentVolumeClaim:
-            claimName: sudosos-banners
-        - name: data-invoices
-          persistentVolumeClaim:
-            claimName: sudosos-invoices
-        - name: data-payout-requests
-          persistentVolumeClaim:
-            claimName: sudosos-payout-requests
-        - name: data-seller-payouts
-          persistentVolumeClaim:
-            claimName: sudosos-seller-payouts
-        - name: data-write-offs
-          persistentVolumeClaim:
-            claimName: sudosos-write-offs
+            claimName: sudosos-data

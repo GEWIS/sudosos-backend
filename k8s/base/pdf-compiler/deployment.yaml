@@ -17,8 +17,15 @@ spec:
       containers:
         - name: pdf-compiler
           image: abc.docker-registry.gewis.nl/eou/pdf-compiler:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m

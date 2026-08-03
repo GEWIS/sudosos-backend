@@ -8,7 +8,7 @@ Kustomize-based deployment for all SudoSOS services.
 k8s/
 ├── base/                     # Shared resource definitions
 │   ├── kustomization.yaml
-│   ├── pvcs.yaml             # Shared RWX volumes (products, invoices, etc.)
+│   ├── pvcs.yaml             # Shared RWX data volume (products, invoices, etc.)
 │   ├── nginx/                # Reverse proxy (cookie-based beta routing)
 │   ├── backend/              # Express API
 │   ├── frontend/             # Dashboard (stable)
@@ -59,18 +59,28 @@ To generate or rotate sealed secrets, see `secrets/README.md`.
 
 ## PVCs
 
-The shared volumes use `ReadWriteMany` access mode:
+All uploaded files share a single `sudosos-data` volume.
 
-| PVC name                   | Mount path              |
-|----------------------------|-------------------------|
-| `sudosos-products`         | `/data/products`        |
-| `sudosos-banners`          | `/data/banners`         |
-| `sudosos-invoices`         | `/data/invoices`        |
-| `sudosos-payout-requests`  | `/data/payout_requests` |
-| `sudosos-seller-payouts`   | `/data/seller_payouts`  |
-| `sudosos-write-offs`       | `/data/write_offs`      |
+**Backend** mounts the volume once at `/app/data`. Subdirectories (`products/`,
+`banners/`, etc.) match the paths in `src/files/storage/locations.ts`.
 
-Your cluster needs a storage class that supports RWX (e.g. NFS, Longhorn with NFS, or a shared filesystem).
+**Static** uses `subPath` mounts to map disk directories to public URL paths
+(e.g. `payout_requests/` → `/static/payouts`).
+
+| Subdirectory       | Backend (via `/app/data/…`) | Static mount path              |
+|--------------------|---------------------------------|--------------------------------|
+| `products`         | `…/products`                    | `/srv/static/products`         |
+| `banners`          | `…/banners`                     | `/srv/static/banners`          |
+| `invoices`         | `…/invoices`                    | `/srv/static/invoices`         |
+| `payout_requests`  | `…/payout_requests`             | `/srv/static/payouts`          |
+| `seller_payouts`   | `…/seller_payouts`             | `/srv/static/sellerPayouts`    |
+| `write_offs`       | `…/write_offs`                  | `/srv/static/writeOffs`        |
+
+
+## JWT signing key
+
+The backend JWT private key is stored in a dedicated `backend-jwt` sealed secret and
+mounted at `/app/config/jwt.key`. See `secrets/README.md` for generation and rotation.
 
 ## Image Tags
 

@@ -18,8 +18,16 @@ spec:
       containers:
         - name: redis
           image: redis:7.2-alpine
+          imagePullPolicy: Always
           ports:
             - containerPort: 6379
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           volumeMounts:
             - name: redis-data
               mountPath: /data

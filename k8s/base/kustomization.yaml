@@ -12,6 +12,7 @@ resources:
   # backend
   - backend/configmap.yaml
   - backend/deployment.yaml
+  - backend/cron-deployment.yaml
   - backend/service.yaml
   # frontend
   - frontend/deployment.yaml

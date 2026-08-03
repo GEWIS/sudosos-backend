@@ -24,5 +24,8 @@ data:
   # Redis — must use the in-cluster service name (default would be localhost)
   REDIS_HOST: redis
 
+  # JWT signing key — mounted from backend-env secret at this path
+  JWT_KEY_PATH: /app/config/jwt.key
+
   # GEWIS integrations (public URL, key goes in the sealed secret)
   GEWISDB_API_URL: https://database.gewis.nl/api

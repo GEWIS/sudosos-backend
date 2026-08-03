@@ -4,16 +4,16 @@ kind: Kustomization
 resources:
   - ../../base
   - sealed-backend-env.yaml
+  - sealed-backend-jwt.yaml
   - traefik/ingressroute.yaml
 
 patches:
   - path: patches/backend-config.yaml
-  - path: patches/backend-command.yaml
 
 # Test uses develop tags for everything
 images:
   - name: abc.docker-registry.gewis.nl/pos/sudosos/backend
-    newTag: develop
+    newTag: kubernetes-ready
   - name: abc.docker-registry.gewis.nl/pos/sudosos/dashboard
     newTag: develop
   - name: abc.docker-registry.gewis.nl/pos/sudosos/point-of-sale
