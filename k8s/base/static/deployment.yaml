@@ -17,6 +17,7 @@ spec:
       containers:
         - name: static
           image: caddy:alpine
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           livenessProbe:

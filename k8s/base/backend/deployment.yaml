@@ -17,6 +17,7 @@ spec:
       containers:
         - name: backend
           image: abc.docker-registry.gewis.nl/pos/sudosos/backend:latest
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 80

@@ -17,6 +17,7 @@ spec:
       containers:
         - name: pos-develop
           image: abc.docker-registry.gewis.nl/pos/sudosos/point-of-sale:develop
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           livenessProbe:

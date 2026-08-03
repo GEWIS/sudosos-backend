@@ -17,6 +17,7 @@ spec:
       containers:
         - name: docs
           image: abc.docker-registry.gewis.nl/pos/sudosos/docs:develop
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           livenessProbe:

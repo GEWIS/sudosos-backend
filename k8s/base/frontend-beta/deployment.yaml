@@ -17,6 +17,7 @@ spec:
       containers:
         - name: frontend-beta
           image: abc.docker-registry.gewis.nl/pos/sudosos/dashboard:develop
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           livenessProbe:
