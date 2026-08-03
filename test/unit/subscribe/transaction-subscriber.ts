@@ -452,6 +452,54 @@ describe('TransactionSubscriber', () => {
         expect(rootStubs.queueAdd).to.be.called;
       });
     });
+    it('should not throw when the transaction is from a point of sale user', async () => {
+      // Anonymous terminal payments create a transaction whose `from` is the point of
+      // sale user. Those users are excluded from balance reporting, so getBalance
+      // returns undefined and the subscriber used to throw a TypeError.
+      const posUser = await User.findOne({ where: { type: UserType.POINT_OF_SALE, active: true } });
+      expect(posUser).to.not.be.null;
+
+      const pos = ctx.pointOfSales[0];
+      const container = ctx.containers[0];
+      const product = ctx.products[0];
+
+      const amount = 1;
+      const totalPriceInclVat = product.priceInclVat.multiply(amount).toObject();
+      const transactionRequest: TransactionRequest = {
+        from: posUser.id,
+        pointOfSale: {
+          id: pos.pointOfSaleId,
+          revision: pos.revision,
+        },
+        createdBy: posUser.id,
+        totalPriceInclVat,
+        subTransactions: [{
+          container: {
+            id: container.containerId,
+            revision: container.revision,
+          },
+          to: product.product.owner.id,
+          totalPriceInclVat,
+          subTransactionRows: [{
+            product: {
+              id: product.productId,
+              revision: product.revision,
+            },
+            amount,
+            totalPriceInclVat,
+          }],
+        }],
+      };
+
+      const transactionService = new TransactionService();
+      const verification = await transactionService.verifyTransaction(transactionRequest);
+      if (!verification.valid || !verification.context) {
+        throw new Error('Invalid transaction in test');
+      }
+
+      const transaction = await transactionService.createTransaction(transactionRequest, verification.context);
+      expect(transaction).to.not.be.undefined;
+    });
     it('should send a notification email if the user wants from itself', async () => {
       // Find a user that is not in debt and has the notification preference
       let user: User | undefined;
