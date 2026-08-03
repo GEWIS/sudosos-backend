@@ -209,7 +209,7 @@ export default class StripeService extends WithManager {
    * @param amount The amount to be deposited/paid using Stripe
    * @param paymentMethod The payment method to use: 'digital' for an online
    * deposit (automatic payment methods) or 'terminal' for a card-present
-   * payment captured manually by a Stripe Terminal.
+   * payment captured automatically by a Stripe Terminal.
    * @param metadata Optional extra metadata to attach to the payment intent
    * @returns The saved {@link StripePaymentIntent} and the Stripe client secret
    * (null when Stripe does not return one).
@@ -242,11 +242,6 @@ export default class StripeService extends WithManager {
         ],
         capture_method: 'automatic',
         description: `SudoSOS terminal payment of ${amount.getCurrency()} ${(amount.getAmount() / 100).toFixed(2)} for ${User.fullName(user)}.`,
-        payment_method_options: {
-          card_present: {
-            capture_method: 'manual_preferred',
-          },
-        },
         metadata: {
           ...metadata,
           'service': config.app.name,
