@@ -35,6 +35,8 @@ import { AppDataSource } from '../database/database';
 import Stripe from 'stripe';
 import Config from '../config';
 import StripeWebhookService from '../service/stripe-webhook-service';
+import TerminalPaymentService from '../service/terminal-payment-service';
+import WebSocketService from '../service/websocket-service';
 
 export default class StripeWebhookController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeWebhookController');
@@ -135,10 +137,38 @@ export default class StripeWebhookController extends BaseController {
     AppDataSource.manager.transaction(async (manager) => {
       const stripeService = new StripeWebhookService(manager);
       await stripeService.handleWebhookEvent(webhookEvent);
+    }).then(async () => {
+      // Deliberately after the transaction has committed. A terminal payment
+      // reaching `paid` makes the point of sale clear its cart, so telling it
+      // about a state that later rolls back would lose a sale.
+      await this.emitTerminalPaymentUpdate(paymentIntent.id);
     }).catch((error) => {
       this.logger.error(error);
     });
 
     res.status(204).send();
+  }
+
+  /**
+   * Report the new state of the terminal payment behind a payment intent, if
+   * the intent belongs to one.
+   *
+   * Only call this once the webhook's database transaction has committed, so
+   * subscribers never see state that is rolled back afterwards. Failures are
+   * logged and swallowed: the payment has already been processed by this point
+   * and a websocket problem must not turn that into an error.
+   * @param paymentIntentId - Database ID of the Stripe payment intent.
+   */
+  private async emitTerminalPaymentUpdate(paymentIntentId: number): Promise<void> {
+    try {
+      const service = new TerminalPaymentService();
+      const terminalPayment = await service.getTerminalPaymentByPaymentIntentId(paymentIntentId);
+      if (!terminalPayment) return;
+
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment);
+      await WebSocketService.emitTerminalPaymentUpdated(response);
+    } catch (error) {
+      this.logger.error('Could not emit terminal payment update for payment intent', paymentIntentId, error);
+    }
   }
 }

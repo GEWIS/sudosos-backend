@@ -19,7 +19,7 @@
  */
 
 import { expect } from 'chai';
-import { InPosGuard, ForUserGuard } from '../../../../src/service/websocket/event-guards';
+import { InPosGuard, ForUserGuard, ForTerminalPaymentGuard } from '../../../../src/service/websocket/event-guards';
 import { ParsedRoom } from '../../../../src/service/websocket/room-parser';
 
 describe('Event Guards', () => {
@@ -168,6 +168,36 @@ describe('Event Guards', () => {
       };
 
       expect(ForUserGuard(eventData, roomContext)).to.be.false;
+    });
+  });
+
+  describe('ForTerminalPaymentGuard', () => {
+    const room = (overrides: Partial<ParsedRoom> = {}): ParsedRoom => ({
+      entityType: 'terminal_payment',
+      entityId: 42,
+      eventType: 'updates',
+      isGlobal: false,
+      ...overrides,
+    });
+
+    it('should return true when the payment matches the room', () => {
+      expect(ForTerminalPaymentGuard({ id: 42 }, room())).to.be.true;
+    });
+
+    it('should return false for a different payment', () => {
+      expect(ForTerminalPaymentGuard({ id: 43 }, room())).to.be.false;
+    });
+
+    it('should return false for another entity type', () => {
+      expect(ForTerminalPaymentGuard({ id: 42 }, room({ entityType: 'pos' }))).to.be.false;
+    });
+
+    it('should return false for a global room', () => {
+      expect(ForTerminalPaymentGuard({ id: 42 }, room({ entityId: null, isGlobal: true }))).to.be.false;
+    });
+
+    it('should return false when the payment has no id', () => {
+      expect(ForTerminalPaymentGuard({}, room())).to.be.false;
     });
   });
 });

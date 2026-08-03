@@ -152,6 +152,23 @@ export default class TerminalPayment extends BaseEntity {
   public processedByTerminal?: string;
 
   /**
+   * Whether the given user is connected to this TerminalPayment, either as its
+   * creator or as the buyer or creator of its transaction. Callers use this to
+   * decide between the `own` and `all` RBAC relations.
+   *
+   * Requires `createdBy`, `temporaryTransaction` and `finalTransaction` (with
+   * their `from` and `createdBy`) to be loaded.
+   * @param userId ID of the user to check.
+   */
+  public isRelatedToUser(userId: number): boolean {
+    return this.createdBy?.id === userId
+      || this.temporaryTransaction?.from.id === userId
+      || this.temporaryTransaction?.createdBy.id === userId
+      || this.finalTransaction?.from.id === userId
+      || this.finalTransaction?.createdBy.id === userId;
+  }
+
+  /**
    * Determine the terminal payment's state based on the entity's properties
    */
   public getState(): TerminalPaymentState {

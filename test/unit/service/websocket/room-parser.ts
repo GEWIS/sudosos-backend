@@ -131,5 +131,26 @@ describe('Room Parser', () => {
     it('should handle special characters in entity and event types', () => {
       expect(matchesRoomPattern('test_entity:{id}:test_event', 'test_entity:123:test_event')).to.be.true;
     });
+
+    it('should match the terminal payment room to its pattern', () => {
+      expect(matchesRoomPattern('terminal_payment:{id}:updates', 'terminal_payment:42:updates')).to.be.true;
+    });
+  });
+
+  describe('terminal payment rooms', () => {
+    it('should parse the terminal payment room', () => {
+      expect(parseRoom('terminal_payment:42:updates')).to.deep.equal({
+        entityType: 'terminal_payment',
+        entityId: 42,
+        eventType: 'updates',
+        isGlobal: false,
+      });
+    });
+
+    // Entity and event types are matched as [a-z_]+, so a hyphenated room name
+    // silently fails to parse and its event would never be delivered.
+    it('should not parse a hyphenated variant', () => {
+      expect(parseRoom('terminal-payment:42:updates')).to.be.null;
+    });
   });
 });

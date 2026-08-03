@@ -352,6 +352,36 @@ describe('WebSocketService', () => {
       expect(handler).to.not.be.undefined;
     });
 
+    it('should emit terminal_payment:updated event', async () => {
+      const mockTerminalPayment = {
+        id: 42,
+        state: 'paid',
+      } as any;
+
+      await webSocketService.emitTerminalPaymentUpdated(mockTerminalPayment);
+
+      const handler = (webSocketService as any).eventRegistry.getHandler('terminal_payment:updated');
+      expect(handler).to.not.be.undefined;
+    });
+
+    it('should resolve the terminal payment event to its own room', () => {
+      const handler = (webSocketService as any).eventRegistry.getHandler('terminal_payment:updated');
+      const rooms = handler.resolver({ id: 42 });
+
+      expect(rooms).to.deep.equal([{ roomName: 'terminal_payment:42:updates', entityId: 42 }]);
+    });
+
+    it('should not deliver a terminal payment event to another payment room', async () => {
+      const handler = (webSocketService as any).eventRegistry.getHandler('terminal_payment:updated');
+
+      expect(await handler.guard({ id: 42 }, {
+        entityType: 'terminal_payment', entityId: 42, eventType: 'updates', isGlobal: false,
+      })).to.be.true;
+      expect(await handler.guard({ id: 42 }, {
+        entityType: 'terminal_payment', entityId: 99, eventType: 'updates', isGlobal: false,
+      })).to.be.false;
+    });
+
     it('should not emit unregistered event type', async () => {
       let eventReceived = false;
       
