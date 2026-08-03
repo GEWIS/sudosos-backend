@@ -423,6 +423,13 @@ describe('TerminalPaymentService', () => {
         FAKE_PAYMENT_INTENT,
       );
 
+      // The card-present payment must be captured automatically, otherwise the
+      // authorization expires and payment_intent.succeeded never fires.
+      const createParams = paymentIntentsCreateStub.firstCall.args[0];
+      expect(createParams.capture_method).to.equal('automatic');
+      expect(createParams.payment_method_options?.card_present?.capture_method)
+        .to.be.undefined;
+
       // Cleanup
       await ctx.connection
         .getRepository(TerminalPayment)
