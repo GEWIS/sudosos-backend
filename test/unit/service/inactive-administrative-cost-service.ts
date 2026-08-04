@@ -19,6 +19,7 @@
  */
 
 import { DataSource, In } from 'typeorm';
+import Task from '../../../src/entity/task';
 import express, { Application } from 'express';
 import { SwaggerSpecification } from 'swagger-model-validator';
 import User, { UserType } from '../../../src/entity/user/user';
@@ -65,7 +66,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import VatGroup from '../../../src/entity/vat-group';
 import QueryFilter from '../../../src/helpers/query-filter';
-import Redis from 'ioredis';
+import TaskService from '../../../src/service/task-service';
 
 chai.use(deepEqualInAnyOrder);
 
@@ -97,11 +98,9 @@ describe('InactiveAdministrativeCostService', () => {
     pointsOfSale: PointOfSaleRevision[];
     containers: ContainerRevision[];
     products: ProductRevision[];
-    mailer: Mailer;
   };
 
   let sandbox: SinonSandbox;
-  let redis: Redis;
 
   beforeAll(async function test(): Promise<void> {
     const connection = await Database.initialize();
@@ -148,14 +147,6 @@ describe('InactiveAdministrativeCostService', () => {
     const specification = await Swagger.initialize(app);
     app.use(bodyParser.json());
 
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      maxRetriesPerRequest: null,
-    });
-
-    const mailer = new Mailer(redis);
-
     // initialize context
     ctx = {
       connection,
@@ -170,20 +161,12 @@ describe('InactiveAdministrativeCostService', () => {
       transfers: transfersUpdated,
       pointsOfSale: pointOfSaleRevisions,
       inactiveAdministrativeCosts,
-      mailer,
     };
   });
 
   beforeEach(() => {
-    // Restore the default stub
-    rootStubs?.mail.restore();
-
-    try {
-      Mailer.getInstance();
-    } catch (e) {
-      new Mailer(redis);
-    }
-
+    Mailer.reset();
+    new Mailer();
     sandbox = sinon.createSandbox();
   });
 
@@ -192,7 +175,6 @@ describe('InactiveAdministrativeCostService', () => {
     await finishTestDB(ctx.connection);
 
     Mailer.reset();
-    if (redis) await redis.quit();
 
     sandbox.restore();
   });
@@ -481,7 +463,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().handOutInactiveAdministrativeCost(handoutRequest);
       await User.find({ where: { id: In(userIds) } });
 
-      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
+      expect(await Task.count({ where: { type: 'send-notification' } })).to.equal(users.length);
     });
   });
 
@@ -495,7 +477,7 @@ describe('InactiveAdministrativeCostService', () => {
       await new InactiveAdministrativeCostService().sendInactiveNotification(handoutRequest);
       const updatedUsers = await User.find({ where: { id: In(userIds) } });
 
-      expect(rootStubs.queueAdd.callCount).to.equal(users.length);
+      expect(await Task.count({ where: { type: 'send-notification' } })).to.equal(users.length);
       expect(updatedUsers[0].inactiveNotificationSend).to.be.eq(true);
     });
     it('should notify with the amount that will actually be deducted, capped to the user\'s balance', async () => {
@@ -520,8 +502,9 @@ describe('InactiveAdministrativeCostService', () => {
         expect(balance.amount.amount).to.be.lessThan(administrativeCostValue);
 
         await new InactiveAdministrativeCostService().sendInactiveNotification({ userIds: [user.id] });
+        await TaskService.processNextEligible();
 
-        const mailOptions = rootStubs.queueAdd.lastCall.args[1];
+        const mailOptions = rootStubs.sendMail.lastCall.args[0];
         expect(mailOptions.html).to.include(dinero({ amount: lowBalance }).toFormat());
         expect(mailOptions.html).to.not.include(dinero({ amount: administrativeCostValue }).toFormat());
       });

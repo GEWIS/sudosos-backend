@@ -21,6 +21,7 @@
 import { expect } from 'chai';
 import sinon, { SinonSandbox } from 'sinon';
 import { DataSource } from 'typeorm';
+import fs from 'fs';
 import Mailer from '../../../src/mailer';
 import User, { UserType } from '../../../src/entity/user/user';
 import Database from '../../../src/database/database';
@@ -28,21 +29,16 @@ import HelloWorld from '../../../src/mailer/messages/hello-world';
 import { Language } from '../../../src/mailer/mail-message';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
-import fs from 'fs';
 import { rootStubs } from '../../root-hooks';
-import Redis from 'ioredis';
-import nodemailer from 'nodemailer';
 
 describe('Mailer', () => {
   let ctx: {
     connection: DataSource,
     user: User,
     htmlMailTemplate: string,
-    mailer: Mailer,
   };
 
   let sandbox: SinonSandbox;
-  let redis: Redis;
 
   beforeAll(async () => {
     const connection = await Database.initialize();
@@ -57,38 +53,24 @@ describe('Mailer', () => {
 
     const htmlMailTemplate = fs.readFileSync('./static/mailer/template.html').toString();
 
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      maxRetriesPerRequest: null,
-    });
-
-    const mailer = new Mailer(redis);
-
     ctx = {
       connection,
       user,
       htmlMailTemplate,
-      mailer,
     };
   });
 
-  beforeEach(async () => {
-    // Restore the default stub
-    rootStubs?.mail.restore();
-
-    try {
-      Mailer.getInstance();
-    } catch (e) {
-      new Mailer(redis);
-    }
-
+  beforeEach(() => {
+    // root-hooks has already stubbed nodemailer.createTransport for this
+    // test; rebuild the Mailer so it picks up the stub instead of a real
+    // SMTP transporter cached from a previous test.
+    Mailer.reset();
+    new Mailer();
     sandbox = sinon.createSandbox();
   });
 
   afterAll(async () => {
     Mailer.reset();
-    if (redis) await redis.quit();
     await finishTestDB(ctx.connection);
   });
 
@@ -102,6 +84,11 @@ describe('Mailer', () => {
     expect(mailer).to.equal(mailer2);
   });
 
+  it('should reject access before initialization', () => {
+    Mailer.reset();
+    expect(() => Mailer.getInstance()).to.throw(/has not been initialized/);
+  });
+
   const assertIncludesAll = (actual: string, substrings: string[]) => {
     substrings.forEach(sub => {
       expect(actual).to.include(sub, `Mail missing expected content: ${sub}`);
@@ -109,34 +96,31 @@ describe('Mailer', () => {
   };
 
   // eslint-disable-next-line func-names
-  it('should correctly queue mail in English by default', async function () {
+  it('should send English mail by default', async function () {
     const mailer = Mailer.getInstance();
-    const template = new HelloWorld({ name: ctx.user.firstName });
-    await mailer.send(ctx.user, template);
+    await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
 
-    expect(rootStubs.queueAdd.calledOnce).to.be.true;
-    const [jobName, jobData] = rootStubs.queueAdd.firstCall.args;
+    expect(rootStubs!.sendMail.calledOnce).to.be.true;
+    const [mailOptions] = rootStubs!.sendMail.firstCall.args as [{ to: string; html: string }];
 
-    expect(jobName).to.equal('send-email');
-    assertIncludesAll(jobData.html, [
-      'Hello world!',         // <--- Check 'e' vs 'a'
+    expect(mailOptions.to).to.equal(ctx.user.email);
+    assertIncludesAll(mailOptions.html, [
+      'Hello world!',
       'Dear Admin,',
-      'Hello world, Admin!',  // <--- Check 'e' vs 'a'
+      'Hello world, Admin!',
     ]);
   });
 
-
-
   // eslint-disable-next-line func-names
-  it('should correctly queue mail in Dutch', async function () {
+  it('should send Dutch mail when explicitly requested', async function () {
     const mailer = Mailer.getInstance();
     await mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), Language.DUTCH);
 
-    expect(rootStubs.queueAdd.calledOnce).to.be.true;
-    const [jobName, jobData] = rootStubs.queueAdd.firstCall.args;
+    expect(rootStubs!.sendMail.calledOnce).to.be.true;
+    const [mailOptions] = rootStubs!.sendMail.firstCall.args as [{ to: string; html: string }];
 
-    expect(jobName).to.equal('send-email');
-    assertIncludesAll(jobData.html, [
+    expect(mailOptions.to).to.equal(ctx.user.email);
+    assertIncludesAll(mailOptions.html, [
       'Hallo wereld!',
       'Beste Admin,',
       'Hallo wereld, Admin!',
@@ -146,33 +130,17 @@ describe('Mailer', () => {
   // eslint-disable-next-line func-names
   it('should reject when invalid language is provided', async function () {
     const mailer = Mailer.getInstance();
-
     const promise = mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }), 'binary' as any);
-
     await expect(promise).to.eventually.be.rejected;
   });
 
-  // eslint-disable-next-line func-names
-  it('should send mail directly via SMTP when initialised without Redis', async function () {
-    // The test's beforeEach restores the global nodemailer stub, so we
-    // create our own for this test via the sandbox.
-    const sendMailStub = sandbox.stub().resolves({ messageId: 'direct-test-id' });
-    sandbox.stub(nodemailer, 'createTransport').returns({ sendMail: sendMailStub } as any);
+  it('should propagate SMTP failures', async () => {
+    const mailer = Mailer.getInstance();
+    (mailer as any).transporter.sendMail = sandbox.stub()
+      .rejects(new Error('SMTP unavailable'));
 
-    Mailer.reset();
-    const noRedisMailer = new Mailer(/* no redis connection */);
-
-    await noRedisMailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName }));
-
-    // sendMail should have been called once with the correct recipient.
-    expect(sendMailStub.calledOnce).to.be.true;
-    expect(sendMailStub.firstCall.args[0]).to.have.property('to', ctx.user.email);
-
-    // The BullMQ queue should not have been touched.
-    expect(rootStubs.queueAdd.called).to.be.false;
-
-    // Restore the singleton to the Redis-backed instance for subsequent tests.
-    Mailer.reset();
-    new Mailer(redis);
+    await expect(
+      mailer.send(ctx.user, new HelloWorld({ name: ctx.user.firstName })),
+    ).to.be.rejectedWith(/SMTP unavailable/);
   });
 });

@@ -99,12 +99,6 @@ export default class Config {
     sslCaCertsPath: string | undefined;
   };
 
-  public readonly redis: {
-    host: string;
-    port: number;
-    connectTimeoutMs: number;
-  };
-
   public readonly ldap: {
     enabled: boolean;
     serverUrl: string | undefined;
@@ -175,7 +169,6 @@ export default class Config {
   private constructor() {
     const nodeEnv = getOptionalString('NODE_ENV');
     const isTest = nodeEnv === 'test';
-    const defaultRedisConnectTimeoutMs = isTest ? 100 : 3000;
 
     const rawConnection = getOptionalString('TYPEORM_CONNECTION') ?? 'better-sqlite3';
     if (!VALID_DATABASE_CONNECTIONS.includes(rawConnection)) {
@@ -270,12 +263,6 @@ export default class Config {
       logging: getBoolean('TYPEORM_LOGGING'),
       sslEnabled,
       sslCaCertsPath,
-    };
-
-    this.redis = {
-      host: getOptionalString('REDIS_HOST') ?? 'localhost',
-      port: getInteger('REDIS_PORT', 6379),
-      connectTimeoutMs: getInteger('REDIS_CONNECT_TIMEOUT_MS', defaultRedisConnectTimeoutMs),
     };
 
     this.ldap = {

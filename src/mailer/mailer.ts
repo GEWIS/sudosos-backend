@@ -25,59 +25,36 @@
  */
 
 import log4js, { Logger } from 'log4js';
+import { Transporter } from 'nodemailer';
+import Mail from 'nodemailer/lib/mailer';
 import User from '../entity/user/user';
 import MailMessage, { Language } from './mail-message';
-import Mail from 'nodemailer/lib/mailer';
-import { ConnectionOptions, Queue } from 'bullmq';
-import Redis from 'ioredis';
 import createSMTPTransporter from './transporter';
-import { Transporter } from 'nodemailer';
 import { applyConfiguredLogLevel } from '../helpers/logging';
 
-enum MailQueues {
-  SendEmail = 'send-email',
-}
-
+/**
+ * Sends rendered email messages through nodemailer.
+ *
+ * Mailer has no queue logic of its own. Asynchronous delivery is handled
+ * one level up by the `send-notification` task (Notifier dispatches a task;
+ * the worker calls into Mailer when it runs).
+ */
 export default class Mailer {
-  private static instance: Mailer;
+  private static instance: Mailer | undefined;
 
-  private mailQueue: Queue | undefined;
+  private readonly transporter: Transporter;
 
-  private transporter: Transporter | undefined;
+  private readonly logger: Logger = log4js.getLogger('Mailer');
 
-  private logger: Logger = log4js.getLogger('Mailer');
-
-  /**
-   * Create a Mailer instance.
-   *
-   * When a Redis connection is provided, emails are queued via BullMQ (production
-   * behaviour). When no connection is provided the Mailer falls back to sending
-   * emails directly through the SMTP transporter – useful for local development
-   * where Redis may not be running.
-   */
-  constructor(redisConnection?: Redis) {
+  constructor() {
     applyConfiguredLogLevel(this.logger);
-
-    if (redisConnection) {
-      this.mailQueue = new Queue('mail-queue', {
-        connection: redisConnection as unknown as ConnectionOptions,
-      });
-      this.logger.info('Mailer initialised in queued mode (Redis).');
-    } else {
-      this.transporter = createSMTPTransporter();
-      this.logger.warn(
-        'Redis unavailable – Mailer running in direct-send mode. '
-        + 'Emails will be sent synchronously without retries. '
-        + 'Set REDIS_HOST / REDIS_PORT to enable queued sending.',
-      );
-    }
-
+    this.transporter = createSMTPTransporter();
     Mailer.instance = this;
   }
 
   static getInstance(): Mailer {
     if (this.instance === undefined) {
-      throw new Error('Mailer has not been initialized. Create an instance first using: new Mailer(redisConnection)');
+      throw new Error('Mailer has not been initialized. Create an instance first using: new Mailer()');
     }
     return this.instance;
   }
@@ -87,61 +64,34 @@ export default class Mailer {
     template: MailMessage<T>,
     language: Language = Language.ENGLISH,
     extraOptions?: Mail.Options,
-  ) {
+  ): Promise<void> {
     const mailOptions = {
       ...template.getOptions(to, language),
       ...extraOptions,
       to: to.email,
     };
 
-    if (this.mailQueue) {
-      // Queued path – normal production behaviour.
-      try {
-        await this.mailQueue.add(MailQueues.SendEmail, mailOptions, {
-          attempts: 5,
-          backoff: { type: 'exponential', delay: 2000 },
-        });
-
-        this.logger.info({
-          template: template.constructor.name,
-          to: to.email,
-        }, 'Email successfully queued');
-      } catch (error) {
-        this.logger.error({
-          err: error.message,
-          template: template.constructor.name,
-          to: to.email,
-        }, 'Failed to add email to queue');
-
-        throw error;
-      }
-    } else {
-      // Direct-send fallback – no Redis available (e.g. local dev).
-      try {
-        await this.transporter.sendMail(mailOptions);
-
-        this.logger.info({
-          template: template.constructor.name,
-          to: to.email,
-        }, 'Email sent directly (no-Redis fallback)');
-      } catch (error) {
-        this.logger.error({
-          err: error.message,
-          template: template.constructor.name,
-          to: to.email,
-        }, 'Failed to send email directly');
-
-        throw error;
-      }
+    try {
+      await this.transporter.sendMail(mailOptions);
+      this.logger.info({
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Email sent.');
+    } catch (error) {
+      this.logger.error({
+        err: (error as Error).message,
+        template: template.constructor.name,
+        to: to.email,
+      }, 'Failed to send email.');
+      throw error;
     }
   }
 
   /**
-   * TEST-ONLY FUNCTION to reset the singleton.
-   * This is required in all test suites that use this object
-   * to make sure they have the correct stubs
+   * TEST-ONLY: reset the singleton so suites can rebuild it against a fresh
+   * SMTP stub.
    */
-  static reset() {
+  static reset(): void {
     this.instance = undefined;
   }
 }

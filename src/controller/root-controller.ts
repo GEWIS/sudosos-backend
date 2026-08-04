@@ -33,6 +33,7 @@ import BannerService from '../service/banner-service';
 import ServerSettingsStore from '../server-settings/server-settings-store';
 import { ServerStatusResponse } from './response/server-status-response';
 import TermsOfServiceService from '../service/terms-of-service-service';
+import TaskService from '../service/task-service';
 
 export default class RootController extends BaseController {
   /**
@@ -129,8 +130,10 @@ export default class RootController extends BaseController {
     try {
       const store = ServerSettingsStore.getInstance();
       const maintenanceMode = await store.getSettingFromDatabase('maintenanceMode');
+      const stats = await TaskService.getStats();
       res.status(200).json({
         maintenanceMode,
+        failedTaskCount: stats.failed,
       } as ServerStatusResponse);
     } catch (e) {
       res.status(500).json('Internal server error.');

@@ -89,7 +89,6 @@ import Dinero from 'dinero.js';
 import NfcAuthenticator from '../../../src/entity/authenticator/nfc-authenticator';
 import AssignedRole from '../../../src/entity/rbac/assigned-role';
 import Wrapped from '../../../src/entity/wrapped';
-import Redis from 'ioredis';
 import Mailer from '../../../src/mailer';
 
 const { expect, request } = chai;
@@ -125,7 +124,6 @@ describe('UserController', (): void => {
     mailer: Mailer,
   };
 
-  let redis: Redis;
 
   beforeAll(async () => {
     const connection = await Database.initialize();
@@ -134,13 +132,7 @@ describe('UserController', (): void => {
     const app = express();
     const database = await seedDatabase(new Date('2020-01-01T00:00:00.000Z'), new Date('2023-12-30T23:59:59.000Z'));
 
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      maxRetriesPerRequest: null,
-    });
-
-    const mailer = new Mailer(redis);
+    const mailer = new Mailer();
 
     ctx = {
       tokenHandler: undefined,
@@ -236,13 +228,12 @@ describe('UserController', (): void => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer(redis);
+      new Mailer();
     }
   });
 
   afterAll(async () => {
     Mailer.reset();
-    if (redis) await redis.quit();
     await finishTestDB(ctx.connection);
   });
 

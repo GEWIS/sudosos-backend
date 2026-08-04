@@ -20,7 +20,10 @@
 
 import sinon from 'sinon';
 import nodemailer, { Transporter } from 'nodemailer';
-import { Queue, Worker } from 'bullmq';
+import '../src/notifications';
+import { registerAllTasks } from '../src/tasks';
+import TaskService from '../src/service/task-service';
+import Task from '../src/entity/task';
 
 /**
  * Object containing all global stubs that are set before each test case.
@@ -30,40 +33,42 @@ import { Queue, Worker } from 'bullmq';
  */
 export let rootStubs: {
   /**
-   * Mail stub, which mocks a new SMTP connection.
+   * Mail stub, which mocks a new SMTP connection. The spy that backs
+   * `sendMail` is exposed so suites can assert that nodemailer was invoked
+   * exactly N times by the task worker.
    */
   mail: sinon.SinonStub;
-  queueAdd: sinon.SinonStub;
+  sendMail: sinon.SinonSpy;
 } | undefined;
 
 beforeAll(() => {
-  sinon.stub(Queue.prototype, 'on').returns({} as any);
-  sinon.stub(Worker.prototype, 'on').returns({} as any);
-
-  Object.defineProperty(Queue.prototype, 'client', {
-    get: () => Promise.resolve({}),
-    configurable: true,
-  });
+  // Register production task handlers globally. Tests that need to swap
+  // handlers can reset the registry and restore it via registerAllTasks() in
+  // their own teardown.
+  registerAllTasks();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   const sendMailSpy = sinon.spy();
   const mailStub = sinon.stub(nodemailer, 'createTransport').returns({
     sendMail: sendMailSpy,
   } as any as Transporter);
 
-  let queueAddStub: sinon.SinonStub;
-  if ((Queue.prototype.add as any).restore) {
-    queueAddStub = Queue.prototype.add as sinon.SinonStub;
-  } else {
-    queueAddStub = sinon.stub(Queue.prototype, 'add').resolves({ id: 'mock-id' } as any);
-  }
+  // Bring TaskService up fresh per test.
+  TaskService.init();
 
-  queueAddStub.resetHistory();
+  // Drop any task rows that earlier tests may have created so each test
+  // starts with an empty queue. Skipped when the DB is not yet initialised
+  // (some unit tests run without a real connection).
+  try {
+    await Task.createQueryBuilder().delete().execute();
+  } catch {
+    // No DB / table yet; ignore.
+  }
 
   rootStubs = {
     mail: mailStub,
-    queueAdd: queueAddStub,
+    sendMail: sendMailSpy,
   };
 });
 

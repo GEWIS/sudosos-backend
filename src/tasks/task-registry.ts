@@ -19,17 +19,37 @@
  */
 
 /**
- * This is the module page of the server-status-response.
+ * This is the module page of the task registry.
  *
- * @module internal/server-status
+ * @module tasks
  */
 
-/**
- * @typedef {object} ServerStatusResponse
- * @property {boolean} maintenanceMode.required - Whether the server is in maintenance mode
- * @property {integer} failedTaskCount.required - Number of background tasks currently in failed state
- */
-export interface ServerStatusResponse {
-  maintenanceMode: boolean;
-  failedTaskCount: number;
+export interface TaskHandler<P = unknown> {
+  readonly type: string;
+  handle(payload: P): Promise<void>;
 }
+
+class TaskRegistry {
+  private handlers = new Map<string, TaskHandler<any>>();
+
+  public register<P>(handler: TaskHandler<P>): void {
+    if (this.handlers.has(handler.type)) {
+      throw new Error(`Task handler for type '${handler.type}' is already registered.`);
+    }
+    this.handlers.set(handler.type, handler);
+  }
+
+  public get(type: string): TaskHandler<any> | undefined {
+    return this.handlers.get(type);
+  }
+
+  public has(type: string): boolean {
+    return this.handlers.has(type);
+  }
+
+  public reset(): void {
+    this.handlers.clear();
+  }
+}
+
+export const taskRegistry = new TaskRegistry();
