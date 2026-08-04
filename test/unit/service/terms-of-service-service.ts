@@ -28,6 +28,8 @@ import TermsOfServiceAcceptance from '../../../src/entity/user/terms-of-service-
 import Database from '../../../src/database/database';
 import { truncateAllTables } from '../../helpers/database-helpers';
 import { finishTestDB } from '../../helpers/test-helpers';
+import { acceptCurrentTos } from '../../helpers/user-factory';
+import UserSeeder from '../../seed/user-seeder';
 
 describe('TermsOfServiceService', () => {
   const stubs: sinon.SinonStub[] = [];
@@ -346,6 +348,70 @@ describe('TermsOfServiceService', () => {
       it('should return an empty array for a user without acceptances', async () => {
         expect(await TermsOfServiceService.getAcceptances(userRequired.id)).to.be.empty;
       });
+    });
+  });
+
+  describe('acceptance seeding', () => {
+    let connection: DataSource;
+    let currentVersion: string;
+
+    beforeAll(async () => {
+      connection = await Database.initialize();
+      await truncateAllTables(connection);
+      TermsOfServiceService.resetVersionCache();
+      currentVersion = await TermsOfServiceService.getCurrentVersion();
+    });
+
+    afterAll(async () => {
+      await finishTestDB(connection);
+    });
+
+    const countCurrent = () => TermsOfServiceAcceptance.count({
+      where: { versionNumber: currentVersion },
+    });
+
+    it('should not duplicate acceptances when seeded onto an already seeded database', async () => {
+      const users = await new UserSeeder().seed();
+      const expected = new Set(users.map((user) => user.id)).size;
+      expect(await countCurrent()).to.equal(expected);
+
+      // Seeders assign fixed user ids, so a suite that starts on a database a
+      // previous suite failed to drop re-seeds acceptances that already exist.
+      await new UserSeeder().acceptCurrentTos(users);
+
+      expect(await countCurrent()).to.equal(expected);
+    });
+
+    it('should tolerate the same user appearing twice in one call', async () => {
+      const user = await User.save({
+        firstName: 'Duplicate',
+        lastName: 'TOS',
+        type: UserType.MEMBER,
+        active: true,
+        tosRequired: true,
+      } as User);
+      const before = await countCurrent();
+
+      await acceptCurrentTos(user, user);
+
+      expect(await countCurrent()).to.equal(before + 1);
+    });
+
+    it('should populate the acceptance timestamp, which getAcceptances orders by', async () => {
+      const user = await User.save({
+        firstName: 'Timestamped',
+        lastName: 'TOS',
+        type: UserType.MEMBER,
+        active: true,
+        tosRequired: true,
+      } as User);
+
+      await acceptCurrentTos(user);
+
+      const [acceptance] = await TermsOfServiceService.getAcceptances(user.id);
+      expect(acceptance.versionNumber).to.equal(currentVersion);
+      expect(acceptance.createdAt).to.be.instanceOf(Date);
+      expect(Number.isNaN(acceptance.createdAt.getTime())).to.be.false;
     });
   });
 });

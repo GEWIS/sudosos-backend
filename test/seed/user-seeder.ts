@@ -140,12 +140,23 @@ export default class UserSeeder extends WithManager {
   /**
    * Stores acceptance records of the current TOS version for the given users,
    * so that seeded users can transact.
+   *
+   * Ignores conflicting rows so seeding is idempotent. Seeders assign fixed user
+   * ids, so a user that already has an acceptance for the current version has to
+   * be skipped rather than trip the unique constraint on
+   * (userId, versionNumber). `orIgnore` becomes `ON CONFLICT DO NOTHING` on
+   * sqlite and `INSERT IGNORE` on mariadb.
    */
   public async acceptCurrentTos(users: User[]): Promise<void> {
     const versionNumber = await TermsOfServiceService.getCurrentVersion();
-    await this.manager.save(TermsOfServiceAcceptance, users.map((user) => Object.assign(
-      new TermsOfServiceAcceptance(), { userId: user.id, versionNumber },
-    )));
+    const userIds = [...new Set(users.map((user) => user.id))];
+    if (userIds.length === 0) return;
+    await this.manager.createQueryBuilder()
+      .insert()
+      .into(TermsOfServiceAcceptance)
+      .values(userIds.map((userId) => ({ userId, versionNumber })))
+      .orIgnore()
+      .execute();
   }
 
   private BCRYPT_ROUNDS = 4;

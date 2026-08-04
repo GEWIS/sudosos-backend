@@ -87,20 +87,22 @@ export async function signTokenFor(
 
 /**
  * Stores acceptance records of the current TOS version for given users.
+ *
+ * Ignores conflicting rows instead of checking for an existing one first. The
+ * previous check-then-insert ran inside a `Promise.all`, so two entries for the
+ * same user could both observe "no acceptance yet" and then both insert.
  */
 export async function acceptCurrentTos(...users: User[]): Promise<void> {
   const versionNumber = await TermsOfServiceService.getCurrentVersion();
-  await Promise.all(users.map(async (user) => {
-    if (!user.tosRequired) return;
-    const existing = await TermsOfServiceAcceptance.findOne({
-      where: { userId: user.id, versionNumber },
-    });
-    if (!existing) {
-      await TermsOfServiceAcceptance.save({
-        userId: user.id, versionNumber,
-      } as TermsOfServiceAcceptance);
-    }
-  }));
+  const userIds = [...new Set(users.filter((user) => user.tosRequired).map((user) => user.id))];
+  if (userIds.length === 0) return;
+  await TermsOfServiceAcceptance.getRepository()
+    .createQueryBuilder()
+    .insert()
+    .into(TermsOfServiceAcceptance)
+    .values(userIds.map((userId) => ({ userId, versionNumber })))
+    .orIgnore()
+    .execute();
 }
 
 export class Builder {
