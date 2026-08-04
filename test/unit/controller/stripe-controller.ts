@@ -41,6 +41,9 @@ import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '../../../src/service/stripe-service';
 import { DepositSeeder } from '../../seed';
 import { ensureProductionRoles, signTokenFor } from '../../helpers/user-factory';
+import sinon from 'sinon';
+import Config from '../../../src/config';
+import StripeSettlementReportPdfService from '../../../src/service/pdf/stripe-settlement-report-pdf-service';
 
 const { expect, request } = chai;
 
@@ -220,6 +223,144 @@ describe.skipIf(shouldSkipStripe)('StripeController', async (): Promise<void> =>
         .send(ctx.validStripeRequest);
 
       expect(res.status).to.equal(401);
+    });
+  });
+});
+
+// A separate, un-skipped suite: the report endpoints never call the real
+// Stripe API, so they should not depend on real Stripe keys being configured.
+// Mirrors the fake-key setup TerminalPaymentController's own test file uses
+// for the same reason.
+describe('StripeController - settlement report', async (): Promise<void> => {
+  let ctx: {
+    connection: DataSource,
+    app: Application,
+    specification: SwaggerSpecification,
+    adminToken: string,
+    posToken: string,
+  };
+  let originalStripeKey: string | undefined;
+
+  beforeAll(async () => {
+    originalStripeKey = process.env.STRIPE_PRIVATE_KEY;
+    process.env.STRIPE_PRIVATE_KEY = process.env.STRIPE_PRIVATE_KEY || 'sk_test_dummy';
+    Config.reset();
+
+    const connection = await Database.initialize();
+    await truncateAllTables(connection);
+
+    const adminUser = await User.save({
+      firstName: 'Admin',
+      type: UserType.LOCAL_ADMIN,
+      active: true,
+      tosRequired: false,
+    } as User);
+    // A POS user's own role only has TerminalPayment:get:own and no
+    // StripeDeposit permission at all, so it must fail both halves of the
+    // combined report's policy.
+    const posUser = await User.save({
+      firstName: 'Bar',
+      type: UserType.POINT_OF_SALE,
+      active: true,
+      tosRequired: false,
+    } as User);
+
+    const app = express();
+    const specification = await Swagger.initialize(app);
+
+    await ensureProductionRoles();
+    const roleManager = await new RoleManager().initialize();
+
+    const tokenHandler = new TokenHandler({
+      algorithm: 'HS256', publicKey: 'test', privateKey: 'test', expiry: 3600,
+    });
+    const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
+    const posToken = await signTokenFor(posUser, tokenHandler, 'nonce pos');
+
+    const controller = new StripeController({ specification, roleManager });
+    app.use(json());
+    app.use(new TokenMiddleware({ tokenHandler, refreshFactor: 0.5 }).getMiddleware());
+    app.use('/stripe', controller.getRouter());
+
+    ctx = { connection, app, specification, adminToken, posToken };
+  });
+
+  afterAll(async () => {
+    process.env.STRIPE_PRIVATE_KEY = originalStripeKey;
+    Config.reset();
+    await finishTestDB(ctx.connection);
+  });
+
+  describe('GET /stripe/report', () => {
+    it('should return 200 and a valid report for an admin', async () => {
+      const res = await request(ctx.app)
+        .get('/stripe/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: new Date(0), toDate: new Date() });
+
+      expect(res.status).to.equal(200);
+      const validation = ctx.specification.validateModel('StripeSettlementReportResponse', res.body, false, true);
+      expect(validation.valid).to.be.true;
+      expect(res.body.deposits).to.have.property('count');
+      expect(res.body.terminalPayments).to.have.property('count');
+      expect(res.body.total).to.have.property('count');
+    });
+    it('should return 403 for a POS token, which has neither required permission', async () => {
+      const res = await request(ctx.app)
+        .get('/stripe/report')
+        .set('Authorization', `Bearer ${ctx.posToken}`)
+        .query({ fromDate: new Date(0), toDate: new Date() });
+
+      expect(res.status).to.equal(403);
+    });
+    it('should return 400 if fromDate is not a valid date', async () => {
+      const res = await request(ctx.app)
+        .get('/stripe/report')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: 'not-a-date', toDate: new Date() });
+
+      expect(res.status).to.equal(400);
+    });
+  });
+
+  describe('GET /stripe/report/pdf', () => {
+    let compileHtmlStub: sinon.SinonStub;
+
+    afterEach(() => {
+      if (compileHtmlStub) compileHtmlStub.restore();
+    });
+
+    it('should return 200 and a pdf for an admin', async () => {
+      compileHtmlStub = sinon.stub(StripeSettlementReportPdfService.prototype, 'compileHtml' as any)
+        .resolves(Buffer.from('PDF content'));
+
+      const res = await request(ctx.app)
+        .get('/stripe/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: new Date(0), toDate: new Date(), fileType: 'PDF' });
+
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-type']).to.include('application/pdf');
+    });
+    it('should default to PDF when fileType is omitted', async () => {
+      compileHtmlStub = sinon.stub(StripeSettlementReportPdfService.prototype, 'compileHtml' as any)
+        .resolves(Buffer.from('PDF content'));
+
+      const res = await request(ctx.app)
+        .get('/stripe/report/pdf')
+        .set('Authorization', `Bearer ${ctx.adminToken}`)
+        .query({ fromDate: new Date(0), toDate: new Date() });
+
+      expect(res.status).to.equal(200);
+      expect(res.headers['content-disposition']).to.include('.PDF"');
+    });
+    it('should return 403 for a POS token, which has neither required permission', async () => {
+      const res = await request(ctx.app)
+        .get('/stripe/report/pdf')
+        .set('Authorization', `Bearer ${ctx.posToken}`)
+        .query({ fromDate: new Date(0), toDate: new Date(), fileType: 'PDF' });
+
+      expect(res.status).to.equal(403);
     });
   });
 });

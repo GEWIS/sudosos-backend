@@ -159,11 +159,11 @@ export default class TerminalPaymentSeeder extends WithManager {
     });
     stripePaymentIntent.paymentIntentStatuses.push(status);
 
-    const terminalPayment = await this.manager.save(TerminalPayment, {
+    const terminalPayment = await this.manager.save(TerminalPayment, Object.assign(new TerminalPayment(), {
       stripePaymentIntent,
       temporaryTransaction: tmpTransaction,
       createdBy: user,
-    } as TerminalPayment);
+    }));
 
     return { terminalPayment };
   }

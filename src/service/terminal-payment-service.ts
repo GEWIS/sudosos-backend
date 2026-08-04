@@ -255,4 +255,5 @@ export default class TerminalPaymentService extends WithManager {
 
     return tp;
   }
+
 }
