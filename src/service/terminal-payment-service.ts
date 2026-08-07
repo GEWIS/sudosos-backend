@@ -24,7 +24,7 @@
  * @module stripe/terminal-payment
  */
 
-import { EntityManager } from 'typeorm';
+import { EntityManager, FindOptionsRelations } from 'typeorm';
 import { CreateTerminalPaymentRequest, ProcessTerminalPaymentRequest } from '../controller/request/terminal-payment-request';
 import WithManager from '../database/with-manager';
 import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
@@ -36,6 +36,37 @@ import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import TransferService from './transfer-service';
 import { TerminalPaymentResponse } from '../controller/response/terminal-payment-response';
 import { parseUserToBaseResponse } from '../helpers/revision-to-response';
+
+/**
+ * The relations needed to turn a TerminalPayment into a
+ * {@link TerminalPaymentResponse}. Shared by every lookup so a payment fetched
+ * by payment intent is as complete as one fetched by ID.
+ */
+const TERMINAL_PAYMENT_RELATIONS: FindOptionsRelations<TerminalPayment> = {
+  temporaryTransaction: {
+    pointOfSale: { pointOfSale: true },
+    from: true,
+    createdBy: true,
+    subTransactions: {
+      container: { container: true },
+      to: true,
+      subTransactionRows: { product: { product: true, vat: true } },
+    },
+  },
+  finalTransaction: {
+    pointOfSale: { pointOfSale: true },
+    from: true,
+    createdBy: true,
+    subTransactions: {
+      container: { container: true },
+      to: true,
+      subTransactionRows: { product: { product: true, vat: true } },
+    },
+  },
+  transfer: true,
+  stripePaymentIntent: true,
+  createdBy: true,
+};
 
 export default class TerminalPaymentService extends WithManager {
   private transactionService: TransactionService;
@@ -92,32 +123,38 @@ export default class TerminalPaymentService extends WithManager {
   public async getTerminalPayment(id: number): Promise<TerminalPayment | null> {
     return this.manager.getRepository(TerminalPayment).findOne({
       where: { id },
-      relations: {
-        temporaryTransaction: {
-          pointOfSale: { pointOfSale: true },
-          from: true,
-          createdBy: true,
-          subTransactions: {
-            container: { container: true },
-            to: true,
-            subTransactionRows: { product: { product: true, vat: true } },
-          },
-        },
-        finalTransaction: {
-          pointOfSale: { pointOfSale: true },
-          from: true,
-          createdBy: true,
-          subTransactions: {
-            container: { container: true },
-            to: true,
-            subTransactionRows: { product: { product: true, vat: true } },
-          },
-        },
-        transfer: true,
-        stripePaymentIntent: true,
-        createdBy: true,
-      },
+      relations: TERMINAL_PAYMENT_RELATIONS,
     });
+  }
+
+  /**
+   * Find the TerminalPayment belonging to the given Stripe payment intent.
+   * Used after a webhook has been processed, to report the payment's new state
+   * to subscribers.
+   * @param paymentIntentId The database ID of the {@link StripePaymentIntent}.
+   * @returns The TerminalPayment if found. Null if not found.
+   */
+  public async getTerminalPaymentByPaymentIntentId(paymentIntentId: number): Promise<TerminalPayment | null> {
+    return this.manager.getRepository(TerminalPayment).findOne({
+      where: { stripePaymentIntent: { id: paymentIntentId } },
+      relations: TERMINAL_PAYMENT_RELATIONS,
+    });
+  }
+
+  /**
+   * Determine whether the given user is connected to the TerminalPayment with
+   * the given ID:
+   *   - `own` if they created it, or are the buyer or creator of its
+   *     transaction
+   *   - `all` otherwise, and when the TerminalPayment does not exist
+   * @param id ID of the TerminalPayment.
+   * @param userId ID of the user whose relation to it is being determined.
+   */
+  public async getRelation(id: number, userId: number): Promise<'all' | 'own'> {
+    const t = await this.getTerminalPayment(id);
+    if (!t) return 'all';
+
+    return t.isRelatedToUser(userId) ? 'own' : 'all';
   }
 
   /**

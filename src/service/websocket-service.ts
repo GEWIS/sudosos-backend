@@ -31,15 +31,17 @@ import JsonWebToken from '../authentication/json-web-token';
 import User from '../entity/user/user';
 import UserService from './user-service';
 import { TransactionResponse } from '../controller/response/transaction-response';
+import { TerminalPaymentResponse } from '../controller/response/terminal-payment-response';
 import { parseRoom } from './websocket/room-parser';
 import {
   RoomPolicyRegistry,
   RoomRegistration,
   WebSocketRequestContext,
 } from './websocket/room-policy';
-import { InPosGuard, ForUserGuard } from './websocket/event-guards';
+import { InPosGuard, ForUserGuard, ForTerminalPaymentGuard } from './websocket/event-guards';
 import { EventRegistry, ResolvedRoom } from './websocket/event-registry';
 import { getPointOfSaleRelation } from './websocket/pos-relation-helper';
+import { getTerminalPaymentRelation } from './websocket/terminal-payment-relation-helper';
 import RoleManager from '../rbac/role-manager';
 import Config from '../config';
 import { applyConfiguredLogLevel } from '../helpers/logging';
@@ -247,6 +249,36 @@ export default class WebSocketService {
             return false;
         }
       },
+    });
+
+    // Register per-terminal-payment rooms. These are scoped to a single payment
+    // rather than to a point of sale, because a cancelled terminal payment no
+    // longer references a transaction and therefore has no point of sale to
+    // route updates by.
+    this.registerRoom({
+      pattern: 'terminal_payment:{id}:updates',
+      policy: async (context) => {
+        const terminalPaymentId = context.parsedRoom?.entityId;
+        if (!terminalPaymentId) return false;
+
+        const relation = await getTerminalPaymentRelation(context.user.id, terminalPaymentId);
+        return this.roleManager.can(
+          context.token.roles,
+          'get',
+          relation,
+          'TerminalPayment',
+          ['*'],
+        );
+      },
+    });
+
+    // Register terminal_payment:updated event handler
+    this.eventRegistry.register<TerminalPaymentResponse>('terminal_payment:updated', {
+      resolver: (terminalPayment) => [{
+        roomName: `terminal_payment:${terminalPayment.id}:updates`,
+        entityId: terminalPayment.id,
+      }],
+      guard: async (terminalPayment, roomContext) => ForTerminalPaymentGuard(terminalPayment, roomContext),
     });
   }
 
@@ -538,6 +570,18 @@ export default class WebSocketService {
   }
 
   /**
+   * Emits a terminal payment's new state to the room scoped to that payment.
+   *
+   * Callers must only emit after the database transaction that changed the
+   * state has committed. A subscriber acts on `paid` by clearing the cart, so
+   * reporting a state that later rolls back would lose a sale.
+   * @param terminalPayment - The terminal payment response to emit.
+   */
+  public async emitTerminalPaymentUpdated(terminalPayment: TerminalPaymentResponse): Promise<void> {
+    await this.emit('terminal_payment:updated', terminalPayment);
+  }
+
+  /**
    * Static method for backward compatibility.
    * Delegates to the singleton instance.
    * @throws Error if WebSocketService has not been initialized.
@@ -562,6 +606,15 @@ export default class WebSocketService {
    */
   public static async emitTransactionCreated(transaction: TransactionResponse): Promise<void> {
     await this.getInstance().emitTransactionCreated(transaction);
+  }
+
+  /**
+   * Static method for backward compatibility.
+   * Delegates to the singleton instance.
+   * @throws Error if WebSocketService has not been initialized.
+   */
+  public static async emitTerminalPaymentUpdated(terminalPayment: TerminalPaymentResponse): Promise<void> {
+    await this.getInstance().emitTerminalPaymentUpdated(terminalPayment);
   }
 
   /**

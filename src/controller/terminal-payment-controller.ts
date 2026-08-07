@@ -37,6 +37,7 @@ import StripeService from '../service/stripe-service';
 import { asNumber } from '../helpers/validators';
 import { TerminalPaymentState } from '../entity/transactions/terminal/terminal-payment';
 import { UserType } from '../entity/user/user';
+import WebSocketService from '../service/websocket-service';
 
 export default class TerminalPaymentController extends BaseController {
   private logger: Logger = log4js.getLogger('TerminalPaymentController');
@@ -240,6 +241,7 @@ export default class TerminalPaymentController extends BaseController {
       await AppDataSource.transaction(async (manager) => {
         await new TerminalPaymentService(manager).startTerminalPayment(id, request);
       });
+      void this.emitStateChange(id);
       res.status(204).send();
     } catch (error) {
       this.logger.error('Could not start terminalPayment:', error);
@@ -284,6 +286,7 @@ export default class TerminalPaymentController extends BaseController {
       });
 
       const response = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment);
+      void this.emitStateChange(id);
       res.status(200).json(response);
     } catch (error) {
       this.logger.error('Could not cancel terminalPayment:', error);
@@ -322,16 +325,36 @@ export default class TerminalPaymentController extends BaseController {
    * @param req - Request with terminalPayment ID as param
    * @return whether terminalPayment is connected to user token
    */
-  private static async getRelation(req: RequestWithToken): Promise<string> {
+  private static async getRelation(req: RequestWithToken): Promise<'all' | 'own'> {
     const id = asNumber(req.params.id);
     const userId = req.token.user.id;
 
-    const t = await new TerminalPaymentService().getTerminalPayment(id);
-    if (!t) return 'all';
-
-    if (t.createdBy.id === userId
-      || t.temporaryTransaction?.from.id === userId || t.temporaryTransaction?.createdBy.id === userId
-      || t.finalTransaction?.from.id === userId || t.finalTransaction?.createdBy.id === userId) return 'own';
-    return 'all';
+    // Shared with the websocket room policy, which authorizes subscriptions to
+    // a single terminal payment's updates.
+    return new TerminalPaymentService().getRelation(id, userId);
   }
+
+  /**
+   * Report a terminal payment's current state to websocket subscribers.
+   *
+   * Always called after the database transaction that changed the state has
+   * committed, so a subscriber is never told about work that later rolls back.
+   *
+   * Call without awaiting. Failures are logged and swallowed here, so a
+   * websocket problem affects neither the HTTP response nor the payment, and a
+   * slow emit does not add latency to the response. This mirrors how
+   * TransactionService emits `transaction:created`.
+   * @param id ID of the TerminalPayment whose state changed.
+   */
+  private async emitStateChange(id: number): Promise<void> {
+    try {
+      const terminalPayment = await new TerminalPaymentService().getTerminalPayment(id);
+      if (!terminalPayment) return;
+      const response = await TerminalPaymentService.asTerminalPaymentResponse(terminalPayment);
+      await WebSocketService.emitTerminalPaymentUpdated(response);
+    } catch (error) {
+      this.logger.error('Could not emit terminal payment update for id', id, error);
+    }
+  }
+
 }

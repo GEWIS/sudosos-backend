@@ -47,3 +47,16 @@ export const ForUserGuard: EventGuard<{ from?: { id?: number } }> = (eventData, 
   }
   return eventData.from?.id === roomContext.entityId;
 };
+
+/**
+ * ForTerminalPayment guard checks whether the event is about the terminal
+ * payment the room is scoped to. Terminal payments are addressed individually
+ * rather than by point of sale: once one is cancelled it no longer references a
+ * transaction, so there is no point of sale left to route it by.
+ */
+export const ForTerminalPaymentGuard: EventGuard<{ id?: number }> = (eventData, roomContext) => {
+  if (roomContext.entityType !== 'terminal_payment' || roomContext.entityId === null) {
+    return false;
+  }
+  return eventData.id === roomContext.entityId;
+};
