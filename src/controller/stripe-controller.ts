@@ -27,12 +27,15 @@
 import log4js, { Logger } from 'log4js';
 import { Response } from 'express';
 import Dinero from 'dinero.js';
+import { ReturnFileType } from 'pdf-generator-client';
 import BaseController, { BaseControllerOptions } from './base-controller';
 import Policy from './policy';
 import { RequestWithToken } from '../middleware/token-middleware';
 import StripeService from '../service/stripe-service';
 import { StripeRequest } from './request/stripe-request';
 import BalanceService from '../service/balance-service';
+import { asFromAndTillDate, asReturnFileType } from '../helpers/validators';
+import { PdfError } from '../errors';
 
 export default class StripeController extends BaseController {
   private logger: Logger = log4js.getLogger('StripeController');
@@ -61,6 +64,20 @@ export default class StripeController extends BaseController {
           ),
           handler: this.createStripeDeposit.bind(this),
           body: { modelName: 'StripeRequest' },
+        },
+      },
+      '/report': {
+        GET: {
+          // The report combines deposits and terminal payments, so both
+          // permissions are required rather than either one being enough.
+          policy: async (req) => this.canGetSettlementReport(req),
+          handler: this.getStripeSettlementReport.bind(this),
+        },
+      },
+      '/report/pdf': {
+        GET: {
+          policy: async (req) => this.canGetSettlementReport(req),
+          handler: this.getStripeSettlementReportPdf.bind(this),
         },
       },
     };
@@ -107,6 +124,111 @@ export default class StripeController extends BaseController {
     } catch (error) {
       this.logger.error('Could not create Stripe payment intent:', error);
       res.status(500).send('Internal server error.');
+    }
+  }
+
+  /**
+   * Whether the token is allowed to see the settlement report. The report
+   * combines StripeDeposit and TerminalPayment data, so both permissions are
+   * required. Both checks are awaited explicitly rather than combined with
+   * `&&`: `can()` is async, and `promiseA && promiseB` looks at the promise
+   * objects themselves (always truthy), not their resolved values, which
+   * would silently reduce this to only the second check.
+   * @param req
+   */
+  private async canGetSettlementReport(req: RequestWithToken): Promise<boolean> {
+    const [canGetDeposits, canGetTerminalPayments] = await Promise.all([
+      this.roleManager.can(req.token.roles, 'get', 'all', 'StripeDeposit', ['*']),
+      this.roleManager.can(req.token.roles, 'get', 'all', 'TerminalPayment', ['*']),
+    ]);
+    return canGetDeposits && canGetTerminalPayments;
+  }
+
+  /**
+   * GET /stripe/report
+   * @summary Get a report of everything settled through Stripe (deposits and
+   * terminal payments)
+   * @operationId getStripeSettlementReport
+   * @tags stripe - Operations of the stripe controller
+   * @security JWT
+   * @param {string} fromDate.query - The start date of the report, inclusive
+   * @param {string} toDate.query - The end date of the report, exclusive
+   * @return {StripeSettlementReportResponse} 200 - The requested report
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getStripeSettlementReport(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get stripe settlement report by', req.token.user);
+
+    let fromDate, toDate;
+    try {
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await this.stripeService.getStripeSettlementReport(fromDate, toDate);
+      res.json(report.toResponse());
+    } catch (error) {
+      this.logger.error('Could not get stripe settlement report:', error);
+      res.status(500).json('Internal server error.');
+    }
+  }
+
+  /**
+   * GET /stripe/report/pdf
+   * @summary Get a report of everything settled through Stripe (deposits and
+   * terminal payments) in pdf format
+   * @operationId getStripeSettlementReportPdf
+   * @tags stripe - Operations of the stripe controller
+   * @security JWT
+   * @param {string} fromDate.query.required - The start date of the report, inclusive
+   * @param {string} toDate.query.required - The end date of the report, exclusive
+   * @param {string} fileType.query - enum:PDF,TEX - The file type of the report, defaults to PDF
+   * @returns {string} 200 - The requested report - application/pdf
+   * @return {string} 400 - Validation error
+   * @return {string} 500 - Internal server error
+   */
+  public async getStripeSettlementReportPdf(req: RequestWithToken, res: Response): Promise<void> {
+    this.logger.trace('Get stripe settlement report pdf by', req.token.user);
+
+    let fromDate, toDate;
+    let fileType: ReturnFileType;
+    try {
+      const filters = asFromAndTillDate(req.query.fromDate, req.query.toDate);
+      fromDate = filters.fromDate;
+      toDate = filters.tillDate;
+      // asReturnFileType returns undefined rather than throwing when the query
+      // param is absent, which would otherwise silently fall through to the
+      // raw/TeX branch below and produce a "....undefined" filename.
+      fileType = asReturnFileType(req.query.fileType) ?? ReturnFileType.PDF;
+    } catch (e) {
+      res.status(400).json(e.message);
+      return;
+    }
+
+    try {
+      const report = await this.stripeService.getStripeSettlementReport(fromDate, toDate);
+
+      const buffer = fileType === 'PDF' ? await report.createPdf() : await report.createRaw();
+      const from = `${fromDate.getFullYear()}${fromDate.getMonth() + 1}${fromDate.getDate()}`;
+      const to = `${toDate.getFullYear()}${toDate.getMonth() + 1}${toDate.getDate()}`;
+      const fileName = `stripe-settlement-report-${from}-${to}.${fileType}`;
+
+      res.setHeader('Content-Type', 'application/pdf+tex');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(buffer);
+    } catch (error) {
+      this.logger.error('Could not get stripe settlement report pdf:', error);
+      if (error instanceof PdfError) {
+        res.status(502).json('PDF Generator service failed.');
+        return;
+      }
+      res.status(500).json('Internal server error.');
     }
   }
 }

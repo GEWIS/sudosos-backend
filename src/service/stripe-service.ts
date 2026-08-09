@@ -25,7 +25,7 @@
  */
 
 import Stripe from 'stripe';
-import { Dinero } from 'dinero.js';
+import DineroFactory, { Dinero } from 'dinero.js';
 import log4js, { Logger } from 'log4js';
 import User from '../entity/user/user';
 import StripeDeposit from '../entity/stripe/stripe-deposit';
@@ -45,6 +45,8 @@ import StripePaymentIntent from '../entity/stripe/stripe-payment-intent';
 import WithManager from '../database/with-manager';
 import Config from '../config';
 import { STRIPE_API_VERSION } from './stripe-api-version';
+import { StripeSettlementReport } from '../entity/report/stripe-settlement-report';
+import { toMySQLString } from '../helpers/timestamps';
 
 export { STRIPE_API_VERSION };
 
@@ -363,5 +365,68 @@ export default class StripeService extends WithManager {
         payment_intent: paymentIntent,
       },
     );
+  }
+
+  /**
+   * Report of everything that settled through Stripe over a date range --
+   * deposits (online top-ups) and terminal payments -- for cross-referencing
+   * against a Stripe payout, which pays out every captured charge on the
+   * account regardless of how it was collected.
+   *
+   * A deposit or terminal payment is "settled" once it has its own Transfer
+   * (respectively `finalTransaction`) attached, which is the same event that
+   * makes it appear as money in SudoSOS's own books, not merely a Stripe
+   * payment intent status. Both queries aggregate in SQL rather than loading
+   * full entity graphs, since this endpoint only needs a count and a sum.
+   * @param fromDate Start of the report period, inclusive.
+   * @param toDate End of the report period, exclusive.
+   */
+  public async getStripeSettlementReport(fromDate: Date, toDate: Date): Promise<StripeSettlementReport> {
+    // Loaded dynamically rather than as a top-level import. The terminal
+    // entity subtree has a mutual import between tmp-sub-transaction and
+    // tmp-sub-transaction-row; pulling it in from stripe-service.ts, which is
+    // imported almost everywhere, reorders module initialisation enough that
+    // TmpSubTransactionRow ends up extending an undefined SubTransactionRow.
+    // Resolving at call time sidesteps the ordering entirely. The underlying
+    // entity cycle is worth fixing on its own (see also the same workaround in
+    // websocket/terminal-payment-relation-helper.ts).
+    const { default: TerminalPayment } = await import('../entity/transactions/terminal/terminal-payment');
+
+    const { depositCount, depositTotalAmount } = await this.manager
+      .createQueryBuilder(StripeDeposit, 'deposit')
+      .innerJoin('deposit.transfer', 'transfer')
+      .innerJoin('deposit.stripePaymentIntent', 'stripePaymentIntent')
+      .andWhere('transfer.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('transfer.createdAt < :toDate', { toDate: toMySQLString(toDate) })
+      .select('COUNT(deposit.id)', 'depositCount')
+      .addSelect('SUM(stripePaymentIntent.amount)', 'depositTotalAmount')
+      .getRawOne();
+
+    const { terminalPaymentCount, terminalPaymentTotalAmount } = await this.manager
+      .createQueryBuilder(TerminalPayment, 'terminalPayment')
+      .innerJoin('terminalPayment.finalTransaction', 'finalTransaction')
+      .innerJoin('terminalPayment.stripePaymentIntent', 'stripePaymentIntent')
+      .andWhere('finalTransaction.createdAt >= :fromDate', { fromDate: toMySQLString(fromDate) })
+      .andWhere('finalTransaction.createdAt < :toDate', { toDate: toMySQLString(toDate) })
+      .select('COUNT(terminalPayment.id)', 'terminalPaymentCount')
+      .addSelect('SUM(stripePaymentIntent.amount)', 'terminalPaymentTotalAmount')
+      .getRawOne();
+
+    // SUM() over zero matching rows is SQL NULL, not 0.
+    const depositAmount = DineroFactory({ amount: depositTotalAmount == null ? 0 : Number(depositTotalAmount) });
+    const terminalAmount = DineroFactory({
+      amount: terminalPaymentTotalAmount == null ? 0 : Number(terminalPaymentTotalAmount),
+    });
+
+    return new StripeSettlementReport({
+      fromDate,
+      toDate,
+      depositCount: Number(depositCount),
+      depositTotalAmount: depositAmount,
+      terminalPaymentCount: Number(terminalPaymentCount),
+      terminalPaymentTotalAmount: terminalAmount,
+      totalCount: Number(depositCount) + Number(terminalPaymentCount),
+      totalAmount: depositAmount.add(terminalAmount),
+    });
   }
 }

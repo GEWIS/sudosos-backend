@@ -90,3 +90,36 @@ export interface StripePaymentTerminalResponse {
   lastSeenAt: string;
   available: boolean;
 }
+
+/**
+ * @typedef {object} StripeSettlementReportCategoryResponse
+ * @property {number} count.required - Number of settled payments in this category
+ * @property {DineroObjectResponse} totalAmount.required - Total gross amount charged
+ * to customers' cards for this category. This is the amount actually charged,
+ * not net of Stripe's processing fees.
+ */
+export interface StripeSettlementReportCategoryResponse {
+  count: number;
+  totalAmount: DineroObjectResponse;
+}
+
+/**
+ * @typedef {object} StripeSettlementReportResponse
+ * @property {string} fromDate.required - Start of the report period, inclusive
+ * @property {string} toDate.required - End of the report period, exclusive
+ * @property {StripeSettlementReportCategoryResponse} deposits.required - Online top-ups
+ * (StripeDeposit) that settled in this period
+ * @property {StripeSettlementReportCategoryResponse} terminalPayments.required - Terminal
+ * payments that reached PAID in this period
+ * @property {StripeSettlementReportCategoryResponse} total.required - deposits and
+ * terminalPayments combined. This is the number to cross-reference against a
+ * Stripe payout, subject to the report's documented gross/net and
+ * PaymentRequest caveats.
+ */
+export interface StripeSettlementReportResponse {
+  fromDate: string;
+  toDate: string;
+  deposits: StripeSettlementReportCategoryResponse;
+  terminalPayments: StripeSettlementReportCategoryResponse;
+  total: StripeSettlementReportCategoryResponse;
+}

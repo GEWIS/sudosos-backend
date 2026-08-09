@@ -227,6 +227,11 @@ export default class DefaultRoles {
         PayoutRequest: admin,
         PaymentRequest: admin,
         SellerPayout: admin,
+        // Deliberately get-only: creating/updating/deleting a deposit only
+        // happens through the Stripe webhook flow, never directly by an admin.
+        StripeDeposit: {
+          get: { all: star },
+        },
         TerminalPayment: {
           ...admin,
           cancel: { all: star },
