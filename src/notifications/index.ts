@@ -31,7 +31,6 @@ import './notification-registry';
 export { default } from './notifier';
 export { UserWillGetFinedOptions } from './notification-options';
 export { ChangedPinOptions } from './notification-options';
-export { ForgotEventPlanningOptions } from './notification-options';
 export { HelloWorldOptions } from './notification-options';
 export { MembershipExpiryNotificationOptions } from './notification-options';
 export { WelcomeWithResetOptions } from './notification-options';

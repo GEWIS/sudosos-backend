@@ -25,9 +25,6 @@ import ProductCategory from '../../src/entity/product/product-category';
 import VatGroup from '../../src/entity/vat-group';
 import Product from '../../src/entity/product/product';
 import ProductRevision from '../../src/entity/product/product-revision';
-import Event from '../../src/entity/event/event';
-import EventShift from '../../src/entity/event/event-shift';
-import EventShiftAnswer from '../../src/entity/event/event-shift-answer';
 import Container from '../../src/entity/container/container';
 import ContainerRevision from '../../src/entity/container/container-revision';
 import PointOfSale from '../../src/entity/point-of-sale/point-of-sale';
@@ -45,7 +42,7 @@ import PinAuthenticator from '../../src/entity/authenticator/pin-authenticator';
 import LocalAuthenticator from '../../src/entity/authenticator/local-authenticator';
 import WriteOff from '../../src/entity/transactions/write-off';
 import {
-  ContainerSeeder, DepositSeeder, EventSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
+  ContainerSeeder, DepositSeeder, FineSeeder, InvoiceSeeder, PayoutRequestSeeder,
   PointOfSaleSeeder,
   ProductCategorySeeder,
   ProductSeeder, TransactionSeeder, TransferSeeder,
@@ -53,6 +50,7 @@ import {
   VatGroupSeeder, WriteOffSeeder, UserNotificationSeeder,
 } from './index';
 import { seedMemberUsers } from './user-seeder';
+import RoleSeeder from './role-seeder';
 import BannerSeeder from './banner-seeder';
 import QRAuthenticatorSeeder from './qr-authenticator-seeder';
 import QRAuthenticator from '../../src/entity/authenticator/qr-authenticator';
@@ -68,9 +66,6 @@ export interface DatabaseContent {
   vatGroups: VatGroup[],
   products: Product[],
   productRevisions: ProductRevision[],
-  events: Event[],
-  eventShifts: EventShift[],
-  eventShiftAnswers: EventShiftAnswer[],
   containers: Container[],
   containerRevisions: ContainerRevision[],
   pointsOfSale: PointOfSale[],
@@ -112,7 +107,7 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
   const { pointsOfSale, pointOfSaleRevisions } = await new PointOfSaleSeeder().seed(
     users, containerRevisions,
   );
-  const { roles, roleAssignments, events, eventShifts, eventShiftAnswers } = await new EventSeeder().seed(users);
+  const { roles, roleAssignments } = await new RoleSeeder().seed(users);
   const { transactions } = await new TransactionSeeder().seed(users, pointOfSaleRevisions, beginDate, endDate);
   const transfers = await new TransferSeeder().seed(users, beginDate, endDate);
   const { fines, fineTransfers, userFineGroups } = await new FineSeeder().seed(users, transactions, transfers);
@@ -149,9 +144,6 @@ export default async function seedDatabase(beginDate?: Date, endDate?: Date): Pr
     gewisUsers,
     pinUsers,
     localUsers,
-    events,
-    eventShifts,
-    eventShiftAnswers,
     writeOffs,
     qrAuthenticators,
     userNotificationPreferences,

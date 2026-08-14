@@ -47,7 +47,6 @@ export class EmailTemplate<P extends TemplateOptions> implements TemplateObject<
 
 export enum NotificationTypes {
   ChangedPin = 'ChangedPin',
-  ForgotEventPlanning = 'ForgotEventPlanning',
   HelloWorld = 'HelloWorld',
   InactiveAdministrativeCostNotification = 'InactiveAdministrativeCostNotification',
   MembershipExpiryNotification = 'MembershipExpiryNotification',

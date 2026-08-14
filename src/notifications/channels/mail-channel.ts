@@ -26,7 +26,6 @@ import MailMessage from '../../mailer/mail-message';
 import { NotificationChannels } from '../../entity/notifications/user-notification-preference';
 import {
   ChangedPinTemplate,
-  ForgotEventPlanningTemplate,
   HelloWorldTemplate,
   InactiveAdministrativeCostNotificationTemplate,
   MembershipExpiryNotificationTemplate,
@@ -55,7 +54,6 @@ MailMessage<EmailTemplate<any>>
 > {
   readonly templates = {
     ChangedPin: ChangedPinTemplate,
-    ForgotEventPlanning: ForgotEventPlanningTemplate,
     HelloWorld: HelloWorldTemplate,
     InactiveAdministrativeCostNotification: InactiveAdministrativeCostNotificationTemplate,
     MembershipExpiryNotification: MembershipExpiryNotificationTemplate,

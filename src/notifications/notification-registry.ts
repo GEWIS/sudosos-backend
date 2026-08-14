@@ -22,7 +22,6 @@ import { NotificationTypes, NotificationTypeRegistry } from './notification-type
 
 import {
   ChangedPinOptions,
-  ForgotEventPlanningOptions,
   HelloWorldOptions,
   InactiveAdministrativeCostNotificationOptions,
   MembershipExpiryNotificationOptions,
@@ -40,12 +39,6 @@ import {
 NotificationTypeRegistry.register<ChangedPinOptions>({
   type: NotificationTypes.ChangedPin,
   paramClass: ChangedPinOptions,
-  isMandatory: true,
-});
-
-NotificationTypeRegistry.register<ForgotEventPlanningOptions>({
-  type: NotificationTypes.ForgotEventPlanning,
-  paramClass: ForgotEventPlanningOptions,
   isMandatory: true,
 });
 

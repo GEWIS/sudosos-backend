@@ -204,11 +204,6 @@ export default class DefaultRoles {
         Balance: admin,
         Banner: admin,
         Container: admin,
-        Event: admin,
-        EventAnswer: {
-          ...admin,
-          assign: { all: star },
-        },
         Invoice: admin,
         Fine: {
           ...admin,

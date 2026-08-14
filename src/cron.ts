@@ -31,7 +31,6 @@ import { DataSource } from 'typeorm';
 import cron from 'node-cron';
 import BalanceService from './service/balance-service';
 import RoleManager from './rbac/role-manager';
-import EventService from './service/event-service';
 import DefaultRoles from './rbac/default-roles';
 import UserSyncServiceFactory from './service/sync/user/user-sync-service-factory';
 import UserSyncManager from './service/sync/user/user-sync-manager';
@@ -99,18 +98,6 @@ async function createCronTasks(): Promise<void> {
       logger.error('Could not sync wrapped.', error);
     }));
   });
-  const syncEventShiftAnswers = cron.schedule('39 2 * * *', () => {
-    logger.debug('Syncing event shift answers.');
-    EventService.syncAllEventShiftAnswers()
-      .then(() => logger.debug('Synced event shift answers.'))
-      .catch((error) => logger.error('Could not sync event shift answers.', error));
-  });
-  const sendEventPlanningReminders = cron.schedule('39 13 * * *', () => {
-    logger.debug('Send event planning reminder emails.');
-    EventService.sendEventPlanningReminders()
-      .then(() => logger.debug('Sent event planning reminder emails.'))
-      .catch((error) => logger.error('Could not send event planning reminder emails.', error));
-  });
   const syncUserNotificationPreferences = cron.schedule('0 1 * * *', () => {
     logger.debug('Syncing user notification preferences.');
     new UserNotificationPreferenceService().syncAllUserNotificationPreferences().then(() => {
@@ -120,7 +107,7 @@ async function createCronTasks(): Promise<void> {
     });
   });
 
-  application.tasks = [syncBalances, syncWrapped, syncEventShiftAnswers, sendEventPlanningReminders, syncUserNotificationPreferences];
+  application.tasks = [syncBalances, syncWrapped, syncUserNotificationPreferences];
 
   // Create sync services using the factory
   const syncServiceFactory = new UserSyncServiceFactory();

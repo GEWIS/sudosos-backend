@@ -19,7 +19,6 @@
  */
 import {
   ChangedPinOptions,
-  ForgotEventPlanningOptions,
   HelloWorldOptions,
   InactiveAdministrativeCostNotificationOptions,
   MembershipExpiryNotificationOptions,
@@ -35,7 +34,6 @@ import {
 } from '../notification-options';
 import UserWillGetFined from '../../mailer/messages/user-will-get-fined';
 import { EmailTemplate } from '../notification-types';
-import ForgotEventPlanning from '../../mailer/messages/forgot-event-planning';
 import ChangedPin from '../../mailer/messages/changed-pin';
 import HelloWorld from '../../mailer/messages/hello-world';
 import MembershipExpiryNotification from '../../mailer/messages/membership-expiry-notification';
@@ -51,10 +49,6 @@ import UserTypeUpdatedWithReset from '../../mailer/messages/user-type-updated-wi
 
 export const ChangedPinTemplate = new EmailTemplate(
   (params: ChangedPinOptions) => new ChangedPin(params),
-);
-
-export const ForgotEventPlanningTemplate = new EmailTemplate(
-  (params: ForgotEventPlanningOptions) => new ForgotEventPlanning(params),
 );
 
 export const HelloWorldTemplate = new EmailTemplate(

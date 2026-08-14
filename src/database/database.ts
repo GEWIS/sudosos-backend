@@ -71,9 +71,6 @@ import KeyAuthenticator from '../entity/authenticator/key-authenticator';
 import Fine from '../entity/fine/fine';
 import FineHandoutEvent from '../entity/fine/fineHandoutEvent';
 import UserFineGroup from '../entity/fine/userFineGroup';
-import Event from '../entity/event/event';
-import EventShiftAnswer from '../entity/event/event-shift-answer';
-import EventShift from '../entity/event/event-shift';
 import { TransactionSubscriber, TransferSubscriber } from '../subscriber';
 import InvoicePdf from '../entity/file/invoice-pdf';
 import dotenv from 'dotenv';
@@ -205,9 +202,6 @@ const options: DataSourceOptions = {
     Permission,
     AssignedRole,
     ResetToken,
-    Event,
-    EventShift,
-    EventShiftAnswer,
     Wrapped,
     WrappedOrganMember,
     WriteOff,

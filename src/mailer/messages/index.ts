@@ -25,7 +25,6 @@
  */
 
 export * from './changed-pin';
-export * from './forgot-event-planning';
 export * from './hello-world';
 export * from './membership-expiry-notification';
 export * from './password-reset';

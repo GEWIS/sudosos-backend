@@ -42,22 +42,6 @@ export class ChangedPinOptions extends TemplateOptions {
 }
 
 /**
- * Options for notifying a user that they forgot an event they were planning.
- */
-export class ForgotEventPlanningOptions extends TemplateOptions {
-  /**
-     * @param name - The user's name.
-     * @param eventName - The name of the forgotten event.
-     */
-  constructor(
-    public name: string,
-    public eventName: string,
-  ) {
-    super();
-  }
-}
-
-/**
  * Options for a simple "Hello World" notification.
  */
 export class HelloWorldOptions extends TemplateOptions {

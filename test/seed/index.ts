@@ -21,9 +21,9 @@
 export * from './catalogue';
 export * from './ledger';
 
-export { default as EventSeeder } from './event-seeder';
 export { default as QRAuthenticatorSeeder } from './qr-authenticator-seeder';
 export { default as RbacSeeder } from './rbac-seeder';
+export { default as RoleSeeder } from './role-seeder';
 export { default as UserSeeder } from './user-seeder';
 export { DatabaseContent, default as seedDatabase } from './all';
 

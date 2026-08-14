@@ -72,8 +72,6 @@ import AuthenticationSecureController from './controller/authentication-secure-c
 import MemberAuthenticationController from './controller/member-authentication-controller';
 import MemberAuthenticationSecureController from './controller/member-authentication-secure-controller';
 import DebtorController from './controller/debtor-controller';
-import EventController from './controller/event-controller';
-import EventShiftController from './controller/event-shift-controller';
 import WriteOffController from './controller/write-off-controller';
 import ServerSettingsStore from './server-settings/server-settings-store';
 import SellerPayoutController from './controller/seller-payout-controller';
@@ -376,8 +374,6 @@ export default async function createApp(): Promise<Application> {
   application.app.use('/v1/balances', new BalanceController(options).getRouter());
   application.app.use('/v1/banners', new BannerController(options).getRouter());
   application.app.use('/v1/users', new UserController(options, tokenHandler).getRouter());
-  application.app.use('/v1/events', new EventController(options).getRouter());
-  application.app.use('/v1/eventshifts', new EventShiftController(options).getRouter());
   application.app.use('/v1/vatgroups', new VatGroupController(options).getRouter());
   application.app.use('/v1/products', new ProductController(options).getRouter());
   application.app.use('/v1/productcategories', new ProductCategoryController(options).getRouter());
