@@ -83,8 +83,10 @@ describe('ProductController', async (): Promise<void> => {
     adminUser: User,
     localUser: User,
     organ: User,
+    selfServiceOrgan: User,
     adminToken: String,
     organMemberToken: String,
+    selfServiceOrganMemberToken: String,
     token: String,
     vatGroups: VatGroup[],
     tokenNoRoles: String,
@@ -128,9 +130,19 @@ describe('ProductController', async (): Promise<void> => {
       tosRequired: false,
     } as User;
 
+    const selfServiceOrgan = {
+      id: 4,
+      firstName: 'SelfServiceOrgan',
+      type: UserType.ORGAN,
+      active: true,
+      tosRequired: false,
+      productSelfService: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(organ);
+    await User.save(selfServiceOrgan);
     const users = [organ, adminUser, localUser];
 
     const vatGroups = await new VatGroupSeeder().seed();
@@ -174,6 +186,7 @@ describe('ProductController', async (): Promise<void> => {
     const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
     const token = await signTokenFor(localUser, tokenHandler);
     const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce', [organ]);
+    const selfServiceOrganMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce', [selfServiceOrgan]);
     const tokenNoRoles = await tokenHandler.signToken({ user: localUser, roles: [], organs: [] }, 'nonce');
     const roleManager = await new RoleManager().initialize();
 
@@ -192,7 +205,9 @@ describe('ProductController', async (): Promise<void> => {
       adminUser,
       localUser,
       organ,
+      selfServiceOrgan,
       organMemberToken,
+      selfServiceOrganMemberToken,
       adminToken,
       token,
       vatGroups,
@@ -725,6 +740,39 @@ describe('ProductController', async (): Promise<void> => {
 
       expect(res.status).to.equal(404);
       expect(res.body).to.equal('Product not found');
+    });
+  });
+
+  describe('self-service organ', () => {
+    it('should allow an organ member to create, update and delete a product when productSelfService is enabled', async () => {
+      const productCount = await Product.count();
+      const createRes = await request(ctx.app)
+        .post('/products')
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send({
+          ...ctx.validProductReq,
+          ownerId: ctx.selfServiceOrgan.id,
+        } as CreateProductRequest);
+
+      expect(createRes.status).to.equal(200);
+      expect(await Product.count()).to.equal(productCount + 1);
+      const product = createRes.body as ProductResponse;
+
+      const patchRes = await request(ctx.app)
+        .patch(`/products/${product.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send(ctx.validProductReq);
+      expect(patchRes.status).to.equal(200);
+
+      const deleteRes = await request(ctx.app)
+        .delete(`/products/${product.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send();
+      expect(deleteRes.status).to.equal(204);
+
+      // Cleanup
+      await ProductRevision.delete({ productId: product.id });
+      await Product.delete({ id: product.id });
     });
   });
 });

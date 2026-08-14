@@ -43,6 +43,7 @@ import {
   UpdateContainerRequest,
 } from './request/container-request';
 import userTokenInOrgan from '../helpers/token-helper';
+import User from '../entity/user/user';
 
 /**
  * Controller for managing all routes related to the `container` entity.
@@ -73,7 +74,7 @@ export default class ContainerController extends BaseController {
         },
         POST: {
           body: { modelName: 'CreateContainerRequest' },
-          policy: async (req) => this.roleManager.can(req.token.roles, 'create', 'own', 'Container', ['*']),
+          policy: async (req) => this.roleManager.can(req.token.roles, 'create', await ContainerController.postRelation(req), 'Container', ['*']),
           handler: this.createContainer.bind(this),
         },
       },
@@ -342,9 +343,27 @@ export default class ContainerController extends BaseController {
   }
 
   /**
+   * Function to determine which credentials are needed to create a container
+   *          'all' if user is not connected to the target organ
+   *          'organ' if user is connected to the target organ via an organ that allows product self-service
+   *          'own' if the target organ is the requesting user itself
+   * @param req - Request with CreateContainerRequest as body
+   * @return whether container is connected to user token
+   */
+  static async postRelation(req: RequestWithToken): Promise<string> {
+    const request = req.body as CreateContainerRequest;
+    if (request.ownerId === req.token.user.id) return 'own';
+    if (request.ownerId && userTokenInOrgan(req, request.ownerId)) {
+      const owner = await User.findOne({ where: { id: request.ownerId } });
+      if (owner?.productSelfService) return 'organ';
+    }
+    return 'all';
+  }
+
+  /**
    * Function to determine which credentials are needed to get container
    *          'all' if user is not connected to container
-   *          'organ' if user is not connected to container via organ
+   *          'organ' if user is connected to container via an organ that allows product self-service
    *          'own' if user is connected to container
    * @param req
    * @return whether container is connected to used token
@@ -356,7 +375,7 @@ export default class ContainerController extends BaseController {
     } });
 
     if (!container) return 'all';
-    if (userTokenInOrgan(req, container.owner.id)) return 'organ';
+    if (userTokenInOrgan(req, container.owner.id) && container.owner.productSelfService) return 'organ';
 
     const containerVisibility = await ContainerService.canViewContainer(
       req.token.user.id, container,

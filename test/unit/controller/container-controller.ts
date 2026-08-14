@@ -85,8 +85,10 @@ describe('ContainerController', async (): Promise<void> => {
     adminUser: User,
     localUser: User,
     organ: User,
+    selfServiceOrgan: User,
     adminToken: String,
     organMemberToken: String,
+    selfServiceOrganMemberToken: String,
     token: String,
     products: Product[],
     deletedProducts: Product[],
@@ -127,9 +129,19 @@ describe('ContainerController', async (): Promise<void> => {
       tosRequired: false,
     } as User;
 
+    const selfServiceOrgan = {
+      id: 4,
+      firstName: 'SelfServiceOrgan',
+      type: UserType.ORGAN,
+      active: true,
+      tosRequired: false,
+      productSelfService: true,
+    } as User;
+
     await User.save(adminUser);
     await User.save(localUser);
     await User.save(organ);
+    await User.save(selfServiceOrgan);
 
     const { products, productRevisions } = (
       await new ProductSeeder().seed([adminUser, localUser]));
@@ -161,6 +173,7 @@ describe('ContainerController', async (): Promise<void> => {
     const adminToken = await signTokenFor(adminUser, tokenHandler, 'nonce admin');
     const token = await signTokenFor(localUser, tokenHandler);
     const organMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce organ', [organ]);
+    const selfServiceOrganMemberToken = await signTokenFor(localUser, tokenHandler, 'nonce self-service organ', [selfServiceOrgan]);
 
     const controller = new ContainerController({ specification, roleManager });
     app.use(json());
