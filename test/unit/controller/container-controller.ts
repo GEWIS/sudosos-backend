@@ -170,6 +170,7 @@ describe('ContainerController', async (): Promise<void> => {
     // initialize context
     ctx = {
       organ,
+      selfServiceOrgan,
       connection,
       app,
       specification,
@@ -178,6 +179,7 @@ describe('ContainerController', async (): Promise<void> => {
       localUser,
       adminToken,
       organMemberToken,
+      selfServiceOrganMemberToken,
       token,
       products: products.filter((p) => p.deletedAt == null),
       deletedProducts: products.filter((p) => p.deletedAt != null),
@@ -642,6 +644,49 @@ describe('ContainerController', async (): Promise<void> => {
 
       expect(res.status).to.equal(404);
       expect(res.body).to.equal('Container not found');
+    });
+  });
+
+  describe('self-service organ', () => {
+    it('should allow an organ member to create, update and delete a container when productSelfService is enabled', async () => {
+      const containerCount = await Container.count();
+      const createRes = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send({
+          ...ctx.validContainerReq,
+          ownerId: ctx.selfServiceOrgan.id,
+        } as CreateContainerRequest);
+
+      expect(createRes.status).to.equal(200);
+      expect(await Container.count()).to.equal(containerCount + 1);
+      const container = createRes.body as ContainerResponse;
+
+      const patchRes = await request(ctx.app)
+        .patch(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send(ctx.validContainerUpdate);
+      expect(patchRes.status).to.equal(200);
+
+      const deleteRes = await request(ctx.app)
+        .delete(`/containers/${container.id}`)
+        .set('Authorization', `Bearer ${ctx.selfServiceOrganMemberToken}`)
+        .send();
+      expect(deleteRes.status).to.equal(204);
+
+      // Cleanup
+      await ContainerRevision.delete({ containerId: container.id });
+      await Container.delete({ id: container.id });
+    });
+    it('should return an HTTP 403 if the organ does not have productSelfService enabled', async () => {
+      const containerCount = await Container.count();
+      const res = await request(ctx.app)
+        .post('/containers')
+        .set('Authorization', `Bearer ${ctx.organMemberToken}`)
+        .send(ctx.validContainerReq);
+
+      expect(res.status).to.equal(403);
+      expect(await Container.count()).to.equal(containerCount);
     });
   });
 });
