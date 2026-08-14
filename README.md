@@ -1,26 +1,13 @@
 <!-- markdownlint-disable-file MD041 MD033 -->
-<div align="center">
+> [!IMPORTANT]
+> **This repository is archived.** Development continues at
+> [GEWIS/sudosos](https://github.com/GEWIS/sudosos) -- this repo's full history is preserved there,
+> under [`backend/`](https://github.com/GEWIS/sudosos/tree/develop/backend). Please open new issues
+> and pull requests there, not here.
+>
+> Everything below reflects this repository's state before the migration, kept for historical reference.
 
-<img src="https://github.com/GEWIS/sudosos-backend/blob/develop/backend_logo.png?raw=true"
-  alt="SudoSOS Backend Logo" style="width:200px;height:auto;">
-
-<h1>SudoSOS Backend</h1>
-
-<p align="center">
-  <!-- markdownlint-disable-next-line MD013 -->
-  <strong>A comprehensive Point of Sale and Financial Management System for Study Association GEWIS</strong>
-</p>
-
-[![Coverage Status](https://coveralls.io/repos/github/GEWIS/sudosos-backend/badge.svg?branch=develop)](https://coveralls.io/github/GEWIS/sudosos-backend?branch=develop)
-[![Uptime](https://uptime.gewis.nl/api/badge/2/uptime)](https://sudosos.gewis.nl/api/v1/ping)
-[![Build](https://img.shields.io/github/actions/workflow/status/GEWIS/sudosos-backend/release.yml?branch=main&label=Build)](https://github.com/GEWIS/sudosos-backend/actions/workflows/release.yml)
-[![Latest Release](https://img.shields.io/github/v/tag/GEWIS/sudosos-backend?label=Latest)](https://github.com/GEWIS/sudosos-backend/releases)
-[![Issues](https://img.shields.io/github/issues/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/issues)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend/commits/develop)
-[![Code Size](https://img.shields.io/github/languages/code-size/GEWIS/sudosos-backend)](https://github.com/GEWIS/sudosos-backend)
-[![License](https://img.shields.io/github/license/GEWIS/sudosos-backend.svg)](./LICENSE)
-
-</div>
+# SudoSOS Backend
 
 ## 🎯 Overview
 
