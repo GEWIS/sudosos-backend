@@ -5,6 +5,7 @@
 #Linters and coverages
 .nyc_output/
 reports
+coverage
 
 #Nodejs
 node_modules
@@ -12,6 +13,28 @@ out
 
 #Local data
 *.sqlite
+
+# Exclude tests — but re-include the two paths that src/database/seed.ts imports
+# from directly (anti-pattern; these should be moved to src/ in a future refactor).
+test/
+!test/seed
+!test/seed/**
+!test/setup.ts
+
+#Secrets and local config
+.env
+.env.*
+*.key
+*.pem
+
+#Git
+.git
+.gitignore
+.gitattributes
+.github
+
+#Docs
+docs/
 
 ### Docker files
 Dockerfile
