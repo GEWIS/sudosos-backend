@@ -245,6 +245,14 @@ export default class UserSeeder extends WithManager {
         user: bob,
         hash: await bcrypt.hash('5678', BCRYPT_ROUNDS),
       })),
+      this.manager.save(LocalAuthenticator, Object.assign(new LocalAuthenticator(), {
+        user: alice,
+        hash: await bcrypt.hash('password', BCRYPT_ROUNDS),
+      })),
+      this.manager.save(LocalAuthenticator, Object.assign(new LocalAuthenticator(), {
+        user: bob,
+        hash: await bcrypt.hash('password', BCRYPT_ROUNDS),
+      })),
     ]);
 
     // Organ memberships: alice and bob are members of organ

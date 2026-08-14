@@ -27,8 +27,8 @@
  * Default credentials after running this seed:
  *   - Admin:  admin@sudosos.nl  / admin  / PIN 0000  (LOCAL_ADMIN)
  *   - User:   user@sudosos.nl   / user   / PIN 1111  (LOCAL_USER)
- *   - Alice:  alice@gewis.nl    / PIN 1234 (MEMBER, member of GEWIS organ)
- *   - Bob:    bob@gewis.nl      / PIN 5678 (MEMBER, member of GEWIS organ)
+ *   - Alice:  alice@gewis.nl    / password / PIN 1234 (MEMBER, member of GEWIS organ)
+ *   - Bob:    bob@gewis.nl      / password / PIN 5678 (MEMBER, member of GEWIS organ)
  */
 
 import { config } from 'dotenv';

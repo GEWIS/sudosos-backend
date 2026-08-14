@@ -1,5 +1,5 @@
 {
-  "name": "@sudosos/sudosos-client",
+  "name": "@gewis/sudosos-client",
   "version": "0.0.0-development",
   "description": "Auto-generated TypeScript-Axios client for the SudoSOS API",
   "license": "AGPL-3.0-or-later",
