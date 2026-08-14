@@ -60,6 +60,7 @@ import {
   UserNotificationPreferenceUpdateParams,
 } from '../../../src/controller/request/user-notification-preference-request';
 import { createValidTransactionRequest } from '../../helpers/transaction-factory';
+import Redis from 'ioredis';
 
 describe('TransactionSubscriber', () => {
   let ctx: {
@@ -79,6 +80,7 @@ describe('TransactionSubscriber', () => {
   };
 
   let sandbox: SinonSandbox;
+  let redis: Redis;
 
   let env: string;
 
@@ -105,7 +107,13 @@ describe('TransactionSubscriber', () => {
     const subTransactions: SubTransaction[] = Array.prototype.concat(...transactions
       .map((t) => t.subTransactions));
 
-    const mailer = new Mailer();
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+      lazyConnect: true,
+    });
+    const mailer = new Mailer(redis);
 
     ctx = {
       connection,
@@ -138,7 +146,7 @@ describe('TransactionSubscriber', () => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer();
+      new Mailer(redis);
     }
 
     sandbox = sinon.createSandbox();
@@ -149,6 +157,7 @@ describe('TransactionSubscriber', () => {
     sandbox.restore();
 
     Mailer.reset();
+    if (redis) redis.disconnect();
 
     process.env.NODE_ENV = env;
   });

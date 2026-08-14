@@ -29,6 +29,7 @@ import MemberUser from '../../../src/entity/user/member-user';
 import User from '../../../src/entity/user/user';
 import { inUserContext, UserFactory } from '../../helpers/user-factory';
 import ServerSettingsStore from '../../../src/server-settings/server-settings-store';
+import Redis from 'ioredis';
 
 async function createMemberUser(user: User, memberId: number): Promise<MemberUser> {
   expect(await MemberUser.findOne({ where: { user: { id: user.id } } })).to.be.null;
@@ -79,9 +80,16 @@ describe('GewisDBSyncService', () => {
   let basicApiStub: sinon.SinonStubbedInstance<BasicApi>;
   let sandbox: SinonSandbox;
   let serverSettingsStore: ServerSettingsStore;
+  let redis: Redis;
 
   before(async () => {
-    const mailer = new Mailer();
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+      lazyConnect: true,
+    });
+    const mailer = new Mailer(redis);
 
     ctx = {
       ...(await defaultBefore()),
@@ -98,13 +106,14 @@ describe('GewisDBSyncService', () => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer();
+      new Mailer(redis);
     }
     sandbox = sinon.createSandbox();
   });
 
   after(async () => {
     Mailer.reset();
+    if (redis) redis.disconnect();
     await finishTestDB(ctx.connection);
   });
 

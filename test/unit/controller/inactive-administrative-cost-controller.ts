@@ -52,6 +52,7 @@ import ServerSettingsStore from '../../../src/server-settings/server-settings-st
 import VatGroup from '../../../src/entity/vat-group';
 import { InactiveAdministrativeCostReport } from '../../../src/entity/report/inactive-administrative-cost-report';
 import { PdfError } from '../../../src/errors';
+import Redis from 'ioredis';
 
 describe('InactiveAdministrativeCostController', async () => {
   let ctx: {
@@ -71,6 +72,7 @@ describe('InactiveAdministrativeCostController', async () => {
   };
 
   let sandbox: SinonSandbox;
+  let redis: Redis;
 
   before(async () => {
     const connection = await Database.initialize();
@@ -163,7 +165,13 @@ describe('InactiveAdministrativeCostController', async () => {
       forId: localUser.id,
     };
 
-    const mailer = new Mailer();
+    redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+      maxRetriesPerRequest: null,
+      lazyConnect: true,
+    });
+    const mailer = new Mailer(redis);
 
     ctx = {
       connection,
@@ -189,7 +197,7 @@ describe('InactiveAdministrativeCostController', async () => {
     try {
       Mailer.getInstance();
     } catch (e) {
-      new Mailer();
+      new Mailer(redis);
     }
 
     sandbox = sinon.createSandbox();
@@ -197,6 +205,7 @@ describe('InactiveAdministrativeCostController', async () => {
 
   after(async () => {
     Mailer.reset();
+    if (redis) redis.disconnect();
 
     await finishTestDB(ctx.connection);
   });
