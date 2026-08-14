@@ -348,6 +348,7 @@ export default class ContainerService {
       container: {
         deletedAt: IsNull(),
         owner,
+        ...(params.public !== undefined ? { public: params.public } : {}),
       },
       products: {
         product: {

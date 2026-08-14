@@ -572,10 +572,10 @@ describe('ContainerController', async (): Promise<void> => {
         .get('/containers/public')
         .set('Authorization', `Bearer ${ctx.adminToken}`);
 
-      (res.body as PaginatedContainerResponse).records.every(
-        async (container) => (expect(container.public).true),
-      );
       expect(res.status).to.equal(200);
+      (res.body as PaginatedContainerResponse).records.forEach(
+        (container) => expect(container.public).to.be.true,
+      );
     });
   });
   describe('DELETE /containers/:id', () => {
