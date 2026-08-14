@@ -144,11 +144,13 @@
       "ioredis": "$ioredis"
     },
     "onlyBuiltDependencies": [
+      "@scarf/scarf",
       "@swc/core",
       "bcrypt",
       "better-sqlite3",
       "esbuild",
       "msgpackr-extract",
+      "sqlite3",
       "vue-demi"
     ]
   }
