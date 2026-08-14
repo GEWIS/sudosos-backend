@@ -125,6 +125,9 @@ import TerminalPayment from '../entity/transactions/terminal/terminal-payment';
 import TmpSubTransaction from '../entity/transactions/terminal/tmp-sub-transaction';
 import TmpTransaction from '../entity/transactions/terminal/tmp-transaction';
 import TmpSubTransactionRow from '../entity/transactions/terminal/tmp-sub-transaction-row';
+import {
+  AddProductSelfServiceToUser1785401380818,
+} from '../migrations/1785401380818-add-product-self-service-to-user';
 
 function getDataSourceOptions(): DataSourceOptions {
   const config = Config.get();
@@ -178,6 +181,7 @@ function getDataSourceOptions(): DataSourceOptions {
       AddExpiryToUser1778681972323,
       TermsOfServiceVersioning1781691836923,
       TerminalPayment1782294145719,
+      AddProductSelfServiceToUser1785401380818,
     ],
     extra: {
       authPlugins: {

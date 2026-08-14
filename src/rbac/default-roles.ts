@@ -267,9 +267,15 @@ export default class DefaultRoles {
       permissions: {
         Product: {
           get: { own: star, organ: star, all: star },
+          create: { organ: star },
+          update: { organ: star },
+          delete: { organ: star },
         },
         Container: {
           get: { own: star, organ: star, all: star },
+          create: { organ: star },
+          update: { organ: star },
+          delete: { organ: star },
         },
         PointOfSale: {
           get: { own: star, organ: star, all: star },
